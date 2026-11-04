@@ -12,7 +12,11 @@ Inspyx itself is home-inspection software: a fast iPhone app for the inspection,
 
 ## Current state
 
-As of November 2026 this repository holds only this README. The site content and privacy policy are being prepared alongside the product, which is in active development toward a limited pilot. Until the site files land here, inspyx.com is the address to watch.
+The pilot site files have landed. This is the Inspyx pilot site — ten public pages plus the application-status pages — ported from design **DES-008** (Direction C on the DES-007 pilot architecture), whose design review closed on **2026-11-04** with all findings closed. The counters and cohort strips render from a single `FOUNDING_LEDGER` block in each page, currently at its truthful zero state; the live wiring (application store, founding-seat ledger, deposits) is a later build step.
+
+**Local preview:** the site is fully static — open `index.html` in a browser, or serve the folder with any static server (for example `python3 -m http.server`) and visit `http://localhost:8000/`.
+
+**A note on the status pages:** `status.html`, `status-applied.html`, and `status-held.html` are personal-link **specimens** — they show the layout and wording of the per-applicant status surface with bracketed format values. They are pending the Step 7b authenticated build (controlled access and safe rendering of live data) and are not wired to real applicant data.
 
 ## Organization
 

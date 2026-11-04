@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<!-- DES-007 DESIGN-C — preview build (founder-ordered 2026-11-04). Not published.
+     Spine and form carried from the desk-cleared DES-007 pilot page, restyled in
+     direction C and re-scoped: cohort = the first 25 (the same 25 as founding
+     pricing — the old five-inspector line does NOT carry), promise narrowed to
+     report time, Spex Live is the pilot feature (no inbox/agent).
+     The form is a DESIGN MOCK: no backend, no endpoint — the submit is inert by
+     construction (DQA-WEB-001: no method, action is javascript:void(0), onsubmit
+     returns false; applicant data cannot leave the page). -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Pilot — Inspyx</title>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<!-- ============================================================
+     FOUNDING-SEAT LEDGER — the single source of truth for every
+     count on this page (cohort strip, the line panel). Step 7 build
+     obligation: generated server-side from the application store —
+     one authoritative ledger for claims, certificates, deposits,
+     transfers and queue movement. Values below are the truthful
+     opening state: no applications have been taken.
+     ============================================================ -->
+<script>
+window.FOUNDING_LEDGER = {
+  placesTotal: 25,
+  claimed: 0,
+  applicationsIn: 0,
+  waiting: 0,
+  latestClaim: null,
+  latestMoveIn: null
+};
+</script>
+
+<div class="wrap">
+  <nav class="nav">
+    <a class="logo" href="index.html"><img src="assets/lockup-horizontal-navy.svg" alt="Inspyx"></a>
+    <a class="btn small" href="#apply">Get early access</a>
+  </nav>
+</div>
+
+<div class="wrap">
+
+  <div class="page-head">
+    <div class="eyebrow">The Pilot</div>
+    <h1>The first twenty-five get founding terms.</h1>
+    <p class="sub">This page is an application, not a checkout. The first places go to inspectors we can onboard properly — and every application is read by a person, not screened by a machine.</p>
+  </div>
+
+  <main>
+
+
+  <!-- THE FOUNDING COHORT + THE LINE, AS IT STANDS (psychology Moves 2 / O1) -->
+  <div class="card cohort block-gap" style="margin-top:34px">
+    <div class="ch-top">
+      <div>
+        <h3>The founding cohort — 25 places.</h3>
+        <p class="why">There are 25 because every move-in is done by hand, and every inspector’s starting numbers are written down with them, by a person, before their first inspection. That work is done properly for a small cohort or not at all — so the cohort is 25, and places go in the order applications are read.</p>
+      </div>
+      <div class="count">
+        <div class="big"><span data-ledger="claimed">0</span> of 25</div>
+        <div class="cap">places claimed · <span data-ledger="left">25</span> left</div>
+      </div>
+    </div>
+    <div class="bar"><div class="fill" data-ledger-bar style="width:0%"></div></div>
+    <div class="line-rows">
+      <div class="lr"><div class="v" data-ledger="applicationsIn">0</div><div class="k">applications in</div></div>
+      <div class="lr"><div class="v" data-ledger="claimed2">0 of 25</div><div class="k">places claimed</div></div>
+      <div class="lr"><div class="v" data-ledger="waiting">0</div><div class="k">inspectors waiting to be read</div></div>
+    </div>
+    <div class="feed" data-ledger-feed hidden></div>
+    <p class="feed" data-ledger-feed-empty><span class="f-empty">No applications yet. Claims and move-ins appear here as they happen — dates only, never names.</span></p>
+    <p class="queue-rules"><b>The rules of the line:</b> applications are read in the order they arrive, in a weekly review, and places are claimed in that order. One published exception — and it changes no one's place in line: every founding inspector receives one Golden Ticket, which gives <b>one named colleague</b> the founding rate, claimed through the same application as everyone else, and only while places remain. A ticket creates no place outside the 25: a colleague who claims through one counts against the 25 like any other member. That is the whole list of exceptions.</p>
+    <p class="gone">When the 25 are claimed, the founding rate is gone — <b>the price after is $84.95 a month.</b></p>
+  </div>
+  <!-- PEER DESCRIPTORS (Move 8): rendered only from real, permissioned member
+       records; zero state = hidden. See the note on index.html. -->
+  <div data-descriptors hidden></div>
+
+  <!-- what you get -->
+  <div class="cols3 block-gap">
+    <div class="card"><h3>30 days free</h3><p>A 30-day free trial — the one free period. Nothing stacks on it.</p></div>
+    <div class="card"><h3>Free onboarding</h3><p>Free onboarding for the first 25 accounts — done-for-you included, if you want it done for you.</p></div>
+    <div class="card"><h3>Spex Live, in the field</h3><p>Talk while you work — Spex notes what you find and places it in the report as you go. Nothing is filed without your OK.</p></div>
+  </div>
+
+  <!-- expectations, stated before the application -->
+  <div class="card block-gap">
+    <h2>The pilot, stated plainly</h2>
+    <p class="lede expect-intro">A pilot is a trade, and both sides of it belong on the page before you apply. Inspyx is new. The pilot is where it gets proven — on real inspections, by the first inspectors in. We would rather say that plainly than dress it up.</p>
+    <div class="expect-cols">
+      <div>
+        <h3>What pilot inspectors get</h3>
+        <ul class="ticks">
+          <li><span><b>The founding price, locked.</b> $69 a month for the first 25 accounts — theirs permanently.</span></li>
+          <li><span><b>Thirty days free to start.</b> The app and Spex Live, on your real inspections.</span></li>
+          <li><span><b>Your software moved for you.</b> Free onboarding for the first 25 — we bring across everything your current software lets us reach, done-for-you included. Anything that can't move is named for you at review, never dropped silently.</span></li>
+          <li><span><b>The guarantee, in writing.</b> Less time to a finished report, measured against your own starting numbers. If it doesn't happen on a business we onboarded: six months free, or walk away. If you've paid and don't like it, your money back.</span></li>
+          <li><span><b>A direct line to the founder.</b> Your feedback goes to the person who built Inspyx — not a ticket queue.</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3>What we ask of you</h3>
+        <ul class="ticks">
+          <li><span><b>Real inspections.</b> Run your actual work on Inspyx — that is what the pilot is for.</span></li>
+          <li><span><b>Honest feedback.</b> Tell us what works, what doesn't, and what is missing — plainly, as it happens.</span></li>
+          <li><span><b>An honest testimonial, if we have earned one.</b> Your words, good or bad, when you have something to say. We won't write it for you.</span></li>
+        </ul>
+      </div>
+    </div>
+    <p class="steps-note">The pilot is the first twenty-five — the same twenty-five as founding pricing. We work inspectors in as they come, a few at a time, because the move-in is hands-on; your 30 days and your starting numbers run from your own start.</p>
+    <p class="steps-note">Nationwide — South Florida is home, not a boundary.</p>
+  </div>
+
+  <!-- FOUNDING RATE CERTIFICATE — specimen of the real entitlement (Move 3) -->
+  <div class="cert block-gap" id="certificate">
+    <div class="c-eyebrow"><span>Founding Rate Certificate</span><span class="spec-wm">Specimen — a real one carries your name and number</span></div>
+    <h3>The founding rate, as a document — not a promise in an ad.</h3>
+    <div class="c-fields">
+      <div class="cf"><div class="k">Certificate</div><div class="v">No. [n] of 25</div></div>
+      <div class="cf"><div class="k">Issued to</div><div class="v">[Name] · [Company]</div></div>
+      <div class="cf"><div class="k">The rate</div><div class="v">$69 a month</div></div>
+    </div>
+    <p class="rate">$69 a month — yours for as long as you stay subscribed.</p>
+    <p>Issued when a qualified applicant holds their seat (see your status page after you apply). This rate is never offered again after the 25 places are claimed; the standard price is $84.95 a month. If a hold lapses before onboarding, the place returns to the cohort and the deposit is refunded in full.</p>
+    <p>Keep this certificate — it is the durable record of your rate. Every invoice repeats it: <b>you pay $69; new inspectors pay $84.95.</b></p>
+  </div>
+
+  <!-- THE FOUNDING 25 — charter (Move 9): recognition, no capability claims -->
+  <div class="card block-gap">
+    <div class="eyebrow">The charter</div>
+    <h3>The Founding 25</h3>
+    <p style="margin-top:10px">The first twenty-five inspector businesses in are a named group — <b>the Founding 25</b> — listed on this charter, and never added to after the twenty-fifth place is claimed. Membership is not a tier and it buys no features. It is recognition, and a rate, and a say:</p>
+    <ul class="charter-list">
+      <li><span><b>The founding rate, locked.</b> $69 a month, permanently — held under your numbered Founding Rate Certificate, above.</span></li>
+      <li><span><b>A direct line to the founder.</b> Your feedback goes to the person who built Inspyx — not a ticket queue.</span></li>
+      <li><span><b>An advisory say.</b> First sight of what is being built, and a standing voice in the order it ships.</span></li>
+      <li><span><b>Your number is yours.</b> Your certificate number appears on your certificate and in your Inspyx account, for as long as you are a member.</span></li>
+      <li><span><b>One Golden Ticket.</b> Each founding member receives one Golden Ticket: it gives one named fellow inspector the founding rate, claimed through the same application as everyone else, while places remain. A ticket creates no place outside the 25 — a colleague who claims through one counts against the 25 like any other member — and it moves nobody up or down the line. One ticket per member. It is not a discount, and it cannot be sold.</span></li>
+    </ul>
+    <p class="steps-note">The member list itself — names and companies, only of members who agree in writing to be listed — is published on this charter as the cohort fills. While it is short, that is the point.</p>
+  </div>
+
+  <!-- what happens next -->
+  <div class="block-gap">
+    <h2>What happens next</h2>
+    <div class="cols3" style="margin-top:30px;">
+      <div class="card step-card"><div class="stepnum">1</div><h3>You apply</h3><p>Six required fields, plus one optional question, at the bottom of this page. Nothing else is asked of you at this stage.</p></div>
+      <div class="card step-card"><div class="stepnum">2</div><h3>We read it, and we call you</h3><p>On the call we build your starting point together — your template brought over and your report time written down — so you start from something finished, not a blank account. We review every application personally. If you are a fit for the first group, we call you and talk it through — and we will tell you plainly if the timing is not right.</p></div>
+      <div class="card step-card"><div class="stepnum">3</div><h3>We move you in</h3><p>You sign in to your current software yourself. We pull across everything your software lets us reach, then show you all of it — you review it and confirm before the move is final, and anything that couldn't move is listed for you there, never dropped silently. We revoke our access when the move is done. Your 30 free days start on a business that is already set up.</p></div>
+    </div>
+  </div>
+
+  <!-- FIRST-WEEK PREVIEW (consultation addition): supported workflows only,
+       sequence without fixed-day promises -->
+  <div class="card block-gap">
+    <h3>Your first week, as it actually runs</h3>
+    <ul class="week-list">
+      <li><span class="wk">First</span><p><b>Your first inspection on your own template</b> — the one we brought across and you confirmed at review, not a blank starter.</p></li>
+      <li><span class="wk">First</span><p><b>Your first approved finding</b> — spoken in the field, drafted by Spex, corrected or approved by you, and filed only on your say-so.</p></li>
+      <li><span class="wk">First</span><p><b>Your first finished report</b> — built as you went, read through by you, and sent from a business that is already set up. Your 30 free days run from your own start.</p></li>
+      <li><span class="wk">First</span><p><b>Your first help moment</b> — a question asked and a person answering: the founder, not a ticket queue.</p></li>
+    </ul>
+  </div>
+
+  <!-- LIMITATIONS & SUITABILITY (consultation addition) — current, specific -->
+  <div class="card block-gap" id="limits">
+    <h3>Who the pilot is not yet for</h3>
+    <p style="margin-bottom:14px">Plainly, so nobody joins under a wrong picture:</p>
+    <ul class="ticks">
+      <li><span><b>If your software is not Spectora or ISN,</b> your move runs on an export route or an individual assessment — some things may not move, and anything that cannot is named for you at review. If your case needs assessment, we will tell you before you commit to anything.</span></li>
+      <li><span><b>If you are counting on Spex in your inbox,</b> that is not this pilot. The pilot is Spex Live in the field — notes, proposed findings, report preparation. Reading and answering email, and Instant Reply, are not shipped in the pilot and are not promised here.</span></li>
+      <li><span><b>If you need a finished legal file before you start,</b> our Terms document is still being drafted and the Privacy page still awaits its legal review. Both are publication gates we will not skip.</span></li>
+      <li><span><b>If you want the Concierge service defined to the last hour,</b> its full service definition — the work, the hours, the response commitments, the exclusions — is written out in full before it can be bought. The summary on the Pricing page is the shape of it, not the contract.</span></li>
+    </ul>
+  </div>
+
+  <!-- founder note — above the form, as the desk-cleared page has it -->
+  <div class="note block-gap">
+    <div class="eyebrow">A note from the founder</div>
+    <p>I built Inspyx for myself first. I am a licensed home inspector and a truck driver, and the software on the market stopped my own start — too expensive, and too difficult to learn. So I built the software that would have saved it.</p>
+    <p>Now I inspect part-time with it, and I am opening it to a first group of inspectors before anyone else, because I want it proven by the people who do this work. If that is you, apply below. I will read it myself.</p>
+    <p class="sign"><b>Moises Avila</b><br>Founder, Inspyx · Licensed home inspector, part-time</p>
+  </div>
+
+  <!-- the application form (the form is the page's CTA) -->
+  <div class="card form-card block-gap" id="apply">
+    <div class="form-head">
+      <h3>Apply for the pilot</h3>
+      <p>Six required fields, plus one optional question. We take it from there.</p>
+    </div>
+    <form action="javascript:void(0)" onsubmit="return false;">
+      <div class="field"><label for="f-name">Name <span class="req" aria-hidden="true">*</span></label><input id="f-name" name="name" type="text" placeholder="Your name" autocomplete="name" required></div>
+      <div class="field"><label for="f-company">Company <span class="req" aria-hidden="true">*</span></label><input id="f-company" name="company" type="text" placeholder="Your company" autocomplete="organization" required></div>
+      <div class="field"><label for="f-phone">Phone <span class="req" aria-hidden="true">*</span></label><input id="f-phone" name="phone" type="tel" placeholder="(555) 012-3456" autocomplete="tel" required></div>
+      <div class="field"><label for="f-software">Current software <span class="req" aria-hidden="true">*</span></label><input id="f-software" name="software" type="text" placeholder="What you inspect with today — and anything you need brought over" required></div>
+      <div class="field"><label for="f-state">State licensed <span class="req" aria-hidden="true">*</span></label><input id="f-state" name="state" type="text" placeholder="State you're licensed in" required></div>
+      <div class="field"><label for="f-volume">Inspections per month <span class="req" aria-hidden="true">*</span></label><input id="f-volume" name="volume" type="number" min="0" max="500" placeholder="How many you run in a typical month" required></div>
+      <div class="field"><label for="f-pain">What's the hardest part of your reporting today? <span class="opt">(optional)</span></label><textarea id="f-pain" name="pain" placeholder="The part you would hand off first, if you could"></textarea></div>
+      <label class="checkline"><input type="checkbox" name="updates" value="yes"><span>Yes, email me the occasional Inspyx update. Optional — your application doesn't depend on it.</span></label>
+      <p class="condline"><b>Guarantee condition:</b> the promise — less time to a finished report — is measured against your starting numbers and applies to businesses Inspyx onboards — six months free or walk away if it doesn't happen; if you've paid and don't like it, your money back.</p>
+      <button class="btn" type="submit">Get early access</button>
+    </form>
+    <p class="form-privacy">We use what you send only to review your application and contact you about the pilot.</p>
+  </div>
+
+  </main>
+
+</div>
+
+<div class="wrap">
+  <footer>
+    <div class="foot-top">
+      <div>
+        <img class="flogo" src="assets/lockup-stacked-white-on-navy.svg" alt="Inspyx">
+        <p class="tagline">You inspect. Spex takes the notes.</p>
+      </div>
+      <nav class="flinks">
+        <a href="index.html">Home</a>
+        <a href="report.html">The Report</a>
+        <a href="switch.html">Switch to Inspyx</a>
+        <a href="your-data.html">Your Data Stays Yours</a>
+        <a href="reliability.html">Reliability</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="about.html">Our Story</a>
+        <a href="pilot.html">Pilot</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </nav>
+    </div>
+    <div class="base">
+      <span>© 2026 Inspyx LLC</span>
+      <a href="mailto:support@inspyx.com">support@inspyx.com</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* Founding-seat ledger renderer — populates every [data-ledger] count from the
+   single FOUNDING_LEDGER block at the top of this page. */
+(function(){
+  var L = window.FOUNDING_LEDGER || {placesTotal:25, claimed:0, applicationsIn:0, waiting:0, latestClaim:null, latestMoveIn:null};
+  function set(name, val){ document.querySelectorAll('[data-ledger="' + name + '"]').forEach(function(el){ el.textContent = val; }); }
+  set('claimed', L.claimed);
+  set('claimed2', L.claimed + ' of ' + L.placesTotal);
+  set('left', L.placesTotal - L.claimed);
+  set('applicationsIn', L.applicationsIn);
+  set('waiting', L.waiting);
+  document.querySelectorAll('[data-ledger-bar]').forEach(function(el){ el.style.width = (L.claimed / L.placesTotal * 100) + '%'; });
+  var feed = document.querySelector('[data-ledger-feed]');
+  var empty = document.querySelector('[data-ledger-feed-empty]');
+  var lines = [];
+  if (L.latestClaim) lines.push('Latest: a place claimed in <b>' + L.latestClaim.state + '</b> · ' + L.latestClaim.date);
+  if (L.latestMoveIn) lines.push('Latest move-in completed · ' + L.latestMoveIn.date);
+  if (feed && lines.length) {
+    feed.hidden = false; if (empty) empty.hidden = true;
+    feed.innerHTML = lines.map(function(t){ return '<div class="f-line">' + t + '</div>'; }).join('');
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!-- DES-007 DESIGN-C — preview build (founder-ordered 2026-11-04). Not published.
+     DES-007 switch architecture with the DES-006 Rev 1.2a migration wording
+     exactly as desk-corrected (DQA-WEB-003) — source-conditional, review-and-
+     confirm, never dropped silently. Restyled in direction C. Direction C's own
+     switching copy ("reads everything") was NOT carried: the corrected wording
+     governs. See DESIGN-NOTES-C.md. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Switch to Inspyx — Inspyx</title>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="nav">
+    <a class="logo" href="index.html"><img src="assets/lockup-horizontal-navy.svg" alt="Inspyx"></a>
+    <a class="btn small" href="pilot.html">Get early access</a>
+  </nav>
+</div>
+
+<div class="wrap">
+
+  <div class="page-head">
+    <div class="eyebrow">Switch to Inspyx</div>
+    <h1>Switching is our job. Not yours.</h1>
+    <p>The worst part of changing software is the move itself — rebuilding your profile, your templates, your history by hand. So we took that job too. Switching to Inspyx isn't a project you have to find a weekend for.</p>
+  </div>
+
+  <main>
+
+  <div class="cols4 block-gap">
+    <div class="card step-card"><div class="stepnum">1</div><p>You sign in yourself.</p></div>
+    <div class="card step-card"><div class="stepnum">2</div><p>We pull what your current software lets us reach — your profile, services, templates, contacts, and inspections.</p></div>
+    <div class="card step-card"><div class="stepnum">3</div><p>You review everything and confirm before the move is final. Anything that couldn't move is listed for you — never dropped silently.</p></div>
+    <div class="card step-card"><div class="stepnum">4</div><p>Access keys are revoked when we're done.</p></div>
+  </div>
+
+  <p class="fine-print block-gap">What moves depends on the software you use today. You see exactly what can come over for yours before anything starts — and anything that can't is reported to you at review, never dropped silently.</p>
+
+
+  <!-- PERSONALIZED MIGRATION CERTAINTY — what moves, source by source.
+       States grounded in the verified DES-006 record only: Spectora and ISN are
+       API-supported; HomeGauge and Horizon are export routes (partial); anything
+       unverified is marked "requires assessment" — never an automatic green. -->
+  <div class="card disp-card block-gap">
+    <h3>What moves, from the software you use today</h3>
+    <p style="margin-bottom:18px">The honest picture, before you apply — not after you have committed. “Supported” means our migration reaches it directly. “Needs export” means it comes across from a file your current software exports. “Requires assessment” means a person looks at your case before anyone promises anything.</p>
+    <table class="disp">
+      <tr class="disp-head"><th>Your software</th><th>Profile</th><th>Services</th><th>Templates</th><th>Inspection history</th><th>Photos</th><th>Client records</th></tr>
+      <tr><td class="src">Spectora</td><td data-col="Profile"><span class="st st-sup">Supported</span></td><td data-col="Services"><span class="st st-con">Conditional</span></td><td data-col="Templates"><span class="st st-con">Conditional</span></td><td data-col="Inspection history"><span class="st st-sup">Supported</span></td><td data-col="Photos"><span class="st st-con">Conditional</span></td><td data-col="Client records"><span class="st st-sup">Supported</span></td></tr>
+      <tr><td class="src">ISN</td><td data-col="Profile"><span class="st st-sup">Supported</span></td><td data-col="Services"><span class="st st-con">Conditional</span></td><td data-col="Templates"><span class="st st-con">Conditional</span></td><td data-col="Inspection history"><span class="st st-sup">Supported</span></td><td data-col="Photos"><span class="st st-con">Conditional</span></td><td data-col="Client records"><span class="st st-sup">Supported</span></td></tr>
+      <tr><td class="src">HomeGauge</td><td data-col="Profile"><span class="st st-con">Conditional</span></td><td data-col="Services"><span class="st st-ass">Requires assessment</span></td><td data-col="Templates"><span class="st st-exp">Needs export</span></td><td data-col="Inspection history"><span class="st st-exp">Needs export</span></td><td data-col="Photos"><span class="st st-exp">Needs export</span></td><td data-col="Client records"><span class="st st-con">Conditional</span></td></tr>
+      <tr><td class="src">Horizon</td><td data-col="Profile"><span class="st st-con">Conditional</span></td><td data-col="Services"><span class="st st-ass">Requires assessment</span></td><td data-col="Templates"><span class="st st-exp">Needs export</span></td><td data-col="Inspection history"><span class="st st-con">Conditional</span></td><td data-col="Photos"><span class="st st-exp">Needs export</span></td><td data-col="Client records"><span class="st st-ass">Requires assessment</span></td></tr>
+      <tr><td class="src">Something else</td><td data-col="Profile"><span class="st st-ass">Requires assessment</span></td><td data-col="Services"><span class="st st-ass">Requires assessment</span></td><td data-col="Templates"><span class="st st-ass">Requires assessment</span></td><td data-col="Inspection history"><span class="st st-ass">Requires assessment</span></td><td data-col="Photos"><span class="st st-ass">Requires assessment</span></td><td data-col="Client records"><span class="st st-ass">Requires assessment</span></td></tr>
+    </table>
+    <p class="disp-note">Photos are conditional even on supported sources: they move with the inspections they belong to, where the source exposes them. Services are conditional on the supported sources: your services and prices are read during your migration session, and confirmed with you at your review. Templates are conditional on every source: template conversion is not yet verified, so yours are confirmed account-by-account at review, before anything moves. <b>What we cannot guarantee:</b> that everything in your current software can move. What cannot move is named for you at review, before the move is final — never dropped silently, and never discovered by you afterwards.</p>
+  </div>
+
+  <div class="strip block-gap">
+    <p>For the move, you fill out nothing. <span>Not a form, not a spreadsheet — not even your name.</span></p>
+    <p style="margin-top:14px;font-size:15.5px;color:#B9CBDD">That promise is about the migration. Joining the pilot comes first, and it starts with the application on the Pilot page — that part is yours to fill in.</p>
+  </div>
+
+  <div class="card tint block-gap">
+    <h3>Horizon inspectors: you have to move anyway.</h3>
+    <p>Your vendor is retiring your software on 15 December 2026. Move once — to a home that treats your data as yours.</p>
+  </div>
+
+  <a class="link-card block-gap" href="your-data.html">
+    <div class="card">
+      <h3>Why the new home is different →</h3>
+      <p>Your clients are your clients. Never sold, never marketed to, never a cut taken. See the data promise.</p>
+    </div>
+  </a>
+
+  </main>
+
+  <div class="cta-band">
+    <a class="btn light" href="pilot.html">Get early access</a>
+  </div>
+
+</div>
+
+<div class="wrap">
+  <footer>
+    <div class="foot-top">
+      <div>
+        <img class="flogo" src="assets/lockup-stacked-white-on-navy.svg" alt="Inspyx">
+        <p class="tagline">You inspect. Spex takes the notes.</p>
+      </div>
+      <nav class="flinks">
+        <a href="index.html">Home</a>
+        <a href="report.html">The Report</a>
+        <a href="switch.html">Switch to Inspyx</a>
+        <a href="your-data.html">Your Data Stays Yours</a>
+        <a href="reliability.html">Reliability</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="about.html">Our Story</a>
+        <a href="pilot.html">Pilot</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </nav>
+    </div>
+    <div class="base">
+      <span>© 2026 Inspyx LLC</span>
+      <a href="mailto:support@inspyx.com">support@inspyx.com</a>
+    </div>
+  </footer>
+</div>
+
+</body>
+</html>

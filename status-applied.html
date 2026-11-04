@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<!-- DES-007 DESIGN-C — STATUS PAGE, STATE SPECIMEN: APPLIED (DQA-WEB-015).
+     One of the state specimens for the post-application surface. The base
+     specimen (status.html) shows the QUALIFIED state; this file shows
+     APPLIED: the deposit control exists ONLY in the qualified state, so
+     this page carries no deposit panel and no deposit control anywhere,
+     and the next-actions panel shows only the review-wait explanation.
+     State → UI rendering rules are written in status.html's specimen
+     comment block and in DES-008-CORRECTIONS.md (closing round).
+     Reached only by the personal link in the application confirmation. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Your place in the founding cohort — Inspyx</title>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<!-- ============================================================
+     APPLICANT STATUS — SPECIMEN DATA ISLAND, STATE: APPLIED.
+     Step 7 replaces this block with the applicant's real record,
+     rendered server-side from the founding-seat ledger.
+     ============================================================ -->
+<script>
+window.APPLICANT_STATUS = {
+  applicationId: "[application number]",
+  received: "[date received]",
+  state: "applied",              /* applied | qualified | seat held | awaiting onboarding */
+  position: "[n]",
+  ahead: "[a]",
+  behind: "[b]",
+  claimed: "[n]",
+  placesTotal: 25,
+  movement: [                    /* format specimens — real entries are events with real dates */
+    { text: "Two inspectors moved in", date: "[date]", specimen: true },
+    { text: "A place claimed in [ST]", date: "[date]", specimen: true }
+  ],
+  opsLine: { week: "[week of — entered by a person, dated]", text: "[what the team is doing this week: reviews read, move-ins in progress]" }
+};
+</script>
+
+<div class="wrap">
+  <nav class="nav">
+    <a class="logo" href="index.html"><img src="assets/lockup-horizontal-navy.svg" alt="Inspyx"></a>
+    <a class="btn small" href="pilot.html">Get early access</a>
+  </nav>
+</div>
+
+<div class="wrap">
+
+  <div class="page-head status-head">
+    <div class="eyebrow">Application status</div>
+    <h1>Your place in the founding cohort</h1>
+    <p class="sub">Application <span data-st="applicationId">[application number]</span> · received <span data-st="received">[date received]</span>. This page is yours — it is reached only by the personal link in your confirmation, and it shows your real position, from the same ledger as the public count.</p>
+    <p style="margin-top:14px"><span class="spec-wm">Specimen — the layout and wording are final; the bracketed values are format specimens</span></p>
+    <p style="margin-top:8px"><span class="spec-wm">Access control is a build requirement — this specimen shows layout only</span></p>
+  </div>
+
+  <main>
+
+  <!-- WHERE YOU STAND — position, front, behind (Move 7 / O2) -->
+  <div class="card block-gap" style="margin-top:34px">
+    <h3>Where you stand</h3>
+    <div class="kv-rows">
+      <div class="kv-row"><span class="k">Inspectors ahead of you</span><span class="v" data-st="ahead">[a]</span></div>
+      <div class="kv-row"><span class="k">Inspectors who applied after you</span><span class="v" data-st="behind">[b]</span></div>
+      <div class="kv-row"><span class="k">Places claimed</span><span class="v"><span data-st="claimed">[n]</span> of 25</span></div>
+      <div class="kv-row"><span class="k">How places move</span><span class="v">In order, a few at a time</span></div>
+    </div>
+    <div class="bar"><div class="fill" data-st-bar style="width:0%"></div></div>
+    <p class="steps-note">Applications are read in the order they arrive, in a weekly review. One published exception — and it changes no one's place in line: each founding member holds one Golden Ticket, which gives one named colleague the founding rate through the same application, while places remain. A ticket creates no place outside the 25 — a colleague who claims through one counts against the 25 like any other member.</p>
+    <p class="steps-note">You are not at the back of anything — the cohort fills behind you while your place is read in order.</p>
+  </div>
+
+  <!-- YOUR STATE — APPLIED: Step 1 current; nothing else is open yet -->
+  <div class="card block-gap">
+    <h3>Your state</h3>
+    <div class="state-track" style="margin-top:18px">
+      <div class="stt now"><span class="sn">Step 1 — you are here</span>Applied</div>
+      <div class="stt"><span class="sn">Step 2</span>Qualified</div>
+      <div class="stt"><span class="sn">Step 3</span>Seat held</div>
+      <div class="stt"><span class="sn">Step 4</span>Awaiting onboarding</div>
+    </div>
+    <p class="steps-note">Applied means your application is in, in the order it arrived. A person reads every application in a weekly review — nobody is screened by a machine, and nobody is read out of order.</p>
+  </div>
+
+  <!-- YOUR NEXT ACTIONS — APPLIED STATE: the review-wait explanation ONLY.
+       No window-preference control, no deposit panel, no deposit control:
+       those open only after qualification (DQA-WEB-015). -->
+  <div class="card block-gap">
+    <h3>Your next actions</h3>
+    <p style="margin-top:6px"><b>None, yet — and that is deliberate.</b> Your application is read in a weekly review, in the order applications arrive. While you wait, your application itself holds your place in line: nothing is asked of you, and no one can take your place by paying or by asking.</p>
+    <p style="margin-top:10px">When your application has been read, this page changes: your state becomes “qualified,” and the steps that open then — choosing your onboarding window, and holding your seat — appear here. If the timing is not right for the founding cohort, we tell you that plainly here too.</p>
+  </div>
+
+  <!-- MOVEMENT — verified material events only (O4); zero state hides the feed -->
+  <div class="card block-gap" data-movement-card>
+    <h3>Movement</h3>
+    <p class="steps-note" style="margin-top:4px">What we are doing this week — <span data-st="opsWeek">[week of — entered by a person, dated]</span>: <span data-st="opsText">[what the team is doing this week]</span></p>
+    <div class="feed" data-movement-feed style="margin-top:14px"></div>
+    <p class="steps-note">Entries are events — a move-in completed, a place claimed — with their real dates. If nothing has moved, this section shows its last real entry with its date. It is never refreshed to look busy.</p>
+  </div>
+
+  </main>
+
+</div>
+
+<div class="wrap">
+  <footer>
+    <div class="foot-top">
+      <div>
+        <img class="flogo" src="assets/lockup-stacked-white-on-navy.svg" alt="Inspyx">
+        <p class="tagline">You inspect. Spex takes the notes.</p>
+      </div>
+      <nav class="flinks">
+        <a href="index.html">Home</a>
+        <a href="report.html">The Report</a>
+        <a href="switch.html">Switch to Inspyx</a>
+        <a href="your-data.html">Your Data Stays Yours</a>
+        <a href="reliability.html">Reliability</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="about.html">Our Story</a>
+        <a href="pilot.html">Pilot</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </nav>
+    </div>
+    <div class="base">
+      <span>© 2026 Inspyx LLC</span>
+      <a href="mailto:support@inspyx.com">support@inspyx.com</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* Status renderer — fills the specimen tokens from APPLICANT_STATUS. At Step 7
+   the same fields arrive from the founding-seat ledger, per applicant. */
+(function(){
+  var S = window.APPLICANT_STATUS || {};
+  function set(name, val){ document.querySelectorAll('[data-st="' + name + '"]').forEach(function(el){ el.textContent = val; }); }
+  set('applicationId', S.applicationId); set('received', S.received);
+  set('ahead', S.ahead); set('behind', S.behind); set('claimed', S.claimed);
+  set('opsWeek', S.opsLine && S.opsLine.week); set('opsText', S.opsLine && S.opsLine.text);
+  var feed = document.querySelector('[data-movement-feed]');
+  var card = document.querySelector('[data-movement-card]');
+  if (feed) {
+    if (S.movement && S.movement.length) {
+      feed.innerHTML = S.movement.map(function(m){
+        return '<div class="f-line"><b>' + m.text + '</b> · ' + m.date + (m.specimen ? ' <span class="spec-wm" style="margin-left:8px">Format specimen</span>' : '') + '</div>';
+      }).join('');
+    } else if (card) { card.style.display = 'none'; }  /* zero state: the feed hides */
+  }
+})();
+</script>
+
+</body>
+</html>

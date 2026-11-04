@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<!-- DES-007 DESIGN-C — preview build (founder-ordered 2026-11-04). Not published.
+     DES-007 pricing architecture + desk fixes (DQA-WEB-004: "What the $69
+     founding price includes" + printed comparison assumptions), restyled in
+     direction C and re-scoped: the inbox/Instant Reply includes item is OUT
+     (not a pilot feature); the guarantee panel promises report time only.
+     Only competitor figures used: Spectora, verified 2026-11-03. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing — Inspyx</title>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="nav">
+    <a class="logo" href="index.html"><img src="assets/lockup-horizontal-navy.svg" alt="Inspyx"></a>
+    <a class="btn small" href="pilot.html">Get early access</a>
+  </nav>
+</div>
+
+<div class="wrap">
+
+  <div class="page-head">
+    <div class="eyebrow">Pricing</div>
+    <h1>$69 a month. One price, everything in.</h1>
+  </div>
+
+  <main>
+
+  <div class="card price-card block-gap">
+    <div>
+      <div class="price-big">$69<span>/month</span></div>
+    </div>
+    <div>
+      <h3>Founding pricing — the first 25 accounts.</h3>
+      <p>$69/mo or $649/yr, theirs permanently. "Everything in" means the whole product for one inspector at that one price — the app, the report, and Spex. The only separate charges are extra seats ($59/mo each) and the Starter per-report option ($9 per report, capped at the founding monthly price), each in its own row on this page. After the first 25 accounts, standard pricing is $84.95/mo.</p>
+    </div>
+  </div>
+
+  <div class="card block-gap">
+    <h3>What the $69 founding price includes</h3>
+    <ul class="checks">
+      <li>The full app — inspections, templates, your day in one place</li>
+      <li>The report — the document your clients and agents judge you by</li>
+      <li>Spex Live, your voice co-inspector in the field</li>
+      <li>A done-for-you move from your current software</li>
+    </ul>
+  </div>
+
+
+  <!-- WHAT YOUR CURRENT SOFTWARE RUNS YOU — visitor-computed anchor (Move 1).
+       Arithmetic only, from the verified published Spectora figures:
+       $109/mo base + $99/mo per added inspector + $4 per published inspection
+       (with Advanced). Static default state = the verified 25-inspection
+       example (1 inspector total, 25 inspections, Advanced on -> ~$209/mo). -->
+  <div class="card calc block-gap">
+    <h3>What does your current software actually run you?</h3>
+    <p style="margin-bottom:20px">Do not take our comparison’s word for it — run your own numbers. Spectora’s published prices, applied to the way you actually work:</p>
+    <div class="calc-grid">
+      <div class="cin">
+        <label for="calc-insp">Published inspections a month</label>
+        <input type="number" id="calc-insp" min="0" max="500" value="25">
+        <div class="hint">Reports you publish in a typical month.</div>
+      </div>
+      <div class="cin">
+        <label for="calc-seats">Added inspectors on your account</label>
+        <input type="number" id="calc-seats" min="0" max="50" value="0">
+        <div class="hint">Beyond the first inspector — Spectora charges $99 a month for each.</div>
+      </div>
+      <div>
+        <label class="switchline"><input type="checkbox" id="calc-adv" checked><span><b>Spectora Advanced is on.</b> Advanced is the optional extra that carries the $4 per published inspection charge. Without it, there is no per-inspection charge — and none of what Advanced adds.</span></label>
+      </div>
+    </div>
+    <div class="calc-out">
+      <div class="co"><div class="k">Spectora, at your numbers</div><div class="v">≈ $<span id="calc-spec-mo">209</span><span class="sfx">/mo</span></div><div class="s">≈ $<span id="calc-spec-yr">2,508</span> a year</div></div>
+      <div class="co"><div class="k">Inspyx — Founding</div><div class="v">$69<span class="sfx">/mo</span></div><div class="s">$69 a month, or $649 a year on the annual plan — the first 25, locked for good</div></div>
+      <div class="co"><div class="k">Inspyx Ongoing Concierge</div><div class="v">$249<span class="sfx">/mo</span></div><div class="s">Software included; the service is below</div></div>
+    </div>
+    <p class="fine-print" style="margin-top:16px;">Spectora figures verified 2026-11-03 against Spectora’s published pricing: $109/mo base, $99/mo per added inspector, $4 per published inspection with Advanced on. Your total is those published prices applied to the numbers you entered — no other charges of theirs are counted, and none of ours are hidden: Inspyx charges nothing per published inspection.</p>
+  </div>
+
+  <div class="card cmp-card block-gap">
+    <h3>The honest comparison</h3>
+    <table class="cmp">
+      <tr><th></th><th class="us">Inspyx — Founding</th><th>Spectora</th></tr>
+      <tr><td>Base price</td><td class="us">$69/mo</td><td>$109/mo</td></tr>
+      <tr><td>Each added inspector</td><td class="us">$59/mo</td><td>$99/mo</td></tr>
+      <tr><td>Per published inspection</td><td class="us">Included</td><td>$4 (Advanced)</td></tr>
+      <tr><td><b>Solo inspector, 25 published inspections a month, with Advanced on</b></td><td class="us"><b>$69/mo</b></td><td><b>≈ $209/mo</b></td></tr>
+    </table>
+    <p class="fine-print" style="margin-top:16px;">Spectora figures verified 2026-11-03 against Spectora's published pricing. The ≈ $209 total assumes Advanced — an optional extra — at 25 published inspections: $109/mo base + 25 × $4. Without Advanced, Spectora's base alone is $109/mo. Inspyx charges nothing per published inspection.</p>
+  </div>
+
+  <div class="guarantee-panel block-gap">
+    <h3>The guarantee, with its conditions in the open</h3>
+    <p><b>The promise:</b> less time to a finished report — measured against your own starting numbers, written down with you when you start.</p>
+    <p><b>If it doesn't happen</b> on an inspection business Inspyx onboarded: you choose — six months free, or walk away. We can only guarantee a setup we did and verified ourselves; self-serve setup isn't covered.</p>
+    <p><b>If you've paid</b> and you don't like it, you get your money back. The money-back guarantee stands, in every phase.</p>
+    <p><b>What it is not:</b> not a promise of a specific number of minutes or a specific percentage. Every plan starts with a 30-day free trial — the one free period; nothing stacks on it.</p>
+    <div class="worked" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.35)">
+      <div class="w-lbl" style="color:#9CC0DE">How the measurement works — a worked example, figures illustrative</div>
+      <p style="color:#C4D6E6">Say your starting number, written down with you on day one, is <b>3 hours and 10 minutes</b> a report. The clock starts when an inspection ends and stops when the finished report is ready to send. Your trial reports are timed the same way. If the time has not come down, the remedy above applies — six months free, or walk away. The figures here are an example; the number that counts is your own, recorded before you start.</p>
+    </div>
+  </div>
+
+  <div class="card block-gap">
+    <h3>Onboarding</h3>
+    <p>Onboarding is free and self-serve. The optional professional done-for-you onboarding is $29 — and free either way for the first 25 accounts.</p>
+  </div>
+
+  <!-- INSPYX ONGOING CONCIERGE — the premium tier, renamed per the desk's cold
+       test (the founder's clarity rule). $249/mo ALL-IN: the software is
+       included; it is NOT $249 on top of $69. Copy sells the service, never a
+       universal price anchor — per-visitor truth lives in the calculator. -->
+  <div class="card block-gap">
+    <div class="eyebrow">Optional — a service, not the software</div>
+    <h3>Inspyx Ongoing Concierge</h3>
+    <p style="font-size:18px;color:var(--ink)"><b>Monthly hands-on service after onboarding — $249 per month — Inspyx software included.</b></p>
+    <p style="margin-top:12px">Your initial move into Inspyx is free under the founding offer, whether or not you choose Concierge. This is not the move, and it is not onboarding. This is us, in your business, every month — for the inspector who wants a person in his corner, not just a product.</p>
+    <ul class="checks" style="margin-top:18px">
+      <li>Your template and comment library rebuilt and tuned by hand, after the move — beyond the as-is migration everyone gets</li>
+      <li>Your first live report built together with the founder, on the call</li>
+      <li>A priority line — direct access to the founder, not a ticket queue</li>
+      <li>Your 30-day review done with you: your report time against the starting numbers we wrote down together</li>
+      <li>A founding advisory seat — first sight of what is being built, and a standing say in the order it ships</li>
+    </ul>
+    <p style="margin-top:16px">$249 a month is the whole bill — the plan is included, not added to it. Concierge is a service, month to month: stop it any time, and your founding $69 rate stays yours. The rate is the lock; the service is the help. Concierge is limited by the founder’s own calendar — when the cohort’s places are claimed, it closes with them.</p>
+    <p style="margin-top:12px">$249 is one inspector's whole bill — the software and the Concierge service together. Extra inspectors on the account are separate, at the seat prices above; the $9-per-report Starter plan is a different plan and is not included.</p>
+  </div>
+
+  <div class="card faq-mini block-gap">
+    <h3>Your rate, in writing</h3>
+    <p>Founding members hold a numbered <a href="pilot.html#certificate" style="color:var(--navy);font-weight:600">Founding Rate Certificate</a> — the durable record of the $69 rate and its conditions, issued when you hold your seat.</p>
+  </div>
+
+  <div class="card faq-mini block-gap">
+    <h3>What if I leave?</h3>
+    <p>Your inspections, reports, templates and client records are yours, and they stay yours if you go — the exit is stated in full on <a href="your-data.html#leaving" style="color:var(--navy);font-weight:600">Your Data Stays Yours</a>, before you ever join.</p>
+    <p style="margin-top:10px">And who the pilot is <a href="pilot.html#limits" style="color:var(--navy);font-weight:600">not yet for</a> is stated just as plainly, on the Pilot page.</p>
+  </div>
+
+  </main>
+
+  <div class="cta-band">
+    <a class="btn light" href="pilot.html">Get early access</a>
+  </div>
+
+</div>
+
+<div class="wrap">
+  <footer>
+    <div class="foot-top">
+      <div>
+        <img class="flogo" src="assets/lockup-stacked-white-on-navy.svg" alt="Inspyx">
+        <p class="tagline">You inspect. Spex takes the notes.</p>
+      </div>
+      <nav class="flinks">
+        <a href="index.html">Home</a>
+        <a href="report.html">The Report</a>
+        <a href="switch.html">Switch to Inspyx</a>
+        <a href="your-data.html">Your Data Stays Yours</a>
+        <a href="reliability.html">Reliability</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="about.html">Our Story</a>
+        <a href="pilot.html">Pilot</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </nav>
+    </div>
+    <div class="base">
+      <span>© 2026 Inspyx LLC</span>
+      <a href="mailto:support@inspyx.com">support@inspyx.com</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* TCO calculator — arithmetic from the verified published Spectora figures
+   ($109 base + $99 per added inspector + $4 per published inspection with
+   Advanced on). Client-side only; computes from the visitor's own inputs. */
+(function(){
+  var insp = document.getElementById('calc-insp'),
+      seats = document.getElementById('calc-seats'),
+      adv = document.getElementById('calc-adv'),
+      mo = document.getElementById('calc-spec-mo'),
+      yr = document.getElementById('calc-spec-yr');
+  if (!insp || !mo) return;
+  function fmt(n){ return n.toLocaleString('en-US'); }
+  function run(){
+    var i = Math.max(0, parseInt(insp.value, 10) || 0),
+        s = Math.max(0, parseInt(seats.value, 10) || 0),
+        total = 109 + 99 * s + (adv.checked ? 4 * i : 0);
+    mo.textContent = fmt(total);
+    yr.textContent = fmt(total * 12);
+  }
+  [insp, seats].forEach(function(el){ el.addEventListener('input', run); });
+  adv.addEventListener('change', run);
+  run();
+})();
+</script>
+</body>
+</html>
