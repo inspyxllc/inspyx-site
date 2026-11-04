@@ -710,8 +710,16 @@ table.disp tr:last-child td{border-bottom:none}
    field on page 1, the application completed on page 2 (apply.html). */
 
 /* slim single-column hero (no visual stack) */
-.hero-slim{padding:84px 0 8px; max-width:840px}
+.hero-slim{padding:84px 0 8px; max-width:none}
 .hero-slim .lede{font-size:20px; margin-top:24px; max-width:34em}
+/* founder order 2026-11-04: the headline runs HORIZONTAL — one line across
+   the full content width, Linear-style. Sized fluidly off the wrap width
+   (wrap content = min(1180px, 100vw) - 56px); the sentence measures
+   ~12.3em at this weight/tracking, so the /13.4 divisor keeps headroom
+   at every width and the 88px cap holds the line inside the 1124px wrap.
+   Below 760px the nowrap comes off (see the 760 block) and the headline
+   wraps naturally to two lines. */
+.hero-slim h1{font-size:clamp(40px, calc((100vw - 56px)/13.4), 88px); white-space:nowrap}
 
 /* ease demonstration — three beats, specimen cards, no report imagery */
 .ease-seq{display:grid; grid-template-columns:repeat(3,1fr); gap:22px}
@@ -804,6 +812,7 @@ a.door-line .go{font-size:15px; font-weight:600; color:var(--navy); white-space:
 }
 @media (max-width:760px){
   .hero-slim{padding-top:48px}
+  .hero-slim h1{white-space:normal}
   .email-entry{padding:28px 24px}
   .email-row{flex-direction:column}
   .email-row input{flex:none; width:100%}
