@@ -13,6 +13,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inspyx — You inspect. Spex reports.</title>
 <link rel="stylesheet" href="site.css">
+
+<style>
+/* ---- SPEX PEEK (founder order 2026-11-04): Spex peeks over the email
+     card's top-right corner — head, magnifier and waving hand, clipped flush
+     at the card's top edge. The clip layer is a SIBLING of the glass card,
+     outside its backdrop-filter stacking context, so the multiply blend
+     drops the artwork's white ground cleanly — no white box. ---- */
+.peek-sec{position:relative}
+.peek-clip{position:absolute; left:0; right:0; top:-40px; height:48px; overflow:hidden; pointer-events:none}
+.spex-peek-img{position:absolute; top:0; right:-30px; width:118px; height:auto; mix-blend-mode:multiply;
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 18%, #000 88%, transparent);
+  mask-image:linear-gradient(90deg, transparent, #000 18%, #000 88%, transparent)}
+@media (max-width:760px){
+  .peek-clip{top:-30px; height:38px}
+  .spex-peek-img{width:88px; right:-8px}
+}
+</style>
 </head>
 <body>
 
@@ -54,7 +71,8 @@ window.FOUNDING_LEDGER = {
        Every application-entry link on this page (nav CTA, footer Pilot
        link) routes HERE first (#email-entry); apply.html is never the
        entry point from Home. -->
-  <section style="padding-top:8px" id="email-entry">
+  <section style="padding-top:8px" id="email-entry" class="peek-sec">
+    <div class="peek-clip"><img class="spex-peek-img" src="assets/spex-peek.webp" alt="" aria-hidden="true"></div>
     <div class="card email-entry">
       <h3>Start with your email.</h3>
       <p>One field. This starts your application — you finish it on the next page. Nothing else is asked here.</p>
