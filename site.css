@@ -3,6 +3,9 @@
    Language: DIRECTION C layout — RESKINNED black-and-white, Apple-style
    (founder direct order 2026-11-04): white ground, #F5F5F7 alt surfaces,
    black bands/buttons, light footer with the black One Line lockup.
+   Finish: LIQUID GLASS (founder direct order 2026-11-04) — frosted
+   translucent surfaces, specular edges, layered float shadows; the
+   closing section of this file carries the governing finish layer.
    Architecture: DES-007 (desk-cleared):
    page set/order, header = One Line logo + ONE primary CTA,
    light footer with the 10-page link set, base text #6E6E73
@@ -13,10 +16,10 @@
   --navy:#000000; --deep:#1D1D1F; --ink:#1D1D1F;
   --ink-soft:#424245; --ink-faint:#6E6E73;
   --warm:#FFFFFF; --cream:#F5F5F7;
-  --glass:linear-gradient(180deg, rgba(255,255,255,.92), rgba(245,245,247,.78));
-  --glass-border:#E8E8ED;
-  --shadow:0 24px 60px -24px rgba(0,0,0,.16), 0 4px 16px -6px rgba(0,0,0,.07);
-  --shadow-sm:0 10px 30px -14px rgba(0,0,0,.14);
+  --glass:linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.46));
+  --glass-border:rgba(255,255,255,.65);
+  --shadow:0 24px 60px -24px rgba(0,0,0,.20), 0 4px 16px -6px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.05);
+  --shadow-sm:0 12px 28px -12px rgba(0,0,0,.16), 0 0 0 1px rgba(0,0,0,.05);
   --radius:28px;
   --band-bg:#000000;
 }
@@ -24,7 +27,16 @@
 html{scroll-behavior:smooth}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  color:var(--ink); background:var(--warm);
+  color:var(--ink);
+  /* liquid-glass ground: soft monochrome gradient + two subtle gray
+     radial glows, fixed so the frosted surfaces have depth to play
+     against as the page scrolls. Monochrome only. */
+  background:
+    radial-gradient(1200px 760px at 86% -10%, rgba(0,0,0,.085), rgba(0,0,0,0) 62%),
+    radial-gradient(1000px 720px at -12% 24%, rgba(0,0,0,.07), rgba(0,0,0,0) 62%),
+    radial-gradient(1150px 880px at 50% 118%, rgba(0,0,0,.06), rgba(0,0,0,0) 64%),
+    linear-gradient(180deg, #FFFFFF 0%, #F5F5F7 52%, #FFFFFF 100%);
+  background-attachment:fixed, fixed, fixed, fixed;
   -webkit-font-smoothing:antialiased; line-height:1.5;
 }
 a{text-decoration:none;color:inherit}
@@ -802,4 +814,154 @@ a.door-line .go{font-size:15px; font-weight:600; color:var(--navy); white-space:
   a.door-line{flex-direction:column; align-items:flex-start; gap:4px; padding:18px 22px}
   .spec-note{padding:26px 24px}
   .carry-note{padding:24px 22px}
+}
+
+/* ============================================================
+   LIQUID GLASS FINISH — founder direct order 2026-11-04 (no desk)
+   Apple-style glass inside the black-and-white palette: frosted
+   translucent surfaces, a specular highlight on every top edge,
+   layered soft shadows so panels float over the ground. Palette
+   stays the nine monochrome values plus white/black alphas of
+   them (the button gradient's #3A3A3C/#48484A are the founder-
+   approved black-glass stops). No layout, copy, or structure
+   changes — this layer only re-skins surfaces declared above.
+   Every backdrop-filter carries the -webkit- prefix and sits on
+   an rgba background, so browsers without backdrop-filter still
+   render the same surfaces, simply unfrosted.
+   ============================================================ */
+
+/* floating nav — true glass pill */
+.nav{
+  background:rgba(255,255,255,.62);
+  -webkit-backdrop-filter:blur(20px) saturate(160%); backdrop-filter:blur(20px) saturate(160%);
+  border:1px solid rgba(0,0,0,.06);
+  box-shadow:0 18px 40px -18px rgba(0,0,0,.28), 0 4px 14px -6px rgba(0,0,0,.10),
+    inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+/* cards & panels — translucent white glass, full frost */
+.card{
+  -webkit-backdrop-filter:blur(18px) saturate(150%); backdrop-filter:blur(18px) saturate(150%);
+  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 0 rgba(0,0,0,.04);
+}
+a.door, a.door-line{
+  -webkit-backdrop-filter:blur(18px) saturate(150%); backdrop-filter:blur(18px) saturate(150%);
+}
+.doc-card{
+  background:linear-gradient(180deg, rgba(255,255,255,.74), rgba(255,255,255,.56));
+  border:1px solid rgba(255,255,255,.65);
+  -webkit-backdrop-filter:blur(18px) saturate(150%); backdrop-filter:blur(18px) saturate(150%);
+}
+.scope-card, .carry-note{
+  background:linear-gradient(180deg, rgba(255,255,255,.68), rgba(255,255,255,.52));
+  border:1px solid rgba(255,255,255,.6);
+  box-shadow:0 10px 26px -14px rgba(0,0,0,.16), 0 0 0 1px rgba(0,0,0,.05),
+    inset 0 1px 0 rgba(255,255,255,.9);
+  -webkit-backdrop-filter:blur(14px) saturate(145%); backdrop-filter:blur(14px) saturate(145%);
+}
+
+/* primary CTA — black glass: gradient body, specular top edge */
+.btn{
+  background:linear-gradient(180deg, #3A3A3C, #000000);
+  box-shadow:0 14px 28px -10px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.25);
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.btn:hover{
+  background:linear-gradient(180deg, #48484A, #1D1D1F);
+  box-shadow:0 18px 32px -10px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.38);
+  transform:translateY(-1px);
+}
+/* secondary / ghost — light glass pill */
+.btn.light{
+  background:rgba(255,255,255,.14);
+  -webkit-backdrop-filter:blur(10px) saturate(140%); backdrop-filter:blur(10px) saturate(140%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35);
+}
+.btn.light:hover{background:rgba(255,255,255,.22); transform:translateY(-1px)}
+
+/* black panels — black glass: radial sheen top-left over #000 */
+.band, .cta-band, .strip, .elsewhere, .guarantee-panel, .note, .deposit-box{
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.14), rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0) 42%),
+    #000000;
+  box-shadow:0 34px 70px -30px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.deposit-box{box-shadow:0 18px 36px -18px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.18)}
+.band .step{
+  background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.18);
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+}
+/* the white panel inside the black band reads as glass too */
+.g-panel{
+  background:linear-gradient(180deg, rgba(255,255,255,.97), rgba(255,255,255,.90));
+  border:1px solid rgba(255,255,255,.7);
+  box-shadow:0 24px 50px -20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,1);
+  -webkit-backdrop-filter:blur(14px) saturate(140%); backdrop-filter:blur(14px) saturate(140%);
+}
+
+/* inputs — glass inset: translucent fill, inner shadow, hairline */
+.field input, .field textarea, .email-row input, .calc .cin input[type=number]{
+  background:rgba(255,255,255,.7);
+  border:1px solid rgba(0,0,0,.16);
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.55);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+}
+.field input:focus, .field textarea:focus, .email-row input:focus, .calc .cin input[type=number]:focus{
+  border-color:#1D1D1F;
+  box-shadow:0 0 0 4px rgba(0,0,0,.08), inset 0 2px 6px rgba(0,0,0,.05);
+}
+
+/* chips & labels — light glass pills */
+.spec-tag, .spec-wm, .st, .pilot-invite .fact{
+  background:rgba(255,255,255,.55);
+  -webkit-backdrop-filter:blur(10px) saturate(140%); backdrop-filter:blur(10px) saturate(140%);
+  border:1px solid rgba(0,0,0,.12);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85), 0 2px 8px -2px rgba(0,0,0,.10);
+}
+.st-sup{border-color:rgba(0,0,0,.30)}
+.st-con{border-color:rgba(0,0,0,.38)}
+.st-exp{border-color:rgba(0,0,0,.30)}
+.st-ass{border-color:rgba(0,0,0,.30)}
+
+/* small black elements take the same black-glass gradient */
+.stepnum, .beat .bnum, .day-row .tick,
+.note-card .approve, .demo-card .approve, .ease-seq .beat .approve{
+  background:linear-gradient(180deg, #3A3A3C, #000000);
+  box-shadow:0 8px 18px -6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.bar{background:rgba(0,0,0,.10); box-shadow:inset 0 1px 3px rgba(0,0,0,.18)}
+.bar .fill{background:linear-gradient(90deg, #3A3A3C, #000000)}
+
+/* inner translucent panels — lighter frost + specular edge */
+.calc-out, .state-track .stt, .choice-list label, .chapter .plain-visual,
+.beat .wrong, .beat .fixed, .tint{
+  -webkit-backdrop-filter:blur(10px) saturate(140%); backdrop-filter:blur(10px) saturate(140%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
+}
+.worked, .owed, .spec-note{
+  -webkit-backdrop-filter:blur(10px) saturate(140%); backdrop-filter:blur(10px) saturate(140%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
+}
+.cert{
+  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,1), inset 0 0 0 1px rgba(255,255,255,.5);
+  -webkit-backdrop-filter:blur(12px) saturate(140%); backdrop-filter:blur(12px) saturate(140%);
+}
+
+/* footer — light glass panel, black lockup unchanged */
+footer{
+  background:linear-gradient(180deg, rgba(245,245,247,.80), rgba(245,245,247,.64));
+  -webkit-backdrop-filter:blur(18px) saturate(150%); backdrop-filter:blur(18px) saturate(150%);
+  border:1px solid rgba(255,255,255,.6);
+  box-shadow:0 24px 50px -30px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.04),
+    inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+/* reduced-transparency systems get the solid fallback */
+@media (prefers-reduced-transparency: reduce){
+  .nav, .card, a.door, a.door-line, .doc-card, .scope-card, .carry-note, footer{
+    background:#FFFFFF; -webkit-backdrop-filter:none; backdrop-filter:none;
+  }
+  footer{background:#F5F5F7}
 }
