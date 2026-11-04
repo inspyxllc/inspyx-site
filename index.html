@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<!-- DES-007 DESIGN-C — preview build (founder-ordered 2026-11-04). Not published.
-     Direction C language + story on the DES-007 pilot architecture.
-     Re-scoped per FD-MVP-FEATURE-2026-11-03: the pilot story centers SPEX LIVE,
-     the voice co-inspector; the guarantee promises ONE thing — less time to a
-     finished report. No testimonials section (founder withdrew it 2026-11-03);
-     the demonstration sits in its place. See DESIGN-NOTES-C.md. -->
+<!-- DES-009 DESIGN-D — preview build (founder-ordered 2026-11-04). Not published.
+     RESTRUCTURE of the DES-008 Home per the founder's direction the same day:
+     the report leaves Home — every report photo and every report section is
+     gone (the Report page carries all of it); Home demonstrates how EASY the
+     Spex companion is (three beats: say it → Spex writes it → tap approve);
+     entry is Linear-style — one email field here, the application completed
+     on page 2 (apply.html). Structure and dispositions: STRUCTURE.md.
+     design-c/ remains the desk-cleared DES-008 record, untouched. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -16,12 +18,11 @@
 
 <!-- ============================================================
      FOUNDING-SEAT LEDGER — the single source of truth for every
-     count on this page (cohort strip, claims feed). Step 7 build
-     obligation: this block is generated server-side from the
-     application store (one authoritative ledger governing claims,
-     certificates, deposits, transfers and queue movement), so the
-     public page and the store can never disagree. Values below are
-     the truthful opening state: no applications have been taken.
+     count on this page (cohort strip). Step 7 build obligation:
+     generated server-side from the application store (one
+     authoritative ledger governing claims, certificates, deposits,
+     transfers and queue movement). Values below are the truthful
+     opening state: no applications have been taken.
      ============================================================ -->
 <script>
 window.FOUNDING_LEDGER = {
@@ -37,98 +38,97 @@ window.FOUNDING_LEDGER = {
 <div class="wrap">
   <nav class="nav">
     <a class="logo" href="index.html"><img src="assets/lockup-horizontal-navy.svg" alt="Inspyx"></a>
-    <a class="btn small" href="pilot.html">Get early access</a>
+    <a class="btn small" href="#email-entry">Get early access</a>
   </nav>
 </div>
 
 <div class="wrap">
 
-  <!-- HERO — direction C, re-scoped to Spex Live -->
-  <div class="hero">
-    <div>
-      <div class="eyebrow">Inspyx + Spex Live</div>
-      <h1>You inspect.<br><span class="accent">Spex handles<br>the office.</span></h1>
-      <div class="scope-card">
-        <div class="lbl">What Spex Live does in this pilot</div>
-        <p>In this pilot, Spex Live is your <b>voice co-inspector in the field</b>: it takes your spoken notes, drafts findings for your approval, and helps prepare the report as you go. Spex answering email, keeping a schedule, and the rest of the office work are <b>not part of this pilot</b>.</p>
+  <!-- HERO — the promise, then immediately the ease demonstration -->
+  <div class="hero-slim">
+    <div class="eyebrow">Inspyx + Spex Live</div>
+    <h1>You inspect.<br><span class="accent">Spex handles<br>the office.</span></h1>
+    <div class="scope-card">
+      <div class="lbl">What Spex Live does in this pilot</div>
+      <p>In this pilot, Spex Live is your <b>voice co-inspector in the field</b>: it takes your spoken notes, drafts findings for your approval, and helps prepare the report as you go. Spex answering email, keeping a schedule, and the rest of the office work are <b>not part of this pilot</b>.</p>
+    </div>
+    <p class="lede">The note-taking that comes with an inspection — stopping to type, sorting photos, then rewriting it all into a report at night — is a second job you never applied for. Spex Live takes that job: you talk while you work.</p>
+  </div>
+
+  <!-- THE EASE DEMONSTRATION — how easy the companion is: one sentence in, done.
+       [MATERIAL NEEDED: a short real-device capture of this exact sequence —
+       speak → draft → approve. Until it exists, the specimen cards below stand
+       in, labelled as what they are.] -->
+  <section style="padding-top:44px" id="ease">
+    <div class="sec-head">
+      <div class="eyebrow">How it works</div>
+      <h2>One sentence.<br>That’s the job.</h2>
+      <span class="spec-tag">Illustrative walkthrough — specimen cards, not a working demo</span>
+      <p>One complete sequence — the way the pilot is meant to run: you speak, Spex drafts, you tap once. The words are a specimen and the steps are the intended workflow; the sequence is being proven on real devices during the pilot, and nothing enters a report without the inspector’s approval.</p>
+    </div>
+    <div class="ease-seq">
+      <div class="card beat">
+        <div class="bnum">1</div>
+        <div class="lbl">You say one sentence</div>
+        <p class="quote">“Water heater is past its service life. There is corrosion at the base. I have two photos — put it under Plumbing.”</p>
+        <p style="margin-top:12px">That is the whole input. No typing, no form, no stopping the inspection.</p>
       </div>
-      <p class="lede">The inspection is the part only you can do. The note-taking that comes with it — stopping to type, sorting photos, then rewriting it all into a report at night — is a second job you never applied for. Spex Live is the voice co-inspector who takes that job: you talk while you work, and the report is built as you go — so what is left at the end is a read-through, not a rewrite.</p>
-      <div class="cta-row">
-        <a class="btn" href="pilot.html">Get early access</a>
+      <div class="card beat">
+        <div class="bnum">2</div>
+        <div class="lbl">Spex writes the finding</div>
+        <p class="quote">“The water heater is past its service life, with corrosion at the base — flagged under Plumbing, <b>with your photos.</b>”</p>
+        <p style="margin-top:12px">Your words, in plain language, in the right section — held as a proposal, not entered yet.</p>
       </div>
+      <div class="card beat">
+        <div class="bnum">3</div>
+        <div class="lbl">You tap approve</div>
+        <p>One tap. Nothing is filed until you say so — <b>Spex proposes, you decide, every time.</b></p>
+        <span class="approve">Approve</span>
+        <p style="margin-top:14px">And you keep walking. The next room is next.</p>
+      </div>
+    </div>
+    <!-- Founder amendment 2026-11-04: ONE report image returns to Home — a
+         cropped defect FINDING (S1.1), not the cover. The cover photo and the
+         photos-page image stay removed (Report page). Nothing else. -->
+    <figure class="card finding-band">
+      <img src="report-finding-s11.png" alt="A sample report finding: S1.1, cracked tile and leak, marked a major defect, with the inspector’s photo of the cracked roof tile and the recommended action.">
+      <figcaption>The finding, as it lands in the report. Sample shown.</figcaption>
+    </figure>
+  </section>
+
+  <!-- EMAIL ENTRY — the Linear move: one field starts the application.
+       Every application-entry link on this page (nav CTA, footer Pilot
+       link) routes HERE first (#email-entry); apply.html is never the
+       entry point from Home. -->
+  <section style="padding-top:8px" id="email-entry">
+    <div class="card email-entry">
+      <h3>Start with your email.</h3>
+      <p>One field. This starts your application — you finish it on the next page. Nothing else is asked here.</p>
+      <!-- Inert specimen (DQA-WEB-001 pattern, carried from the cleared pilot
+           form): no method, action is javascript:void(0), onsubmit returns
+           false — the email cannot leave the page. The Step 7 build carries
+           the email to apply.html and stores the application. -->
+      <form class="email-row" action="javascript:void(0)" onsubmit="return false;">
+        <input type="email" name="email" placeholder="Your email" autocomplete="email" aria-label="Your email" required>
+        <button class="btn" type="submit">Get early access</button>
+      </form>
       <p class="fine">Free for 30 days. We move you over from your current software — you don’t fill out a thing.</p>
       <p class="fine">The pilot is the first 25 inspectors — the same 25 who lock the founding price. We work inspectors in as they come.</p>
     </div>
-    <div class="hero-visual">
-      <div class="card day-card">
-        <h3>Handled in the field</h3>
-        <div class="sub">By Spex Live, while you work</div>
-        <div class="day-row"><div class="tick">✓</div><div><div class="what">Water heater flagged</div><div class="detail">Past its service life — placed under Plumbing, with your photos.</div></div></div>
-        <div class="day-row"><div class="tick">✓</div><div><div class="what">Findings written as you speak</div><div class="detail">Your words, turned into findings in the right sections of the report.</div></div></div>
-        <div class="day-row"><div class="tick">✓</div><div><div class="what">Yesterday’s report, ready</div><div class="detail">Finished on site and ready to send to the buyer and their agent.</div></div></div>
-      </div>
-      <div class="card report-card">
-        <img src="assets/report-cover-01.png" alt="A sample Inspyx inspection report">
-        <div class="cap"><b>Your report, finished.</b> Sample shown.</div>
-      </div>
-      <div class="card note-card">
-        <div class="lbl">Spex noted it in the field</div>
-        <p>“Water heater is past its service life — flagged under Plumbing, <b>with your photos.</b>” Nothing is filed until you say so.</p>
-        <span class="approve">Approve</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- OBJECTION-FIRST NAVIGATION — the four doors, directly under the hero -->
-  <section style="padding:34px 0 6px">
-    <div class="sec-head" style="margin-bottom:26px">
-      <h2 style="font-size:27px">What would you need to know before switching?</h2>
-    </div>
-    <div class="doors">
-      <a class="door" href="switch.html"><div class="q">Will my records move?</div><div class="a">What comes across from the software you use today — source by source, including what cannot be guaranteed.</div><div class="go">See the move →</div></a>
-      <a class="door" href="#demonstration"><div class="q">Can I trust the AI?</div><div class="a">Watch one complete sequence — including the moment Spex gets it wrong and the inspector corrects it. Nothing is filed without approval.</div><div class="go">Watch Spex work →</div></a>
-      <a class="door" href="pricing.html"><div class="q">What will I really pay?</div><div class="a">One founding price, the optional Concierge service, and a calculator that works out what your current software runs you — at your numbers.</div><div class="go">See pricing →</div></a>
-      <a class="door" href="your-data.html#leaving"><div class="q">What if I leave?</div><div class="a">Your inspections, reports, templates and client records are yours — and they stay yours if you go. The exit, stated before you enter.</div><div class="go">Read the exit terms →</div></a>
-    </div>
   </section>
 
-  <!-- THE PROMISE — the guarantee, narrowed to report time, directly beneath the hero -->
+  <!-- THE GUARANTEE — short form only (the full panel lives on Pricing) -->
   <section style="padding-top:26px">
-    <div class="band" id="guarantee">
+    <div class="band slim" id="guarantee">
       <div class="eyebrow">Our promise</div>
-      <h2>Less time to a finished report.<br>Guaranteed.</h2>
+      <h2>Less time to a finished report. Guaranteed.</h2>
       <p>Measured against your own starting numbers — how long your reports take you today, written down with you when you start. If your reports don’t take less time on an inspection business Inspyx onboarded, you choose: <b>six months free, or walk away</b>.</p>
-      <div class="steps">
-        <div class="step"><div class="n">Step one</div><h3>Start free for 30 days</h3><p>The app and Spex Live, working in your real business, on real inspections.</p></div>
-        <div class="step"><div class="n">Step two</div><h3>Your report time, written down</h3><p>How long a report takes you today is recorded on day one, so “faster” is a fact, not a feeling.</p></div>
-        <div class="step"><div class="n">Step three</div><h3>Faster, or the remedy applies</h3><p>If the time doesn’t come down, the remedy below applies. In writing, before you start.</p></div>
-      </div>
       <p class="remedy">Get set up by our team and if your reports don’t take less time in your free trial, you get six months free — or walk away. Your choice. (Self-serve setup isn’t covered — we can only guarantee results we set up and verified ourselves.)</p>
       <p class="moneyback">And if you’ve paid us and simply don’t like it, our money-back guarantee stands: ask, and we refund you.</p>
-      <div class="lm-row">
-        <button class="btn light" id="lm-btn" aria-expanded="false" aria-controls="guarantee-details">Learn more</button>
-      </div>
-      <div class="g-panel" id="guarantee-details" hidden>
-        <h3>The guarantee, in full</h3>
-        <p>Start with Inspyx, and we guarantee one thing:</p>
-        <ul>
-          <li>Less time to a finished report.</li>
-        </ul>
-        <p><b>How it’s measured.</b> When you start, we sit down with you and write down how long your reports take you today — from the end of an inspection to a finished report your client can read. That’s your baseline, established with you when you’re onboarded. Everything is measured against your own numbers — not industry averages, not somebody else’s results.</p>
-        <p><b>How it starts.</b> Your first 30 days are free — the full product, on your real inspections. One free period; nothing stacks on it.</p>
-        <p><b>If the results don’t come.</b> If your reports don’t take less time, you get six months of Inspyx free — or you walk away. Your choice. That applies when Inspyx onboarded you — we can only guarantee a setup we did and verified ourselves.</p>
-        <p><b>If you’ve paid.</b> If you’ve paid for Inspyx and you don’t like it, you get your money back. That’s the money-back guarantee, and it stands.</p>
-        <div class="worked">
-          <div class="w-lbl">A worked example — the figures are illustrative</div>
-          <p>Say your reports take you <b>3 hours and 10 minutes</b> today, written down with you on day one as your starting number. <b>The clock starts</b> when an inspection ends and <b>stops</b> when the finished report is ready to send. Over your free 30 days, your reports on Inspyx are timed the same way, against the same line.</p>
-          <p>If the time has not come down by the end of the trial on a business we onboarded, <b>the remedy applies</b>: six months free, or walk away — your choice. The figures in this example are illustrative; your own starting number is the one that counts, and it is written down with you before you start.</p>
-        </div>
-        <p><b>What this guarantee is not.</b> It’s not a promise of a specific number of minutes, and it’s not a specific percentage — nobody honest can promise you that. The promise is improvement, measured on your own numbers, backed by the remedy above. In writing, before you start.</p>
-      </div>
     </div>
   </section>
 
-  <!-- THE FOUNDING COHORT — confirmed claims only, reason printed beside the count -->
+  <!-- THE FOUNDING COHORT — the count, the reason, and the queue in miniature -->
   <section style="padding-top:26px;padding-bottom:0">
     <div class="card cohort" id="cohort">
       <div class="ch-top">
@@ -145,139 +145,42 @@ window.FOUNDING_LEDGER = {
       <p class="gone">When the 25 are claimed, the founding rate is gone — <b>the price after is $84.95 a month.</b></p>
       <div class="feed" data-ledger-feed hidden></div>
       <p class="feed" data-ledger-feed-empty><span class="f-empty">No places claimed yet. Claims appear here as they happen — state and date only, never names.</span></p>
+      <p class="queue-mini"><b>Your place in line is yours to watch.</b> Applications are read in the order they arrive, in a weekly review. When you apply, you get a personal status link — your position, how many inspectors are ahead of you and how many applied after you — drawn from this same count, never a separate list.</p>
     </div>
-    <!-- PEER DESCRIPTORS (psychology Move 8): facts about who is in — volume band,
-         city/state, prior software — rendered ONLY from real, permissioned member
-         records. Zero state = the strip does not render. Never seeded, never
-         placeholder people. Step 7 renders members into [data-descriptors]. -->
+    <!-- PEER DESCRIPTORS (psychology Move 8): rendered ONLY from real,
+         permissioned member records. Zero state = the strip does not render.
+         Never seeded, never placeholder people. -->
     <div data-descriptors hidden></div>
   </section>
 
-  <!-- THE DEMONSTRATION — demo-as-proof, in the place testimonials stood -->
-  <section style="padding-top:36px" id="demonstration">
-    <div class="sec-head">
-      <div class="eyebrow">The demonstration</div>
-      <h2>Don’t take our word for it.<br>Watch Spex work.</h2>
-      <span class="spec-tag">Illustrative walkthrough — specimen cards, not a working demo</span>
-      <p>One complete sequence, the way it runs in the field: you speak, Spex drafts, you stay in charge — including the moment Spex gets it wrong. The words are a specimen; the steps are the product’s. Nothing on this page is clickable, and nothing enters a report without the inspector’s approval.</p>
-    </div>
-    <div class="seq">
-      <div class="card beat">
-        <div class="bnum">1</div>
-        <div class="lbl">You speak — in the field</div>
-        <p class="quote">“Water heater is past its service life. There is corrosion at the base. I have two photos — put it under Plumbing.”</p>
-        <p style="margin-top:12px">That is the whole input. No typing, no form, no stopping the inspection.</p>
-      </div>
-      <div class="card beat">
-        <div class="bnum">2</div>
-        <div class="lbl">Spex drafts the finding</div>
-        <p class="quote">“The water heater is past its service life, with corrosion at the base — flagged under Plumbing, <b>with your photos.</b>”</p>
-        <p style="margin-top:12px">Your words, in plain language, in the right section — held as a proposal, not entered yet.</p>
-      </div>
-      <div class="card beat">
-        <div class="bnum">3</div>
-        <div class="lbl">Spex gets it wrong — you correct it</div>
-        <div class="wrong"><span class="w-lbl">Spex proposed</span>Severity: monitor at the next service. Recommended action: note for the buyer.</div>
-        <p style="margin-top:12px">You look at the base again: <b>“No — it is weeping at the seam. Mark it defective and recommend a licensed plumber now.”</b></p>
-        <div class="fixed"><span class="f-lbl">After your correction</span>Severity: defective. Recommended action: a licensed plumber, now. Your wording stands; the draft is replaced, not argued with.</div>
-      </div>
-      <div class="card beat">
-        <div class="bnum">4</div>
-        <div class="lbl">You approve — it enters the report</div>
-        <p>Only the corrected finding goes in, with your photos beside it, in the section you named. <b>Spex proposes — you decide, every time.</b> The page it lands on is below: a real findings page from a sample report.</p>
-      </div>
-    </div>
-    <div class="doc-card block-gap">
-      <img src="assets/report-findings-12.png" alt="A findings page from a sample Inspyx inspection report">
-      <div class="cap"><b>The report it lands in.</b> A findings page from a sample Inspyx report.</div>
-    </div>
-  </section>
-
-  <!-- ORIENTATION STRIP -->
-  <div class="orient">Inspyx is the software home inspectors run their day on: capture, voice notes with Spex, and a report worth showing.</div>
-
-  <!-- A DAY, THE INSPYX WAY — field-first -->
-  <section>
-    <div class="sec-head">
-      <div class="eyebrow">A day, the Inspyx way</div>
-      <h2>Talk in the field.<br>The report keeps up.</h2>
-      <p>You bring the eyes and the judgment. Spex Live brings the notebook — and hands you back the evening the report used to eat.</p>
-    </div>
-    <div class="day-grid">
-      <div class="card chapter">
-        <div class="time">In the field · Your voice</div>
-        <h3>Talk. Spex takes the notes.</h3>
-        <p>Walk the property and say what you see. Spex listens, writes the finding in plain words, and puts it in the right section of the report — with the photos you took. You stay eyes-up on the house instead of heads-down in a phone. And nothing lands in the report until you approve it: Spex proposes, you decide. Always.</p>
-        <div class="plain-visual">
-          <div class="pv-row"><b>Findings</b><span>Spoken, written, placed</span></div>
-          <div class="pv-row"><b>Photos</b><span>Attached as you take them</span></div>
-          <div class="pv-row"><b>Filed in the report</b><span>Only with your approval</span></div>
-        </div>
-      </div>
-      <div class="card chapter">
-        <div class="time">As you go · The report</div>
-        <h3>The report builds as you go</h3>
-        <p>Every approved finding lands in the report the moment you say it — the right section, your photos beside it, in the clean spacing your clients actually read. By the last room, the report is nearly done. What’s left is a read-through, not a rewrite.</p>
-        <img src="assets/report-findings-12.png" alt="Findings page from a sample Inspyx report">
-      </div>
-      <div class="card chapter">
-        <div class="time">Evening · Done</div>
-        <h3>Home for dinner. The rewrite is gone.</h3>
-        <p>The report is written as you go, so the evening rewrite is gone. The workflow is built so a report can be ready to send the day of the inspection — and how long yours took is measured against the numbers we wrote down when you started.</p>
-        <div class="plain-visual">
-          <div class="pv-row"><b>Reports</b><span>Built as you inspect</span></div>
-          <div class="pv-row"><b>Your report time</b><span>Measured against your baseline</span></div>
-          <div class="pv-row"><b>The evening</b><span>Yours</span></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- FOUNDER STORY — direction C treatment, his words -->
-  <section style="padding-top:6px">
-    <div class="sec-head">
-      <div class="eyebrow">Why Inspyx exists</div>
-      <h2>The software I built<br>for myself.</h2>
-    </div>
-    <div class="card founder">
-      <p class="f-lede">I’m a truck driver.</p>
-      <p>More truck drivers are killed on the job than workers in any other occupation in America — year after year. I was looking to get out. Actively looking.</p>
-      <p>Home inspection found me. I’d always had an interest in it, and then I saw some YouTube videos that really resonated with me. So I did it properly: I spent months studying, got my home inspection license, spent a couple more months furthering my education — more videos, more learning — and gathered all the tools I needed to start my trade.</p>
-      <p>And then I never really got into it. I felt overwhelmed — by the complexity of it, by the responsibility of it, and most of all by the software. <b>Spectora was too expensive and too difficult to learn.</b> So I kind of gave up, and I stuck with truck driving.</p>
-      <p>So I built the software myself — for me. And it got me inspecting: I run inspections with Inspyx now — part-time, on my own terms — the start the other software never gave me. And now I want to share it with the rest of the world — for the home inspectors standing exactly where I was standing: licensed, equipped, ready, and stopped by tools that were supposed to help them.</p>
+  <!-- FOUNDER LINE — compact; the full story is on Our Story -->
+  <section style="padding-top:44px;padding-bottom:0">
+    <div class="card founder-line">
+      <p>I’m a truck driver. The software on the market stopped my own start — <b>too expensive, and too difficult to learn</b> — so I built the software myself. And it got me inspecting: I run inspections with Inspyx now — part-time, on my own terms — and I want to share it with the inspectors standing exactly where I was standing.</p>
       <p class="f-sign">— Moises Avila, part-time home inspector and founder of Inspyx</p>
+      <a class="more" href="about.html">Read our story →</a>
     </div>
   </section>
 
-  <!-- TEASERS -->
-  <section style="padding-top:6px">
-    <div class="two-up">
-      <div class="card teaser">
-        <div class="eyebrow">Switching</div>
-        <h3>Switching is our job. Not yours.</h3>
-        <p>Tell us what you use today. You sign in yourself, and we pull across what your current software lets us reach — your profile, your templates, your contacts, your inspections. For the move itself, you don’t fill out a form — you don’t even type your own name. (The pilot application comes first, and that one is yours to fill in.)</p>
-        <a class="more" href="switch.html">How switching works →</a>
-      </div>
-      <div class="card teaser">
-        <div class="eyebrow">Pricing</div>
-        <h3>$69 a month. One price, everything in.</h3>
-        <p>The app and Spex Live together, one monthly price — the first 25 pay the founding price of $69 a month, and that price is theirs for good. When payments arrive, they go to your account, not through ours.</p>
-        <a class="more" href="pricing.html">See pricing →</a>
-      </div>
+  <!-- OBJECTION DOORS — one line each -->
+  <section style="padding-top:44px;padding-bottom:0">
+    <div class="sec-head" style="margin-bottom:26px">
+      <h2 style="font-size:27px">What would you need to know before switching?</h2>
+    </div>
+    <div class="door-lines">
+      <a class="door-line" href="switch.html"><span class="q">Will my records move?</span><span class="go">See the move →</span></a>
+      <a class="door-line" href="#ease"><span class="q">Can I trust the AI?</span><span class="go">Watch how it works →</span></a>
+      <a class="door-line" href="pricing.html"><span class="q">What will I really pay?</span><span class="go">See pricing →</span></a>
+      <a class="door-line" href="your-data.html#leaving"><span class="q">What if I leave?</span><span class="go">Read the exit terms →</span></a>
     </div>
   </section>
 
-  <!-- PILOT INVITATION -->
-  <div class="pilot-invite">
-    <div class="card">
-      <div class="eyebrow">Now boarding</div>
-      <h2>The first 25 inspectors get the team first.</h2>
-      <p>We’re opening Inspyx to a first group of 25 inspectors and working alongside them personally. We work inspectors in as they come — a few at a time, because the move-in is hands-on. Run your real inspections with the app and Spex Live, tell us honestly what works and what doesn’t, and help shape the tool inspectors will switch to.</p>
-      <div class="facts"><span class="fact">First 25 inspectors</span><span class="fact">30 days free</span><span class="fact">Nationwide</span><span class="fact">Rolling intake</span></div>
-      <p class="pilot-promise">Less time to a finished report. <b>Guaranteed</b> — measured against your own starting numbers, or six months free.</p>
-      <a class="btn" href="pilot.html">Get early access</a>
+  <!-- THE REPORT — one text link, no photos, no sections -->
+  <section style="padding-top:40px">
+    <div class="report-link-row">
+      <a href="report.html">See the report itself →</a>
     </div>
-  </div>
+  </section>
 
 </div>
 
@@ -296,7 +199,7 @@ window.FOUNDING_LEDGER = {
         <a href="reliability.html">Reliability</a>
         <a href="pricing.html">Pricing</a>
         <a href="about.html">Our Story</a>
-        <a href="pilot.html">Pilot</a>
+        <a href="index.html#email-entry">Pilot</a>
         <a href="privacy.html">Privacy</a>
         <a href="terms.html">Terms</a>
       </nav>
@@ -321,17 +224,21 @@ window.FOUNDING_LEDGER = {
   var empty = document.querySelector('[data-ledger-feed-empty]');
   if (feed && L.latestClaim) {
     feed.hidden = false; if (empty) empty.hidden = true;
-    feed.innerHTML = '<div class="f-line">Latest: a place claimed in <b>' + L.latestClaim.state + '</b> · ' + L.latestClaim.date + '</div>';
+    /* SAFE RENDERING (Step 7 gate): ledger values are NEVER interpolated
+       into HTML — they are placed with textContent / DOM creation only, so
+       a ledger value can never become markup. State codes are validated
+       server-side against the approved list before any value reaches
+       this feed. */
+    var line = document.createElement('div');
+    line.className = 'f-line';
+    line.appendChild(document.createTextNode('Latest: a place claimed in '));
+    var st = document.createElement('b');
+    st.textContent = L.latestClaim.state;
+    line.appendChild(st);
+    line.appendChild(document.createTextNode(' · ' + L.latestClaim.date));
+    feed.appendChild(line);
   }
 })();
-</script>
-<script>
-document.getElementById('lm-btn').addEventListener('click', function(){
-  var p = document.getElementById('guarantee-details');
-  var open = p.hasAttribute('hidden');
-  if (open) { p.removeAttribute('hidden'); } else { p.setAttribute('hidden',''); }
-  this.setAttribute('aria-expanded', open ? 'true' : 'false');
-});
 </script>
 
 </body>

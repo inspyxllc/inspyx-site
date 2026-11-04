@@ -693,3 +693,115 @@ table.disp tr:last-child td{border-bottom:none}
   table.disp td.src::before{content:none}
   .st{font-size:11.5px; padding:2px 8px; white-space:normal; text-align:right}
 }
+
+/* ---------- DES-009 restructure (design-d) — slim two-page flow ----------
+   Founder direction 2026-11-04: the report leaves Home (photos and all);
+   Home demonstrates how EASY Spex is; entry is Linear-style — one email
+   field on page 1, the application completed on page 2 (apply.html). */
+
+/* slim single-column hero (no visual stack) */
+.hero-slim{padding:84px 0 8px; max-width:840px}
+.hero-slim .lede{font-size:20px; margin-top:24px; max-width:34em}
+
+/* ease demonstration — three beats, specimen cards, no report imagery */
+.ease-seq{display:grid; grid-template-columns:repeat(3,1fr); gap:22px}
+
+/* founder amendment 2026-11-04: ONE finding image under the ease beats —
+   a cropped defect finding (S1.1) in a slim band; the only report image
+   on Home (cover + photos-page images remain on the Report page) */
+.finding-band{margin-top:22px; padding:26px 30px 22px; text-align:center}
+.finding-band img{display:block; width:100%; max-width:620px; margin:0 auto; border-radius:14px; box-shadow:0 10px 26px rgba(13,39,69,.14)}
+.finding-band figcaption{margin-top:16px; font-size:15px; color:var(--ink-faint)}
+.ease-seq .beat .approve{display:inline-block; margin-top:14px; font-size:13.5px; font-weight:600; color:#fff; background:var(--navy); padding:7px 16px; border-radius:999px}
+
+/* Linear-style email entry — one field, page 1 */
+.email-entry{padding:36px 38px}
+.email-entry h3{font-size:26px; margin-bottom:8px}
+.email-entry p{color:var(--ink-soft); font-size:16.5px; line-height:1.6}
+.email-row{display:flex; gap:14px; margin-top:22px; align-items:stretch}
+.email-row input{
+  flex:1 1 260px; font:inherit; font-size:17px; color:var(--ink);
+  padding:14px 18px; border-radius:999px;
+  border:1.5px solid rgba(31,78,121,.30); background:#fff;
+  box-shadow: inset 0 2px 5px rgba(13,39,69,.05);
+}
+.email-row input::placeholder{color:#5B7288}
+.email-row input:focus{outline:none; border-color:var(--navy); box-shadow:0 0 0 4px rgba(31,78,121,.16)}
+.email-entry .fine{margin-top:16px; font-size:14.5px; color:var(--ink-faint); max-width:40em}
+
+/* guarantee, short form only */
+.band.slim{padding:46px 48px 42px}
+.band.slim h2{font-size:34px}
+.band.slim .remedy{border-top:none; padding-top:6px}
+
+/* cohort strip — waitlist / position promise, one short block */
+.queue-mini{
+  margin-top:18px; font-size:15.5px; color:var(--ink-soft); line-height:1.62; max-width:52em;
+  border-left:3px solid var(--navy); padding:2px 0 2px 14px;
+}
+.queue-mini b{color:var(--ink)}
+
+/* compact founder line (the full story lives on Our Story) */
+.founder-line{padding:30px 34px}
+.founder-line p{font-size:17.5px; line-height:1.62; color:var(--ink-soft); max-width:46em}
+.founder-line p b{color:var(--deep)}
+.founder-line .f-sign{font-size:15.5px; font-weight:600; color:var(--navy); margin-top:14px}
+.founder-line a.more{color:var(--navy); font-weight:600; font-size:16px; display:inline-block; margin-top:12px}
+
+/* objection doors — one line each */
+.door-lines{display:flex; flex-direction:column; gap:12px}
+a.door-line{
+  display:flex; justify-content:space-between; align-items:center; gap:18px;
+  padding:20px 26px; border-radius:20px;
+  background:var(--glass); border:1px solid var(--glass-border);
+  box-shadow:var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,.95);
+  transition:transform .15s ease;
+}
+a.door-line:hover{transform:translateY(-2px)}
+a.door-line .q{font-size:18px; font-weight:700; letter-spacing:-.012em; color:var(--deep)}
+a.door-line .go{font-size:15px; font-weight:600; color:var(--navy); white-space:nowrap}
+
+/* the single text link to the Report page */
+.report-link-row{text-align:center; padding:6px 0 0}
+.report-link-row a{font-size:19px; font-weight:650; color:var(--navy)}
+.report-link-row a:hover{text-decoration:underline}
+
+/* apply page — carried email + specimen notes */
+.carry-note{
+  border-radius:24px; padding:26px 30px;
+  background:rgba(255,255,255,.55); border:1px solid rgba(31,78,121,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+}
+.carry-note p{font-size:16px; color:var(--ink-soft); line-height:1.6; margin-top:10px}
+.carry-note .field{margin:16px 0 0}
+.carry-note .field input{background:var(--cream); color:var(--ink-faint)}
+.spec-note{
+  border-radius:24px; padding:30px 34px;
+  background:linear-gradient(160deg, rgba(31,78,121,.06), rgba(31,78,121,.02));
+  border:1.5px dashed rgba(31,78,121,.45);
+}
+.spec-note h3{margin:12px 0 8px}
+.spec-note p{font-size:16px; color:var(--ink-soft); line-height:1.62}
+.spec-note p + p{margin-top:10px}
+.spec-note p b{color:var(--ink)}
+.scope-note{
+  font-size:15.5px; line-height:1.62; color:var(--ink-soft);
+  border-left:3px solid var(--navy); padding:2px 0 2px 14px; margin-bottom:26px;
+}
+
+@media (max-width:960px){
+  .ease-seq{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  .hero-slim{padding-top:48px}
+  .email-entry{padding:28px 24px}
+  .email-row{flex-direction:column}
+  .email-row input{flex:none; width:100%}
+  .email-row .btn{text-align:center}
+  .band.slim{padding:36px 26px}
+  .band.slim h2{font-size:28px}
+  .founder-line{padding:26px 24px}
+  a.door-line{flex-direction:column; align-items:flex-start; gap:4px; padding:18px 22px}
+  .spec-note{padding:26px 24px}
+  .carry-note{padding:24px 22px}
+}

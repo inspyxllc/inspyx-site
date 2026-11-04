@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<!-- DES-009 DESIGN-D — preview build (founder-ordered 2026-11-04). Not published.
+     PAGE 2 of the slim two-page flow: the application. Page 1 (index.html)
+     takes one email field, Linear-style; this page carries that email in and
+     completes the application — six required fields in total across the two
+     pages (the email plus the five below), plus one optional question.
+     Copy blocks are carried VERBATIM from the desk-cleared pilot page
+     (design-c/pilot.html) wherever they fit; adaptations are listed in
+     STRUCTURE.md. The form is a DESIGN MOCK: no backend, no endpoint — the
+     submit is inert by construction (DQA-WEB-001 pattern: no method, action
+     is javascript:void(0), onsubmit returns false; applicant data cannot
+     leave the page). The deposit appears on this page ONLY as a specimen
+     note: per the state rules (DQA-WEB-015), the deposit control exists
+     solely in the qualified state, on the applicant's status page. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apply for the Pilot — Inspyx</title>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<!-- ============================================================
+     FOUNDING-SEAT LEDGER — the single source of truth for every
+     count on this page. Step 7 build obligation: generated
+     server-side from the application store — one authoritative
+     ledger for claims, certificates, deposits, transfers and
+     queue movement. Values below are the truthful opening state:
+     no applications have been taken.
+     ============================================================ -->
+<script>
+window.FOUNDING_LEDGER = {
+  placesTotal: 25,
+  claimed: 0,
+  applicationsIn: 0,
+  waiting: 0,
+  latestClaim: null,
+  latestMoveIn: null
+};
+</script>
+
+<div class="wrap">
+  <nav class="nav">
+    <a class="logo" href="index.html"><img src="assets/lockup-horizontal-navy.svg" alt="Inspyx"></a>
+    <a class="btn small" href="#apply">Get early access</a>
+  </nav>
+</div>
+
+<div class="wrap">
+
+  <div class="page-head">
+    <div class="eyebrow">The Pilot</div>
+    <h1>The first twenty-five get founding terms.</h1>
+    <p class="sub">This page is an application, not a checkout. The first places go to inspectors we can onboard properly — and every application is read by a person, not screened by a machine.</p>
+  </div>
+
+  <main>
+
+  <!-- THE EMAIL — STEP ONE OF THE APPLICATION. Two states, one rule: this
+       area NEVER presents as a blank read-only field.
+       STATE A (default specimen, rendered below): the applicant arrived
+       from page 1 — the email is carried in and shown read-only.
+       STATE B (direct visit — the applicant landed on this page without
+       coming through page 1): the same area renders as an EDITABLE email
+       field under one honest line. Its markup:
+
+         <div class="carry-note block-gap" style="margin-top:34px">
+           <p>Start here if you came straight to this page — your email is step one.</p>
+           <div class="field"><label for="f-email">Email</label><input id="f-email" name="email" type="email" value="" placeholder="Your email" autocomplete="email" required></div>
+         </div>
+
+       STEP 7 OBLIGATION (desk gate, DQA-WEB-015 line): the email field sits
+       OUTSIDE the <form> element below in this specimen. In the build, the
+       email is carried into the submission and validated as part of the
+       submission payload — it is a required field of the application, not
+       display text. -->
+  <div class="carry-note block-gap" style="margin-top:34px">
+    <span class="spec-wm">Specimen — your email carries over from page 1</span>
+    <p>You started on the home page with your email. It is carried into this page — you do not type it again. It is the first of the six required fields; the other five are below.</p>
+    <div class="field"><label for="f-email">Email — from page 1</label><input id="f-email" name="email" type="email" value="" placeholder="[your email from page 1]" readonly></div>
+  </div>
+
+  <!-- the application form (the form is the page's CTA) -->
+  <div class="card form-card block-gap" id="apply">
+    <div class="form-head">
+      <h3>Apply for the pilot</h3>
+      <p>Six required fields, plus one optional question. We take it from there.</p>
+    </div>
+    <p class="scope-note">For the move itself, you don’t fill out a form — you don’t even type your own name. (The pilot application comes first, and that one is yours to fill in.) This form is the application only; the migration asks nothing of you by hand.</p>
+    <form action="javascript:void(0)" onsubmit="return false;">
+      <div class="field"><label for="f-nameco">Name and company <span class="req" aria-hidden="true">*</span></label><input id="f-nameco" name="nameco" type="text" placeholder="Your name — and your company’s name" autocomplete="name" required></div>
+      <div class="field"><label for="f-phone">Phone <span class="req" aria-hidden="true">*</span></label><input id="f-phone" name="phone" type="tel" placeholder="(555) 012-3456" autocomplete="tel" required></div>
+      <div class="field"><label for="f-software">Current software <span class="req" aria-hidden="true">*</span></label><input id="f-software" name="software" type="text" placeholder="What you inspect with today — and anything you need brought over" required></div>
+      <div class="field"><label for="f-state">State licensed <span class="req" aria-hidden="true">*</span></label><input id="f-state" name="state" type="text" placeholder="State you're licensed in" required></div>
+      <div class="field"><label for="f-volume">Inspections per month <span class="req" aria-hidden="true">*</span></label><input id="f-volume" name="volume" type="number" min="0" max="500" placeholder="How many you run in a typical month" required></div>
+      <div class="field"><label for="f-pain">What's the hardest part of your reporting today? <span class="opt">(optional)</span></label><textarea id="f-pain" name="pain" placeholder="The part you would hand off first, if you could"></textarea></div>
+      <label class="checkline"><input type="checkbox" name="updates" value="yes"><span>Yes, email me the occasional Inspyx update. Optional — your application doesn't depend on it.</span></label>
+      <p class="condline"><b>Guarantee condition:</b> the promise — less time to a finished report — is measured against your starting numbers and applies to businesses Inspyx onboards — six months free or walk away if it doesn't happen; if you've paid and don't like it, your money back.</p>
+      <button class="btn" type="submit">Get early access</button>
+    </form>
+    <p class="form-privacy">We use what you send only to review your application and contact you about the pilot.</p>
+  </div>
+
+  <!-- what happens next — carried from the cleared pilot page -->
+  <div class="block-gap">
+    <h2>What happens next</h2>
+    <div class="cols3" style="margin-top:30px;">
+      <div class="card step-card"><div class="stepnum">1</div><h3>You apply</h3><p>You started with your email on the home page and finished the form above — six required fields, plus one optional question. Nothing else is asked of you at this stage.</p></div>
+      <div class="card step-card"><div class="stepnum">2</div><h3>We read it, and we call you</h3><p>On the call we build your starting point together — your template brought over and your report time written down — so you start from something finished, not a blank account. We review every application personally. If you are a fit for the first group, we call you and talk it through — and we will tell you plainly if the timing is not right.</p></div>
+      <div class="card step-card"><div class="stepnum">3</div><h3>We move you in</h3><p>You sign in to your current software yourself. We pull across everything your software lets us reach, then show you all of it — you review it and confirm before the move is final, and anything that couldn't move is listed for you there, never dropped silently. We revoke our access when the move is done. Your 30 free days start on a business that is already set up.</p></div>
+    </div>
+    <p class="steps-note">Applications are read in a weekly review. When your application is in, you receive a personal status link: it shows <b>your real position</b> in the founding cohort — how many inspectors are ahead of you and how many applied after you — from the same ledger as the public count, and it updates as places move.</p>
+    <p class="queue-rules"><b>The rules of the line:</b> applications are read in the order they arrive, in a weekly review, and places are claimed in that order. One published exception — and it changes no one's place in line: every founding inspector receives one Golden Ticket, which gives <b>one named colleague</b> the founding rate, claimed through the same application as everyone else, and only while places remain. A ticket creates no place outside the 25: a colleague who claims through one counts against the 25 like any other member. That is the whole list of exceptions.</p>
+  </div>
+
+  <!-- LIMITATIONS & SUITABILITY — carried verbatim from the cleared pilot page -->
+  <div class="card block-gap" id="limits">
+    <h3>Who the pilot is not yet for</h3>
+    <p style="margin-bottom:14px">Plainly, so nobody joins under a wrong picture:</p>
+    <ul class="ticks">
+      <li><span><b>If your software is not Spectora or ISN,</b> your move runs on an export route or an individual assessment — some things may not move, and anything that cannot is named for you at review. If your case needs assessment, we will tell you before you commit to anything.</span></li>
+      <li><span><b>If you are counting on Spex in your inbox,</b> that is not this pilot. The pilot is Spex Live in the field — notes, proposed findings, report preparation. Reading and answering email, and Instant Reply, are not shipped in the pilot and are not promised here.</span></li>
+      <li><span><b>If you need a finished legal file before you start,</b> our Terms document is still being drafted and the Privacy page still awaits its legal review. Both are publication gates we will not skip.</span></li>
+      <li><span><b>If you want the Concierge service defined to the last hour,</b> its full service definition — the work, the hours, the response commitments, the exclusions — is written out in full before it can be bought. The summary on the Pricing page is the shape of it, not the contract.</span></li>
+    </ul>
+  </div>
+
+  <!-- THE DEPOSIT — specimen note only. Per the state rules (DQA-WEB-015) the
+       deposit control exists ONLY in the qualified state, on the status page;
+       nothing is charged, offered, or collected on this page. -->
+  <div class="spec-note block-gap">
+    <span class="spec-wm">Specimen note — no deposit is taken on this page</span>
+    <h3>Holding your seat comes later — only if you qualify</h3>
+    <p>The deposit step appears only <b>after qualification</b>, on your personal status page — it is rendered only when your state is “qualified.” Nothing is charged when you apply.</p>
+    <p>The deposit is <b>one founding month, paid early: $69</b>. It is <b>refundable in full, any time before your onboarding</b> — ask, and it comes back; no retention flow, no argument. If you stay, it is <b>credited in full against your first paid month</b>, after your 30 free days. When your seat is held, your numbered <b>Founding Rate Certificate</b> is issued — the durable record of your $69 rate.</p>
+  </div>
+
+  </main>
+
+</div>
+
+<div class="wrap">
+  <footer>
+    <div class="foot-top">
+      <div>
+        <img class="flogo" src="assets/lockup-stacked-white-on-navy.svg" alt="Inspyx">
+        <p class="tagline">You inspect. Spex takes the notes.</p>
+      </div>
+      <nav class="flinks">
+        <a href="index.html">Home</a>
+        <a href="report.html">The Report</a>
+        <a href="switch.html">Switch to Inspyx</a>
+        <a href="your-data.html">Your Data Stays Yours</a>
+        <a href="reliability.html">Reliability</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="about.html">Our Story</a>
+        <a href="apply.html">Pilot</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </nav>
+    </div>
+    <div class="base">
+      <span>© 2026 Inspyx LLC</span>
+      <a href="mailto:support@inspyx.com">support@inspyx.com</a>
+    </div>
+  </footer>
+</div>
+
+</body>
+</html>
