@@ -43,7 +43,7 @@
      ============================================================ -->
 <script>
 window.FOUNDING_LEDGER = {
-  placesTotal: 25,
+  placesTotal: 10,
   claimed: 0,          /* places held by qualified applicants (deposit held or onboarded) */
   applicationsIn: 0,   /* live applications received */
   waiting: 0,          /* live applications not yet read */
@@ -85,7 +85,7 @@ window.FOUNDING_LEDGER = {
         <button class="btn" type="submit">Get early access</button>
       </form>
       <p class="fine">Free for 30 days. We move you over from your current software — you don’t fill out a thing.</p>
-      <p class="fine">The pilot is the first 25 inspectors — the same 25 who lock the founding price. We work inspectors in as they come.</p>
+      <p class="fine">The pilot is the first 10 inspectors — the same 10 who lock the founding price. We work inspectors in as they come.</p>
     </div>
   </section>
 
@@ -105,16 +105,16 @@ window.FOUNDING_LEDGER = {
     <div class="card cohort" id="cohort">
       <div class="ch-top">
         <div>
-          <h3>The founding cohort — 25 places.</h3>
-          <p class="why">There are 25 because every move-in is done by hand, and every inspector’s starting numbers are written down with them, by a person, before their first inspection. That work is done properly for a small cohort or not at all — so the cohort is 25, and places go in the order applications are read.</p>
+          <h3>The founding cohort — 10 places.</h3>
+          <p class="why">There are 10 because every move-in is done by hand, and every inspector’s starting numbers are written down with them, by a person, before their first inspection. That work is done properly for a small cohort or not at all — so the cohort is 10, and places go in the order applications are read.</p>
         </div>
         <div class="count">
-          <div class="big"><span data-ledger="claimed">0</span> of 25</div>
-          <div class="cap">places claimed · <span data-ledger="left">25</span> left</div>
+          <div class="big"><span data-ledger="claimed">0</span> of 10</div>
+          <div class="cap">places claimed · <span data-ledger="left">10</span> left</div>
         </div>
       </div>
       <div class="bar"><div class="fill" data-ledger-bar style="width:0%"></div></div>
-      <p class="gone">When the 25 are claimed, the founding rate is gone — <b>the price after is $84.95 a month.</b></p>
+      <p class="gone">When the 10 are claimed, the founding rate is gone — <b>the price after is $84.95 a month.</b></p>
       <div class="feed" data-ledger-feed hidden></div>
       <p class="feed" data-ledger-feed-empty><span class="f-empty">No places claimed yet. Claims appear here as they happen — state and date only, never names.</span></p>
       <p class="queue-mini"><b>Your place in line is yours to watch.</b> Applications are read in the order they arrive, in a weekly review. When you apply, you get a personal status link — your position, how many inspectors are ahead of you and how many applied after you — drawn from this same count, never a separate list.</p>
@@ -187,7 +187,7 @@ window.FOUNDING_LEDGER = {
 /* Founding-seat ledger renderer — populates every [data-ledger] count from the
    single FOUNDING_LEDGER block at the top of this page. */
 (function(){
-  var L = window.FOUNDING_LEDGER || {placesTotal:25, claimed:0, latestClaim:null};
+  var L = window.FOUNDING_LEDGER || {placesTotal:10, claimed:0, latestClaim:null};
   var left = L.placesTotal - L.claimed;
   document.querySelectorAll('[data-ledger="claimed"]').forEach(function(el){ el.textContent = L.claimed; });
   document.querySelectorAll('[data-ledger="left"]').forEach(function(el){ el.textContent = left; });
