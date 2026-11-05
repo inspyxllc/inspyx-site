@@ -76,10 +76,11 @@ window.FOUNDING_LEDGER = {
     <div class="card email-entry">
       <h3>Start with your email.</h3>
       <p>One field. This starts your application — you finish it on the next page. Nothing else is asked here.</p>
-      <!-- Inert specimen (DQA-WEB-001 pattern, carried from the cleared pilot
-           form): no method, action is javascript:void(0), onsubmit returns
-           false — the email cannot leave the page. The Step 7 build carries
-           the email to apply.html and stores the application. -->
+      <!-- LIVE (2026-11-05): the email stays in this browser tab
+           (sessionStorage) and is carried to apply.html by the script at the
+           end of this page. Nothing is sent anywhere until the applicant
+           submits the application on apply.html. Without JavaScript the form
+           stays inert (action is javascript:void(0)). -->
       <form class="email-row" action="javascript:void(0)" onsubmit="return false;">
         <input type="email" name="email" placeholder="Your email" autocomplete="email" aria-label="Your email" required>
         <button class="btn" type="submit">Get early access</button>
@@ -94,8 +95,8 @@ window.FOUNDING_LEDGER = {
     <div class="band slim" id="guarantee">
       <div class="eyebrow">Our promise</div>
       <h2>Less time to a finished report. Guaranteed.</h2>
-      <p>Measured against your own starting numbers — how long your reports take you today, written down with you when you start. If your reports don’t take less time on an inspection business Inspyx onboarded, you choose: <b>six months free, or walk away</b>.</p>
-      <p class="remedy">Get set up by our team and if your reports don’t take less time in your free trial, you get six months free — or walk away. Your choice. (Self-serve setup isn’t covered — we can only guarantee results we set up and verified ourselves.)</p>
+      <p>Measured against your own starting numbers — how long your reports take you today, written down with you when you start. If your reports don’t take less time on an inspection business Inspyx onboarded, you choose: <b>three months free, or walk away</b>.</p>
+      <p class="remedy">Get set up by our team and if your reports don’t take less time in your free trial, you get three months free — or walk away. Your choice. (Self-serve setup isn’t covered — we can only guarantee results we set up and verified ourselves.)</p>
       <p class="moneyback">And if you’ve paid us and simply don’t like it, our money-back guarantee stands: ask, and we refund you.</p>
     </div>
   </section>
@@ -210,6 +211,22 @@ window.FOUNDING_LEDGER = {
     line.appendChild(document.createTextNode(' · ' + L.latestClaim.date));
     feed.appendChild(line);
   }
+})();
+</script>
+<script>
+/* Email entry → apply page (live 2026-11-05). The email is kept in this
+   browser tab only (sessionStorage) and carried to apply.html, which
+   submits the whole application. Nothing is sent from this page. */
+(function(){
+  var form = document.querySelector('form.email-row');
+  if (!form) return;
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var input = form.querySelector('input[type="email"]');
+    if (!input || !input.checkValidity()) { if (input) input.reportValidity(); return; }
+    try { sessionStorage.setItem('inspyx_apply_email', input.value.trim()); } catch (err) {}
+    window.location.href = 'apply.html#apply';
+  });
 })();
 </script>
 
