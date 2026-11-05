@@ -6,10 +6,11 @@
      pages (the email plus the five below), plus one optional question.
      Copy blocks are carried VERBATIM from the desk-cleared pilot page
      (design-c/pilot.html) wherever they fit; adaptations are listed in
-     STRUCTURE.md. The form is a DESIGN MOCK: no backend, no endpoint — the
-     submit is inert by construction (DQA-WEB-001 pattern: no method, action
-     is javascript:void(0), onsubmit returns false; applicant data cannot
-     leave the page). The deposit appears on this page ONLY as a specimen
+     STRUCTURE.md. LIVE FORM (2026-11-05): the application posts to the
+     "Inspyx Pilot Application" Google Form owned by support@inspyx.com
+     (responses land in the linked Sheet in the company Drive, and Google
+     emails support@ on each one) — see the script at the end of the page.
+     Without JavaScript the form stays inert (action is javascript:void(0)). The deposit appears on this page ONLY as a specimen
      note: per the state rules (DQA-WEB-015), the deposit control exists
      solely in the qualified state, on the applicant's status page. -->
 <html lang="en">
@@ -75,10 +76,10 @@ window.FOUNDING_LEDGER = {
        email is carried into the submission and validated as part of the
        submission payload — it is a required field of the application, not
        display text. -->
-  <div class="carry-note block-gap" style="margin-top:34px">
-    <span class="spec-wm">Specimen — your email carries over from page 1</span>
-    <p>You started on the home page with your email. It is carried into this page — you do not type it again. It is the first of the six required fields; the other five are below.</p>
-    <div class="field"><label for="f-email">Email — from page 1</label><input id="f-email" name="email" type="email" value="" placeholder="[your email from page 1]" readonly></div>
+  <div class="carry-note block-gap" style="margin-top:34px" id="email-step">
+    <p id="email-carried-line" hidden>You started on the home page with your email. It is carried into this page — you do not type it again. It is the first of the six required fields; the other five are below.</p>
+    <p id="email-direct-line">Start here if you came straight to this page — your email is step one.</p>
+    <div class="field"><label for="f-email" id="f-email-label">Email</label><input id="f-email" name="email" type="email" value="" placeholder="Your email" autocomplete="email" required></div>
   </div>
 
   <!-- the application form (the form is the page's CTA) -->
@@ -88,7 +89,8 @@ window.FOUNDING_LEDGER = {
       <p>Six required fields, plus one optional question. We take it from there.</p>
     </div>
     <p class="scope-note">For the move itself, you don’t fill out a form — you don’t even type your own name. (The pilot application comes first, and that one is yours to fill in.) This form is the application only; the migration asks nothing of you by hand.</p>
-    <form action="javascript:void(0)" onsubmit="return false;">
+    <form id="apply-form" action="javascript:void(0)">
+      <div aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden"><label>Leave this empty <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
       <div class="field"><label for="f-nameco">Name and company <span class="req" aria-hidden="true">*</span></label><input id="f-nameco" name="nameco" type="text" placeholder="Your name — and your company’s name" autocomplete="name" required></div>
       <div class="field"><label for="f-phone">Phone <span class="req" aria-hidden="true">*</span></label><input id="f-phone" name="phone" type="tel" placeholder="(555) 012-3456" autocomplete="tel" required></div>
       <div class="field"><label for="f-software">Current software <span class="req" aria-hidden="true">*</span></label><input id="f-software" name="software" type="text" placeholder="What you inspect with today — and anything you need brought over" required></div>
@@ -96,9 +98,14 @@ window.FOUNDING_LEDGER = {
       <div class="field"><label for="f-volume">Inspections per month <span class="req" aria-hidden="true">*</span></label><input id="f-volume" name="volume" type="number" min="0" max="500" placeholder="How many you run in a typical month" required></div>
       <div class="field"><label for="f-pain">What's the hardest part of your reporting today? <span class="opt">(optional)</span></label><textarea id="f-pain" name="pain" placeholder="The part you would hand off first, if you could"></textarea></div>
       <label class="checkline"><input type="checkbox" name="updates" value="yes"><span>Yes, email me the occasional Inspyx update. Optional — your application doesn't depend on it.</span></label>
-      <p class="condline"><b>Guarantee condition:</b> the promise — less time to a finished report — is measured against your starting numbers and applies to businesses Inspyx onboards — six months free or walk away if it doesn't happen; if you've paid and don't like it, your money back.</p>
+      <p class="condline"><b>Guarantee condition:</b> the promise — less time to a finished report — is measured against your starting numbers and applies to businesses Inspyx onboards — three months free or walk away if it doesn't happen; if you've paid and don't like it, your money back.</p>
       <button class="btn" type="submit">Get early access</button>
+      <p id="apply-error" class="apply-error" hidden role="alert">Your application didn't send. Check your connection and try again.</p>
     </form>
+    <div id="apply-sent" class="apply-sent" hidden role="status">
+      <h3>Application received.</h3>
+      <p>We review every application personally. If you are a fit for the first group, we call you and talk it through — and we will tell you plainly if the timing is not right.</p>
+    </div>
     <p class="form-privacy">We use what you send only to review your application and contact you about the pilot.</p>
   </div>
 
@@ -167,5 +174,67 @@ window.FOUNDING_LEDGER = {
   </footer>
 </div>
 
+<script>
+/* Pilot application → Google Form (live 2026-11-05). Posts to the
+   "Inspyx Pilot Application" form owned by support@inspyx.com; responses
+   land in its linked Sheet in the company Drive and Google emails support@
+   on each one. Entry IDs come from the published form. */
+(function(){
+  var ENDPOINT = 'https://docs.google.com/forms/d/e/1FAIpQLSdFjpU8aZ6D44V7FkNRXFUGyjwfkH8YqBLK1qc0eE6OpuZvOg/formResponse';
+  var FIELDS = {
+    email: 'entry.46313459',
+    nameco: 'entry.754376287',
+    phone: 'entry.1270963958',
+    software: 'entry.2027722936',
+    state: 'entry.1559457972',
+    volume: 'entry.1208893374',
+    pain: 'entry.84494489',
+    updates: 'entry.1402113102'
+  };
+  var email = document.getElementById('f-email');
+  var carried = null;
+  try { carried = sessionStorage.getItem('inspyx_apply_email'); } catch (e) {}
+  if (carried && email) {
+    email.value = carried;
+    email.readOnly = true;
+    document.getElementById('email-carried-line').hidden = false;
+    document.getElementById('email-direct-line').hidden = true;
+    document.getElementById('f-email-label').textContent = 'Email — from page 1';
+  }
+  var form = document.getElementById('apply-form');
+  var sent = document.getElementById('apply-sent');
+  var err = document.getElementById('apply-error');
+  if (!form || !email) return;
+  form.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    err.hidden = true;
+    if (!email.checkValidity()) { email.readOnly = false; email.reportValidity(); return; }
+    /* Spam trap: people never see this field; bots fill it. */
+    if (form.elements.website && form.elements.website.value) { form.hidden = true; sent.hidden = false; return; }
+    var body = new URLSearchParams();
+    body.append(FIELDS.email, email.value.trim());
+    ['nameco', 'phone', 'software', 'state', 'volume', 'pain'].forEach(function(k){
+      var el = form.elements[k];
+      if (el) body.append(FIELDS[k], String(el.value || '').trim());
+    });
+    body.append(FIELDS.updates, form.elements.updates && form.elements.updates.checked ? 'yes' : 'no');
+    var btn = form.querySelector('button[type="submit"]');
+    var label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    fetch(ENDPOINT, { method: 'POST', mode: 'no-cors', body: body })
+      .then(function(){
+        form.hidden = true;
+        sent.hidden = false;
+        try { sessionStorage.removeItem('inspyx_apply_email'); } catch (e) {}
+      })
+      .catch(function(){
+        err.hidden = false;
+        btn.disabled = false;
+        btn.textContent = label;
+      });
+  });
+})();
+</script>
 </body>
 </html>

@@ -974,3 +974,7 @@ footer{
   }
   footer{background:#F5F5F7}
 }
+
+/* Live pilot application (2026-11-05): the sent and error states. */
+.apply-sent h3{margin:0 0 8px}
+.apply-error{font-weight:600;margin-top:12px}
