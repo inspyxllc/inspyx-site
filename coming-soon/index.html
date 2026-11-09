@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inspyx — Pilot coming soon</title>
 <meta name="description" content="Inspyx is a home inspection app from INSPYX LLC. You inspect. Spex reports. Our inspector pilot is coming soon.">
+<script>
+  // Stripe sends inspectors back here from Inspyx's plan pages (the billing
+  // function's success_url, return_url and cancel_url): ?billing=done, back
+  // or canceled. The page then shows that message instead of the pilot pitch.
+  (function () {
+    var billing = new URLSearchParams(location.search).get("billing");
+    if (billing === "done" || billing === "back" || billing === "canceled") {
+      document.documentElement.setAttribute("data-billing", billing);
+    }
+  })();
+</script>
 <style>
   :root{
     --ink:#1D1D1F; --ink-soft:#424245; --ink-faint:#6E6E73;
@@ -40,6 +51,12 @@
     text-decoration:none; font-size:17px; font-weight:600; padding:16px 32px; border-radius:999px;
   }
   .btn:hover{opacity:.85}
+  .return{display:none}
+  .return h1{font-size:clamp(32px, 7vw, 48px)}
+  html[data-billing] .pitch{display:none}
+  html[data-billing="done"] .return-done,
+  html[data-billing="back"] .return-back,
+  html[data-billing="canceled"] .return-canceled{display:block}
   footer{padding:32px 16px 40px; text-align:center; font-size:14px; line-height:1.7; color:var(--ink-faint)}
   footer a{color:var(--ink-soft)}
 </style>
@@ -51,11 +68,25 @@
 
   <main>
     <section class="card">
-      <span class="badge">Pilot coming soon</span>
-      <h1>You inspect.<br>Spex reports.</h1>
-      <p class="tag">The home inspection app with a voice companion.</p>
-      <p class="lead">We're opening a small pilot for home inspectors. Apply now to be one of the first.</p>
-      <a class="btn" href="https://docs.google.com/forms/d/e/1FAIpQLSdFjpU8aZ6D44V7FkNRXFUGyjwfkH8YqBLK1qc0eE6OpuZvOg/viewform" rel="noopener">Apply for the pilot</a>
+      <div class="pitch">
+        <span class="badge">Pilot coming soon</span>
+        <h1>You inspect.<br>Spex reports.</h1>
+        <p class="tag">The home inspection app with a voice companion.</p>
+        <p class="lead">We're opening a small pilot for home inspectors. Apply now to be one of the first.</p>
+        <a class="btn" href="https://docs.google.com/forms/d/e/1FAIpQLSdFjpU8aZ6D44V7FkNRXFUGyjwfkH8YqBLK1qc0eE6OpuZvOg/viewform" rel="noopener">Apply for the pilot</a>
+      </div>
+      <div class="return return-done">
+        <h1>You're all set.</h1>
+        <p class="tag">Your Inspyx plan has started. Tap ✓ at the top to go back to the app.</p>
+      </div>
+      <div class="return return-back">
+        <h1>All done.</h1>
+        <p class="tag">Tap ✓ at the top to go back to Inspyx.</p>
+      </div>
+      <div class="return return-canceled">
+        <h1>No charge was made.</h1>
+        <p class="tag">Tap ✓ at the top to go back to Inspyx.</p>
+      </div>
     </section>
   </main>
 
