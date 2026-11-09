@@ -17,3 +17,12 @@ in place of the old "Inspyx Voice" site (Replit, 34.111.179.208).
   done "You're all set. Your Inspyx plan has started. Tap ✓ at the top to go back to the app.",
   back "All done. Tap ✓ at the top to go back to Inspyx.",
   canceled "No charge was made. Tap ✓ at the top to go back to Inspyx."
+
+Since 2026-11-09 (draft, live only once Moises approves the words): the site has
+four more pages, served with clean URLs (vercel.json cleanUrls):
+/pricing (founding price $69 a month or $649 a year, 30 days free),
+/refunds (cancellation and refunds), /terms and /privacy, sharing
+assets/page.css. Every page's footer links all four and gives the business
+line (888) 772-2919. Stripe's public business details link /terms and /privacy.
+Deploy every file in this folder together (index.html, the four pages,
+vercel.json, assets/).

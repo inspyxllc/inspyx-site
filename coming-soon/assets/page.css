@@ -1,0 +1,56 @@
+/* The pricing and policy pages (2026-11-09), in the coming-soon page's
+   black and white. One column, readable on a phone. */
+:root{
+  --ink:#1D1D1F; --ink-soft:#424245; --ink-faint:#6E6E73;
+  --bg:#FFFFFF; --alt:#F5F5F7; --line:rgba(0,0,0,.10); --btn:#000000; --btn-ink:#FFFFFF;
+  --shadow:0 24px 60px -24px rgba(0,0,0,.20), 0 4px 16px -6px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.05);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink); line-height:1.6;
+  background:var(--bg) radial-gradient(1200px 600px at 50% -10%, #ECECEF 0%, rgba(255,255,255,0) 60%) no-repeat;
+  -webkit-font-smoothing:antialiased;
+}
+header{padding:28px 16px 0; display:flex; justify-content:center}
+header a{display:block}
+header img{height:40px; width:auto; display:block}
+main{max-width:720px; margin:0 auto; padding:40px 16px 24px}
+h1{font-size:clamp(32px, 7vw, 48px); line-height:1.1; letter-spacing:-.02em; font-weight:700}
+.updated{margin-top:10px; font-size:15px; color:var(--ink-faint)}
+.intro{margin-top:16px; font-size:19px; line-height:1.5; color:var(--ink-soft)}
+h2{margin-top:44px; font-size:23px; line-height:1.25; letter-spacing:-.01em}
+h3{margin-top:24px; font-size:18px}
+p, li{font-size:17px; color:var(--ink-soft)}
+p{margin-top:12px}
+ul, ol{margin-top:12px; padding-left:24px}
+li{margin-top:8px}
+li::marker{color:var(--ink-faint)}
+a{color:var(--ink); text-underline-offset:2px}
+strong{color:var(--ink); font-weight:600}
+.path{font-weight:600; color:var(--ink)}
+
+/* Pricing: the plan card. */
+.plan{
+  margin-top:32px; text-align:center; border-radius:28px; box-shadow:var(--shadow);
+  background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.6));
+  padding:44px 24px 40px;
+}
+.badge{
+  display:inline-block; font-size:13px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+  background:var(--btn); color:var(--btn-ink); padding:8px 16px; border-radius:999px;
+}
+.price{margin-top:24px; font-size:clamp(48px, 12vw, 68px); font-weight:700; letter-spacing:-.03em; line-height:1; color:var(--ink)}
+.price span{font-size:22px; font-weight:600; letter-spacing:0; color:var(--ink-soft)}
+.alt-price{margin-top:12px; font-size:20px; color:var(--ink-soft)}
+.plan .note{max-width:440px; margin:20px auto 0; font-size:16px; color:var(--ink-faint)}
+.btn{
+  display:inline-block; margin-top:28px; background:var(--btn); color:var(--btn-ink);
+  text-decoration:none; font-size:17px; font-weight:600; padding:15px 30px; border-radius:999px;
+}
+.btn:hover{opacity:.85}
+
+footer{margin-top:56px; padding:32px 16px 40px; text-align:center; font-size:14px; line-height:1.8; color:var(--ink-faint); border-top:1px solid var(--line)}
+footer a{color:var(--ink-soft)}
+footer nav{margin-top:6px}
+footer nav a{display:inline-block; margin:0 8px}
