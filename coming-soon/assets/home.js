@@ -581,7 +581,8 @@ ctx.fillStyle = c(P.hair); ctx.beginPath(); ctx.ellipse(-6.6, -42.6, 4.7, 7.2, 0
 ctx.restore();
 ctx.fillStyle = c(P.skin, 0.2); ctx.beginPath(); ctx.arc(-10.9, -40.2, 1.3, 0, 6.2832); ctx.fill();
 ctx.fillStyle = c(P.cap); ctx.beginPath(); ctx.arc(-12, -42.5, 6.6, Math.PI, 0); ctx.closePath(); ctx.fill();
-ctx.fillRect(-22, -43.6, 10, 2.3);
+/* the brim, and the cap's band running on to the back of his head in one clean line */
+ctx.fillRect(-22, -43.6, 16.6, 2.3);
 ctx.restore();
 }
 
