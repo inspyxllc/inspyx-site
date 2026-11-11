@@ -7,14 +7,19 @@
 --
 -- Lives in the site repo, beside the page that uses it.
 --
--- STATUS on 2026-11-11: NOT APPLIED YET. It waits for Moises's OK. When he
--- gives it, apply this file to inspyx-prod with the Supabase connector as
--- the migration "website_waitlist", then update this note.
--- Dry run on inspyx-prod the same day (the whole file plus eight checks in
--- one transaction that was rolled back, nothing kept): new email 'ok', the
--- same email again 'ok' with no second row, five bad addresses 'invalid',
--- unknown taps stored as skipped, a visitor's browser may join but may not
--- read or insert, and the 121st new sign-up in an hour gets 'busy'.
+-- STATUS: applied to inspyx-prod on 2026-11-11 as the migration
+-- "website_waitlist" (20261111170433), on Moises's yes the same day.
+-- Checked after applying:
+--   * the live function's text is this file's, byte for byte;
+--   * a visitor's browser may run join_waitlist() and has no rights on the
+--     table (no reading, no direct insert);
+--   * in a transaction that was rolled back, so nothing was kept: a new
+--     email 'ok', the same email again 'ok' with no second row, five bad
+--     addresses 'invalid', unknown taps stored as skipped.
+-- The hourly limit ('busy' for the 121st new sign-up in an hour) was checked
+-- in the dry run before applying, with this same text.
+-- A later change goes in as a new migration, and this file is updated to
+-- match it.
 --
 -- What a visitor's browser can do: run join_waitlist(), and nothing else.
 -- It cannot read, change or count the list. An email that is already on the

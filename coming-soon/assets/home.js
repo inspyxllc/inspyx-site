@@ -567,10 +567,19 @@ ctx.save(); ctx.translate(-2, -10); ctx.rotate(-0.28);
 ctx.fillStyle = c(P.vest); this._rr(ctx, -8, -26, 16, 27, 5); ctx.fill();
 ctx.fillStyle = 'rgba(245,245,235,0.85)'; ctx.fillRect(-8, -15, 16, 2.4);
 ctx.restore();
-ctx.strokeStyle = c(P.vest, 0.3); ctx.lineWidth = 4.6; ctx.lineCap = 'round';
+/* He is the same man as in the close-up at the panel: a navy shirt under the vest, a navy cap, dark hair.
+   His sleeve is that navy shirt. */
+ctx.strokeStyle = c(P.cap, 0.2); ctx.lineWidth = 4.6; ctx.lineCap = 'round';
 ctx.beginPath(); ctx.moveTo(-9, -30); ctx.lineTo(-20, -14); ctx.stroke();
 ctx.fillStyle = c(P.skin); ctx.beginPath(); ctx.arc(-21, -12, 2.6, 0, 6.2832); ctx.fill();
-ctx.fillStyle = c(P.hair); ctx.beginPath(); ctx.arc(-12, -41, 6.2, 0, 6.2832); ctx.fill();
+/* His head is in profile, looking left. The face is the very same skin colour as his hand; his hair shows
+   only at the back of his head, under the cap. (Until 2026-11-11 the whole head was drawn in the hair colour,
+   which read as a brown face above tan hands.) */
+ctx.fillStyle = c(P.skin); ctx.beginPath(); ctx.arc(-12, -41, 6.2, 0, 6.2832); ctx.fill();
+ctx.save(); ctx.beginPath(); ctx.arc(-12, -41, 6.2, 0, 6.2832); ctx.clip();
+ctx.fillStyle = c(P.hair); ctx.beginPath(); ctx.ellipse(-6.6, -42.6, 4.7, 7.2, 0, 0, 6.2832); ctx.fill();
+ctx.restore();
+ctx.fillStyle = c(P.skin, 0.2); ctx.beginPath(); ctx.arc(-10.9, -40.2, 1.3, 0, 6.2832); ctx.fill();
 ctx.fillStyle = c(P.cap); ctx.beginPath(); ctx.arc(-12, -42.5, 6.6, Math.PI, 0); ctx.closePath(); ctx.fill();
 ctx.fillRect(-22, -43.6, 10, 2.3);
 ctx.restore();
