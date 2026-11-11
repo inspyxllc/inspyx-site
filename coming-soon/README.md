@@ -26,3 +26,49 @@ assets/page.css. Every page's footer links all four and gives the business
 line (888) 772-2919. Stripe's public business details link /terms and /privacy.
 Deploy every file in this folder together (index.html, the four pages,
 vercel.json, assets/).
+
+## The client's report page (branch claude/web-report, 2026-11-11; not live)
+
+`/r/<22-character key>` shows a client their inspection report as a web page, with the PDF one tap away.
+It is the first piece of "the report delivered as a web link" (Drive: "Plan — The Web Report: a Link for
+the Client, with the PDF on It (2026-11-11)").
+
+- Files: `report.html`, `assets/report.css`, `assets/report.js`. No build step, no library, and nothing
+  loaded from another company.
+- `vercel.json` sends `/r/:key` to `report.html` and gives the page its headers: not listed by search
+  engines, no referrer, not cached, never framed, and a Content-Security-Policy that allows only this site
+  and Inspyx's Supabase project.
+- The page asks the `report` Edge Function for the report a key opens and draws the "view" it answers with
+  (`inspyx-report-view/1`, made on the server from the same content the PDF is made from, so the two say the
+  same thing). **The function is not built yet.** Until it is, a real-looking key shows "The report
+  couldn't be opened."
+- What it can show: the report (open); its cover with a Pay button (locked, not paid yet); the address and
+  the PDF alone (plain, for a report the page can't lay out); "This report link doesn't work" (gone);
+  "The report couldn't be opened", with Try again (failed).
+- Three rules it keeps: a report's words go on the page as text, never as markup; a photo, the PDF and the
+  pay page load only from this site, inspyx.com or the Supabase project; nothing about the visit is sent
+  anywhere else.
+
+Checking it (self-checks; Playwright with Chromium):
+
+    node tools/report_serve.js --sample <sample folder> &
+    node tools/check_report.js <sample folder>
+
+A sample folder holds `report.json` (what the function answers for an open report), `files/` (its photos,
+each with a small copy) and `report.pdf`. The sample used so far is made from the app repo's Report B test
+fixture; it is **not** in this repo, which is public, and its builder is to live in the app's repo beside
+the report function.
+
+A private preview for Moises (one file, with the sample beside it, published as the claude.ai artifact
+"Web Report Sample"):
+
+    node tools/report_preview.js <sample folder> <out folder>
+    node tools/check_preview.js <out folder>
+
+Before the page goes live:
+
+- the report function, its tables and its private file store (app repo), tested with the sample;
+- the page's own wording (drafts, under `WORDS` in `report.js`) approved by Moises;
+- a new line on `/privacy`, which today says inspections are saved on the iPhone;
+- where the site is hosted, settled (Vercel's free plan is for non-commercial use);
+- a test in Safari on a real iPhone.

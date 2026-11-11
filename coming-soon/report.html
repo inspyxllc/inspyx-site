@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Home inspection report</title>
+<!-- A client's report, opened from the private link their inspector sent (inspyx.com/r/ and a key).
+     Search engines are asked to leave it alone, and the address is never passed on to another site. -->
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="stylesheet" href="/assets/report.css">
+</head>
+<body>
+<a class="skip" href="#report">Skip to the report</a>
+<div id="app" aria-busy="true">
+  <p class="state state-wait" role="status">Opening the report…</p>
+</div>
+<noscript>
+  <p class="state">This page needs JavaScript to show the report. Please ask your inspector for the PDF.</p>
+</noscript>
+<script src="/assets/report.js" defer></script>
+</body>
+</html>
