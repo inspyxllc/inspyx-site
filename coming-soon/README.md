@@ -40,7 +40,8 @@ states the guarantee's condition; the form really sends.
   browser's bars tucked away; the scene is composed for the shorter screen you see first.
 - **Wide screens (860 px and up, at least 520 px tall):** the words sit on the left and the film
   plays in a window on the right.
-- **Between the two** (tablets held upright, narrow windows): the phone page, centred.
+- **Between the two** (tablets held upright, narrow windows): the phone page, footer included, centred on a
+  dark ground.
 - **The film** is drawn in code. Scrolling sets the film time: 1 at the top of the page, then one
   unit for each scene's stretch of page (`data-scene="1"` to `"4"`). With "reduce motion" on, each
   scene holds still at its start and then at its end.
@@ -67,7 +68,7 @@ From the repo's top folder:
 
 ```
 node tools/serve.js &            # the site at http://localhost:4173/, with clean URLs like Vercel's
-node tools/check_home.js         # 49 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off
+node tools/check_home.js         # 50 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, tablet and wide layouts
 node tools/shots.js out 390 844 -- t:1 t:1.9 t:3.97 5650     # pictures at chosen film moments or scroll positions
 node tools/make-images.js        # redraws the tab icons and the link-preview picture
 

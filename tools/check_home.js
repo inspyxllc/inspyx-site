@@ -210,6 +210,17 @@ async function open(browser, opts) {
     await ctx.close();
   }
 
+  // ---- between the two: a tablet held upright, or a narrow window
+  {
+    const { ctx, page, errs } = await open(browser, { w: 768, h: 1024 });
+    const r = await page.evaluate(() => {
+      const edge = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return Math.round(b.left) + '-' + Math.round(b.right); };
+      return { film: edge('.film'), sheet: edge('.sheet'), wait: edge('.wait'), foot: edge('.foot'), sw: document.documentElement.scrollWidth, pos: getComputedStyle(document.querySelector('.film')).position };
+    });
+    ok('tablet: the film, the report sheet, the waitlist and the footer share one centred column', r.pos === 'fixed' && r.film === '124-644' && r.sheet === r.film && r.wait === r.film && r.foot === r.film && r.sw === 768 && errs.length === 0, JSON.stringify(r));
+    await ctx.close();
+  }
+
   await browser.close();
   console.log(failed ? '\n' + failed + ' CHECK(S) FAILED' : '\nall checks passed');
   process.exit(failed ? 1 : 0);
