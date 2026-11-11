@@ -129,6 +129,12 @@ inspyx.com or example.com are marked as tests.
 - `privacy.html` says "Last updated" with the day the pages go live.
 - The design checklist has been walked through, test by test (the Claude Project "Inspyx",
   `claude/website-design-checklist.md`).
+- Stripe's card setup sends an inspector back to `/?payments=done`, or `/?payments=again` when
+  the setup link ran out (the app's `payments` function). No page answers either yet: neither
+  inspyx.com (checked 2026-11-11) nor this page, which answer only `?billing=`. The two messages
+  are item 6 of "Wording Waiting for Your OK (2026-11-10)" in Drive and wait for Moises's OK.
+  Once approved they go on this page the way the three `?billing=` messages do. The branch the
+  other chat named for them, `claude/payments-return`, is not on GitHub.
 - Upload every file in this folder together to the Vercel project `inspyx-coming-soon`.
 
 ## The other pages
