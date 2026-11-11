@@ -20,8 +20,10 @@ still shows the "Pilot coming soon" page until Moises says to publish.**
   "Claude Inspyx Development").
 - The guarantee's wording for the pricing page and the Terms (W9 and W10) is drafted for his OK.
   It is not in these files yet.
-- The lines of the Spex scene's conversation are his direction and Claude's wording. They wait for
-  his OK too.
+- The Spex scene's conversation is his direction and Claude's wording. He approved the scene and
+  its lines as shown on 2026-11-11 ("Yes, that's well done.").
+- He wants the report section to show the web report in place of the three PDF pages, once a web
+  report exists. It does not yet: today the app makes a PDF on the phone.
 - The branch can be seen at a private test address: the Vercel project `inspyx-site-test`
   (see "The test address" below).
 
