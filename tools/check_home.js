@@ -210,6 +210,32 @@ async function open(browser, opts) {
     await ctx.close();
   }
 
+  // ---- the conversation in the Spex scene
+  {
+    const { ctx, page, errs } = await open(browser, {});
+    const w = await page.evaluate(() => { const f = window.__inspyxFilm; return { say: f._say.map((l) => l.label + ': ' + l.text), filed: f._filed, text: document.querySelector('[data-talk]').textContent.replace(/\s+/g, ' ').trim() }; });
+    ok('the Spex scene: six lines of conversation and the "filed" card, read from the page\'s own words', w.say.length === 6 && w.say[0] === 'You: Spex, take a photo of that breaker.' && w.say[1] === 'Spex: Camera open.' && w.say[4] === 'You: Take it.' && w.say[5] === 'Spex: Got it.' && w.filed && w.filed[0] === 'Filed under Electrical', w.say.join(' | '));
+    ok('the same conversation is in the page as text, for people who can\'t see the film', /You: Spex, take a photo of that breaker\. Spex: Camera open\./.test(w.text) && /Filed under Electrical\./.test(w.text), w.text.slice(0, 110));
+    const at = async (u) => { await page.evaluate((v) => window.scrollTo(0, window.__inspyxFilm.talkScroll(v)), u); await page.waitForTimeout(250); return page.evaluate(() => window.__inspyxFilm._talkLive.join(' | ')); };
+    const a = await at(0.12), b = await at(0.27), c = await at(0.6), d = await at(1);
+    ok('scrolling: he speaks, then Spex answers, each time', a === '\u201CSpex, take a photo of that breaker.\u201D' && b === a + ' | \u201CCamera open.\u201D' && c === '\u201CSpex, put the flash on, put the light on, and zoom in 4\u00D7.\u201D | \u201CFlash on, light on, 4\u00D7.\u201D' && errs.length === 0, [a, b, c].join(' || '));
+    ok('it ends with the photo taken and filed', d === '\u201CTake it.\u201D | \u201CGot it.\u201D | Filed under Electrical', d);
+    const T = await page.evaluate(() => { const f = window.__inspyxFilm; return [Math.round(f._lastT * 1000) / 1000, f._talkU]; });
+    ok('the film\'s clock waits while they talk, and runs on afterwards', T[1] === 1 && T[0] > 3.56 && T[0] < 4, T.join(', '));
+    await ctx.close();
+  }
+  {
+    const { ctx, page, errs } = await open(browser, { still: true });
+    const seen = [];
+    for (const u of [0.05, 0.5, 0.95]) {
+      await page.evaluate((v) => window.scrollTo(0, window.__inspyxFilm.talkScroll(v)), u);
+      await page.waitForTimeout(250);
+      seen.push(await page.evaluate(() => window.__inspyxFilm._talkU + ':' + window.__inspyxFilm._talkLive.length));
+    }
+    ok('motion off: the conversation is a row of stills, one line at a time', JSON.stringify(seen) === JSON.stringify(['0.12:1', '0.6:2', '1:3']) && errs.length === 0, seen.join(', '));
+    await ctx.close();
+  }
+
   // ---- between the two: a tablet held upright, or a narrow window
   {
     const { ctx, page, errs } = await open(browser, { w: 768, h: 1024 });

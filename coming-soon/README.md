@@ -20,6 +20,8 @@ still shows the "Pilot coming soon" page until Moises says to publish.**
   "Claude Inspyx Development").
 - The guarantee's wording for the pricing page and the Terms (W9 and W10) is drafted for his OK.
   It is not in these files yet.
+- The lines of the Spex scene's conversation are his direction and Claude's wording. They wait for
+  his OK too.
 - The branch can be seen at a private test address: the Vercel project `inspyx-site-test`
   (see "The test address" below).
 
@@ -27,24 +29,31 @@ The new home page follows one job from the first call to the finished report. It
 the phone mock-up Moises approved on 2026-11-10 ("the original", kept on the branch
 `claude/home-page-mockup`), and on a 390 x 844 phone it draws the same picture as that mock-up.
 
-Self-check on 2026-11-11 with `tools/compare_mockup.js`, 18 frames from the first screen down to
-the form, counting every pixel that differs at all:
+**How it stands against the mock-up** (`tools/compare_mockup.js`, counting every pixel that differs
+at all). When first built, 17 of 18 frames from the first screen down to the form were identical
+to the mock-up to the last pixel, and the 18th differed in 8 pixels by 1 step of 255. As visitors
+get the page, the three report pictures also differ inside themselves: the page serves them as
+WebP where the mock-up carried JPEG (at most 12 steps of 255).
 
-- Given the mock-up's own report pictures, 17 frames are identical to the last pixel. The 18th
-  differs in 8 pixels, each by 1 step of 255 (the outline of two buttons on the form).
-- As visitors get it, the only other difference is inside the three report pictures, in 3 frames:
-  the page serves them as WebP, the mock-up carried JPEG (at most 12 steps of 255).
+Changed from the mock-up on purpose since then:
 
-Changed from the mock-up on purpose: the footer no longer links Switching, Reliability and Your
-data (those pages are not on this site) and its email and phone are links; a line under the form
-states the guarantee's condition; the form really sends.
+- **The footer** no longer links Switching, Reliability and Your data (those pages are not on
+  this site), and its email and phone are links. A line under the form states the guarantee's
+  condition. The form really sends.
+- **The inspector on the roof was redrawn** on 2026-11-11, at Moises's word. In the mock-up his
+  whole head was the hair colour, which read as a brown face above tan hands. Now his face is the
+  very same skin colour as his hand, his hair shows only at the back of his head under the cap,
+  and his sleeve is the navy shirt he wears at the panel.
+- **The Spex scene was redrawn** the same day, at his word: "I want the iPhone normal sized. I
+  don't need a close-up of this ridiculously undetailed camera app. Secondly, the captions should
+  be the inspector and specs talking to each other". He now stands at the panel with the iPhone
+  in his hand at its real size, and the scene is a conversation: his words in white captions,
+  Spex's answers in black ones. The scene does what Spex says: the camera comes up, the light
+  comes on, the flash fires. The scene's stretch of page is 2,400 px, where the others are 1,300.
 
-**The inspector on the roof was redrawn on 2026-11-11, at Moises's word.** In the mock-up his
-whole head was the hair colour, which read as a brown face above tan hands. Now his face is the
-very same skin colour as his hand, his hair shows only at the back of his head under the cap, and
-his sleeve is the navy shirt he wears in the close-up at the panel. Since then, of the 18
-comparison frames, 8 are identical to the mock-up to the last pixel, 9 differ only where he is
-drawn, and one differs in the same 8 pixels as before.
+The comparison now leaves the Spex scene out and compares what follows it further down the
+page. Of its 16 frames, 6 are identical to the mock-up to the last pixel, 9 differ only where
+the inspector on the roof is drawn, and one differs in the same 8 pixels as before.
 
 - `index.html` holds every word and all the styles. `assets/home.js` draws the film and runs the
   calculator and the form. No libraries, no web fonts, no cookies, no trackers.
@@ -58,6 +67,14 @@ drawn, and one differs in the same 8 pixels as before.
 - **The film** is drawn in code. Scrolling sets the film time: 1 at the top of the page, then one
   unit for each scene's stretch of page (`data-scene="1"` to `"4"`). With "reduce motion" on, each
   scene holds still at its start and then at its end.
+- **The conversation in the Spex scene** is written in `index.html` (the block marked
+  `data-talk`, hidden from sight and read by screen readers). The film draws those very words, so
+  to change a line, change it there. In that scene the film's clock runs its usual 1,300 px with a
+  pause in the middle, and the conversation plays through the pause; with "reduce motion" on,
+  each line is a still of its own. Spex's answers follow how Spex really runs the camera
+  (`backend/spex_relay/relay/spex.py` in the app's repo, read on 2026-11-11 at 7e35c44): it opens
+  the camera when asked, sets zoom, light and flash by voice, never takes the photo by itself,
+  and says back only what was really set.
 - **The calculator** multiplies the visitor's own numbers. Nothing is sent anywhere.
 - **The waitlist form** sends the email and the two taps to `join_waitlist()` in Inspyx's own
   database (Supabase), with the project's publishable key. See `../backend/waitlist/schema.sql`.
@@ -81,8 +98,8 @@ From the repo's top folder:
 
 ```
 node tools/serve.js &            # the site at http://localhost:4173/, with clean URLs like Vercel's
-node tools/check_home.js         # 50 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, tablet and wide layouts
-node tools/shots.js out 390 844 -- t:1 t:1.9 t:3.97 5650     # pictures at chosen film moments or scroll positions
+node tools/check_home.js         # 56 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, the Spex conversation, tablet and wide layouts
+node tools/shots.js out 390 844 -- t:1 t:1.9 talk:0.6 5650   # pictures at film moments, points in the Spex conversation, or scroll positions
 node tools/make-images.js        # redraws the tab icons and the link-preview picture
 
 # the real page against the mock-up it was built from, frame by frame

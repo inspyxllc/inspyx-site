@@ -11,6 +11,9 @@
 // whatever still differs is in the page itself and not in a picture's file format.
 //
 // The footer is left out: the real page's footer differs on purpose (three links to pages that don't exist were removed).
+// The Spex scene is left out too: Moises had it redrawn on 2026-11-11 (the iPhone at its real size, and a
+// conversation between the inspector and Spex). That scene's stretch of page is longer on the real page, so
+// everything after it is compared at the matching place further down.
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
@@ -21,9 +24,11 @@ const [mockup, outDir] = args.filter((a) => !a.startsWith('--'));
 if (!mockup || !outDir) { console.error('usage: node tools/compare_mockup.js <mockup preview.html> <outDir> [--same-pictures]'); process.exit(2); }
 const SITE = 'http://localhost:4173/';
 
-// film moments (the page is scrolled to (T - 1) x 1300), then places lower down: the report pages, the calculator, the form
-const frames = [1, 1.3, 1.62, 1.9, 2.3, 2.6, 2.9, 3.3, 3.45, 3.8, 3.97, 4.45, 4.8, 5].map((T) => ['T' + String(T).replace('.', '_'), Math.round((T - 1) * 1300)])
-  .concat([5480, 5900, 6350, 6800].map((y) => ['y' + y, y]));
+// film moments (the mock-up is scrolled to (T - 1) x 1300), then places lower down: the report pages, the calculator, the form.
+// Each is [name, the mock-up's scroll position, whether it lies after the Spex scene].
+// (3.35 is the last moment before the Spex scene starts to fade in; 4.6 the first after it has faded out)
+const frames = [1, 1.3, 1.62, 1.9, 2.3, 2.6, 2.9, 3.3, 3.35, 4.6, 4.8, 5].map((T) => ['T' + String(T).replace('.', '_'), Math.round((T - 1) * 1300), T >= 4])
+  .concat([5480, 5900, 6350, 6800].map((y) => ['y' + y, y, true]));
 
 (async () => {
   fs.mkdirSync(outDir, { recursive: true });
@@ -44,7 +49,10 @@ const frames = [1, 1.3, 1.62, 1.9, 2.3, 2.6, 2.9, 3.3, 3.45, 3.8, 3.97, 4.45, 4.
     }
     await page.goto(which === 'mockup' ? 'file://' + path.resolve(mockup) : SITE, { waitUntil: 'load' });
     await page.waitForTimeout(700);
-    for (const [name, top] of frames) {
+    // how much longer the Spex scene's stretch is on the real page
+    const extra = which === 'real' ? await page.evaluate(() => document.querySelector('[data-scene="3"]').offsetHeight - 1300) : 0;
+    for (const [name, at, after] of frames) {
+      const top = at + (after ? extra : 0);
       await page.evaluate(([w, y]) => {
         // the mock-up scrolls inside its phone screen; the real page scrolls the document
         if (w === 'mockup') document.querySelector('[data-scroller]').scrollTo({ top: y, behavior: 'instant' });

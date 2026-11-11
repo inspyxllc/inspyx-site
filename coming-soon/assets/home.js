@@ -4,6 +4,12 @@
 'use strict';
 
 var doc = document;
+
+/* The conversation in the Spex scene, as shares of its stretch of page: when each piece comes in
+   (his words, Spex's answer, three times over, then the "filed" card), and the stills shown one by one
+   when the visitor has motion turned off. */
+var TALK_BEATS = [0.05, 0.19, 0.34, 0.49, 0.65, 0.79, 0.90];
+var TALK_STILLS = [0.12, 0.27, 0.42, 0.60, 0.72, 0.87, 1];
 /* After Stripe's checkout the page shows one message and nothing else runs. */
 if (doc.documentElement.hasAttribute('data-billing')) return;
 
@@ -20,6 +26,19 @@ this._raf = 0; this._lastT = -1; this._lastDraw = 0; this._lastHk = null; this._
 this._geo = null; this._geoAt = 0; this._geoKey = ''; this._geoSig = ''; this._scn = [];
 this._tops = { 1: 353, 2: 376, 3: 325, 4: 315 }; this._heroB0 = 430; this._heroY = 430;
 this._V = 0; this._Hs = 0; this._end = Infinity; this._isWide = false;
+this._talkU = 0; this._lastTalk = -1; this._talkLive = [];
+/* The conversation in the Spex scene is written in the page (index.html, [data-talk]), so the people
+   and programs that can't see the film read the same words the film shows. */
+this._say = []; this._filed = null;
+const talk = doc.querySelector('[data-talk]');
+if (talk) {
+const ps = talk.querySelectorAll('[data-who]');
+for (let i = 0; i < ps.length; i++) {
+const q = ps[i].querySelector('q');
+this._say.push({ who: ps[i].getAttribute('data-who'), label: ps[i].getAttribute('data-label') || '', text: (q ? q.textContent : ps[i].textContent).trim() });
+}
+if (talk.getAttribute('data-filed')) this._filed = [talk.getAttribute('data-filed'), talk.getAttribute('data-filed-note') || ''];
+}
 this._mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 this._wide = window.matchMedia ? window.matchMedia('(min-width: 860px) and (min-height: 520px)') : null;
 this._initFilm();
@@ -60,9 +79,10 @@ if (!this._ctx) { this._ctx = cv.getContext('2d'); resized = true; }
 if (H !== this._lastH) { this._lastH = H; resized = true; }
 const still = this._still();
 const T = this._filmTime(st, still);
+const talk = this._talkU;
 const hk = Math.max(-120, Math.round(this._heroY));
-if (!resized && hk === this._lastHk && Math.abs(T - this._lastT) < 0.0004 && (still || now - this._lastDraw < 45)) return;
-this._lastT = T; this._lastDraw = now; this._lastHk = hk;
+if (!resized && hk === this._lastHk && Math.abs(T - this._lastT) < 0.0004 && Math.abs(talk - this._lastTalk) < 0.0004 && (still || now - this._lastDraw < 45)) return;
+this._lastT = T; this._lastTalk = talk; this._lastDraw = now; this._lastHk = hk;
 this._Hc = Hc;
 this._draw(this._ctx, W, H, dpr, T, still ? 0 : now / 1000);
 }
@@ -117,17 +137,53 @@ if (g.el.style.opacity !== op) g.el.style.opacity = op;
 }
 }
 
-/* Film time: 1 at the top of the page, then one unit for each scene's stretch of page. */
+/* Film time: 1 at the top of the page, then one unit for each scene's stretch of page.
+   The Spex scene's stretch is longer than the others. There the film's clock runs its usual 1,300 px
+   with a pause in the middle, and the conversation plays through the pause: this._talkU goes 0 to 1. */
 _filmTime(st, still) {
 const V = this._V, a = this._scn || [];
-let T = 1;
+let T = 1, talk = 0;
 for (let i = 0; i < a.length; i++) {
 const e = st + V - a[i].top;
 if (e <= 0) break;
-const q = Math.min(1, e / a[i].h);
-T = a[i].n + (still ? (q < 0.5 ? 0 : 0.995) : q);
+const n = a[i].n, h = a[i].h;
+if (n === 3 && h > 1300) {
+const sp = this._talkSpan(V, h);
+const raw = Math.min(1, Math.max(0, (e - sp[0]) / (sp[1] - sp[0])));
+/* the clock stops at 735 px, just after the scene has faded in, and starts again that far from the end */
+const pl = e <= 735 ? e : Math.max(735, e - (h - 1300));
+if (still) {
+/* motion off: the scene before holds until the conversation starts; then each line is a still of its own */
+T = 3 + (e < sp[0] ? 0 : 0.995);
+talk = e < sp[0] ? 0 : TALK_STILLS[Math.min(TALK_STILLS.length - 1, Math.floor(raw * TALK_STILLS.length))];
+} else {
+T = 3 + Math.min(1, pl / 1300);
+talk = raw;
 }
+} else {
+const q = Math.min(1, e / h);
+T = n + (still ? (q < 0.5 ? 0 : 0.995) : q);
+if (n > 3) talk = 1;
+}
+}
+this._talkU = talk;
 return T;
+}
+
+/* Where the conversation starts and ends, in px from where the Spex scene's stretch enters the screen:
+   from just after the scene is fully on and its card has settled, to a little before the stretch ends. */
+_talkSpan(V, h) {
+const t0 = Math.max(735, V - 80) + 40;
+return [t0, Math.max(t0 + 600, h - 150)];
+}
+
+/* For the tools: the scroll position that shows the conversation at u (0 at its start, 1 at its end). */
+talkScroll(u) {
+const a = this._scn || [];
+for (let i = 0; i < a.length; i++) {
+if (a[i].n === 3) { const sp = this._talkSpan(this._V, a[i].h); return Math.round(a[i].top - this._V + sp[0] + u * (sp[1] - sp[0])); }
+}
+return 0;
 }
 
 _initFilm() {
@@ -719,7 +775,7 @@ ctx.fillStyle = g; ctx.fillRect(0, y0, W, y1 - y0);
 
 /* ---- small interface pieces laid over the film ---- */
 
-_chip(ctx, x, y, w, h, alpha, pop, r) {
+_chip(ctx, x, y, w, h, alpha, pop, r, dark) {
 const d = this._dpr, k = 0.94 + 0.06 * pop;
 ctx.save();
 ctx.globalAlpha = Math.max(0, Math.min(1, alpha * pop));
@@ -727,10 +783,10 @@ ctx.translate(x + w / 2, y + h / 2 + (1 - pop) * 10);
 ctx.scale(k, k);
 ctx.translate(-w / 2, -h / 2);
 ctx.shadowColor = 'rgba(0,0,0,0.30)'; ctx.shadowBlur = 22 * d; ctx.shadowOffsetY = 9 * d;
-ctx.fillStyle = 'rgba(255,255,255,0.94)';
+ctx.fillStyle = dark ? 'rgba(16,17,20,0.95)' : 'rgba(255,255,255,0.94)';
 this._rr(ctx, 0, 0, w, h, r == null ? h / 2 : r); ctx.fill();
 ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.stroke();
+ctx.lineWidth = 1; ctx.strokeStyle = dark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.95)'; ctx.stroke();
 }
 
 _icon(ctx, kind, cx, cy, r) {
@@ -886,21 +942,80 @@ ctx.beginPath(); ctx.ellipse(mx, my, 37 * s, 17 * s, -0.08, -1.9, -1.9 + 6.5 * m
 }
 }
 
+/* A caption in the conversation: who is speaking, and the words. Measured first, so its tail can be drawn under it. */
+_sayBox(ctx, line, cs, maxW) {
+const F = this._FONT;
+const q = '“' + line.text + '”';
+ctx.font = '600 ' + (15 * cs) + 'px ' + F;
+const room = maxW - 74 * cs;
+let rows = [q];
+if (ctx.measureText(q).width > room) {
+/* too long for one row on this screen: break it at the space nearest the middle */
+const words = q.split(' ');
+let best = null;
+for (let i = 1; i < words.length; i++) {
+const a = words.slice(0, i).join(' '), b = words.slice(i).join(' ');
+const wa = ctx.measureText(a).width, wb = ctx.measureText(b).width;
+const score = Math.max(wa, wb);
+if (!best || score < best.score) best = { score: score, rows: [a, b] };
+}
+if (best) rows = best.rows;
+}
+let tw = 0;
+for (let i = 0; i < rows.length; i++) tw = Math.max(tw, ctx.measureText(rows[i]).width);
+ctx.font = '600 ' + (12.5 * cs) + 'px ' + F;
+tw = Math.max(tw, ctx.measureText(line.label).width);
+return { who: line.who, label: line.label, rows: rows, w: Math.min(maxW, 54 * cs + tw + 20 * cs), h: (rows.length > 1 ? 75 : 56) * cs };
+}
+
+_sayDraw(ctx, box, x, y, alpha, pop, cs, t) {
+const F = this._FONT, dark = box.who === 'spex', h = box.h;
+this._chip(ctx, x, y, box.w, h, alpha, pop, 19 * cs, dark);
+if (dark) {
+/* Spex: a white disc with its voice in it */
+ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(28 * cs, h / 2, 16 * cs, 0, 6.2832); ctx.fill();
+for (let i = 0; i < 4; i++) {
+const hh = (5 + 11 * Math.abs(Math.sin(t * 5.2 + i * 1.3 + 0.6))) * cs;
+ctx.fillStyle = '#101114'; this._rr(ctx, (20.3 + i * 4.4) * cs, h / 2 - hh / 2, 2.4 * cs, hh, 1.2 * cs); ctx.fill();
+}
+} else {
+this._icon(ctx, 'mic', 28 * cs, h / 2, 16 * cs);
+}
+ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+const n = box.rows.length, y0 = n > 1 ? 16 * cs : h / 2 - 10 * cs;
+ctx.fillStyle = dark ? 'rgba(255,255,255,0.72)' : '#424245'; ctx.font = '600 ' + (12.5 * cs) + 'px ' + F;
+ctx.fillText(box.label, 54 * cs, y0);
+ctx.fillStyle = dark ? '#FFFFFF' : '#1D1D1F'; ctx.font = '600 ' + (15 * cs) + 'px ' + F;
+for (let i = 0; i < n; i++) ctx.fillText(box.rows[i], 54 * cs, y0 + (19 + i * 19) * cs);
+ctx.restore();
+}
+
+/* The Spex scene. He stands at the electrical panel with his iPhone in his hand, at its real size, and
+   talks with Spex: his words show in a white caption, Spex's answers in a black one, and the scene does
+   what Spex says it did (the camera comes up, the light comes on, the flash fires).
+   The words are read from the page (index.html, [data-talk]); u runs 0 to 1 through the conversation. */
 _shotD(ctx, W, H, t, T) {
 const P = this._P, me = this;
 const c = (b, sh, dp, a) => me._c(b, sh, dp, a);
 const ramp = this._ramp, ease = this._ease;
 const d = this._dpr, Hc = this._Hc || H;
 const top = this._tops[3];
-const s = Math.max(0.76, Math.min(W / 390, (H - top) / 440));
+/* on a very short screen the scene is drawn smaller, down to 0.6, so the panel, the phone and his head still fit under the words */
+const s = Math.max(Math.min(0.76, Math.max(0.6, (H - top - 6) / 336)), Math.min(W / 390, (H - top) / 440));
 const ox = W / 2 - 195 * s, oy = Math.max(top, H - 492 * s);
 const X = (v) => ox + v * s, Y = (v) => oy + v * s;
-const a = ramp(3.6, 3.97, T);
+const u = this._talkU || 0, B = TALK_BEATS;
+const pop = (i) => ease(ramp(B[i], B[i] + 0.035, u));
+const raise = ease(ramp(B[1] - 0.045, B[1] + 0.035, u));
+const light = ease(ramp(B[3] - 0.035, B[3] + 0.035, u));
+const zin = ease(ramp(B[3] - 0.035, B[3] + 0.05, u));
+const flash = ramp(B[5] - 0.05, B[5] - 0.035, u) * (1 - ramp(B[5] - 0.035, B[5] + 0.045, u));
 ctx.setTransform(d, 0, 0, d, 0, 0);
 ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-const zoom = 1 + 0.05 * ramp(3.36, 4.5, T);
+const zoom = 1 + 0.035 * ease(u), zx = X(170), zy = Y(285);
+const Z = (p) => [zx + (p[0] - zx) * zoom, zy + (p[1] - zy) * zoom];
 ctx.save();
-ctx.translate(X(170), Y(300)); ctx.scale(zoom, zoom); ctx.translate(-X(170), -Y(300));
+ctx.translate(zx, zy); ctx.scale(zoom, zoom); ctx.translate(-zx, -zy);
 
 /* the wall */
 let g = ctx.createLinearGradient(0, 0, 0, H);
@@ -921,82 +1036,63 @@ lg.addColorStop(0, 'rgba(24,30,58,0.16)'); lg.addColorStop(1, 'rgba(24,30,58,0)'
 ctx.fillStyle = lg; ctx.fillRect(lx - lr, ly - lr, lr * 2, lr * 2);
 }
 
-/* conduit and the panel */
-ctx.fillStyle = c(P.metal, 0.2); ctx.fillRect(X(94), -30, 13 * s, Y(172) + 30);
-ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(X(96.5), -30, 2.6 * s, Y(172) + 30);
-ctx.fillStyle = 'rgba(18,24,46,0.22)'; ctx.fillRect(X(24), Y(172), 164 * s, 222 * s);
-this._panel(ctx, X(100), Y(276), s, 0);
+/* conduit and the panel, on the wall to his left */
+const ps = 0.6 * s, pcx = X(104), pcy = Y(258);
+ctx.fillStyle = c(P.metal, 0.2); ctx.fillRect(pcx - 10 * ps, -30, 13 * ps, pcy - 104 * ps + 30);
+ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(pcx - 6 * ps, -30, 2.6 * ps, pcy - 104 * ps + 30);
+ctx.fillStyle = 'rgba(18,24,46,0.22)'; ctx.fillRect(pcx - 76 * ps, pcy - 104 * ps, 164 * ps, 222 * ps);
+this._panel(ctx, pcx, pcy, ps, 0);
+
+/* the work light, and the flash as the photo is taken, on the breaker he is aiming at */
+const bx = pcx + 31 * ps, by = pcy + 4 * ps;
+if (light > 0 || flash > 0) {
+ctx.save(); ctx.globalCompositeOperation = 'lighter';
+if (light > 0) {
+const lg = ctx.createRadialGradient(bx, by, 0, bx, by, 92 * s);
+lg.addColorStop(0, 'rgba(255,244,214,' + (0.46 * light).toFixed(3) + ')'); lg.addColorStop(0.36, 'rgba(255,244,214,' + (0.22 * light).toFixed(3) + ')'); lg.addColorStop(1, 'rgba(255,244,214,0)');
+ctx.fillStyle = lg; ctx.fillRect(bx - 96 * s, by - 96 * s, 192 * s, 192 * s);
+}
+if (flash > 0) {
+const fg = ctx.createRadialGradient(bx, by, 0, bx, by, 210 * s);
+fg.addColorStop(0, 'rgba(255,255,255,' + (0.95 * flash).toFixed(3) + ')'); fg.addColorStop(0.4, 'rgba(255,255,255,' + (0.45 * flash).toFixed(3) + ')'); fg.addColorStop(1, 'rgba(255,255,255,0)');
+ctx.fillStyle = fg; ctx.fillRect(bx - 214 * s, by - 214 * s, 428 * s, 428 * s);
+}
+ctx.restore();
+}
 
 /* his shadow on the wall */
-g = ctx.createRadialGradient(X(250), Y(420), 0, X(250), Y(420), 210 * s);
-g.addColorStop(0, 'rgba(18,24,46,0.34)'); g.addColorStop(1, 'rgba(18,24,46,0)');
-ctx.fillStyle = g; ctx.fillRect(X(20), Y(190), 460 * s, 330 * s);
+g = ctx.createRadialGradient(X(266), Y(404), 0, X(266), Y(404), 150 * s);
+g.addColorStop(0, 'rgba(18,24,46,0.30)'); g.addColorStop(1, 'rgba(18,24,46,0)');
+ctx.fillStyle = g; ctx.fillRect(X(100), Y(240), 330 * s, 330 * s);
 
-/* forearm and hand */
-ctx.strokeStyle = c(P.cap, 0.2); ctx.lineWidth = 46 * s; ctx.lineCap = 'round';
-/* Where the canvas is taller than the scene (a phone with the browser's bars tucked away) his arm
-   and his back run on down to the canvas's bottom edge. Anywhere else they are drawn exactly as composed. */
-const fb = Y(520) - 23 * s < Hc + 2 ? Math.max(0, (Hc + 60 - Y(520)) / (64 * s)) : 0;
-ctx.beginPath(); ctx.moveTo(X(232 + 36 * fb), Y(520 + 64 * fb)); ctx.lineTo(X(196), Y(456)); ctx.stroke();
-ctx.fillStyle = c(P.skin, 0.25);
-this._rr(ctx, X(160), Y(410), 62 * s, 50 * s, 20 * s); ctx.fill();
+/* The phone is low at first and comes up to aim once the camera opens. */
+const wx = 181 - 4 * raise, wy = 372 - 36 * raise;
 
-/* the phone */
+/* the inspector, from behind: the same man as before, standing a step further back */
 ctx.save();
-ctx.translate(X(166), Y(294)); ctx.rotate(-0.045);
-const pw = 138 * s, ph = 280 * s;
-ctx.shadowColor = 'rgba(0,0,0,0.42)'; ctx.shadowBlur = 30 * d; ctx.shadowOffsetY = 14 * d;
-ctx.fillStyle = '#0E0F12'; this._rr(ctx, -pw / 2, -ph / 2, pw, ph, 24 * s); ctx.fill();
-ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-ctx.save();
-this._rr(ctx, -pw / 2 + 5 * s, -ph / 2 + 5 * s, pw - 10 * s, ph - 10 * s, 19 * s); ctx.clip();
-g = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
-g.addColorStop(0, c(P.siding2, 0.25)); g.addColorStop(1, c(P.siding, 0.5));
-ctx.fillStyle = g; ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
-for (let y = -ph / 2 + 12 * s; y < ph / 2; y += 20 * s) { ctx.fillStyle = 'rgba(20,30,45,0.16)'; ctx.fillRect(-pw / 2, y, pw, 1.5 * s); }
-const mark = ease(ramp(0.50, 0.68, a));
-this._panel(ctx, 6 * s, -18 * s, s * 0.57, mark);
-/* viewfinder corners */
-const bp = 1 + 0.03 * Math.sin(t * 3);
-ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineWidth = 2.4 * s; ctx.lineCap = 'round';
-const bw = 50 * s * bp, bh = 76 * s * bp, bl = 13 * s;
-ctx.beginPath();
-ctx.moveTo(-bw, -18 * s - bh + bl); ctx.lineTo(-bw, -18 * s - bh); ctx.lineTo(-bw + bl, -18 * s - bh);
-ctx.moveTo(bw - bl, -18 * s - bh); ctx.lineTo(bw, -18 * s - bh); ctx.lineTo(bw, -18 * s - bh + bl);
-ctx.moveTo(bw, -18 * s + bh - bl); ctx.lineTo(bw, -18 * s + bh); ctx.lineTo(bw - bl, -18 * s + bh);
-ctx.moveTo(-bw + bl, -18 * s + bh); ctx.lineTo(-bw, -18 * s + bh); ctx.lineTo(-bw, -18 * s + bh - bl);
-ctx.stroke();
-/* listening bar */
-ctx.fillStyle = 'rgba(10,12,16,0.72)'; this._rr(ctx, -pw / 2 + 14 * s, ph / 2 - 58 * s, pw - 28 * s, 40 * s, 20 * s); ctx.fill();
-this._icon(ctx, 'mic', -pw / 2 + 34 * s, ph / 2 - 38 * s, 13 * s);
-for (let i = 0; i < 9; i++) {
-const hh = (4 + 13 * Math.abs(Math.sin(t * 6 + i * 0.9)) * (a < 0.34 ? 1 : 0.35)) * s;
-ctx.fillStyle = '#FFFFFF'; this._rr(ctx, -pw / 2 + (56 + i * 8) * s, ph / 2 - 38 * s - hh / 2, 3.4 * s, hh, 1.7 * s); ctx.fill();
-}
-const flash = ramp(0.30, 0.34, a) * (1 - ramp(0.34, 0.46, a));
-if (flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + (0.92 * flash).toFixed(3) + ')'; ctx.fillRect(-pw / 2, -ph / 2, pw, ph); }
-ctx.restore();
-/* thumb over the lower edge */
-ctx.fillStyle = c(P.skin, 0.15);
-ctx.save(); ctx.translate(pw / 2 - 8 * s, ph / 2 - 44 * s); ctx.rotate(-0.5); this._rr(ctx, -13 * s, -30 * s, 26 * s, 64 * s, 13 * s); ctx.fill(); ctx.restore();
-ctx.restore();
-
-/* the inspector, from behind */
+const f = 0.66;
+ctx.translate(X(272), Y(300)); ctx.scale(f, f); ctx.translate(-X(319), -Y(304));
+const yB = Math.max(Y(541), Y(304) + (Hc + 90 - Y(300)) / f);
 g = ctx.createLinearGradient(0, Y(350), 0, Y(520));
 g.addColorStop(0, c(P.vest)); g.addColorStop(1, c(P.vest, 0.7));
 ctx.fillStyle = g;
-const yb = Y(540) < Hc + 2 ? Hc + 60 : 0;
 ctx.beginPath();
-if (yb) { ctx.moveTo(X(206), yb); ctx.lineTo(X(206), Y(540)); } else ctx.moveTo(X(206), Y(540));
+ctx.moveTo(X(206), yB); ctx.lineTo(X(206), Y(540));
 ctx.bezierCurveTo(X(204), Y(440), X(232), Y(392), X(286), Y(376));
 ctx.lineTo(X(352), Y(376));
 ctx.bezierCurveTo(X(392), Y(384), X(420), Y(402), X(440), Y(430));
-ctx.lineTo(X(440), Y(540));
-if (yb) ctx.lineTo(X(440), yb);
+ctx.lineTo(X(440), yB);
 ctx.closePath(); ctx.fill();
+/* the vest's pale stripes: one across his back, two down from his shoulders */
 ctx.fillStyle = 'rgba(245,245,235,0.78)';
-this._poly(ctx, [[X(214), Y(470)], [X(440), Y(450)], [X(440), Y(468)], [X(212), Y(488)]]); ctx.fill();
-ctx.fillStyle = c(P.skin, 0.35); this._rr(ctx, X(292), Y(338), 54 * s, 50 * s, 14 * s); ctx.fill();
+this._poly(ctx, [[X(206), Y(471)], [X(440), Y(450)], [X(440), Y(468)], [X(206), Y(489)]]); ctx.fill();
+this._poly(ctx, [[X(258), Y(383)], [X(274), Y(379)], [X(270), Y(466)], [X(253), Y(467.5)]]); ctx.fill();
+this._poly(ctx, [[X(364), Y(378)], [X(380), Y(380.5)], [X(388), Y(454.5)], [X(371), Y(456)]]); ctx.fill();
+/* his neck, and his ears either side of his hair: the same skin as his hand */
+ctx.fillStyle = c(P.skin, 0.28); this._rr(ctx, X(292), Y(338), 54 * s, 50 * s, 14 * s); ctx.fill();
+ctx.fillStyle = c(P.skin, 0.25);
+ctx.beginPath(); ctx.ellipse(X(272.5), Y(322), 7.5 * s, 11 * s, -0.12, 0, 6.2832); ctx.fill();
+ctx.beginPath(); ctx.ellipse(X(365.5), Y(322), 7.5 * s, 11 * s, 0.12, 0, 6.2832); ctx.fill();
 ctx.fillStyle = c(P.cap, 0.3);
 ctx.beginPath(); ctx.moveTo(X(282), Y(380)); ctx.quadraticCurveTo(X(319), Y(400), X(356), Y(380)); ctx.lineTo(X(356), Y(372)); ctx.quadraticCurveTo(X(319), Y(388), X(282), Y(372)); ctx.closePath(); ctx.fill();
 ctx.fillStyle = c(P.hair); ctx.beginPath(); ctx.arc(X(319), Y(304), 47 * s, 0, 6.2832); ctx.fill();
@@ -1006,33 +1102,104 @@ ctx.fillStyle = c(P.cap, 0.5); this._rr(ctx, X(303), Y(310), 32 * s, 8 * s, 4 * 
 ctx.fillStyle = c(P.cap); this._poly(ctx, [[X(272), Y(296)], [X(248), Y(304)], [X(250), Y(311)], [X(274), Y(306)]]); ctx.fill();
 ctx.restore();
 
-/* what he says, and what Spex does with it */
-ctx.setTransform(d, 0, 0, d, 0, 0);
-const cs = Math.max(s, 0.9), cr = W - 12;
-const pv = ease(ramp(0.04, 0.14, a));
-if (pv > 0) {
-const h = 44 * cs;
-ctx.font = '600 ' + (14 * cs) + 'px ' + this._FONT;
-const w = h / 2 + 20 * cs + ctx.measureText('“Photo. Mark that breaker.”').width + 18 * cs;
-this._chip(ctx, cr - w, Y(18), w, h, 1, pv);
-this._icon(ctx, 'mic', h / 2, h / 2, 14 * cs);
-ctx.fillStyle = '#1D1D1F'; ctx.font = '600 ' + (14 * cs) + 'px ' + this._FONT; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-ctx.fillText('“Photo. Mark that breaker.”', h / 2 + 20 * cs, h / 2 + 0.5);
-ctx.restore();
+/* his arms: the sleeves of his navy shirt. One hangs at his side; the other holds the phone up. */
+ctx.strokeStyle = c(P.cap, 0.2); ctx.lineWidth = 23 * s; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+ctx.beginPath(); ctx.moveTo(X(343), Y(384)); ctx.lineTo(X(349), Y(492) + Math.max(0, Hc - Y(492)) / zoom + 60); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(X(207), Y(380)); ctx.lineTo(X(193), Y(418)); ctx.lineTo(X(wx), Y(wy)); ctx.stroke();
+
+/* his hand and the iPhone, at its real size beside his head */
+const hx = wx - 9, hy = wy - 27;
+ctx.save();
+ctx.translate(X(hx), Y(hy)); ctx.rotate(-0.26 + 0.2 * raise);
+const pw = 22 * s, ph = 45 * s;
+ctx.fillStyle = c(P.skin, 0.25); this._rr(ctx, -pw / 2 - 1.5 * s, ph * 0.03, pw + 9 * s, ph * 0.6, 8 * s); ctx.fill();
+ctx.shadowColor = 'rgba(0,0,0,0.38)'; ctx.shadowBlur = 9 * d; ctx.shadowOffsetY = 3 * d;
+ctx.fillStyle = '#0E0F12'; this._rr(ctx, -pw / 2, -ph / 2, pw, ph, 5.2 * s); ctx.fill();
+ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+ctx.save();
+this._rr(ctx, -pw / 2 + 1.5 * s, -ph / 2 + 1.5 * s, pw - 3 * s, ph - 3 * s, 3.9 * s); ctx.clip();
+ctx.fillStyle = '#16181C'; ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
+if (raise > 0) {
+/* the camera's view: the panel, then closer in on the breaker at 4x */
+ctx.globalAlpha = raise;
+g = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
+g.addColorStop(0, c(P.siding2, 0.25)); g.addColorStop(1, c(P.siding, 0.5));
+ctx.fillStyle = g; ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
+const k = 0.105 + 0.3 * zin;
+this._panel(ctx, -31 * k * s * zin, -ph * 0.07 - 4 * k * s * zin, k * s, 0);
+if (light > 0) { ctx.fillStyle = 'rgba(255,244,214,' + (0.2 * light).toFixed(3) + ')'; ctx.fillRect(-pw / 2, -ph / 2, pw, ph); }
+ctx.globalAlpha = 1;
 }
-const pf = ease(ramp(0.76, 0.88, a));
-if (pf > 0) {
+/* Spex listening: its voice, low on the screen */
+for (let i = 0; i < 5; i++) {
+const hh = (1.6 + 3.2 * Math.abs(Math.sin(t * 6 + i * 0.9))) * s;
+ctx.fillStyle = 'rgba(255,255,255,0.92)'; this._rr(ctx, (-5.6 + i * 2.5) * s, ph / 2 - 7.5 * s - hh / 2, 1.3 * s, hh, 0.65 * s); ctx.fill();
+}
+if (flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + (0.9 * flash).toFixed(3) + ')'; ctx.fillRect(-pw / 2, -ph / 2, pw, ph); }
+ctx.restore();
+/* fingertips on the far edge, thumb on the near one */
+ctx.fillStyle = c(P.skin, 0.2);
+for (let i = 0; i < 3; i++) { this._rr(ctx, -pw / 2 - 2.6 * s, ph * (0.05 + i * 0.135), 5.2 * s, 5 * s, 2.4 * s); ctx.fill(); }
+ctx.fillStyle = c(P.skin, 0.18);
+ctx.save(); ctx.translate(pw / 2 - 0.5 * s, ph * 0.2); ctx.rotate(-0.42); this._rr(ctx, -4.2 * s, -10 * s, 8.4 * s, 21 * s, 4.2 * s); ctx.fill(); ctx.restore();
+ctx.restore();
+ctx.restore();
+
+/* the whole scene brightens for an instant as the flash fires */
+ctx.setTransform(d, 0, 0, d, 0, 0);
+if (flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + (0.22 * flash).toFixed(3) + ')'; ctx.fillRect(0, 0, W, Hc); }
+
+/* the conversation: his words in white with a line to him, Spex's in black with a line to the phone */
+const say = this._say || [];
+const cs = Math.max(s, 0.9), cr = W - 12, maxW = Math.min(W - 24, 372 * cs), gap = 8 * cs;
+const head = Z([X(272), Y(300 - 49 * f)]), phone = Z([X(hx), Y(hy) - ph / 2]);
+const shown = [];
+for (let k = 0; k < 3; k++) {
+const out = k < 2 ? 1 - ramp(B[2 * k + 2] - 0.03, B[2 * k + 2], u) : 1;
+if (out <= 0) continue;
+for (let j = 0; j < 2; j++) {
+const line = say[2 * k + j], p = pop(2 * k + j);
+if (!line || p <= 0) continue;
+shown.push({ box: this._sayBox(ctx, line, cs, maxW), a: out, p: p, spex: j === 1 });
+}
+}
+const pf = pop(6), filed = this._filed;
+/* three captions fit over his head on most screens; where they don't, his last words make way for the card */
+let all = 60 * cs;
+for (let i = 0; i < shown.length; i++) all += shown[i].box.h + gap;
+const tight = pf > 0 && filed && shown.length > 1 && Y(18) + all > head[1] - 10 * s;
+let y = Y(18);
+const live = [];
+for (let i = 0; i < shown.length; i++) {
+const it = shown[i];
+/* Spex's answer always sits under his words, also while his are still alone on screen */
+if (it.spex && i === 0) y += 56 * cs + gap;
+if (tight && i === 0) { it.a *= 1 - pf; y -= (it.box.h + gap) * pf; }
+it.x = cr - it.box.w; it.y = y; y += it.box.h + gap;
+if (it.a <= 0.01) continue;
+const to = it.spex ? phone : head;
+const fx = it.spex ? it.x + Math.min(34 * cs, it.box.w * 0.3) : Math.max(it.x + 26 * cs, Math.min(it.x + it.box.w - 26 * cs, to[0]));
+ctx.strokeStyle = 'rgba(255,255,255,' + (0.85 * it.a * it.p).toFixed(3) + ')'; ctx.lineWidth = 1.5 * s;
+ctx.beginPath(); ctx.moveTo(to[0], to[1] - 3 * s); ctx.lineTo(fx, it.y + it.box.h + 3 * s); ctx.stroke();
+live.push(it.box.rows.join(' '));
+}
+for (let i = 0; i < shown.length; i++) { const it = shown[i]; if (it.a > 0.01) this._sayDraw(ctx, it.box, it.x, it.y, it.a, it.p, cs, t); }
+if (pf > 0 && filed) {
 const h = 60 * cs;
+ctx.font = '500 ' + (13.5 * cs) + 'px ' + this._FONT;
+const nw = ctx.measureText(filed[1]).width;
 ctx.font = '700 ' + (15.5 * cs) + 'px ' + this._FONT;
-const w = 57 * cs + ctx.measureText('Filed under Electrical').width + 22 * cs;
-this._chip(ctx, cr - w, Y(18) + 54 * cs, w, h, 1, pf, 20 * cs);
+const w = 57 * cs + Math.max(nw, ctx.measureText(filed[0]).width) + 22 * cs;
+this._chip(ctx, cr - w, y, w, h, 1, pf, 20 * cs);
 this._icon(ctx, 'check', 30 * cs, h / 2, 17 * cs);
 ctx.fillStyle = '#1D1D1F'; ctx.font = '700 ' + (15.5 * cs) + 'px ' + this._FONT; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-ctx.fillText('Filed under Electrical', 57 * cs, h / 2 - 9.5 * cs);
+ctx.fillText(filed[0], 57 * cs, h / 2 - 9.5 * cs);
 ctx.fillStyle = '#424245'; ctx.font = '500 ' + (13.5 * cs) + 'px ' + this._FONT;
-ctx.fillText('Photo taken and marked', 57 * cs, h / 2 + 10.5 * cs);
+ctx.fillText(filed[1], 57 * cs, h / 2 + 10.5 * cs);
 ctx.restore();
+live.push(filed[0]);
 }
+this._talkLive = live;
 }
 
 _pagesE(ctx, W, H, t, T) {
