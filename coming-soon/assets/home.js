@@ -924,7 +924,9 @@ ctx.fillStyle = g; ctx.fillRect(X(20), Y(190), 460 * s, 330 * s);
 
 /* forearm and hand */
 ctx.strokeStyle = c(P.cap, 0.2); ctx.lineWidth = 46 * s; ctx.lineCap = 'round';
-const fb = Math.max(0, (Hc + 60 - Y(520)) / (64 * s));
+/* Where the canvas is taller than the scene (a phone with the browser's bars tucked away) his arm
+   and his back run on down to the canvas's bottom edge. Anywhere else they are drawn exactly as composed. */
+const fb = Y(520) - 23 * s < Hc + 2 ? Math.max(0, (Hc + 60 - Y(520)) / (64 * s)) : 0;
 ctx.beginPath(); ctx.moveTo(X(232 + 36 * fb), Y(520 + 64 * fb)); ctx.lineTo(X(196), Y(456)); ctx.stroke();
 ctx.fillStyle = c(P.skin, 0.25);
 this._rr(ctx, X(160), Y(410), 62 * s, 50 * s, 20 * s); ctx.fill();
@@ -973,13 +975,14 @@ ctx.restore();
 g = ctx.createLinearGradient(0, Y(350), 0, Y(520));
 g.addColorStop(0, c(P.vest)); g.addColorStop(1, c(P.vest, 0.7));
 ctx.fillStyle = g;
-const yb = Math.max(Y(540), Hc + 60);
+const yb = Y(540) < Hc + 2 ? Hc + 60 : 0;
 ctx.beginPath();
-ctx.moveTo(X(206), yb); ctx.lineTo(X(206), Y(540));
+if (yb) { ctx.moveTo(X(206), yb); ctx.lineTo(X(206), Y(540)); } else ctx.moveTo(X(206), Y(540));
 ctx.bezierCurveTo(X(204), Y(440), X(232), Y(392), X(286), Y(376));
 ctx.lineTo(X(352), Y(376));
 ctx.bezierCurveTo(X(392), Y(384), X(420), Y(402), X(440), Y(430));
-ctx.lineTo(X(440), yb);
+ctx.lineTo(X(440), Y(540));
+if (yb) ctx.lineTo(X(440), yb);
 ctx.closePath(); ctx.fill();
 ctx.fillStyle = 'rgba(245,245,235,0.78)';
 this._poly(ctx, [[X(214), Y(470)], [X(440), Y(450)], [X(440), Y(468)], [X(212), Y(488)]]); ctx.fill();

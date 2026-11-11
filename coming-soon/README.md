@@ -18,8 +18,20 @@ still shows the "Pilot coming soon" page until Moises says to publish, and sever
 new page still wait for his OK.**
 
 The new home page follows one job from the first call to the finished report. It was built from
-the phone mock-up Moises approved on 2026-11-10 ("the original"), and on a 390 x 844 phone it
-matches that mock-up pixel for pixel.
+the phone mock-up Moises approved on 2026-11-10 ("the original", kept on the branch
+`claude/home-page-mockup`), and on a 390 x 844 phone it draws the same picture as that mock-up.
+
+Self-check on 2026-11-11 with `tools/compare_mockup.js`, 18 frames from the first screen down to
+the form, counting every pixel that differs at all:
+
+- Given the mock-up's own report pictures, 17 frames are identical to the last pixel. The 18th
+  differs in 8 pixels, each by 1 step of 255 (the outline of two buttons on the form).
+- As visitors get it, the only other difference is inside the three report pictures, in 3 frames:
+  the page serves them as WebP, the mock-up carried JPEG (at most 12 steps of 255).
+
+Changed from the mock-up on purpose: the footer no longer links Switching, Reliability and Your
+data (those pages are not on this site) and its email and phone are links; a line under the form
+states the guarantee's condition; the form really sends.
 
 - `index.html` holds every word and all the styles. `assets/home.js` draws the film and runs the
   calculator and the form. No libraries, no web fonts, no cookies, no trackers.
@@ -58,6 +70,11 @@ node tools/serve.js &            # the site at http://localhost:4173/, with clea
 node tools/check_home.js         # 49 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off
 node tools/shots.js out 390 844 -- t:1 t:1.9 t:3.97 5650     # pictures at chosen film moments or scroll positions
 node tools/make-images.js        # redraws the tab icons and the link-preview picture
+
+# the real page against the mock-up it was built from, frame by frame
+git fetch origin claude/home-page-mockup && git show FETCH_HEAD:mockup/preview.html > /tmp/mockup.html
+node tools/compare_mockup.js /tmp/mockup.html /tmp/compare                   # as visitors get it
+node tools/compare_mockup.js /tmp/mockup.html /tmp/compare --same-pictures   # with the mock-up's own report pictures
 ```
 
 The checks never send a sign-up: the waitlist call is caught and answered by the test.

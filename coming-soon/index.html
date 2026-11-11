@@ -104,7 +104,7 @@ a.logo{min-height:44px}
 
 /* The floating header */
 .bar-wrap{position:fixed; top:0; left:0; right:0; z-index:6; display:flex; justify-content:center; pointer-events:none; padding:0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px))}
-.bar{pointer-events:auto; width:100%; max-width:calc(var(--col) - 32px); height:56px; margin-top:12px; padding:6px 6px 6px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:rgba(255,255,255,.74); -webkit-backdrop-filter:blur(20px) saturate(1.5); backdrop-filter:blur(20px) saturate(1.5); border:1px solid rgba(255,255,255,.65); border-radius:999px; box-shadow:0 12px 28px -12px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.05)}
+.bar{pointer-events:auto; width:100%; max-width:calc(var(--col) - 32px); height:56px; margin-top:calc(12px + env(safe-area-inset-top, 0px)); padding:6px 6px 6px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:rgba(255,255,255,.74); -webkit-backdrop-filter:blur(20px) saturate(1.5); backdrop-filter:blur(20px) saturate(1.5); border:1px solid rgba(255,255,255,.65); border-radius:999px; box-shadow:0 12px 28px -12px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.05)}
 
 /* The film: fixed behind the page on phones */
 .film{position:fixed; top:0; left:max(0px, calc(50% - var(--col) / 2)); width:min(100%, var(--col)); height:100vh; height:100lvh; z-index:0; background:linear-gradient(180deg, #A9CBE8 0%, #D9E4EA 55%, #F8DDBE 100%)}
@@ -113,7 +113,7 @@ a.logo{min-height:44px}
 .story-text{position:relative; z-index:1}
 
 /* First screen */
-.hero{min-height:100vh; min-height:100svh; padding:92px max(24px, env(safe-area-inset-right, 0px)) 18px max(24px, env(safe-area-inset-left, 0px)); display:flex; flex-direction:column; align-items:flex-start}
+.hero{min-height:100vh; min-height:100svh; padding:calc(92px + env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) 18px max(24px, env(safe-area-inset-left, 0px)); display:flex; flex-direction:column; align-items:flex-start}
 .eyebrow{font-size:13px; font-weight:700; letter-spacing:.14em; text-transform:uppercase}
 .hero h1{margin-top:12px; font-size:min(34px, 8.1vw); line-height:1.08; letter-spacing:-.022em; font-weight:700; text-wrap:balance}
 .sub{margin-top:14px; font-size:18px; line-height:1.42; color:var(--ink-soft)}
@@ -125,7 +125,7 @@ a.logo{min-height:44px}
 /* One scene of the job: a tall stretch of page with a card that stays in view */
 .scene{min-height:1300px; padding:0 max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px))}
 .scene-last{padding-bottom:104px}
-.card{position:sticky; top:80px; padding:18px 20px 20px; display:flex; flex-direction:column; gap:8px; background:var(--glass); -webkit-backdrop-filter:blur(22px) saturate(1.6); backdrop-filter:blur(22px) saturate(1.6); border:1px solid rgba(255,255,255,.7); border-radius:28px; box-shadow:0 24px 60px -24px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.05)}
+.card{position:sticky; top:calc(80px + env(safe-area-inset-top, 0px)); padding:18px 20px 20px; display:flex; flex-direction:column; gap:8px; background:var(--glass); -webkit-backdrop-filter:blur(22px) saturate(1.6); backdrop-filter:blur(22px) saturate(1.6); border:1px solid rgba(255,255,255,.7); border-radius:28px; box-shadow:0 24px 60px -24px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.05)}
 .tag{align-self:flex-start; display:flex; align-items:center; gap:6px; height:26px; padding:0 11px 0 8px; border-radius:999px; background:rgba(0,0,0,.06); color:var(--ink-soft); font-size:12.5px; font-weight:600}
 .tag svg{display:block; width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
 .tag-now{color:var(--ink)}
@@ -166,7 +166,7 @@ a.logo{min-height:44px}
 .est{font-size:13.5px; line-height:1.45; color:var(--ink-faint)}
 
 /* The close: the waitlist */
-.wait{position:relative; z-index:2; background:#000; color:#fff; padding:92px max(24px, env(safe-area-inset-right, 0px)) 40px max(24px, env(safe-area-inset-left, 0px))}
+.wait{position:relative; z-index:2; background:#000; color:#fff; padding:calc(92px + env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) 40px max(24px, env(safe-area-inset-left, 0px))}
 .wait-in{display:flex; flex-direction:column; gap:16px}
 .wait h2{font-size:32px; line-height:1.08; letter-spacing:-.02em; font-weight:700}
 .wait-sub{font-size:17px; line-height:1.45; color:rgba(255,255,255,.8)}
@@ -215,7 +215,7 @@ a.logo{min-height:44px}
   html,body{background:var(--alt)}
   .wrap{max-width:none}
   .bar-wrap{padding:0 40px}
-  .bar{max-width:1200px; margin-top:16px}
+  .bar{max-width:1200px; margin-top:calc(16px + env(safe-area-inset-top, 0px))}
   .story{display:grid; grid-template-columns:minmax(0, 1fr) auto; column-gap:clamp(40px, 7vw, 112px); align-items:start; max-width:1280px; margin:0 auto; padding:0 40px}
   .film{position:sticky; top:calc((100vh - var(--sh)) / 2 + 30px); left:auto; grid-column:2; grid-row:1; width:var(--sw); height:var(--sh); z-index:1; border-radius:44px; overflow:hidden; box-shadow:0 44px 90px -44px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.06)}
   .film.off{visibility:visible}
