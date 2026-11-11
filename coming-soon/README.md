@@ -40,8 +40,8 @@ the Client, with the PDF on It (2026-11-11)").
   and Inspyx's Supabase project.
 - The page asks the `report` Edge Function for the report a key opens and draws the "view" it answers with
   (`inspyx-report-view/1`, made on the server from the same content the PDF is made from, so the two say the
-  same thing). **The function is not built yet.** Until it is, a real-looking key shows "The report
-  couldn't be opened."
+  same thing). The function is written (app repo, `backend/supabase/functions/report`) but **not live yet**:
+  until it is, a real-looking key shows "The report couldn't be opened."
 - What it can show: the report (open); its cover with a Pay button (locked, not paid yet); the address and
   the PDF alone (plain, for a report the page can't lay out); "This report link doesn't work" (gone);
   "The report couldn't be opened", with Try again (failed).
@@ -58,6 +58,16 @@ A sample folder holds `report.json` (what the function answers for an open repor
 each with a small copy) and `report.pdf`. The sample used so far is made from the app repo's Report B test
 fixture; it is **not** in this repo, which is public, and its builder is to live in the app's repo beside
 the report function.
+
+Against the report function itself (the app repo's `backend/supabase/functions/report`), given the key of a
+link to a published report:
+
+    node tools/report_serve.js &
+    node tools/check_report_cloud.js <key> [--cloud http://localhost:4199]
+
+With `--cloud` the function is the one run on this machine by the app repo's `sample/local_cloud.mjs`, after
+`sample/publish_sample.mjs` put the sample on it; the page still asks Inspyx's real address under its real
+Content-Security-Policy. Without it, the live function is asked.
 
 A private preview for Moises (one file, with the sample beside it, published as the claude.ai artifact
 "Web Report Sample"):
