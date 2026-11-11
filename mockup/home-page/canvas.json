@@ -1,0 +1,36 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-10T19:34:00Z"
+  },
+  "title": "Inspyx Home Page Mock-up",
+  "launch": {
+    "view": "focused",
+    "file": "Main.dc.html"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Home page, phone",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "Main.dc.html"
+  ],
+  "notes": {
+    "about": {
+      "x": 470,
+      "y": 0,
+      "w": 320,
+      "text": "Press Play, then scroll inside the phone. One job runs from the first call to the finished report.\n\nThe moving scene is drawn in code. It stands in for the real-life film we would make with fal.\n\n\"A full office staff in your pocket.\" is saved for ads, short videos and the link preview. Tweaks can swap it into the first screen.\n\nThe waitlist form is a mock-up and saves nothing."
+    }
+  },
+  "designSystems": []
+}
