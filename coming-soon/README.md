@@ -45,6 +45,9 @@ the Client, with the PDF on It (2026-11-11)").
 - What it can show: the report (open); its cover with a Pay button (locked, not paid yet); the address and
   the PDF alone (plain, for a report the page can't lay out); "This report link doesn't work" (gone);
   "The report couldn't be opened", with Try again (failed).
+- The addresses the function signs for pictures and the PDF stop working after two hours. A page left
+  open asks for the report again when its reader comes back to it after 90 minutes, or when a picture
+  fails by then, and takes only the new addresses: what is on screen stays.
 - Three rules it keeps: a report's words go on the page as text, never as markup; a photo, the PDF and the
   pay page load only from this site, inspyx.com or the Supabase project; nothing about the visit is sent
   anywhere else.

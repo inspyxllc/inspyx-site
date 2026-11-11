@@ -480,6 +480,83 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
     await ctx.close();
   }
 
+  // ---- a page left open past the life of its addresses
+  {
+    // The function signs new addresses at every visit: here, the same files with ?v=<visit> added.
+    let visits = 0;
+    const answer = () => {
+      visits += 1;
+      const a = clone(sample);
+      const v = (u) => u + (u.includes('?') ? '&' : '?') + 'v=' + visits;
+      for (const sha of Object.keys(a.files)) { a.files[sha].url = v(a.files[sha].url); if (a.files[sha].thumb) a.files[sha].thumb = v(a.files[sha].thumb); }
+      if (a.pdf) a.pdf.url = v(a.pdf.url);
+      return { body: a };
+    };
+    const { ctx, page, errs } = await open(browser, { answer });
+    await page.waitForTimeout(500);
+    const last = report.sections[report.sections.length - 1];
+    const farPhoto = report.sections.flatMap((s) => s.items.flatMap((i) => i.findings.flatMap((f) => f.photos))).pop().file;
+    const before = await page.evaluate((sha) => ({
+      hero: document.querySelector('.hero-img').getAttribute('src'), heroLoaded: document.querySelector('.hero-img').naturalWidth > 0,
+      far: Array.from(document.querySelectorAll('main img[data-file="' + sha + '"]')).map((i) => [i.getAttribute('src'), i.complete && i.naturalWidth > 0]),
+      pdf: document.querySelector('.bar a[data-pdf]').getAttribute('href'),
+    }), farPhoto);
+    // Soon after, coming back to the page asks for nothing.
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForTimeout(300);
+    const soon = visits;
+    // Two hours on, the reader comes back to it.
+    await page.evaluate(() => { const real = Date.now.bind(Date); Date.now = () => real() + 2 * 60 * 60 * 1000; });
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForFunction(() => document.querySelector('.bar a[data-pdf]').getAttribute('href').includes('v=2'), null, { timeout: 5000 }).catch(() => {});
+    const after = await page.evaluate((sha) => ({
+      hero: document.querySelector('.hero-img').getAttribute('src'),
+      far: Array.from(document.querySelectorAll('main img[data-file="' + sha + '"]')).map((i) => i.getAttribute('src')),
+      pdfs: Array.from(document.querySelectorAll('a[data-pdf]')).map((a) => a.getAttribute('href')),
+    }), farPhoto);
+    ok('a page left open two hours gets new addresses when its reader comes back: the PDF, and pictures not loaded yet; what is on screen stays',
+      soon === 1 && visits === 2 && before.heroLoaded && after.hero === before.hero && before.far.length > 0 && before.far.every((f) => f[0].includes('v=1') && !f[1])
+        && after.far.every((src) => src.includes('v=2')) && after.pdfs.length >= 2 && after.pdfs.every((p) => p.includes('v=2')),
+      JSON.stringify({ soon, visits, hero: [before.hero.slice(-12), after.hero.slice(-12)], far: [before.far, after.far.map((x) => x.slice(-6))] }).slice(0, 400));
+    // The picture loads at its new address once it is scrolled to, and opens full size at a new one too.
+    await page.evaluate((sha) => document.querySelector('main img[data-file="' + sha + '"]').scrollIntoView({ block: 'center' }), farPhoto);
+    await page.waitForFunction((sha) => { const i = document.querySelector('main img[data-file="' + sha + '"]'); return i.complete && i.naturalWidth > 0; }, farPhoto, { timeout: 5000 }).catch(() => {});
+    await page.click('main img[data-file="' + farPhoto + '"]');
+    await page.waitForTimeout(400);
+    const view = await page.evaluate(() => { const i = document.querySelector('.viewer-img'); return { src: i.getAttribute('src'), ok: i.naturalWidth > 0 }; });
+    ok('that picture then loads, and opens full size, at its new address', view.ok && view.src.includes('v=2') && errs.length === 0, JSON.stringify(view) + errs.join('|'));
+    await ctx.close();
+    void last;
+  }
+  {
+    // A picture that fails once its address is old is asked for again at a new one.
+    let visits = 0;
+    const answer = () => {
+      visits += 1;
+      const a = clone(sample);
+      const v = (u) => u + '?v=' + visits;
+      for (const sha of Object.keys(a.files)) { a.files[sha].url = v(a.files[sha].url); if (a.files[sha].thumb) a.files[sha].thumb = v(a.files[sha].thumb); }
+      if (a.pdf) a.pdf.url = v(a.pdf.url);
+      return { body: a };
+    };
+    const { ctx, page } = await open(browser, { answer });
+    await page.waitForTimeout(400);
+    const farPhoto = report.sections.flatMap((s) => s.items.flatMap((i) => i.findings.flatMap((f) => f.photos))).pop().file;
+    // The first addresses have stopped working.
+    await page.route('**/sample-report/files/**v=1', (route) => route.abort('failed'));
+    await page.evaluate(() => { const real = Date.now.bind(Date); Date.now = () => real() + 2 * 60 * 60 * 1000; });
+    await page.evaluate((sha) => document.querySelector('main img[data-file="' + sha + '"]').scrollIntoView({ block: 'center' }), farPhoto);
+    await page.waitForFunction((sha) => { const i = document.querySelector('main img[data-file="' + sha + '"]'); return i.getAttribute('src').includes('v=2') && i.complete && i.naturalWidth > 0; }, farPhoto, { timeout: 6000 }).catch(() => {});
+    const r = await page.evaluate((sha) => { const i = document.querySelector('main img[data-file="' + sha + '"]'); return { src: i.getAttribute('src').slice(-6), loaded: i.naturalWidth > 0, missing: !!i.closest('.ph-missing') }; }, farPhoto);
+    ok('a picture that fails once its address is old is asked for again at a new one, and shows', visits === 2 && r.loaded && !r.missing && r.src.includes('v=2'), JSON.stringify({ visits, r }));
+    // The PDF, tapped with an old address: a new address first, then the download.
+    await page.evaluate(() => { const now = Date.now; Date.now = () => now() + 2 * 60 * 60 * 1000; });
+    await page.waitForTimeout(100);
+    const [download] = await Promise.all([page.waitForEvent('download', { timeout: 8000 }).catch(() => null), page.click('.bar a[data-pdf]')]);
+    ok('the PDF tapped with an old address is fetched at a new one', !!download && download.url().includes('v=3') && visits === 3, (download ? download.url().slice(-24) : 'no download') + ' visits=' + visits);
+    await ctx.close();
+  }
+
   // ---- a browser (or a frame) whose step back never arrives
   {
     const { ctx, page, errs } = await open(browser, { init: () => { History.prototype.go = function () {}; History.prototype.back = function () {}; } });

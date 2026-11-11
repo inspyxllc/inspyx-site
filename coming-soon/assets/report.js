@@ -287,6 +287,77 @@
     return { full: full, small: ownUrl(f.thumb) || full, w: f.w > 0 ? f.w : 0, h: f.h > 0 ? f.h : 0 };
   }
 
+  /* Marks a picture with the file it shows and at which size, so it can be given a new address later. */
+  function shows(img, sha, size) {
+    img.setAttribute('data-file', sha);
+    img.setAttribute('data-size', size);
+    return img;
+  }
+
+  /* The addresses of the pictures and the PDF stop working two hours after the report was fetched. A page
+     left open is given new ones before that matters: when its reader comes back to it, or when a picture
+     fails to load, the report is asked for again and only the addresses are taken from the answer. */
+  var FRESH_MS = 90 * 60 * 1000;
+  var fetchedAt = 0;
+  var freshening = false;
+  var lastTry = 0;
+  var onceFresh = [];
+
+  function stale() { return fetchedAt > 0 && Date.now() - fetchedAt > FRESH_MS; }
+
+  /* Asks for new addresses (once a minute at most). [then] runs when they are in. Answers whether new
+     addresses are on their way. */
+  function freshen(then) {
+    var url = source();
+    if (freshening) { if (then) onceFresh.push(then); return true; }
+    if (!url || Date.now() - lastTry < 60 * 1000) return false;
+    freshening = true;
+    lastTry = Date.now();
+    onceFresh = then ? [then] : [];
+    fetch(url, howToAsk(url))
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (answer) {
+        if (!answer || answer.state !== 'open' || !answer.files) return;
+        files = answer.files;
+        fetchedAt = Date.now();
+        // A picture already on the screen stays as it is. One not loaded yet, or that failed, is asked for
+        // again at its new address.
+        Array.prototype.forEach.call(doc.querySelectorAll('img[data-file]'), function (img) {
+          if (img.complete && img.naturalWidth > 0) return;
+          var f = fileOf(img.getAttribute('data-file'));
+          if (!f) return;
+          var next = img.getAttribute('data-size') === 'full' ? f.full : f.small;
+          if (img.getAttribute('src') === next) return;
+          var tile = img.closest ? img.closest('.ph-missing') : null;
+          if (tile) tile.classList.remove('ph-missing');
+          img.src = next;
+        });
+        var pdf = answer.pdf ? ownUrl(answer.pdf.url) : null;
+        if (pdf) Array.prototype.forEach.call(doc.querySelectorAll('a[data-pdf]'), function (a) { a.href = pdf; });
+        var waiting = onceFresh;
+        onceFresh = [];
+        freshening = false;
+        waiting.forEach(function (f) { f(); });
+      })
+      .catch(function () { /* the old addresses stay; the next return to the page tries again */ })
+      .then(function () { freshening = false; onceFresh = []; });
+    return true;
+  }
+
+  doc.addEventListener('visibilitychange', function () { if (!doc.hidden && stale()) freshen(); });
+  window.addEventListener('pageshow', function () { if (stale()) freshen(); });
+  // A picture that fails once its address is old: new addresses, and it is tried again.
+  doc.addEventListener('error', function (e) {
+    var t = e.target;
+    if (t && t.tagName === 'IMG' && t.hasAttribute && t.hasAttribute('data-file') && stale()) freshen();
+  }, true);
+  // The PDF, asked for with an old address: a new one first, then the download.
+  doc.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[data-pdf]') : null;
+    if (!a || !stale()) return;
+    if (freshen(function () { a.click(); })) e.preventDefault();
+  }, true);
+
   var viewer = null;
 
   function showPhoto(list, index) {
@@ -320,9 +391,10 @@
       missing.hidden = !!f;
       if (f) {
         img.alt = p.caption || (WORDS.photo + ' ' + (at + 1));
-        img.src = f.full;
+        shows(img, p.file, 'full').src = f.full;
       } else {
         img.removeAttribute('src');
+        img.removeAttribute('data-file');
       }
       prev.disabled = at === 0;
       next.disabled = at === list.length - 1;
@@ -379,7 +451,7 @@
       var label = WORDS.openPhoto + ' ' + (i + 1) + ' ' + WORDS.of + ' ' + photos.length + (p.caption ? ': ' + p.caption : '');
       var btn = h('button', { class: 'ph', type: 'button', 'aria-label': label, on: { click: function () { showPhoto(photos, i); } } });
       if (f) {
-        var img = h('img', { alt: '', loading: 'lazy', decoding: 'async', src: big ? f.full : f.small });
+        var img = shows(h('img', { alt: '', loading: 'lazy', decoding: 'async', src: big ? f.full : f.small }), p.file, big ? 'full' : 'small');
         if (f.w && f.h) {
           img.setAttribute('width', f.w);
           img.setAttribute('height', f.h);
@@ -515,21 +587,21 @@
     var sub = [c.locality, c.prepared_for ? PDF.preparedFor + ' ' + c.prepared_for : ''].filter(Boolean).join(' · ');
     var hero = null;
     if (photo) {
-      var img = h('img', { class: 'hero-img', alt: 'The property', src: photo.full, decoding: 'async', fetchpriority: 'high' });
+      var img = shows(h('img', { class: 'hero-img', alt: 'The property', src: photo.full, decoding: 'async', fetchpriority: 'high' }), c.photo, 'full');
       if (photo.w && photo.h) { img.setAttribute('width', photo.w); img.setAttribute('height', photo.h); }
       hero = h('button', { class: 'hero', type: 'button', 'aria-label': WORDS.openPhoto, on: { click: function () { showPhoto([{ file: c.photo, caption: [c.address, c.locality].filter(Boolean).join(', ') }], 0); } } }, img);
     }
     return h('header', { class: 'cover', id: 'top' },
       hero,
       h('div', { class: 'cover-in' },
-        logo ? h('img', { class: 'cover-logo', alt: insp.company || '', src: logo.full }) : null,
+        logo ? shows(h('img', { class: 'cover-logo', alt: insp.company || '', src: logo.full }), c.logo, 'full') : null,
         h('p', { class: 'kicker' }, report.title, sample ? h('span', { class: 'tag' }, WORDS.sample) : null),
         h('h1', { class: 'addr' }, c.address || report.title),
         sub ? h('p', { class: 'cover-sub' }, sub) : null,
         c.inspected ? h('p', { class: 'cover-sub' }, PDF.inspectionDate + ' ' + c.inspected) : null,
         h('div', { class: 'people' },
           h('div', { class: 'pcard pcard-main' },
-            face ? h('img', { class: 'face', alt: '', src: face.small }) : h('span', { class: 'face face-i', 'aria-hidden': 'true' }, initials(insp.name)),
+            face ? shows(h('img', { class: 'face', alt: '', src: face.small }), insp.photo, 'small') : h('span', { class: 'face face-i', 'aria-hidden': 'true' }, initials(insp.name)),
             h('div', { class: 'pcard-b' },
               h('p', { class: 'eyebrow' }, PDF.inspector),
               insp.name ? h('p', { class: 'who-n' }, insp.name) : null,
@@ -558,6 +630,7 @@
   function renderOpen(answer) {
     var report = answer.report;
     files = answer.files || {};
+    fetchedAt = Date.now();
     var pdfUrl = answer.pdf ? ownUrl(answer.pdf.url) : null;
     var pdfName = (answer.pdf && answer.pdf.name) || report.pdf_name || 'Inspection Report.pdf';
 
@@ -720,7 +793,7 @@
         g.rows.forEach(function (r) {
           var f = r.photo ? fileOf(r.photo) : null;
           var thumb = f
-            ? h('img', { class: 'row-ph', alt: '', loading: 'lazy', decoding: 'async', src: f.small })
+            ? shows(h('img', { class: 'row-ph', alt: '', loading: 'lazy', decoding: 'async', src: f.small }), r.photo, 'small')
             : h('span', { class: 'row-ph row-letter cat-' + g.code, 'aria-hidden': 'true' }, labelOf(g.code).charAt(0));
           rows.appendChild(h('li', null,
             h('button', { class: 'row', type: 'button', 'data-finding': r.id, on: { click: function () { openFinding(r.id, visibleOrder()); } } },
@@ -817,7 +890,7 @@
       h('h2', { class: 'part-t' }, PDF.standards),
       h('p', { class: 'prose' }, report.standards),
       h('div', { class: 'sig' },
-        sigFile ? h('img', { class: 'sig-img', alt: PDF.signature, src: sigFile.full }) : null,
+        sigFile ? shows(h('img', { class: 'sig-img', alt: PDF.signature, src: sigFile.full }), sig.image, 'full') : null,
         sig.name ? h('p', null, PDF.signature + ': ' + sig.name) : null,
         sig.license ? h('p', null, PDF.license + ': ' + sig.license) : null,
         sig.date ? h('p', null, PDF.date + ': ' + sig.date) : null
@@ -961,15 +1034,18 @@
     return null;
   }
 
+  /* The report function is asked with no cookies and no word of where the request came from. A sample is a
+     plain file kept beside the page, fetched the way the page's own files are. */
+  function howToAsk(url) {
+    return url.indexOf(API) === 0
+      ? { credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer', headers: { Accept: 'application/json' } }
+      : {};
+  }
+
   function load() {
     var url = source();
     if (!url) return show(message('gone'));
-    // The report function is asked with no cookies and no word of where the request came from. A sample is a
-    // plain file kept beside the page, fetched the way the page's own files are.
-    var how = url.indexOf(API) === 0
-      ? { credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer', headers: { Accept: 'application/json' } }
-      : {};
-    fetch(url, how)
+    fetch(url, howToAsk(url))
       .then(function (res) {
         if (res.status === 404 || res.status === 410) return { state: 'gone' };
         if (!res.ok) throw new Error('status ' + res.status);
