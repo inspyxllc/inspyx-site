@@ -5,19 +5,22 @@
   if (!main || !window.InspyxAuth) return;
   var who = main.querySelector('[data-email]');
   var out = main.querySelector('[data-signout]');
-  var trouble = main.querySelector('[data-say="network"]');
+  var lines = [].slice.call(main.querySelectorAll('[data-say]'));
 
   function show(s) { who.textContent = s.email; main.hidden = false; }
+  function say(kind) { lines.forEach(function (p) { p.hidden = p.getAttribute('data-say') !== kind; }); }
 
   window.InspyxAuth.current().then(function (s) {
     if (!s) { window.location.replace('/signin'); return; }
     show(s);
-  }, function () {
-    // The sign-in could not be renewed just now (no connection): it stays, and the page says so.
+  }, function (why) {
+    // The sign-in could not be renewed just now. It stays, and the page says why: no connection, or a server that
+    // is failing. Telling someone to check their connection when the server is at fault sends them the wrong way.
     var s = window.InspyxAuth.stored();
     if (!s) { window.location.replace('/signin'); return; }
     show(s);
-    if (trouble) trouble.hidden = false;
+    var kind = why && why.kind;
+    say(kind === 'network' ? 'network' : kind === 'server' || kind === 'malformed' ? 'server' : '');
   });
 
   out.addEventListener('click', function () {

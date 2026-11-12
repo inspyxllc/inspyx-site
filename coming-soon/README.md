@@ -734,13 +734,15 @@ and the pattern for the next ones.
 - A sign-in with less than a minute left is renewed before it is used
   (`POST /auth/v1/token?grant_type=refresh_token`). The server gives each renewal token one use, so one tab
   renews at a time (`navigator.locks`) and the others read what it kept. A renewal the server rejects signs
-  the browser out. A renewal that cannot reach the server leaves the sign-in in place, and the page says so.
+  the browser out. A renewal that cannot reach the server, or that the server fails on, leaves the sign-in in
+  place, and the page says which of the two it was.
 - A call is given 30 seconds, as in the app. After that the page says the server could not be reached.
 - **Signing out ends this browser's sign-in only** (`POST /auth/v1/logout?scope=local`). Left unsaid, the
-  server ends every sign-in the person has, on every device: signing out of the website on an office
-  computer would sign the inspector out of the app on their phone within the hour. The browser forgets its
-  sign-in first and tells the server second, so a server that cannot be reached never keeps a browser
-  signed in.
+  server ends every sign-in the person has, on every device. An inspector who signed out of the website on
+  an office computer would then, within the hour, find the app on their phone asking them to sign in again:
+  the app keeps the inspection going on the phone, but stops everything that needs the server until they do
+  (`reauthRequired` in the app's `lib/src/auth/session_manager.dart`). The browser forgets its sign-in first
+  and tells the server second, so a server that cannot be reached never keeps a browser signed in.
 - Signing in on the website leaves the phone signed in. The account server's setting "Enforce single session
   per user" is off (looked at in its dashboard on 2026-11-12 at 23:35Z; the two time limits beside it are 0,
   "never"). Were it ever turned on, a sign-in on one device would end the other's.
@@ -782,13 +784,13 @@ about a forgotten password (the website adds how to reach support). `tools/check
 
 ```
 node tools/serve.js &
-node tools/check_signin.js                      # 57 self-checks, about 45 seconds
-python3 -I tools/undo_checks.py . --signin      # breaks signing in 73 ways, one at a time: each must be caught
+node tools/check_signin.js                      # 58 self-checks, about 45 seconds
+python3 -I tools/undo_checks.py . --signin      # breaks signing in 74 ways, one at a time: each must be caught
 ```
 
 **The checks never make a real sign-in.** Every call the pages make to the account server is caught and
 answered by the test itself, with a made-up address and a made-up password that exist nowhere. Any other
-request that tries to leave the site is stopped and counted as a failure. The 73 breaks take about an hour
+request that tries to leave the site is stopped and counted as a failure. The 74 breaks take about an hour
 one after another; `--part=0/3`, `--part=1/3` and `--part=2/3` split the list across three copies of the
 repo (the top of `tools/undo_checks.py` says how).
 

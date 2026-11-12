@@ -103,9 +103,10 @@
 
   /* Signing out forgets the sign-in here first, then tells the server. As in the app, a server that cannot be
      reached never keeps the browser signed in.
-     It ends THIS browser's sign-in only (scope=local). Left unsaid, the server ends every sign-in the person has,
-     which would sign an inspector out of the app on their phone, in the middle of an inspection, because
-     they signed out of the website on an office computer. */
+     It ends THIS browser's sign-in only (scope=local). Left unsaid, the server ends every sign-in the person has.
+     An inspector who signed out of the website on an office computer would then, within the hour, find the app
+     on their phone asking them to sign in again: the app keeps the inspection going on the phone, but stops
+     everything that needs the server until they do (lib/src/auth/session_manager.dart, reauthRequired). */
   function signOut() {
     var s = stored();
     forget();

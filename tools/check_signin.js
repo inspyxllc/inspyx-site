@@ -32,7 +32,7 @@ const SIGNIN_WORDS = ['h1: Welcome back.', 'label: Email', 'label: Password',
   'button: Sign in',
   'p: Forgot your password? Contact Inspyx support and we will start a reset for you: support@inspyx.com or (888) 772-2919.',
   'p: New to Inspyx? Join the waitlist'];
-const ACCOUNT_WORDS = ['h1: Account', 'p: Signed in as', 'button: Sign out', 'p: Inspyx could not reach the sign-in server. Check your connection and try again.'];
+const ACCOUNT_WORDS = ['h1: Account', 'p: Signed in as', 'button: Sign out', 'p: Inspyx could not reach the sign-in server. Check your connection and try again.', 'p: The sign-in server refused the request. Try again later.'];
 const read = () => {
   const flat = (t) => t.replace(/\s+/g, ' ').trim();
   const main = document.querySelector('main').cloneNode(true);
@@ -277,6 +277,9 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const n = await open(browser, 'account', { store: kept(11, -5000), answers: () => 'offline' });
     ok('a renewal that cannot reach the server keeps the sign-in and says so on the page', (await at(n.page)) === '/account' && JSON.parse(await stored(n.page)).access === 'test-access-11' && JSON.stringify(await shown(n.page)) === '["network"]', JSON.stringify(await shown(n.page)));
     await n.ctx.close();
+    const f = await open(browser, 'account', { store: kept(17, -5000), answers: () => ({ status: 500, json: { msg: 'x' } }) });
+    ok('a renewal the server fails on keeps the sign-in too, and the page blames the server, not the connection', (await at(f.page)) === '/account' && JSON.parse(await stored(f.page)).access === 'test-access-17' && JSON.stringify(await shown(f.page)) === '["server"]' && f.calls.length === 1, JSON.stringify(await shown(f.page)));
+    await f.ctx.close();
   });
 
   // ---- the Back button. A browser that brings a page back shows it as it was left and tells the page so (the
