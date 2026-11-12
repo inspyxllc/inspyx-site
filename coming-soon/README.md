@@ -253,18 +253,54 @@ inspyx.com or example.com are marked as tests.
 
 ### Before publishing
 
+- Moises says to publish. Nothing else puts this page on inspyx.com. On 2026-11-12 he said to get
+  it ready ("Yes, get it ready"), which is not the go.
 - The guarantee's wording (W9, W10) is approved and in `pricing.html` and `terms.html`, or the
-  guarantee line and its condition are off the home page.
-- `privacy.html` says "Last updated" with the day the pages go live.
+  guarantee line and its condition are off the home page. The drafts are in Drive ("Wording
+  Waiting for Your OK — Website, Part 2: the Guarantee (2026-11-11)"), with two questions only he
+  can settle: whether the promise is measured in the 30 free days, and whether the pilot's
+  inspectors count as set up by Inspyx. The Terms have a section headed "No guarantees" (the
+  usual "as is" clause); W10 adds one sentence to it that names the promise.
+- "Last updated" on `privacy.html` (and on `terms.html`, if W10 goes in) says the day the pages
+  go live, and `sitemap.xml` gives that day for each page that changed.
 - The design checklist has been walked through, test by test (the Claude Project "Inspyx",
-  `claude/website-design-checklist.md`).
+  `claude/website-design-checklist.md`). That note cannot be read from Claude Code on the Mac.
+  What was checked there on 2026-11-12 is listed under "Checked on 2026-11-12" below.
 - Stripe's card setup sends an inspector back to `/?payments=done`, or `/?payments=again` when
   the setup link ran out (the app's `payments` function). No page answers either yet: neither
   inspyx.com (checked 2026-11-11) nor this page, which answer only `?billing=`. The two messages
   are item 6 of "Wording Waiting for Your OK (2026-11-10)" in Drive and wait for Moises's OK.
   Once approved they go on this page the way the three `?billing=` messages do. The branch the
-  other chat named for them, `claude/payments-return`, is not on GitHub.
-- Upload every file in this folder together to the Vercel project `inspyx-coming-soon`.
+  other chat named for them, `claude/payments-return`, is not on GitHub. This does not hold the
+  page back: today's live page does not answer them either.
+- **How the files get to Vercel.** Until now the live project `inspyx-coming-soon` has taken
+  files pasted in through Vercel's connector. That cannot carry this page: it has nine pictures
+  (444 KB), and pictures cannot be pasted. The way put to Moises on 2026-11-12: connect that
+  project to this repo on GitHub, with `coming-soon` as its root directory and `main` as the
+  branch it publishes. Publishing is then merging a pull request, and every pull request gets a
+  private build on the real project first. It is a change to a setting of his Vercel account, so
+  it needs his yes. Checked that day: the live site is main's `coming-soon/` byte for byte
+  (7 files of 7), so the first build after connecting changes nothing.
+
+### Checked on 2026-11-12, before asking for the go
+
+- **In Safari on an iPhone** (the iOS Simulator on the Mac: iPhone 17, iOS 26.2), the first time
+  the two new scenes met real Safari. The first screen and all three scenes draw as built, with
+  no error, with Safari's bar open and tucked away, and a scroll by finger drives the film. One
+  fault was found and fixed: the white strip behind Safari's bar (see "Behind Safari's bar on an
+  iPhone" above). A real iPhone has not been tried that day; its speed is the one thing the
+  Simulator cannot show.
+- **The real form against the live waitlist.** One sign-up from the page, with an address at
+  example.com: the database answered "ok", the page showed "You're on the list.", and the row is
+  there, marked as a test, with the two taps, the page and the ad's name. The same address again:
+  "ok", no second row, counted as a repeat. The list was empty before; that row is its only one.
+- **The build that would go live.** Vercel's test project (`inspyx-site-test`) builds this branch
+  on every push. Its build of commit 545c822 serves all 21 files as they are in the repo, byte
+  for byte, but for one line Vercel adds to a private build for its own toolbar. A visitor's
+  phone downloads 11 KB for the page and 28 KB for the film's code, compressed.
+- **Nobody is told when someone joins the waitlist.** The row is kept; no email goes out.
+  Claude can read the list for Moises at any time. A message to him on each sign-up needs a way
+  to send email, which is not chosen yet.
 
 ## The other pages
 
