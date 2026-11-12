@@ -90,7 +90,7 @@ async function open(browser, opts) {
 
   // ---- the colour a phone's browser gives its own top bar: every part of the page it may read names the sky's blue
   {
-    const SKY = 'rgb(169, 203, 232)';
+    const SKY = 'rgb(148, 178, 203)';
     const { ctx, page } = await open(browser, {});
     const on = await page.evaluate(() => {
       const film = document.querySelector('.film');
@@ -100,8 +100,13 @@ async function open(browser, opts) {
       document.body.style.backgroundColor = inline;
       return r;
     });
+    // the bar meets the film at the film's top row: as the page opens, that row must be the named blue (within what an eye can tell)
+    await page.waitForTimeout(600);
+    const row = await page.evaluate(() => { const c = document.querySelector('canvas[data-film]'), g = c.getContext('2d'); return [0.03, 0.5, 0.97].map((x) => Array.from(g.getImageData(Math.round(c.width * x), 0, 1, 1).data).slice(0, 3)); });
+    const far = Math.max(...row.map((p) => Math.max(Math.abs(p[0] - 148), Math.abs(p[1] - 178), Math.abs(p[2] - 203))));
+    ok('the named blue is the colour of the film\'s top row as the page opens, so the bar and the sky meet without a band', far <= 6, 'top row ' + row.map((p) => p.join(',')).join(' | ') + '; named 148,178,203; furthest channel ' + far);
     await ctx.close();
-    ok('on a phone the page names the sky\'s blue wherever a browser may read its top bar\'s colour: the theme-color tag, both grounds, and the film\'s box pinned to the top edge', on.html === SKY && on.body === SKY && on.film === SKY && on.pos === 'fixed' && on.filmTop === 0 && on.filmW === 390 && on.media && on.tint.toUpperCase() === '#A9CBE8', JSON.stringify(on));
+    ok('on a phone the page names the sky\'s blue wherever a browser may read its top bar\'s colour: the theme-color tag, both grounds, and the film\'s box pinned to the top edge', on.html === SKY && on.body === SKY && on.film === SKY && on.pos === 'fixed' && on.filmTop === 0 && on.filmW === 390 && on.media && on.tint.toUpperCase() === '#94B2CB', JSON.stringify(on));
     const wideCtx = await open(browser, { w: 1440, h: 900, desktop: true });
     const off = await wideCtx.page.evaluate(() => ({ html: getComputedStyle(document.documentElement).backgroundColor, media: window.matchMedia(document.querySelector('meta[name="theme-color"]').getAttribute('media')).matches }));
     await wideCtx.ctx.close();
@@ -109,7 +114,7 @@ async function open(browser, opts) {
     // the page as it is served, before any script has run
     const served = await (await browser.newContext()).request.get(url);
     const tag = ((await served.text()).match(/<meta name="theme-color"[^>]*>/) || [''])[0];
-    ok('the tag is in the page itself, before any script runs', /media="\(max-width: 520px\)"/.test(tag) && /content="#A9CBE8"/.test(tag), tag);
+    ok('the tag is in the page itself, before any script runs', /media="\(max-width: 520px\)"/.test(tag) && /content="#94B2CB"/.test(tag), tag);
   }
 
   // ---- calculator
