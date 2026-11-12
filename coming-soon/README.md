@@ -786,6 +786,7 @@ about a forgotten password (the website adds how to reach support). `tools/check
 node tools/serve.js &
 node tools/check_signin.js                      # 58 self-checks, about 45 seconds
 BROWSER=webkit node tools/check_signin.js       # the same in Safari's engine: 59 (one more, for Safari's Tab key)
+node tools/check_rules.js                       # 4 checks: Vercel's own reader accepts vercel.json (see the file's top)
 python3 -I tools/undo_checks.py . --signin      # breaks signing in 74 ways, one at a time: each must be caught
 ```
 
@@ -821,7 +822,11 @@ message before a picture is taken, one after).
   Moises's, with his own account, at a plain inspyx.com address.
 - **A real Back in Safari.** The checks send the browser's "page brought back" signal themselves, because
   the browser they run in always loads the page again.
-- **Vercel sending the headers.** Checked on the local server only, which reads the same `vercel.json`.
+- **Vercel sending the headers.** Seen on the local server only, which reads the same `vercel.json`.
+  Vercel's own route reader (`@vercel/routing-utils` 6.6.1, the library its build runs) accepts the file and
+  turns the rule into `^(?:/(signin|account))$`: the two addresses and no other (`tools/check_rules.js`). A
+  rule it refused would fail the whole build. The headers on Vercel itself are looked at after the first
+  publish: `curl -sI https://inspyx.com/signin`.
 - **The app's own sign-out ends every sign-in the person has**, the website's too: it makes the same call
   without `scope=local`. The website handles that (its next renewal is rejected and the browser goes to the
   sign-in page). Whether the app should sign out the phone alone is a question for the app, not settled here.
