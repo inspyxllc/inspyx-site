@@ -27,11 +27,11 @@ still shows the "Pilot coming soon" page until Moises says to publish.**
 - **The Spex Business scene was rebuilt on 2026-11-12**, at his word: "we don't have a section that
   includes Spex Business yet… something like the email auto scheduler, that schedules in jobs for
   you based on emails you receive or website forms filled out". Its new words (the card's paragraph
-  and every line in the film) are Claude's drafts and wait for his OK: see "Words waiting for his
-  OK" below.
+  and every line in the film) are Claude's wording. He approved them the same day: see "Words
+  approved on 2026-11-12" below.
 - **Mia's scene became a phone call the same day**, at his word ("Yes, do Mia"), so that all three
   scenes are told the same way: two parties talking, then what came of it. The caller's two
-  questions and Mia's two answers are Claude's drafts and wait for his OK too.
+  questions and Mia's two answers are Claude's wording, and he approved them that day too.
 - The branch can be seen at a private test address: the Vercel project `inspyx-site-test`
   (see "The test address" below).
 
@@ -203,9 +203,11 @@ python3 -I tools/undo_checks.py . --part=0/2          # half the list; the scrip
 The tools need Playwright 1.59 (`npm i playwright@1.59.1` in a folder of its own, then
 `NODE_PATH=<that folder>/node_modules`).
 
-### Words waiting for his OK
+### Words approved on 2026-11-12
 
-Drafted by Claude on 2026-11-12. None is approved yet.
+Drafted by Claude on 2026-11-12. Moises approved all of them, as written, at about 10:53Z that
+day. Asked "Are the words in both new scenes OK as written?", he answered: "Yes, all". To change
+one of them now is to change approved wording, which is his to decide.
 
 For Mia's scene (the phone call):
 
@@ -230,6 +232,8 @@ For the Spex Business scene:
   "Monday, 10:00 AM", and the tags "Phone", "Email", "Website".
 - For screen readers only: the sentences around those lines in the `data-desk` block.
 
+And the header's link on wide screens: "Pricing".
+
 ### The test address
 
 The Vercel project `inspyx-site-test` (prj_IJHVH8wbMeOhNA0X2yvwyI68jRHI, same team) builds this
@@ -241,8 +245,6 @@ inspyx.com or example.com are marked as tests.
 
 ### Before publishing
 
-- The words of Mia's phone call and of the Spex Business scene are approved (see "Words waiting
-  for his OK"), or changed to the words he gives.
 - The guarantee's wording (W9, W10) is approved and in `pricing.html` and `terms.html`, or the
   guarantee line and its condition are off the home page.
 - `privacy.html` says "Last updated" with the day the pages go live.
