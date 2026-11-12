@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Account</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/account.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="doc account" data-account hidden>
+<section class="title">
+<h1>Account</h1>
+<p class="who">Signed in as <strong data-email></strong></p>
+<button class="btn" type="button" data-signout>Sign out</button>
+</section>
+<div class="say" role="status">
+<p data-say="network" hidden>Inspyx could not reach the sign-in server. Check your connection and try again.</p>
+</div>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<footer>
+INSPYX LLC · Miami Gardens, FL<br>
+<a href="mailto:support@inspyx.com">support@inspyx.com</a> · <a href="tel:+18887722919">(888) 772-2919</a>
+<nav><a href="/pricing">Pricing</a><a href="/refunds">Cancellation and refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
+</footer>
+</body>
+</html>

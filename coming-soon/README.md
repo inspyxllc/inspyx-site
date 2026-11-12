@@ -698,3 +698,134 @@ entry brings its section up and marks it).
 date in the commit. A changed word without that fails the checks, which is the point.
 One check on the home page (`check_home.js`) looks for the promise's lines in `pricing.html` as they are
 written, tags included: `<h2>Faster reports, or three months free</h2>` must stay bare, with no class or id.
+
+## Signing in on the website (/signin and /account)
+
+Built 2026-11-12 on the local branch `claude/web-signin`, after Moises's "Yes, start" to "Start building the
+website's sign-in tonight?". **Not published, not pushed, and hidden on purpose**: no page links to it, the
+sitemap leaves it out, and both pages ask search engines not to list them. It becomes reachable only on his
+word.
+
+**What it does.** An inspector signs in with the email and password of their Inspyx account, the same one
+the app uses. There is no way to make an account here (accounts are made by invitation) and no button to
+reset a password (the app has none either: both say to contact support). `/account` is the page a signed-in
+inspector lands on: it names who is signed in and has "Sign out". It is the first of the signed-in pages,
+and the pattern for the next ones.
+
+**The files.**
+
+- `signin.html`, `account.html`: the two pages. They hold every sentence.
+- `assets/auth.js`: the sign-in itself. No library: a few calls to the account server, the same ones the
+  app makes (`lib/src/auth/auth_client.dart` in the app's repo), but for one (signing out, below). It says
+  no words.
+- `assets/signin.js`, `assets/account.js`: each page's own small script. They say no words either.
+- `assets/app.css`: the look of both, loaded after `page.css`. `assets/page.js` gives the phone its lean.
+- `assets/signin-screen.webp` / `.jpg`: the picture on the phone beside the form (see "Before publishing").
+- `vercel.json`: one rule of headers for the two pages. `tools/serve.js` sends the same headers locally.
+- Eight files are added to what the site serves (the two pages, three scripts, one stylesheet, the picture
+  in two formats): 21 becomes 29.
+
+**How signing in works.**
+
+- Signing in is one call, `POST /auth/v1/token?grant_type=password`, with the email and password in its
+  body. They are never put in an address, a log or an error, and the password is never kept.
+- The browser keeps (`localStorage`, key `inspyx.signin`) the two tokens, when the sign-in ends, and the
+  account's id and email. Nothing else.
+- A sign-in with less than a minute left is renewed before it is used
+  (`POST /auth/v1/token?grant_type=refresh_token`). The server gives each renewal token one use, so one tab
+  renews at a time (`navigator.locks`) and the others read what it kept. A renewal the server rejects signs
+  the browser out. A renewal that cannot reach the server leaves the sign-in in place, and the page says so.
+- A call is given 30 seconds, as in the app. After that the page says the server could not be reached.
+- **Signing out ends this browser's sign-in only** (`POST /auth/v1/logout?scope=local`). Left unsaid, the
+  server ends every sign-in the person has, on every device: signing out of the website on an office
+  computer would sign the inspector out of the app on their phone within the hour. The browser forgets its
+  sign-in first and tells the server second, so a server that cannot be reached never keeps a browser
+  signed in.
+- Signing in on the website leaves the phone signed in. The account server's setting "Enforce single session
+  per user" is off (looked at in its dashboard on 2026-11-12 at 23:35Z; the two time limits beside it are 0,
+  "never"). Were it ever turned on, a sign-in on one device would end the other's.
+- The gate: `<html data-gate="in">` marks a page for the signed-in, `data-gate="out"` the sign-in page.
+  `auth.js` is loaded in the head, not deferred, so it sends the browser to the right page before anything
+  is drawn. It asks again when the sign-in changes in another tab, and when the Back button brings a page
+  back (a browser shows such a page as it was left, without loading it again).
+- The gate is a courtesy, not the lock. Anyone can read these files. What protects an inspector's data is
+  the account server, where every table answers only to a valid sign-in. A signed-in page must get its data
+  from the server with the sign-in (`InspyxAuth.current()` gives it), and never carry data in the page.
+- To add a signed-in page: `data-gate="in"` on `<html>`, `auth.js` in the head, the page's own script
+  deferred, the part that shows the account's data marked `hidden` until the script has a sign-in, and the
+  page's address added to the rule in `vercel.json` and to `tools/check_signin.js`.
+
+**The server's rule for the two pages** (`vercel.json`): only this site's own scripts and styles run
+(nothing written into a page, nothing from another site), only the account server may be called, the pages
+cannot be shown inside another site, no form can post anywhere, no address is passed on when leaving, and
+browsers keep no copy. So these pages have no `style="..."` and no `<script>` with code in it. A script may
+still move things with `element.style.setProperty`, which the rule allows.
+
+**The look.** The sign-in page is the design Moises approved as a mock-up on 2026-11-12 at 20:14:05Z ("Yes,
+that's it"): the form on white and, beside it, a phone with depth on the home page's morning sky, with three
+cards. The picture is decoration: it is hidden from screen readers and nothing in it can be tabbed to. It
+takes its size from its own width, so nothing is cut off. On a phone the cards go and the phone stands under
+the form. With motion turned off nothing floats or leans. The account page stands on the policy pages' look.
+
+**Left out of the approved design until it works.** The mock-up showed three more ways to sign in (Apple,
+Google, a passkey) above the form, with "or with your email" between. None of them works yet (Apple waits
+on the developer enrollment), so none is on the page: a button that does nothing is worse than no button.
+With them gone, "Sign in" is the page's one solid button. The mock-up's line under the heading ("Your
+inspections, reports and payments, on any screen.") is left out until the website has those.
+
+**The words wait for Moises.** Every sentence on the two pages is a draft until he approves it. The five
+sentences about a sign-in that did not go through are the app's own, word for word, and so is the line
+about a forgotten password (the website adds how to reach support). `tools/check_signin.js` holds the list
+(`SIGNIN_WORDS`, `ACCOUNT_WORDS`). Once he approves, a change needs his word, named in the commit.
+
+**Checking it.**
+
+```
+node tools/serve.js &
+node tools/check_signin.js                      # 57 self-checks, about 45 seconds
+python3 -I tools/undo_checks.py . --signin      # breaks signing in 73 ways, one at a time: each must be caught
+```
+
+**The checks never make a real sign-in.** Every call the pages make to the account server is caught and
+answered by the test itself, with a made-up address and a made-up password that exist nowhere. Any other
+request that tries to leave the site is stopped and counted as a failure. The 73 breaks take about an hour
+one after another; `--part=0/3`, `--part=1/3` and `--part=2/3` split the list across three copies of the
+repo (the top of `tools/undo_checks.py` says how).
+
+They cover: the page as it opens, on a phone and on a wide screen (no errors, nobody called, the headers,
+nothing written into the page, the boxes as password managers expect them, tap sizes, the picture, every
+word); a good sign-in (one call, made as the app makes it; the button says "Signing in…" and the form cannot
+be sent twice; the password is kept nowhere); each way a sign-in fails, with its own sentence and no other
+(a wrong password, no connection, a failing server, too many tries, half an answer, a server that never
+answers, a browser that keeps nothing); trying again; an empty form; the gate, both ways; signing out, with
+and without a connection, and that it ends this browser's sign-in only; two tabs; renewing; the Back button;
+the Tab key; motion; and the files (the same public key and server as the waitlist form, no secret key,
+nothing links to the pages, the scripts say no words).
+
+**Not checked, and known gaps.**
+
+- **Safari, and a real iPhone.** Everything above ran in Chromium. What Chromium does is not what Safari
+  draws.
+- **A real sign-in.** Claude never types a password and makes no accounts. The first real sign-in is
+  Moises's, with his own account, at a plain inspyx.com address.
+- **A real Back in Safari.** The checks send the browser's "page brought back" signal themselves, because
+  the browser they run in always loads the page again.
+- **Vercel sending the headers.** Checked on the local server only, which reads the same `vercel.json`.
+- **The app's own sign-out ends every sign-in the person has**, the website's too: it makes the same call
+  without `scope=local`. The website handles that (its next renewal is rejected and the browser goes to the
+  sign-in page). Whether the app should sign out the phone alone is a question for the app, not settled here.
+- **Every page of inspyx.com can read the kept sign-in** (a browser keeps it for the whole site), so no page
+  of the site may ever run a script from somewhere else. Today none does. The rule in `vercel.json` covers
+  the two sign-in pages; widening it to the whole site is to do before signed-in pages hold real data (the
+  home page has a short script and styles written into it, which the rule would have to allow by name).
+- **If `auth.js` does not arrive** (a dropped connection), `/account` shows its top and footer and nothing
+  between. Loading the page again fixes it.
+
+**Before publishing** (each needs Moises's word, or his hands):
+
+1. His approval of the words.
+2. A real screen of the app on the phone in the picture. Today it is the mock-up's "Today" screen, which is
+   not built. A device on the site always shows a real, finished screen.
+3. His own sign-in at a plain inspyx.com address, on his iPhone and on a computer: sign in, sign out, Back,
+   a wrong password. Never a Vercel share link.
+4. A decision on where the site links to it.

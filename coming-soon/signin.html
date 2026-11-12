@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="out">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Sign in</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/signin.js" defer></script>
+</head>
+<body class="app">
+<div class="split">
+<main class="signin">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+<h1>Welcome back.</h1>
+<form class="fields" data-signin method="post" action="/signin">
+<label for="signin-email">Email</label>
+<input id="signin-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="you@yourcompany.com" required>
+<label for="signin-password">Password</label>
+<input id="signin-password" name="password" type="password" autocomplete="current-password" required>
+<div class="say" role="alert">
+<p data-say="rejected" hidden>That email or password was not accepted. Check both and try again.</p>
+<p data-say="network" hidden>Inspyx could not reach the sign-in server. Check your connection and try again.</p>
+<p data-say="malformed" hidden>The sign-in server answered in an unexpected way. No session was created.</p>
+<p data-say="server" hidden>The sign-in server refused the request. Try again later.</p>
+<p data-say="other" hidden>Sign-in did not complete. Try again.</p>
+</div>
+<button class="btn" type="submit" data-busy="Signing in…">Sign in</button>
+</form>
+<p class="help">Forgot your password? Contact Inspyx support and we will start a reset for you: <a href="mailto:support@inspyx.com">support@inspyx.com</a> or <a href="tel:+18887722919">(888) 772-2919</a>.</p>
+<p class="help"><span class="line">New to Inspyx?&nbsp;<a href="/#waitlist">Join the waitlist</a></span></p>
+<noscript><p class="help">Signing in needs JavaScript turned on in this browser.</p></noscript>
+</main>
+<div class="stage" data-lean aria-hidden="true">
+<div class="spot"></div>
+<div class="cloud cloud-a"></div>
+<div class="cloud cloud-b"></div>
+<div class="scene3">
+<div class="pulse"></div>
+<div class="ground"></div>
+<div class="phone-float">
+<div class="phone3">
+<div class="phone-back"></div>
+<div class="phone-frame">
+<div class="phone-bezel">
+<div class="phone-screen">
+<picture><source srcset="/assets/signin-screen.webp" type="image/webp"><img src="/assets/signin-screen.jpg" alt="" width="600" height="1298"></picture>
+<div class="glass"></div>
+<div class="band"></div>
+</div>
+</div>
+</div>
+<div class="island"></div>
+</div>
+</div>
+<div class="side side-video">
+<div class="clip">
+<picture><source srcset="/assets/report-leak.webp" type="image/webp"><img src="/assets/report-leak.jpg" alt="" width="480" height="360"></picture>
+<span class="clip-tag"><svg viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="3"></rect><path d="M15 10l6-3v10l-6-3z"></path></svg>Video</span>
+<span class="clip-play"><svg viewBox="0 0 24 24" fill="#1D1D1F" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"></path></svg></span>
+<span class="clip-time">0:12</span>
+</div>
+<div class="side-text"><span class="side-kind">Recommendation</span><span class="side-title">Active leak</span><span class="side-sub">Attic · filed by Spex</span></div>
+</div>
+<div class="side side-booked">
+<span class="side-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 4h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5l1.5-2 4 1.5v3a2 2 0 0 1-2 2A16 16 0 0 1 4.5 6a2 2 0 0 1 2-2z"></path></svg></span>
+<div class="side-two"><span class="small green">Booked by Mia</span><span class="big">Tomorrow, 9:00 AM</span></div>
+</div>
+<div class="side side-paid">
+<span class="side-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"></path><path d="M14 3v4h4M10 14l2 2 4-4"></path></svg></span>
+<div class="side-two"><span class="small blue">Report opened</span><span class="big">Paid, $425</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<footer class="app-foot">
+INSPYX LLC · Miami Gardens, FL<br>
+<a href="mailto:support@inspyx.com">support@inspyx.com</a> · <a href="tel:+18887722919">(888) 772-2919</a>
+<nav><a href="/pricing">Pricing</a><a href="/refunds">Cancellation and refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
+</footer>
+</body>
+</html>
