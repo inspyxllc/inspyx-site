@@ -10,6 +10,8 @@ var doc = document;
    when the visitor has motion turned off. */
 var TALK_BEATS = [0.05, 0.19, 0.34, 0.49, 0.65, 0.79, 0.90];
 var TALK_STILLS = [0.12, 0.27, 0.42, 0.60, 0.72, 0.87, 1];
+/* The attic's floor in the Spex scene, lit: the insulation in the film's last rows. The dark of the moment is laid over it. */
+var ATTIC_FLOOR = [198, 171, 127];
 /* The Spex Business scene, the same way: a request comes in, Spex Business replies, the job lands on the
    calendar; then the same again for the second request. */
 var DESK_BEATS = [0.04, 0.19, 0.33, 0.50, 0.65, 0.79];
@@ -461,12 +463,12 @@ this._screen(ctx);
 const vg = ctx.createRadialGradient(W / 2, Hc * 0.56, Hc * 0.34, W / 2, Hc * 0.56, Hc * 0.82);
 vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.24)');
 ctx.fillStyle = vg; ctx.fillRect(0, 0, W, Hc);
-/* The colour of the film's last row, for _bars: the street in the light of the hour, or the wall in the Spex
-   scene (its last row lies in his shadow and under the darkened corners, a little darker than the wall).
+/* The colour of the film's last row, for _bars: the street in the light of the hour, or the dark the attic
+   ends in in the Spex scene (a little darker still under the darkened corners).
    Stepped by fours, so that the page's grounds are repainted now and then and not at every pixel of scroll. */
 const step = (v) => Math.max(0, Math.min(255, Math.round(v / 4) * 4));
-const street = this._rgb(this._P.street2, 0.3), wall = this._rgb(this._P.siding, 0.3);
-this._groundCol = 'rgb(' + [0, 1, 2].map((i) => step(street[i] + (wall[i] * 0.88 - street[i]) * aD)).join(', ') + ')';
+const street = this._rgb(this._P.street2, 0.3), attic = this._atticGround || [34, 33, 37];
+this._groundCol = 'rgb(' + [0, 1, 2].map((i) => step(street[i] + (attic[i] * 0.92 - street[i]) * aD)).join(', ') + ')';
 }
 
 _sky(ctx, W, H, t) {
@@ -1182,34 +1184,17 @@ ctx.restore();
 this._deskLive = live;
 }
 
-_panel(ctx, cx, cy, s, mark) {
-const P = this._P, me = this;
-const c = (b, sh, dp, a) => me._c(b, sh, dp, a);
-ctx.fillStyle = c(P.metalD); this._poly(ctx, [[cx - 75 * s, cy - 106 * s], [cx - 132 * s, cy - 94 * s], [cx - 132 * s, cy + 118 * s], [cx - 75 * s, cy + 106 * s]]); ctx.fill();
-ctx.fillStyle = 'rgba(255,255,255,0.5)'; this._poly(ctx, [[cx - 84 * s, cy - 60 * s], [cx - 122 * s, cy - 52 * s], [cx - 122 * s, cy + 30 * s], [cx - 84 * s, cy + 26 * s]]); ctx.fill();
-ctx.fillStyle = c(P.metal); this._rr(ctx, cx - 75 * s, cy - 106 * s, 150 * s, 212 * s, 6 * s); ctx.fill();
-ctx.fillStyle = c(P.metalD, 0.2); this._rr(ctx, cx - 64 * s, cy - 95 * s, 128 * s, 190 * s, 4 * s); ctx.fill();
-ctx.fillStyle = c(P.box); this._rr(ctx, cx - 36 * s, cy - 86 * s, 72 * s, 17 * s, 3 * s); ctx.fill();
-ctx.fillStyle = '#D9DCE0'; this._rr(ctx, cx - 9 * s, cy - 83 * s, 18 * s, 11 * s, 2 * s); ctx.fill();
-for (let r = 0; r < 8; r++) {
-for (let k = 0; k < 2; k++) {
-const bx = cx + (k === 0 ? -56 : 6) * s, by = cy - 60 * s + r * 19 * s;
-const bad = (r === 3 && k === 1);
-ctx.fillStyle = bad ? '#3A2A22' : c(P.box); this._rr(ctx, bx, by, 50 * s, 14 * s, 2.5 * s); ctx.fill();
-ctx.fillStyle = bad ? '#8A6A55' : '#D9DCE0';
-this._rr(ctx, bx + (k === 0 ? 30 : 6) * s + ((r * 7 + k * 3) % 3 === 0 ? 0 : (k === 0 ? 4 : -2) * s), by + 3.5 * s, 14 * s, 7 * s, 1.6 * s); ctx.fill();
-if (bad) {
-const g = ctx.createRadialGradient(bx + 25 * s, by + 7 * s, 0, bx + 25 * s, by + 7 * s, 30 * s);
-g.addColorStop(0, 'rgba(40,20,8,0.55)'); g.addColorStop(1, 'rgba(40,20,8,0)');
-ctx.fillStyle = g; ctx.fillRect(bx - 8 * s, by - 24 * s, 66 * s, 62 * s);
-}
-}
-}
-if (mark > 0) {
-const mx = cx + 31 * s, my = cy - 60 * s + 3 * 19 * s + 7 * s;
-ctx.strokeStyle = '#FF453A'; ctx.lineWidth = 3.4 * s; ctx.lineCap = 'round';
-ctx.beginPath(); ctx.ellipse(mx, my, 37 * s, 17 * s, -0.08, -1.9, -1.9 + 6.5 * mark); ctx.stroke();
-}
+/* What he photographs in the attic: the stain a leak has left on the underside of the roof, with its tide line
+   and the streaks that ran down from it. Drawn flat around (cx, cy); the caller lays it on the roof's slope. */
+_stain(ctx, cx, cy, s) {
+const blob = (x, y, rx, ry, rot, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(cx + x * s, cy + y * s, rx * s, ry * s, rot, 0, 6.2832); ctx.fill(); };
+const run = [[-21, 22, 64, 6], [4, 26, 92, 8], [25, 20, 52, 5]];
+ctx.strokeStyle = 'rgba(60,38,22,0.62)'; ctx.lineCap = 'round';
+for (let i = 0; i < run.length; i++) { const r = run[i]; ctx.lineWidth = r[3] * s; ctx.beginPath(); ctx.moveTo(cx + r[0] * s, cy + r[1] * s); ctx.lineTo(cx + (r[0] + 3) * s, cy + (r[1] + r[2]) * s); ctx.stroke(); }
+blob(0, 0, 47, 36, -0.2, 'rgba(104,72,42,0.6)');
+blob(1, 1, 41, 30, -0.2, 'rgba(62,40,24,0.82)');
+blob(-12, -6, 23, 17, 0.4, 'rgba(36,24,16,0.82)');
+blob(15, 7, 18, 13, -0.5, 'rgba(36,24,16,0.72)');
 }
 
 /* A caption in the conversation: who is speaking, and the words. Measured first, so its tail can be drawn under it. */
@@ -1264,10 +1249,14 @@ for (let i = 0; i < n; i++) ctx.fillText(box.rows[i], 54 * cs, y0 + (19 + i * 19
 ctx.restore();
 }
 
-/* The Spex scene. He stands at the electrical panel with his iPhone in his hand, at its real size, and
-   talks with Spex: his words show in a white caption, Spex's answers in a black one, and the scene does
-   what Spex says it did (the camera comes up, the light comes on, the flash fires).
-   The words are read from the page (index.html, [data-talk]); u runs 0 to 1 through the conversation. */
+/* The Spex scene. He is up in a dark attic with his iPhone in his hand, at its real size, and talks with
+   Spex: his words show in a white caption, Spex's answers in a black one, and the scene does what Spex says
+   it did. The camera comes up; the light comes on and shows the attic, and the stain a leak has left under the
+   roof; the flash fires and lights all of it for an instant.
+   The words are read from the page (index.html, [data-talk]); u runs 0 to 1 through the conversation.
+   (Until 2026-11-12 he stood at an electrical panel on an outside wall, in daylight. Moises: "it'd send a
+   bolder statement to have them like in an attic ... turn the flashlight on and the flash on to take photos
+   and basically light up the dark attic".) */
 _shotD(ctx, W, H, t, T) {
 const P = this._P, me = this;
 const c = (b, sh, dp, a) => me._c(b, sh, dp, a);
@@ -1291,56 +1280,88 @@ const Z = (p) => [zx + (p[0] - zx) * zoom, zy + (p[1] - zy) * zoom];
 ctx.save();
 ctx.translate(zx, zy); ctx.scale(zoom, zoom); ctx.translate(-zx, -zy);
 
-/* the wall */
-let g = ctx.createLinearGradient(0, 0, 0, H);
-g.addColorStop(0, c(P.siding2)); g.addColorStop(1, c(P.siding, 0.3));
-ctx.fillStyle = g; ctx.fillRect(-30, -30, W + 60, Hc + 60);
-const step = 31 * s;
-for (let y = Y(20) % step - step; y < Hc + step; y += step) {
-ctx.fillStyle = 'rgba(20,30,45,0.15)'; ctx.fillRect(-30, y, W + 60, 2.2 * s);
-ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(-30, y + 2.2 * s, W + 60, 1.3 * s);
+/* The attic, drawn as it looks lit, in one-point perspective toward the far gable. Every pair of rafters is
+   the far gable's triangle again, k times nearer: its top at PA(k), its feet at PL(k) and PR(k). The dark is
+   laid over all of it further down. */
+const vx = 150, vy = 236, far = 12;
+const PA = (k) => [X(vx), Y(vy - 64 * k)], PL = (k) => [X(vx - 54 * k), Y(vy + 32 * k)], PR = (k) => [X(vx + 54 * k), Y(vy + 32 * k)];
+const KS = [1, 1.5, 2.3, 3.6, 5.7, 9];
+let g;
+ctx.fillStyle = '#2B2118'; ctx.fillRect(-60, -60, W + 120, Hc + 120);
+/* the two slopes of the roof from underneath: boards, lighter the nearer they are */
+for (let i = 0; i < 2; i++) {
+const PF = i === 0 ? PL : PR, a = PA(1), f1 = PF(1), n = PF(far), an = PA(far);
+g = ctx.createLinearGradient(f1[0], f1[1], f1[0] + (n[0] - f1[0]) * 0.45, f1[1] + (n[1] - f1[1]) * 0.45);
+g.addColorStop(0, i === 0 ? '#8C6C48' : '#7E6040'); g.addColorStop(1, i === 0 ? '#B8925F' : '#A6835A');
+ctx.fillStyle = g; this._poly(ctx, [a, f1, n, [n[0], an[1]], an]); ctx.fill();
+ctx.strokeStyle = 'rgba(40,26,14,0.3)'; ctx.lineWidth = 1 * s;
+for (let j = 1; j < 5; j++) {
+const h = j * 0.2;
+ctx.beginPath(); ctx.moveTo(f1[0] + (a[0] - f1[0]) * h, f1[1] + (a[1] - f1[1]) * h); ctx.lineTo(n[0] + (an[0] - n[0]) * h, n[1] + (an[1] - n[1]) * h); ctx.stroke();
 }
-g = ctx.createLinearGradient(0, Y(-150), 0, Y(70));
-g.addColorStop(0, 'rgba(24,30,58,0.5)'); g.addColorStop(1, 'rgba(24,30,58,0)');
-ctx.fillStyle = g; ctx.fillRect(-30, -30, W + 60, Y(70) + 30);
-for (let i = 0; i < 8; i++) {
-const lx = X(20 + ((i * 97) % 380)) + Math.sin(t * 0.7 + i) * 5 * s, ly = Y(60 + ((i * 61) % 250)) + Math.cos(t * 0.6 + i * 2) * 4 * s, lr = (34 + (i * 13) % 30) * s;
-const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
-lg.addColorStop(0, 'rgba(24,30,58,0.16)'); lg.addColorStop(1, 'rgba(24,30,58,0)');
-ctx.fillStyle = lg; ctx.fillRect(lx - lr, ly - lr, lr * 2, lr * 2);
 }
-
-/* conduit and the panel, on the wall to his left */
-const ps = 0.6 * s, pcx = X(104), pcy = Y(258);
-ctx.fillStyle = c(P.metal, 0.2); ctx.fillRect(pcx - 10 * ps, -30, 13 * ps, pcy - 104 * ps + 30);
-ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(pcx - 6 * ps, -30, 2.6 * ps, pcy - 104 * ps + 30);
-ctx.fillStyle = 'rgba(18,24,46,0.22)'; ctx.fillRect(pcx - 76 * ps, pcy - 104 * ps, 164 * ps, 222 * ps);
-this._panel(ctx, pcx, pcy, ps, 0);
-
-/* the work light, and the flash as the photo is taken, on the breaker he is aiming at */
-const bx = pcx + 31 * ps, by = pcy + 4 * ps;
-if (light > 0 || flash > 0) {
-ctx.save(); ctx.globalCompositeOperation = 'lighter';
-if (light > 0) {
-const lg = ctx.createRadialGradient(bx, by, 0, bx, by, 92 * s);
-lg.addColorStop(0, 'rgba(255,244,214,' + (0.46 * light).toFixed(3) + ')'); lg.addColorStop(0.36, 'rgba(255,244,214,' + (0.22 * light).toFixed(3) + ')'); lg.addColorStop(1, 'rgba(255,244,214,0)');
-ctx.fillStyle = lg; ctx.fillRect(bx - 96 * s, by - 96 * s, 192 * s, 192 * s);
-}
-if (flash > 0) {
-const fg = ctx.createRadialGradient(bx, by, 0, bx, by, 210 * s);
-fg.addColorStop(0, 'rgba(255,255,255,' + (0.95 * flash).toFixed(3) + ')'); fg.addColorStop(0.4, 'rgba(255,255,255,' + (0.45 * flash).toFixed(3) + ')'); fg.addColorStop(1, 'rgba(255,255,255,0)');
-ctx.fillStyle = fg; ctx.fillRect(bx - 214 * s, by - 214 * s, 428 * s, 428 * s);
-}
+/* where the pipe goes through the roof, on the left slope: the stain lies there, and his light and his camera
+   are aimed at it. Across, the stain runs toward the far gable; down, it runs down the rafters. */
+const sl = PL(2.9), sa = PA(2.9);
+const bx = sl[0] + (sa[0] - sl[0]) * 0.42, by = sl[1] + (sa[1] - sl[1]) * 0.42;
+{
+const ax = X(vx) - bx, ay = Y(vy) - by, al = Math.hypot(ax, ay), rx = sl[0] - sa[0], ry = sl[1] - sa[1], rl = Math.hypot(rx, ry), q = 0.86 * s;
+ctx.save(); ctx.transform(ax / al * q, ay / al * q, rx / rl * q, ry / rl * q, bx, by + 8 * s);
+this._stain(ctx, 0, 0, 1);
 ctx.restore();
 }
-
-/* his shadow on the wall */
-g = ctx.createRadialGradient(X(266), Y(404), 0, X(266), Y(404), 150 * s);
-g.addColorStop(0, 'rgba(18,24,46,0.30)'); g.addColorStop(1, 'rgba(18,24,46,0)');
-ctx.fillStyle = g; ctx.fillRect(X(100), Y(240), 330 * s, 330 * s);
+/* the far gable, with the vent that lets a little daylight in */
+ctx.fillStyle = '#8F7150'; this._poly(ctx, [PA(1), PL(1), PR(1)]); ctx.fill();
+ctx.strokeStyle = '#6F553A'; ctx.lineWidth = 2.2 * s; ctx.lineCap = 'butt';
+for (let j = -2; j <= 2; j++) {
+if (j === 0) continue;
+ctx.beginPath(); ctx.moveTo(X(vx + j * 18), Y(vy + 32)); ctx.lineTo(X(vx + j * 18), Y(vy - 64 + Math.abs(j) * 18 / 54 * 96)); ctx.stroke();
+}
+ctx.fillStyle = '#5E4C39'; ctx.fillRect(X(vx - 11.5), Y(vy - 35.5), 23 * s, 27 * s);
+ctx.fillStyle = '#BFD6F2'; ctx.fillRect(X(vx - 9.5), Y(vy - 33.5), 19 * s, 23 * s);
+ctx.fillStyle = '#5E4C39';
+for (let j = 0; j < 5; j++) ctx.fillRect(X(vx - 9.5), Y(vy - 31 + j * 4.6), 19 * s, 2.3 * s);
+/* the floor: joists from eave to eave, and insulation lying between them */
+ctx.save();
+this._poly(ctx, [PL(1), PR(1), PR(far), [PR(far)[0], Hc + 80], [PL(far)[0], Hc + 80], PL(far)]); ctx.clip();
+ctx.fillStyle = '#A88C62'; ctx.fillRect(-60, PL(1)[1], W + 120, Hc + 120);
+for (let i = 0; i < KS.length; i++) {
+const k = KS[i], k2 = i + 1 < KS.length ? KS[i + 1] : far, y0 = PL(k)[1], y1 = PL(k2)[1], xl = PL(k2)[0] - 20, xr = PR(k2)[0] + 20, hump = 9 * k * s;
+g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, '#DCC49A'); g.addColorStop(1, '#A98D64');
+ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(xl, y1); ctx.lineTo(xl, y0);
+for (let x = xl; x < xr; x += hump) ctx.quadraticCurveTo(x + hump / 2, y0 - 0.36 * hump, x + hump, y0);
+ctx.lineTo(xr, y1); ctx.closePath(); ctx.fill();
+ctx.fillStyle = '#7C5E3D'; ctx.fillRect(xl, y1 - 1.5 * k2 * s, xr - xl, 2.4 * k2 * s);
+}
+ctx.restore();
+/* the rafters, pair by pair, and the ridge they meet at */
+for (let i = 0; i < KS.length; i++) {
+const k = KS[i], a = PA(k), w = 3.1 * k * s;
+for (let j = 0; j < 2; j++) {
+const pf = (j === 0 ? PL : PR)(k);
+ctx.strokeStyle = '#5F452C'; ctx.lineWidth = w + 1.8 * s; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(pf[0], pf[1]); ctx.stroke();
+ctx.strokeStyle = j === 0 ? '#CDAA78' : '#B8966A'; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(a[0], a[1] + 1.3 * s); ctx.lineTo(pf[0], pf[1] + 1.3 * s); ctx.stroke();
+}
+}
+ctx.fillStyle = '#6E5134'; this._poly(ctx, [[X(vx) - 1.8 * s, PA(1)[1]], [X(vx) + 1.8 * s, PA(1)[1]], [X(vx) + 1.8 * far * s, PA(far)[1]], [X(vx) - 1.8 * far * s, PA(far)[1]]]); ctx.fill();
+/* two ties across, from rafter to rafter */
+for (let i = 0; i < 2; i++) {
+const k = i === 0 ? 2.3 : 5.7, l = PL(k), a = PA(k), y = l[1] + (a[1] - l[1]) * 0.55, x0 = l[0] + (a[0] - l[0]) * 0.55, x1 = 2 * X(vx) - x0, w = 2.5 * k * s;
+ctx.fillStyle = '#5F452C'; ctx.fillRect(x0, y - w / 2 - 0.9 * s, x1 - x0, w + 1.8 * s);
+ctx.fillStyle = '#C4A070'; ctx.fillRect(x0, y - w / 2 + 0.5 * s, x1 - x0, w);
+}
+/* the vent pipe, up from the floor and through the roof where the stain is */
+{
+const kf = (X(vx) - bx) / (54 * s), yf = Y(vy + 32 * kf) + 7 * s;
+ctx.fillStyle = '#A9AEB2'; ctx.fillRect(bx - 4.5 * s, by, 9 * s, yf - by);
+ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(bx - 2.6 * s, by, 2.2 * s, yf - by);
+ctx.fillStyle = 'rgba(40,46,58,0.3)'; ctx.fillRect(bx + 2 * s, by, 2.5 * s, yf - by);
+ctx.fillStyle = '#979CA1'; ctx.fillRect(bx - 5.6 * s, by + (yf - by) * 0.52, 11.2 * s, 7 * s);
+ctx.fillStyle = 'rgba(30,20,12,0.75)'; ctx.beginPath(); ctx.ellipse(bx, by, 6.4 * s, 2.8 * s, -0.5, 0, 6.2832); ctx.fill();
+}
 
 /* The phone is low at first and comes up to aim once the camera opens. */
-const wx = 181 - 4 * raise, wy = 372 - 36 * raise;
+const wx = 181 - 4 * raise, wy = 372 - 36 * raise, hx = wx - 9, hy = wy - 27;
 
 /* The inspector, from behind. He is drawn to a man's proportions, counted in heads (his head with its cap
    is 67 units tall): his shoulders two heads wide with his arms, the hem of his vest three heads below the top
@@ -1427,12 +1448,61 @@ const ex = 194 - 2 * raise, ey = 416 - 6 * raise;
 ctx.lineWidth = 22 * s; ctx.beginPath(); ctx.moveTo(X(ex), Y(ey)); ctx.lineTo(X(wx), Y(wy)); ctx.stroke();
 ctx.lineWidth = 26 * s; ctx.beginPath(); ctx.moveTo(X(mx - 63), Y(368)); ctx.lineTo(X(ex), Y(ey)); ctx.stroke();
 
+/* The dark, over the attic and over him. `amb` is how dark it is away from the light, `core` how dark it is
+   where the light falls. Before the light there is no difference; the flash takes nearly all of it away. */
+const amb = (0.86 - 0.16 * light) * (1 - 0.95 * flash), core = amb * (1 - 0.96 * light);
+const dk = (a) => 'rgba(9,12,24,' + Math.max(0, Math.min(1, a)).toFixed(3) + ')';
+g = ctx.createRadialGradient(bx, by, 0, bx, by, 230 * s);
+g.addColorStop(0, dk(core)); g.addColorStop(0.26, dk(core)); g.addColorStop(0.55, dk(core + (amb - core) * 0.62)); g.addColorStop(1, dk(amb));
+ctx.fillStyle = g; ctx.fillRect(-60, -60, W + 120, Hc + 120);
+ctx.save(); ctx.globalCompositeOperation = 'lighter';
+/* daylight through the vent in the far gable: all the light there is before Spex's */
+g = ctx.createRadialGradient(X(vx), Y(vy - 22), 0, X(vx), Y(vy - 22), 50 * s);
+g.addColorStop(0, 'rgba(150,185,255,0.46)'); g.addColorStop(0.28, 'rgba(120,160,240,0.17)'); g.addColorStop(1, 'rgba(120,160,240,0)');
+ctx.fillStyle = g; ctx.fillRect(X(vx - 52), Y(vy - 74), 104 * s, 104 * s);
+g = ctx.createLinearGradient(0, Y(vy - 22), 0, Y(vy + 60));
+g.addColorStop(0, 'rgba(140,175,250,0.10)'); g.addColorStop(1, 'rgba(140,175,250,0)');
+ctx.fillStyle = g; this._poly(ctx, [[X(vx - 9), Y(vy - 22)], [X(vx + 9), Y(vy - 22)], [X(vx + 62), Y(vy + 60)], [X(vx - 30), Y(vy + 60)]]); ctx.fill();
+if (light > 0) {
+/* Spex's light: the beam from the back of the phone to the roof, the dust in it, and the glow where it lands */
+const lx = X(hx) - 2 * s, ly = Y(hy) - 19 * s, ang = Math.atan2(by - ly, bx - lx), nx = -Math.sin(ang), ny = Math.cos(ang), half = 58 * s;
+g = ctx.createLinearGradient(lx, ly, bx, by);
+g.addColorStop(0, 'rgba(255,244,214,' + (0.3 * light).toFixed(3) + ')'); g.addColorStop(0.5, 'rgba(255,244,214,' + (0.1 * light).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,244,214,' + (0.03 * light).toFixed(3) + ')');
+ctx.fillStyle = g; this._poly(ctx, [[lx + nx * 2.5 * s, ly + ny * 2.5 * s], [bx + nx * half, by + ny * half], [bx - nx * half, by - ny * half], [lx - nx * 2.5 * s, ly - ny * 2.5 * s]]); ctx.fill();
+g = ctx.createRadialGradient(bx, by, 0, bx, by, 84 * s);
+g.addColorStop(0, 'rgba(255,240,205,' + (0.1 * light).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,240,205,0)');
+ctx.fillStyle = g; ctx.fillRect(bx - 86 * s, by - 86 * s, 172 * s, 172 * s);
+for (let i = 0; i < 16; i++) {
+const along = (i * 0.137 + t * 0.012 * (1 + i % 3)) % 1, side = ((i * 37) % 17 / 8.5 - 1) * along * 0.8;
+ctx.fillStyle = 'rgba(255,246,224,' + (0.5 * light * (0.4 + 0.6 * Math.abs(Math.sin(t * 1.3 + i * 2.1)))).toFixed(3) + ')';
+ctx.beginPath(); ctx.arc(lx + (bx - lx) * along + nx * half * side, ly + (by - ly) * along + ny * half * side + Math.sin(t * 0.9 + i) * 2 * s, (0.7 + (i % 3) * 0.35) * s, 0, 6.2832); ctx.fill();
+}
+/* the instant it comes on */
+const on = ramp(B[3] - 0.035, B[3], u) * (1 - ramp(B[3], B[3] + 0.07, u));
+if (on > 0) {
+g = ctx.createRadialGradient(bx, by, 0, bx, by, 170 * s);
+g.addColorStop(0, 'rgba(255,246,224,' + (0.4 * on).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,246,224,0)');
+ctx.fillStyle = g; ctx.fillRect(bx - 174 * s, by - 174 * s, 348 * s, 348 * s);
+}
+}
+if (flash > 0) {
+g = ctx.createRadialGradient(bx, by, 0, bx, by, 230 * s);
+g.addColorStop(0, 'rgba(255,255,255,' + (0.95 * flash).toFixed(3) + ')'); g.addColorStop(0.4, 'rgba(255,255,255,' + (0.42 * flash).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,255,255,0)');
+ctx.fillStyle = g; ctx.fillRect(bx - 234 * s, by - 234 * s, 468 * s, 468 * s);
+}
+/* his phone's screen lights his hand and the side of his head a little */
+g = ctx.createRadialGradient(X(hx), Y(hy), 0, X(hx), Y(hy), 44 * s);
+g.addColorStop(0, 'rgba(170,195,255,0.16)'); g.addColorStop(1, 'rgba(170,195,255,0)');
+ctx.fillStyle = g; ctx.fillRect(X(hx - 46), Y(hy - 46), 92 * s, 92 * s);
+ctx.restore();
+/* his hand is as dark as the attic around it, less a little for the screen's light */
+const skin = (sh) => { const v = me._rgb(P.skin, sh), q = amb * 0.7; return me._rgba([v[0] + (9 - v[0]) * q, v[1] + (12 - v[1]) * q, v[2] + (24 - v[2]) * q]); };
+
 /* his hand and the iPhone, at its real size beside his head */
-const hx = wx - 9, hy = wy - 27;
 ctx.save();
 ctx.translate(X(hx), Y(hy)); ctx.rotate(-0.26 + 0.2 * raise);
 const pw = 22 * s, ph = 45 * s;
-ctx.fillStyle = c(P.skin, 0.25); this._rr(ctx, -pw / 2 - 1.5 * s, ph * 0.03, pw + 9 * s, ph * 0.6, 8 * s); ctx.fill();
+ctx.fillStyle = skin(0.25); this._rr(ctx, -pw / 2 - 1.5 * s, ph * 0.03, pw + 9 * s, ph * 0.6, 8 * s); ctx.fill();
 ctx.shadowColor = 'rgba(0,0,0,0.38)'; ctx.shadowBlur = 9 * d; ctx.shadowOffsetY = 3 * d;
 ctx.fillStyle = '#0E0F12'; this._rr(ctx, -pw / 2, -ph / 2, pw, ph, 5.2 * s); ctx.fill();
 ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
@@ -1440,14 +1510,19 @@ ctx.save();
 this._rr(ctx, -pw / 2 + 1.5 * s, -ph / 2 + 1.5 * s, pw - 3 * s, ph - 3 * s, 3.9 * s); ctx.clip();
 ctx.fillStyle = '#16181C'; ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
 if (raise > 0) {
-/* the camera's view: the panel, then closer in on the breaker at 4x */
+/* the camera's view: the underside of the roof, dark until the light comes on, then closer in on the stain at 4x */
 ctx.globalAlpha = raise;
-g = ctx.createLinearGradient(0, -ph / 2, 0, ph / 2);
-g.addColorStop(0, c(P.siding2, 0.25)); g.addColorStop(1, c(P.siding, 0.5));
-ctx.fillStyle = g; ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
-const k = 0.105 + 0.3 * zin;
-this._panel(ctx, -31 * k * s * zin, -ph * 0.07 - 4 * k * s * zin, k * s, 0);
-if (light > 0) { ctx.fillStyle = 'rgba(255,244,214,' + (0.2 * light).toFixed(3) + ')'; ctx.fillRect(-pw / 2, -ph / 2, pw, ph); }
+const k = 0.11 * (1 + 3 * zin), cy0 = -ph * 0.07;
+ctx.fillStyle = '#AD8960'; ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
+ctx.fillStyle = 'rgba(40,26,14,0.3)';
+for (let i = -3; i <= 3; i++) ctx.fillRect(-pw / 2, cy0 + (i * 62 + 31) * k * s, pw, Math.max(0.5 * s, 2.4 * k * s));
+ctx.fillStyle = '#C9A678'; ctx.fillRect(-78 * k * s, -ph / 2, 20 * k * s, ph);
+this._stain(ctx, 0, cy0 + 10 * k * s, k * s);
+ctx.fillStyle = '#C6CACD'; ctx.fillRect(-9 * k * s, cy0, 18 * k * s, ph);
+ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(-5.2 * k * s, cy0, 4.4 * k * s, ph);
+ctx.fillStyle = 'rgba(30,20,12,0.75)'; ctx.beginPath(); ctx.ellipse(0, cy0, 12.8 * k * s, 5.6 * k * s, 0, 0, 6.2832); ctx.fill();
+ctx.fillStyle = 'rgba(9,12,24,' + (0.8 * (1 - light) * (1 - flash)).toFixed(3) + ')'; ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
+if (light > 0) { ctx.fillStyle = 'rgba(255,244,214,' + (0.12 * light).toFixed(3) + ')'; ctx.fillRect(-pw / 2, -ph / 2, pw, ph); }
 ctx.globalAlpha = 1;
 }
 /* Spex listening: its voice, low on the screen */
@@ -1458,15 +1533,20 @@ ctx.fillStyle = 'rgba(255,255,255,0.92)'; this._rr(ctx, (-5.6 + i * 2.5) * s, ph
 if (flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + (0.9 * flash).toFixed(3) + ')'; ctx.fillRect(-pw / 2, -ph / 2, pw, ph); }
 ctx.restore();
 /* fingertips on the far edge, thumb on the near one */
-ctx.fillStyle = c(P.skin, 0.2);
+ctx.fillStyle = skin(0.2);
 for (let i = 0; i < 3; i++) { this._rr(ctx, -pw / 2 - 2.6 * s, ph * (0.05 + i * 0.135), 5.2 * s, 5 * s, 2.4 * s); ctx.fill(); }
-ctx.fillStyle = c(P.skin, 0.18);
+ctx.fillStyle = skin(0.18);
 ctx.save(); ctx.translate(pw / 2 - 0.5 * s, ph * 0.2); ctx.rotate(-0.42); this._rr(ctx, -4.2 * s, -10 * s, 8.4 * s, 21 * s, 4.2 * s); ctx.fill(); ctx.restore();
 ctx.restore();
 ctx.restore();
 
-/* the whole scene brightens for an instant as the flash fires */
 ctx.setTransform(d, 0, 0, d, 0, 0);
+/* The film's last rows are the attic's floor, away from the light: as dark as the attic is at that moment, and
+   brighter for the instant of the flash. The page under the film takes that colour on a phone. */
+this._atticGround = ATTIC_FLOOR.map((v, i) => { const q = v + ([9, 12, 24][i] - v) * amb; return q + (255 - q) * 0.22 * flash; });
+/* where the light falls, in the screen's own pixels (for the page's self-checks) */
+this._atticSpot = Z([bx, by]);
+/* the whole scene brightens for an instant as the flash fires */
 if (flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + (0.22 * flash).toFixed(3) + ')'; ctx.fillRect(0, 0, W, Hc); }
 
 /* the conversation: his words in white with a line to him, Spex's in black with a line to the phone */

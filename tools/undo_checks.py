@@ -30,6 +30,22 @@ PRICING = 'coming-soon/pricing.html'
 TERMS = 'coming-soon/terms.html'
 
 MUTATIONS = [
+    # ---- the attic in the Spex scene (2026-11-12)
+    ("Spex's light never comes on in the attic", JS,
+     'const amb = (0.86 - 0.16 * light) * (1 - 0.95 * flash), core = amb * (1 - 0.96 * light);',
+     'const amb = 0.86 * (1 - 0.95 * flash), core = amb;'),
+    ('the flash no longer lights the attic', JS,
+     'const amb = (0.86 - 0.16 * light) * (1 - 0.95 * flash), core = amb * (1 - 0.96 * light);',
+     'const amb = (0.86 - 0.16 * light), core = amb * (1 - 0.96 * light);'),
+    ('the attic is lit before Spex is asked for the light', JS,
+     'const amb = (0.86 - 0.16 * light) * (1 - 0.95 * flash), core = amb * (1 - 0.96 * light);',
+     'const amb = (0.3 - 0.16 * light) * (1 - 0.95 * flash), core = amb * (1 - 0.96 * light);'),
+    ('the page under the attic keeps a daylight colour', JS,
+     'attic = this._atticGround || [34, 33, 37];',
+     'attic = [160, 170, 172];'),
+    ("the attic's first line is changed in the page", HTML,
+     '<q>Spex, open the camera.</q>',
+     '<q>Spex, open camera.</q>'),
     # ---- the promise and its terms (2026-11-12)
     ("the promise's terms are gone from the pricing page", PRICING,
      '<h2>Faster reports, or three months free</h2>',

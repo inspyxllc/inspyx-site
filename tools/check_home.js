@@ -359,14 +359,29 @@ async function open(browser, opts) {
   {
     const { ctx, page, errs } = await open(browser, {});
     const w = await page.evaluate(() => { const f = window.__inspyxFilm; return { say: f._say.map((l) => l.label + ': ' + l.text), filed: f._filed, text: document.querySelector('[data-talk]').textContent.replace(/\s+/g, ' ').trim() }; });
-    ok('the Spex scene: six lines of conversation and the "filed" card, read from the page\'s own words', w.say.length === 6 && w.say[0] === 'You: Spex, take a photo of that breaker.' && w.say[1] === 'Spex: Camera open.' && w.say[4] === 'You: Take it.' && w.say[5] === 'Spex: Got it.' && w.filed && w.filed[0] === 'Filed under Electrical', w.say.join(' | '));
-    ok('the same conversation is in the page as text, for people who can\'t see the film', /You: Spex, take a photo of that breaker\. Spex: Camera open\./.test(w.text) && /Filed under Electrical\./.test(w.text), w.text.slice(0, 110));
+    ok('the Spex scene: six lines of conversation and the "filed" card, read from the page\'s own words', w.say.length === 6 && w.say[0] === 'You: Spex, open the camera.' && w.say[1] === 'Spex: Camera open.' && w.say[4] === 'You: Take it.' && w.say[5] === 'Spex: Got it.' && w.filed && w.filed[0] === 'Filed under Attic', w.say.join(' | '));
+    ok('the same conversation is in the page as text, for people who can\'t see the film', /You: Spex, open the camera\. Spex: Camera open\./.test(w.text) && /Filed under Attic\./.test(w.text), w.text.slice(0, 110));
     const at = async (u) => { await page.evaluate((v) => window.scrollTo(0, window.__inspyxFilm.talkScroll(v)), u); await page.waitForTimeout(250); return page.evaluate(() => window.__inspyxFilm._talkLive.join(' | ')); };
     const a = await at(0.12), b = await at(0.27), c = await at(0.6), d = await at(1);
-    ok('scrolling: he speaks, then Spex answers, each time', a === '\u201CSpex, take a photo of that breaker.\u201D' && b === a + ' | \u201CCamera open.\u201D' && c === '\u201CSpex, put the flash on, put the light on, and zoom in 4\u00D7.\u201D | \u201CFlash on, light on, 4\u00D7.\u201D' && errs.length === 0, [a, b, c].join(' || '));
-    ok('it ends with the photo taken and filed', d === '\u201CTake it.\u201D | \u201CGot it.\u201D | Filed under Electrical', d);
+    ok('scrolling: he speaks, then Spex answers, each time', a === '\u201CSpex, open the camera.\u201D' && b === a + ' | \u201CCamera open.\u201D' && c === '\u201CSpex, put the flash on, put the light on, and zoom in 4\u00D7.\u201D | \u201CFlash on, light on, 4\u00D7.\u201D' && errs.length === 0, [a, b, c].join(' || '));
+    ok('it ends with the photo taken and filed', d === '\u201CTake it.\u201D | \u201CGot it.\u201D | Filed under Attic', d);
     const T = await page.evaluate(() => { const f = window.__inspyxFilm; return [Math.round(f._lastT * 1000) / 1000, f._talkU]; });
     ok('the film\'s clock waits while they talk, and runs on afterwards', T[1] === 1 && T[0] > 3.56 && T[0] < 4, T.join(', '));
+    // the attic is dark until Spex's light; the light opens a patch of it; the flash lights all of it for an instant.
+    // Brightness is read from the film itself: just above the stain, where the light falls, and at the film's
+    // lower left corner, on the floor away from the light.
+    const lum = async (u) => {
+      await page.evaluate((v) => window.scrollTo(0, window.__inspyxFilm.talkScroll(v)), u); await page.waitForTimeout(250);
+      return page.evaluate(() => {
+        const f = window.__inspyxFilm, cv = f._cv, g = cv.getContext('2d'), k = cv.width / window.innerWidth, p = f._atticSpot;
+        const mean = (x, y, w, h) => { const d = g.getImageData(Math.round(x * k), Math.round(y * k), Math.round(w * k), Math.round(h * k)).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11; return Math.round(s / (d.length / 4)); };
+        return { spot: mean(p[0] - 12, p[1] - 58, 24, 20), away: mean(8, cv.height / k - 40, 24, 24) };
+      });
+    };
+    const dark = await lum(0.3), lit = await lum(0.6), fl = await lum(0.755);
+    ok('the attic is dark before the light comes on, where the light will fall and away from it', dark.spot < 50 && dark.away < 50, JSON.stringify(dark));
+    ok('Spex\'s light opens a patch of the attic: bright where it falls, half-dark away from it', lit.spot > dark.spot + 60 && lit.spot > lit.away + 40 && lit.away < 90, JSON.stringify(lit));
+    ok('the flash lights the whole attic for an instant', fl.away > lit.away + 60 && fl.spot > lit.spot, JSON.stringify(fl));
     await ctx.close();
   }
   {
@@ -391,7 +406,7 @@ async function open(browser, opts) {
         const y = stop === 'top' ? 0 : stop === 'last' ? f._scn[3].top - f._V + 900 : f.seqScroll({ call: 1, desk: 2, talk: 3 }[stop], 0.5);
         window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 300));
         // the film's last rows at its right-hand end, away from the truck and the man (forty rows, so that the
-        // wall's siding lines in the Spex scene average out)
+        // insulation's humps on the attic floor in the Spex scene average out)
         const c = f._cv, d = c.getContext('2d').getImageData(c.width - 14, c.height - 40, 6, 40).data, film = [0, 0, 0];
         for (let i = 0; i < d.length; i += 4) { film[0] += d[i]; film[1] += d[i + 1]; film[2] += d[i + 2]; }
         const g = (getComputedStyle(document.querySelector('[data-story]')).backgroundColor.match(/[\d.]+/g) || []).map(Number);

@@ -66,7 +66,7 @@ Changed from the mock-up on purpose since then:
 - **The inspector on the roof was redrawn** on 2026-11-11, at Moises's word. In the mock-up his
   whole head was the hair colour, which read as a brown face above tan hands. Now his face is the
   very same skin colour as his hand, his hair shows only at the back of his head under the cap,
-  and his sleeve is the navy shirt he wears at the panel.
+  and his sleeve is the navy shirt he wears in the Spex scene.
 - **The Spex scene was redrawn** the same day, at his word: "I want the iPhone normal sized. I
   don't need a close-up of this ridiculously undetailed camera app. Secondly, the captions should
   be the inspector and specs talking to each other". He now stands at the panel with the iPhone
@@ -84,6 +84,34 @@ Changed from the mock-up on purpose since then:
   hand and the phone are where they were, because the captions' lines end at them. The figure is
   `_shotD` in `home.js`; a figure that is cut off by the bottom of the screen needs its waist
   and legs drawn all the same, because a phone shows more of it once its bars tuck away.
+- **The Spex scene moved into a dark attic** on 2026-11-12, at Moises's word: "it'd send a
+  bolder statement to have them like in an attic and have you talk to specs and have them turn
+  the flashlight on and the flash on to take photos and basically light up the dark attic".
+  Until then he stood at an electrical panel on an outside wall, in daylight.
+  - **What happens.** The attic is dark: a little daylight through the vent in the far gable,
+    his outline, and his phone's screen. "Spex, open the camera." brings the camera up, still in
+    the dark. "Spex, put the flash on, put the light on, and zoom in 4×." brings Spex's light on:
+    it opens a patch of the attic and shows a stain under the roof, where a vent pipe goes
+    through it, and the phone's camera closes in on it. "Take it." fires the flash, which lights
+    the whole attic for an instant. The photo is filed under Attic.
+  - **It is true to the app.** The app's camera has a work light and a flash that Spex switches
+    (`lib/src/shell/phone_camera.dart` in the app's repo: "Work light and flash."). The light
+    belongs to the camera, which is why the camera opens first.
+  - **How it is drawn** (`_shotD` in `home.js`). The whole attic is drawn as it looks lit, in
+    one-point perspective toward the far gable: every pair of rafters is the far gable's
+    triangle again, some number of times nearer. Then the dark is laid over it as one layer:
+    even before the light comes on, with a bright patch where the light falls once it is on, and
+    almost gone for the instant of the flash. The stain is `_stain`; it is drawn flat and laid on
+    the roof's slope, and drawn again, straight on, in the phone's camera view.
+  - **The page under the film** on a phone takes the colour of the attic's floor at that moment
+    (`_atticGround`): dark, a little lighter once the light is on, bright for the flash.
+  - **The words.** Five of the scene's lines are as Moises approved them on 2026-11-11. Two
+    phrases are new with the attic and are drafts until he says yes: "Spex, open the camera."
+    (it was "Spex, take a photo of that breaker.") and "Filed under Attic" (it was "Filed under
+    Electrical").
+  - **Checks.** Three self-checks read the film's own brightness: the attic is dark before the
+    light, the light opens a patch that is bright against the half-dark, and the flash lights
+    all of it.
 
 - **The Spex Business scene was rebuilt** on 2026-11-12, at his word (above). In the mock-up three
   small chips over the tailgate turned a question into "Reply ready" with a Send button. Now the
