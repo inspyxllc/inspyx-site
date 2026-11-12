@@ -311,16 +311,22 @@ wording, two questions about it, and connecting Vercel to GitHub), and "Publish"
 - **A fix for iPhones followed at 12:14:51Z** (pull request 6, commit 2fd63bf, deployment
   dpl_96uJXraTbbQXyeouhuJhDvdNQbY8): see "Behind Safari's bars on an iPhone" above. Checked at
   12:15:02Z: 21 of 21 files, and 92 self-checks pass against the live site. Seen in Safari on the
-  live site with the bar tucked away: the street runs to the bottom of the screen.
+  live site with the bar tucked away: the street runs to the bottom of the screen. The undo
+  checks for the fix, run from 12:13:51Z to 12:22:56Z: 4 changes of 4 caught.
 - **How `main` is moved.** By pushing the pull request's checked commit to it
   (`git push origin <commit>:main`), when `main` is that commit's ancestor. GitHub then shows the
   pull request as merged, the commit that goes live is the very one that was checked, and no new
-  commit is made. Merging with the button on github.com writes the account's email address into
-  this public repo as the merge's author: the four merges before 2026-11-12 carry one.
-- **The way back.** Vercel keeps every deployment. "Promote" on the one that was live before
-  puts it back: dpl_Fh6mTwE2S4HPipxiQWNRoHuNsJi2 is the page as first published, and
-  dpl_HkkT16HjoTXs2zqdVSodMsVDN4hP is the "Pilot coming soon" page with the pricing and policy
-  pages. Then put the repo right.
+  commit is made. The merge button on github.com is not used: it makes a new commit, which is
+  not the one that was checked. Every push to `main` makes a new production deployment, also one
+  that changes only this manual; the served files are then the same as before.
+- **The way back.** Vercel keeps every deployment, and putting an earlier one back takes no
+  build: "Instant Rollback" (or "Promote") on it, in the project's list of deployments.
+  dpl_Fh6mTwE2S4HPipxiQWNRoHuNsJi2 is the page as first published. On 2026-11-12 Vercel listed
+  the deployments made from GitHub as rollback candidates, and not the last one made by upload,
+  dpl_HkkT16HjoTXs2zqdVSodMsVDN4hP ("Pilot coming soon" with the pricing and policy pages);
+  whether "Promote" works on that one was not tried. The sure way back to that page is through
+  this repo: a pull request that puts `coming-soon/` back as it was at commit 097fb4e. Either
+  way, put the repo right afterwards, so that the next push does not undo the step back.
 
 ### Still open after publishing
 
@@ -338,10 +344,6 @@ wording, two questions about it, and connecting Vercel to GitHub), and "Publish"
   page answers only `?billing=`. The two messages are item 6 of "Wording Waiting for Your OK
   (2026-11-10)" in Drive and wait for Moises's OK. Once approved they go on this page the way the
   three `?billing=` messages do.
-- Four merges made on github.com before 2026-11-12 carry the account's email address as their
-  author, in this public repo. Hiding the address for future merges is a setting of the GitHub
-  account ("Keep my email addresses private"); taking it out of the old commits would mean
-  rewriting `main`'s history. Both are Moises's call.
 
 ### Checked on 2026-11-12, before asking for the go
 
