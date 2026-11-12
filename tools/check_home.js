@@ -117,6 +117,31 @@ async function open(browser, opts) {
     ok('the tag is in the page itself, before any script runs', /media="\(max-width: 520px\)"/.test(tag) && /content="#94B2CB"/.test(tag), tag);
   }
 
+  // ---- the lid: on an iPhone a strip pinned to the top edge takes the colour of what lies under it, and Safari
+  //      colours its own top bar from it. These checks hold the page's part; what Safari then does was measured by
+  //      hand in the iOS simulator (26.4 and 27.0) and no check here can see it.
+  {
+    const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1';
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true, userAgent: UA });
+    const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+    await page.goto(url, { waitUntil: 'load' }); await page.addStyleTag({ content: 'html{scroll-behavior:auto !important}' }); await page.waitForTimeout(900);
+    const lid = () => page.evaluate(() => { const l = document.querySelector('[data-lid]'), s = getComputedStyle(l), b = l.getBoundingClientRect(), c = document.querySelector('canvas[data-film]'), d = c.getContext('2d').getImageData(Math.round(c.width / 2), 0, 1, 1).data; return { show: s.display, pos: s.position, col: s.backgroundColor, top: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height), z: s.zIndex, film: [d[0], d[1], d[2]] }; });
+    const near = (col, rgb, by) => { const m = (col.match(/\d+/g) || []).map(Number); return m.length >= 3 && Math.max(Math.abs(m[0] - rgb[0]), Math.abs(m[1] - rgb[1]), Math.abs(m[2] - rgb[2])) <= by; };
+    const at = async (js) => { await page.evaluate((js) => window.scrollTo(0, eval(js)), js); await page.waitForTimeout(800); return lid(); };
+    const top = await lid();
+    const attic = await at('window.__inspyxFilm.talkScroll(0.6)');
+    const sheet = await at('document.querySelector("[data-sheet]").getBoundingClientRect().top + window.pageYOffset + 200');
+    const wait = await at('document.querySelector("#waitlist").getBoundingClientRect().top + window.pageYOffset + 60');
+    ok('on an iPhone a strip is pinned to the top edge of the screen: 12 px deep, full width, over everything', top.show === 'block' && top.pos === 'fixed' && top.top === 0 && top.w === 390 && top.h === 12 && top.z === '7' && errs.length === 0, JSON.stringify(top) + (errs.length ? ' | ' + errs.join(' | ') : ''));
+    ok('the strip has the colour of the film\'s top row: the sky at the top of the page, the dark in the attic', near(top.col, top.film, 6) && top.film[2] > 180 && near(attic.col, attic.film, 6) && attic.film[0] < 70, 'top ' + top.col + ' over ' + top.film.join(',') + '; attic ' + attic.col + ' over ' + attic.film.join(','));
+    ok('past the film the strip is white over the white sheet and black over the waitlist', sheet.col === 'rgb(255, 255, 255)' && wait.col === 'rgb(0, 0, 0)', 'sheet ' + sheet.col + ' | waitlist ' + wait.col);
+    await ctx.close();
+    const other = await open(browser, {});
+    const off = await other.page.evaluate(() => getComputedStyle(document.querySelector('[data-lid]')).display + ' ' + document.documentElement.classList.contains('lid-on'));
+    await other.ctx.close();
+    ok('on a phone that is not an iPhone there is no strip (no browser there reads it)', off === 'none false', off);
+  }
+
   // ---- calculator
   {
     const { ctx, page } = await open(browser);

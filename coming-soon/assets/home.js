@@ -157,9 +157,13 @@ this._topCol = 'rgb(' + mid(0) + ', ' + mid(1) + ', ' + mid(2) + ')';
      ground (a picture pinned to the screen, like the film, stops at the bar);
    - behind the bottom, with the bar tucked away: the body's background. A strip pinned to the bottom of the
      screen changes nothing there, and neither does the html element's background;
-   - behind the top: the background of whatever is pinned to the top edge when the page loads, here the film's
-     box as the stylesheet colours it (morning blue). Safari reads that once: a colour set later by script, a
-     forced new layout, a nudge of the box and a theme-color tag were all tried, and none changed it.
+   - behind the top: on iOS 26.2 it looked like the film's box as the stylesheet colours it, read once; a colour
+     set on that box later by script, a forced new layout, a nudge of the box and a theme-color tag changed
+     nothing. Measured again later the same day (iOS 26.4 and 27.0, with parts of the page painted in loud
+     colours): Safari colours its top bar from the background colour of a strip pinned to the top edge (full
+     width, 12 px deep, over everything), and FOLLOWS that strip when its colour changes, a moment after
+     scrolling stops. It does not follow the body, the html element, the film's box or a theme-color tag.
+     That strip is the lid (see the end of this function, and .lid in index.html).
    Left alone, the bottom was a white strip under the street. So on phones the story's ground takes the colour
    of the film's last row, and the body the colour of whatever lies at the bottom of the screen: the film's
    last row, the white sheet, the black waitlist, the white footer.

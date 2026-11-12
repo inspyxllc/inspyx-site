@@ -31,6 +31,19 @@ PRICING = 'coming-soon/pricing.html'
 TERMS = 'coming-soon/terms.html'
 
 MUTATIONS = [
+    # ---- the lid: Safari's top bar follows the page (2026-11-12)
+    ('the strip no longer follows the film into the attic', JS,
+     "over = !m || st < m.sheet ? this._topCol :",
+     "over = !m || st < m.sheet ? '' :"),
+    ('the strip keeps the film\'s colour over the white sheet', JS,
+     "st < m.wait ? 'rgb(255, 255, 255)' : st < m.foot ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)'; }\nif (over !== this._lidOn)",
+     "st < m.wait ? this._topCol : st < m.foot ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)'; }\nif (over !== this._lidOn)"),
+    ('the strip is switched on for every phone, where nothing reads it', JS,
+     "this._lidUse = !!this._lid && /iP(hone|od)/.test(navigator.userAgent || '');",
+     "this._lidUse = !!this._lid;"),
+    ('the strip is 4 px deep, too thin for Safari to read', HTML,
+     'height:12px; z-index:7; pointer-events:none; background-color:var(--sky)}',
+     'height:4px; z-index:7; pointer-events:none; background-color:var(--sky)}'),
     # ---- the colour of a phone browser's top bar (2026-11-12)
     ("the page's grounds on a phone are white again", HTML,
      '  html,body{background:var(--sky)}',

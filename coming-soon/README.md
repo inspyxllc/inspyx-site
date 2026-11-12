@@ -335,6 +335,42 @@ stops, and compares what follows them further down the page. Of its 11 frames (m
   (`backend/spex_relay/relay/spex.py` in the app's repo, read on 2026-11-11 at 7e35c44): it opens
   the camera when asked, sets zoom, light and flash by voice, never takes the photo by itself,
   and says back only what was really set.
+- **Safari's top bar follows the page (the lid; built 2026-11-12, published at his word).** On an iPhone
+  the strip with the clock, the Wi-Fi and the battery takes the colour of what lies under it: the
+  sky's blue at the top of the page, the dark of the attic, white over the white sheet, black over
+  the waitlist.
+  - **His words.** 16:41:27Z: "that white banner up top ... the banner is like a light blue that
+    matches the sky ... Is that actually possible, or does it have to be white?" 17:17:45Z: "if this
+    is something that each person has to do in the settings of their phone, then it's not worth it.
+    This has to be something that comes with the website." 17:27:23Z, with two screenshots: "On
+    Google Chrome, it's white, but on Safari, it is light blue. Even though it's not the exact light
+    blue, needed to perfectly blend into the background." 17:39:02Z: "when you're in the attic, the
+    whole scene turns dark. I would like to know if I can get that thing to switch from light blue
+    to dark so that it can basically match the site ... a fully immersive experience". Shown four
+    pictures from iOS 27 and asked whether to publish it when Vercel's limit frees: "Yes, publish
+    it" (18:08:34Z).
+  - **How it works.** A strip (`.lid`, `[data-lid]`) is pinned to the top edge of the screen, 12 px
+    deep, full width, over everything. `home.js` gives it the colour of what lies under it: the
+    film's top row (read from the film's own picture at most every 160 ms: the middle of five
+    points across the row, so that a star is not taken for the sky), then white, black and white by
+    the same marks that colour the body for the bottom of the screen. Safari colours its top bar
+    from that strip and follows it. Because the strip is the film's own top row, it cannot be seen.
+  - **What was measured** (iOS simulator, iPhone 17, 2026-11-12, with parts of the page painted in
+    loud colours): on iOS 26.4 the body, the html element, the film's box and a theme-color tag all
+    turned dark and the bar stayed blue; with the strip alone it turned dark. On iOS 27.0 a red body
+    left the bar as it was, and a green strip made it green, also when the strip was added after
+    the page had loaded. The bar takes the new colour a moment after scrolling stops. On iOS 27.0
+    the page as built was then seen at four places: the sky, the attic, the white sheet, the
+    waitlist. Earlier that day this manual and `home.js` said the top is read once per visit: that
+    was true of everything tried then, and the strip had not been tried.
+  - **For the first paint,** before the script runs, every other place a browser may read names
+    one blue, `--sky` (#94B2CB): the theme-color tag (phones), the html and body grounds (phones)
+    and the film's box. It is the film's top row as the page opens; a lighter blue showed as a band
+    on his iPhone. A check holds `--sky` to the film's top row.
+  - **Limits.** Chrome on an iPhone paints its own bars white for every site: no page can change
+    that. The lid is switched on by the script on an iPhone only (`html.lid-on`): nothing else
+    reads it. Seen in the simulator (iOS 26.4 and 27.0), not yet on a real iPhone. The self-checks
+    hold the page's part (the strip's place and colours); what Safari then does no check can see.
 - **The calculator** multiplies the visitor's own numbers. Nothing is sent anywhere. It starts at
   3 inspections a week, 1 hour writing each report, 1 call to voicemail a week and a $400 fee
   (so "3 hours a week" and "$1,600 a month"). Those are Moises's numbers, 2026-11-12 16:41:27Z: "I
