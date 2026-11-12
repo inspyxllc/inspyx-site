@@ -219,10 +219,13 @@ return T;
 }
 
 /* Where a scene's sequence starts and ends, in px from where its stretch enters the screen:
-   from just after the scene is fully on and its card has settled, to a little before the stretch ends. */
+   from just after the scene is fully on and its card has settled, to a little before the stretch ends.
+   On a very tall window the card settles late, and the sequence would run on past the end of its stretch
+   (and be cut off as the next scene comes in). There it starts sooner, so that it keeps 900 px of its own. */
 _seqSpan(n, V, h) {
-const t0 = Math.max(SEQ_HOLD[n], V - 80) + 40;
-return [t0, Math.max(t0 + 600, h - 150)];
+const t1 = h - 150;
+const t0 = Math.max(SEQ_HOLD[n] + 40, Math.min(Math.max(SEQ_HOLD[n], V - 80) + 40, t1 - 900));
+return [t0, Math.max(t0 + 600, t1)];
 }
 
 /* For the tools: the scroll position that shows scene n's sequence at u (0 at its start, 1 at its end). */

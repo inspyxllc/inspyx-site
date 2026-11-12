@@ -365,6 +365,24 @@ async function open(browser, opts) {
     await ctx.close();
   }
 
+  // ---- a very tall window (a large monitor, or one turned upright): each sequence still plays out inside its own stretch
+  for (const [w, h] of [[1600, 1900], [1200, 2300]]) {
+    const { ctx, page, errs } = await open(browser, { w, h, desktop: true });
+    const seen = [];
+    for (const [n, live] of [[1, '_callLive'], [2, '_deskLive'], [3, '_talkLive']]) {
+      seen.push(await page.evaluate(async ([n, live]) => {
+        const f = window.__inspyxFilm, s = f._scn.find((x) => x.n === n), sp = f._seqSpan(n, f._V, s.h), out = [];
+        for (const u of [0, 0.5, 1]) { window.scrollTo(0, f.seqScroll(n, u)); await new Promise((r) => setTimeout(r, 250)); out.push(f[live].length); }
+        return { n, inside: sp[0] >= 0 && sp[1] <= s.h - 149, long: Math.round(sp[1] - sp[0]), T: Math.round(f._lastT * 100) / 100, shown: out.join('') };
+      }, [n, live]));
+    }
+    // how many pieces show at the start, the middle and the end: the call (nothing, a question with its answer, Mia's last words with the job),
+    // the requests (the calendar's first line, two lines, both cards with three lines), the conversation (nothing, two lines, two lines with the card)
+    const want = ['022', '125', '023'];
+    ok(w + ' x ' + h + ': each sequence plays from its start to its end inside its own stretch of page', seen.every((r, i) => r.inside && r.long >= 900 && r.T < r.n + 1 && r.shown === want[i]) && errs.length === 0, JSON.stringify(seen));
+    await ctx.close();
+  }
+
   // ---- between the two: a tablet held upright, or a narrow window
   {
     const { ctx, page, errs } = await open(browser, { w: 768, h: 1024 });

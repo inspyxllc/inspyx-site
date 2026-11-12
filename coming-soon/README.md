@@ -112,7 +112,11 @@ stops, and compares what follows them further down the page. Of its 11 frames (m
   (2,300 px), the Spex Business scene (2,100 px) and the Spex scene (2,400 px). In each, the
   film's clock runs its usual 1,300 px with a pause in the middle, and the sequence plays through
   the pause (`SEQ_HOLD` in `home.js` says where each clock stops). With "reduce motion" on, each
-  piece of a sequence is a still of its own.
+  piece of a sequence is a still of its own. A sequence starts once the page's card has settled.
+  On a very tall window (a large monitor at full scale, or one turned upright) the card settles
+  late, so there the sequence starts sooner and always keeps 900 px of its own inside its
+  stretch. Until 2026-11-12 it ran on past the end of the stretch on windows taller than about
+  1,540 px, and was cut off as the next scene came in.
 - **The phone call in Mia's scene** is written in `index.html` (the block marked `data-call`,
   hidden from sight and read by screen readers): the caller's lines are marked `data-who="call"`
   and Mia's `data-who="mia"`, and the block itself carries the words of the small cards
@@ -172,7 +176,7 @@ From the repo's top folder:
 
 ```
 node tools/serve.js &            # the site at http://localhost:4173/, with clean URLs like Vercel's
-node tools/check_home.js         # 85 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, Mia's phone call, the Spex Business requests, the Spex conversation, tablet and wide layouts
+node tools/check_home.js         # 87 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, Mia's phone call, the Spex Business requests, the Spex conversation, very tall windows, tablet and wide layouts
 node tools/shots.js out 390 844 -- t:1 call:0.5 desk:0.4 talk:0.6 5650   # pictures at film moments, points in Mia's phone call, the Spex Business requests or the Spex conversation, or scroll positions
 node tools/shots.js out 390 844 2 --bars=180 -- desk:1      # the same phone with its browser's bars showing: the screen people really see first
 node tools/make-images.js        # redraws the tab icons and the link-preview picture
