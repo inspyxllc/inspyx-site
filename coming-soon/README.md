@@ -661,7 +661,8 @@ inspyx.com shows, so it waits for his word, and it goes out as one publish.
 - The type is the home page's own (`-apple-system` and its fallbacks). Nothing is fetched from another
   site: a web font would send each visitor's address to its host, which the privacy page does not allow for.
 - With motion turned off nothing floats, drifts or leans.
-- The site now serves 22 files: the 21 from before and `assets/page.js`.
+- One file is added to what the site serves: `assets/page.js`. This branch stands on the top-banner branch, which
+  takes the hidden `/banner-test` page away, so the count stays 21: the live site's 21, less that page, plus this file.
 
 **Checking it.**
 

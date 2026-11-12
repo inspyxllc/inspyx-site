@@ -16,6 +16,9 @@ const FILE = path.join(__dirname, 'page_words.json');
 const PAGES = ['pricing', 'refunds', 'terms', 'privacy', 'no-such-page'];   // the last is answered by 404.html
 const POLICIES = ['refunds', 'terms', 'privacy'];
 const NAV = [['/pricing', 'Pricing'], ['/refunds', 'Cancellation and refunds'], ['/terms', 'Terms'], ['/privacy', 'Privacy']];
+// The two windows the pages are looked at in. Widths are compared with these numbers, never with the window's own
+// report of itself: a phone's browser zooms out to fit a page that is too wide, and then says the window is that wide.
+const PHONE = 390, WIDE = 1280;
 let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -26,6 +29,9 @@ const diff = (got, want) => {
   for (let i = 0; i < n; i++) if (got[i] !== want[i]) return 'line ' + (i + 1) + ' of ' + want.length + ': approved "' + String(want[i]).slice(0, 90) + '", served "' + String(got[i]).slice(0, 90) + '"';
   return '';
 };
+// One group of checks. A page so broken that its checks cannot even run has failed them: say so as a failed check,
+// not as a crash (the undo checks count failed checks).
+const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
 
 // A page's words, links and head, read in the page. The pricing card's repeat of the plan (hidden from screen readers)
 // and the policy pages' list of headings are left out: they are checked against the page's own words further down.
@@ -46,7 +52,7 @@ const read = () => {
 
 async function open(browser, name, opts) {
   const o = opts || {};
-  const ctx = await browser.newContext({ viewport: { width: o.w || 390, height: o.h || 844 }, deviceScaleFactor: 1, hasTouch: !o.desktop, isMobile: !o.desktop, reducedMotion: o.still ? 'reduce' : 'no-preference' });
+  const ctx = await browser.newContext({ viewport: { width: o.w || PHONE, height: o.h || 844 }, deviceScaleFactor: 1, hasTouch: !o.desktop, isMobile: !o.desktop, reducedMotion: o.still ? 'reduce' : 'no-preference' });
   const page = await ctx.newPage();
   const errs = [], away = [];
   const home = new URL(url).origin;
@@ -77,7 +83,7 @@ async function open(browser, name, opts) {
     const here = name === 'no-such-page' ? null : '/' + name;
 
     // ---- on a phone: the words, the links, the head, and the layout
-    {
+    await group(name + ', phone', async () => {
       const { ctx, page, errs, away } = await open(browser, name);
       const got = await page.evaluate(read);
       ok(name + ': every word is the approved one', same(got.words, want.words), diff(got.words, want.words));
@@ -89,55 +95,56 @@ async function open(browser, name, opts) {
         const bar = document.querySelector('header');
         const logo = bar.querySelector('a[href="/"]');
         return {
-          sw: document.documentElement.scrollWidth, iw: window.innerWidth,
+          sw: document.documentElement.scrollWidth,
           logo: logo ? { name: logo.getAttribute('aria-label'), h: box(logo).h, mark: !!logo.querySelector('svg') } : null,
-          nav: [...bar.querySelectorAll('nav a')].map((a) => ({ href: a.getAttribute('href'), text: a.textContent.trim(), cur: a.getAttribute('aria-current'), h: box(a).h })),
+          nav: [...bar.querySelectorAll('nav a')].map((a) => box(a).h),
           footNav: [...document.querySelectorAll('footer nav a')].map((a) => [a.getAttribute('href'), a.textContent.trim()]),
           foot: [...document.querySelectorAll('footer a')].map((a) => box(a).h),
           btn: [...document.querySelectorAll('main a.btn')].map((a) => box(a).h),
           font: getComputedStyle(document.body).fontFamily, h1: document.querySelectorAll('h1').length
         };
       });
-      ok(name + ': nothing scrolls sideways on a phone', r.sw <= r.iw, r.sw + ' wide in a ' + r.iw + ' window');
-      ok(name + ', phone: the top keeps to the logo, and the footer has the four pages', !!r.logo && r.logo.name === 'Inspyx, home' && r.logo.mark && r.nav.length === 4 && r.nav.every((a) => a.h === 0) && same(r.footNav, NAV), JSON.stringify([r.logo, r.nav.map((a) => a.h), r.footNav]));
+      ok(name + ': nothing scrolls sideways on a phone', r.sw <= PHONE, r.sw + ' wide in a ' + PHONE + ' window');
+      ok(name + ', phone: the top keeps to the logo, and the footer has the four pages', !!r.logo && r.logo.name === 'Inspyx, home' && r.logo.mark && r.nav.length === 4 && r.nav.every((h) => h === 0) && same(r.footNav, NAV), JSON.stringify([r.logo, r.nav, r.footNav]));
       ok(name + ', phone: the logo, the buttons and the footer links are big enough to tap', r.logo && r.logo.h >= 44 && r.foot.length >= 6 && r.foot.every((h) => h >= 44) && r.btn.every((h) => h >= 44), JSON.stringify({ logo: r.logo && r.logo.h, foot: r.foot, btn: r.btn }));
       ok(name + ': the type is the home page\'s own (nothing is fetched for it), and there is one main heading', /^-apple-system/.test(r.font) && r.h1 === 1, r.font + ' / h1: ' + r.h1);
       await ctx.close();
-    }
+    });
 
-    // ---- on a wide screen: the same words, and nothing scrolls sideways
-    {
-      const { ctx, page, errs } = await open(browser, name, { w: 1280, h: 900, desktop: true });
+    // ---- on a wide screen: the same words, the four pages at the top, and nothing scrolls sideways
+    await group(name + ', wide', async () => {
+      const { ctx, page, errs } = await open(browser, name, { w: WIDE, h: 900, desktop: true });
       const got = await page.evaluate(read);
-      const sw = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
-      ok(name + ': the same words on a wide screen, and nothing scrolls sideways', same(got.words, want.words) && sw[0] <= sw[1] && errs.length === 0, diff(got.words, want.words) || sw.join(' in ') + ' ' + errs.join(' | '));
+      const sw = await page.evaluate(() => document.documentElement.scrollWidth);
+      ok(name + ': the same words on a wide screen, and nothing scrolls sideways', same(got.words, want.words) && sw <= WIDE && errs.length === 0, diff(got.words, want.words) || sw + ' wide in a ' + WIDE + ' window ' + errs.join(' | '));
       const nav = await page.evaluate(() => [...document.querySelectorAll('header nav a')].map((a) => ({ href: a.getAttribute('href'), text: a.textContent.trim(), cur: a.getAttribute('aria-current'), h: Math.round(a.getBoundingClientRect().height) })));
       const label = await page.evaluate(() => document.querySelector('header nav').getAttribute('aria-label'));
       ok(name + ', wide: the top has the four pages, this one marked, each big enough to tap', same(nav.map((a) => [a.href, a.text]), NAV) && nav.every((a) => (a.cur === 'page') === (a.href === here) && a.h >= 44) && !!label, JSON.stringify(nav));
       await ctx.close();
-    }
+    });
   }
 
   // ---- the pricing page: the plan, and its card
-  {
+  await group('pricing, phone', async () => {
     const { ctx, page } = await open(browser, 'pricing');
     const r = await page.evaluate(() => {
       const flat = (t) => t.replace(/\s+/g, ' ').trim();
       const h = (s) => Math.round(document.querySelector(s).getBoundingClientRect().height);
       const fs = (s) => parseFloat(getComputedStyle(document.querySelector(s)).fontSize);
-      const art = document.querySelector('.hero [aria-hidden="true"]');
+      const art = document.querySelector('.hero-art');
+      const card = art && art.querySelector('.card3d');
       const plan = (flat(document.querySelector('.plan').textContent) + ' INSPYX').toLowerCase();
-      const said = art ? [...art.querySelectorAll('.face-top > span, .face-plan > span')].map((e) => flat(e.textContent)).filter(Boolean) : null;
-      return { price: h('.price'), priceFs: fs('.price'), badge: h('.badge'), btn: h('.plan .btn'), said, stray: said ? said.filter((t) => !plan.includes(t.toLowerCase())) : null,
-        cardW: art ? Math.round(art.querySelector('.card3d').getBoundingClientRect().right) : 0, iw: window.innerWidth };
+      const said = art ? [...art.querySelectorAll('.face-top > span, .face-plan > span')].map((e) => flat(e.textContent)).filter(Boolean) : [];
+      return { price: h('.price'), priceFs: fs('.price'), badge: h('.badge'), btn: h('.plan .btn'), hidden: !!art && art.getAttribute('aria-hidden') === 'true', said, stray: said.filter((t) => !plan.includes(t.toLowerCase())),
+        cardR: card ? Math.round(card.getBoundingClientRect().right) : 0, cardL: card ? Math.round(card.getBoundingClientRect().left) : -1 };
     });
-    ok('pricing, phone: the price, the plan\'s tag and its button each stay on one line', r.price < r.priceFs * 1.25 && r.badge <= 36 && r.btn <= 60, JSON.stringify(r));
-    ok('pricing: the card repeats the plan, is hidden from screen readers, and says nothing the plan does not', !!r.said && r.said.length === 4 && r.said.includes('$69 a month') && r.stray.length === 0, JSON.stringify(r.said) + ' stray: ' + JSON.stringify(r.stray));
-    ok('pricing, phone: the card is whole inside the window', r.cardW > 0 && r.cardW <= r.iw, r.cardW + ' in ' + r.iw);
+    ok('pricing, phone: the price, the plan\'s tag and its button each stay on one line', r.price < r.priceFs * 1.25 && r.badge <= 36 && r.btn <= 60, JSON.stringify({ price: r.price, type: r.priceFs, tag: r.badge, button: r.btn }));
+    ok('pricing: the card repeats the plan, is hidden from screen readers, and says nothing the plan does not', r.hidden && r.said.length === 4 && r.said.includes('$69 a month') && r.stray.length === 0, 'hidden: ' + r.hidden + ' says: ' + JSON.stringify(r.said) + ' stray: ' + JSON.stringify(r.stray));
+    ok('pricing, phone: the card is whole inside the window', r.cardR > 0 && r.cardR <= PHONE && r.cardL >= 0, r.cardL + ' to ' + r.cardR + ' in ' + PHONE);
     await ctx.close();
-  }
-  {
-    const { ctx, page } = await open(browser, 'pricing', { w: 1280, h: 900, desktop: true });
+  });
+  await group('pricing, wide', async () => {
+    const { ctx, page } = await open(browser, 'pricing', { w: WIDE, h: 900, desktop: true });
     const pose = () => page.evaluate(() => getComputedStyle(document.querySelector('.card3d')).transform);
     const moving = () => page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').length);
     const box = await page.evaluate(() => { const b = document.querySelector('.hero').getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; });
@@ -149,9 +156,9 @@ async function open(browser, name, opts) {
     ok('pricing, wide: the card leans to the pointer and comes back to rest', rest !== near && back === rest && /matrix3d/.test(near), rest.slice(0, 40) + ' / ' + near.slice(0, 40) + ' / ' + back.slice(0, 40));
     ok('pricing: with motion on, the card floats', (await moving()) > 0);
     await ctx.close();
-  }
-  {
-    const { ctx, page } = await open(browser, 'pricing', { w: 1280, h: 900, desktop: true, still: true });
+  });
+  await group('pricing, motion turned off', async () => {
+    const { ctx, page } = await open(browser, 'pricing', { w: WIDE, h: 900, desktop: true, still: true });
     const pose = () => page.evaluate(() => getComputedStyle(document.querySelector('.card3d')).transform);
     const box = await page.evaluate(() => { const b = document.querySelector('.hero').getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; });
     const rest = await pose();
@@ -160,12 +167,12 @@ async function open(browser, name, opts) {
     const moving = await page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running').length);
     ok('pricing, motion turned off: nothing moves, and the card does not lean', moving === 0 && near === rest, moving + ' running / ' + (near === rest ? 'still' : 'leaned'));
     await ctx.close();
-  }
+  });
 
   // ---- the policy pages: the list of headings beside the text
   for (const name of POLICIES) {
-    {
-      const { ctx, page } = await open(browser, name, { w: 1280, h: 900, desktop: true });
+    await group(name + ', wide', async () => {
+      const { ctx, page } = await open(browser, name, { w: WIDE, h: 900, desktop: true });
       const r = await page.evaluate(() => {
         const flat = (t) => t.replace(/\s+/g, ' ').trim();
         const toc = document.querySelector('nav.toc'), art = document.querySelector('main article');
@@ -184,13 +191,13 @@ async function open(browser, name, opts) {
       const z = await page.evaluate(() => { const a = document.querySelector('nav.toc a:last-child'); const h = document.querySelector(a.getAttribute('href')); return { top: Math.round(h.getBoundingClientRect().top), ih: window.innerHeight, cur: a.getAttribute('aria-current'), marked: document.querySelectorAll('nav.toc a[aria-current]').length }; });
       ok(name + ', wide: the last heading, which cannot reach the top, is marked when chosen and is in the window', z.cur === 'true' && z.marked === 1 && z.top >= 0 && z.top < z.ih, JSON.stringify(z));
       await ctx.close();
-    }
-    {
+    });
+    await group(name + ', phone', async () => {
       const { ctx, page } = await open(browser, name);
-      const r = await page.evaluate(() => { const t = document.querySelector('nav.toc'), a = document.querySelector('main article'); const ink = document.createRange(); ink.selectNodeContents(document.querySelector('h1')); return { above: t.getBoundingClientRect().bottom <= a.getBoundingClientRect().top, pos: getComputedStyle(t).position, title: Math.round(ink.getBoundingClientRect().right), iw: window.innerWidth }; });
-      ok(name + ', phone: the list stands above the text and does not follow the page; the title fits', r.above && r.pos === 'static' && r.title <= r.iw - 16, JSON.stringify(r));
+      const r = await page.evaluate(() => { const t = document.querySelector('nav.toc'), a = document.querySelector('main article'); const ink = document.createRange(); ink.selectNodeContents(document.querySelector('h1')); return { above: t.getBoundingClientRect().bottom <= a.getBoundingClientRect().top, pos: getComputedStyle(t).position, title: Math.round(ink.getBoundingClientRect().right) }; });
+      ok(name + ', phone: the list stands above the text and does not follow the page; the title fits', r.above && r.pos === 'static' && r.title <= PHONE - 16, JSON.stringify(r) + ' in ' + PHONE);
       await ctx.close();
-    }
+    });
   }
 
   await browser.close();
