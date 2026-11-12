@@ -243,8 +243,8 @@ PRIVACY = 'coming-soon/privacy.html'
 LOST = 'coming-soon/404.html'
 PAGE_MUTATIONS = [
     ('the pricing button no longer goes to the waitlist', PRICING,
-     '<a class="btn" href="/#waitlist">Apply for the pilot</a>',
-     '<a class="btn" href="/">Apply for the pilot</a>'),
+     '<a class="btn" href="/#waitlist">Join the waitlist</a>',
+     '<a class="btn" href="/">Join the waitlist</a>'),
     ('a word is changed on the pricing page', PRICING,
      'Cancel before then and you pay nothing.',
      'Cancel before then and you pay little.'),
