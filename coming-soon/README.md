@@ -623,11 +623,13 @@ but for one sentence added to the privacy page: what the waitlist keeps (approve
 `404.html` is the page a wrong address gets. `robots.txt` lets every reader in, and
 `sitemap.xml` lists the five pages.
 
-### Their new look (built 2026-11-12, NOT published yet)
+### Their new look (built 2026-11-12; approved for publishing together with the top banner)
 
 Moises approved the look as a mock-up on 2026-11-12 at 21:07:49Z ("Yes, that's it", to "Is this the look you
-want for the pricing and policy pages?"). That approves the look. Publishing it is a change to what
-inspyx.com shows, so it waits for his word, and it goes out as one publish.
+want for the pricing and policy pages?"). Shown pictures and a clip of the real pages built from it, and asked
+"Publish the new pricing and policy pages together with the banner tomorrow?", he answered "Yes, together"
+(2026-11-12 21:25:37Z). This branch stands on the top-banner branch, so one publish carries both, once
+Vercel's daily limit has freed.
 
 **What changed, and what did not.**
 
