@@ -24,13 +24,14 @@ GitHub changed nothing live.
 
 ## The home page (index.html)
 
-**Status on 2026-11-12: built on the branch `claude/new-home-page`. It is not live. inspyx.com
-still shows the "Pilot coming soon" page until Moises says to publish.**
+**Live on inspyx.com since 2026-11-12, 11:58:20Z.** Moises said "Publish" that day, and the page
+took the place of "Pilot coming soon". How it was published, and what was checked, is under
+"How it was published" below.
 
 - Moises approved the new words on these pages that day (the list W1 to W8 in the Drive folder
   "Claude Inspyx Development").
-- The guarantee's wording for the pricing page and the Terms (W9 and W10) is drafted for his OK.
-  It is not in these files yet.
+- The promise's terms (W9 and W10) are on the pricing page and in the Terms since that day: see
+  "Words approved on 2026-11-12" below.
 - The Spex scene's conversation is his direction and Claude's wording. He approved the scene and
   its lines as shown on 2026-11-11 ("Yes, that's well done.").
 - He wants the report section to show the web report in place of the three PDF pages, once a web
@@ -43,8 +44,9 @@ still shows the "Pilot coming soon" page until Moises says to publish.**
 - **Mia's scene became a phone call the same day**, at his word ("Yes, do Mia"), so that all three
   scenes are told the same way: two parties talking, then what came of it. The caller's two
   questions and Mia's two answers are Claude's wording, and he approved them that day too.
-- The branch can be seen at a private test address: the Vercel project `inspyx-site-test`
-  (see "The test address" below).
+- Before a change is published it can be seen at a private address: every pull request gets a
+  build of its own on the live Vercel project and on `inspyx-site-test` (see "The test address"
+  below).
 
 The new home page follows one job from the first call to the finished report. It was built from
 the phone mock-up Moises approved on 2026-11-10 ("the original", kept on the branch
@@ -287,31 +289,59 @@ his iPhone without signing in. It was made on 2026-11-11 for testing in Safari o
 The form at a test address is the real one and saves to the live waitlist: addresses at
 inspyx.com or example.com are marked as tests.
 
-### Before publishing
+### How it was published (2026-11-12)
 
-- Moises says to publish. Nothing else puts this page on inspyx.com. On 2026-11-12 he said to get
-  it ready ("Yes, get it ready"), which is not the go.
-- "Last updated" on `privacy.html` and `terms.html` says the day the pages go live, and
-  `sitemap.xml` gives that day for the home page and the pricing, terms and privacy pages. They
-  say 2026-11-12, set that day. If the go comes on another day, they are set to that day.
-- The design checklist has been walked through, test by test (the Claude Project "Inspyx",
-  `claude/website-design-checklist.md`). That note cannot be read from Claude Code on the Mac.
-  What was checked there on 2026-11-12 is listed under "Checked on 2026-11-12" below.
-- Stripe's card setup sends an inspector back to `/?payments=done`, or `/?payments=again` when
-  the setup link ran out (the app's `payments` function). No page answers either yet: neither
-  inspyx.com (checked 2026-11-11) nor this page, which answer only `?billing=`. The two messages
-  are item 6 of "Wording Waiting for Your OK (2026-11-10)" in Drive and wait for Moises's OK.
-  Once approved they go on this page the way the three `?billing=` messages do. The branch the
-  other chat named for them, `claude/payments-return`, is not on GitHub. This does not hold the
-  page back: today's live page does not answer them either.
-- **How it gets published: by merging the pull request into `main`.** The live project was
-  connected to this repo on 2026-11-12 at about 11:42Z, in Moises's Chrome, on his yes: the root
+Moises said "Yes, get it ready" at about 10:58Z, "Yes, all four" at about 11:37Z (the promise's
+wording, two questions about it, and connecting Vercel to GitHub), and "Publish" at about 11:56Z.
+
+- **The live project was connected to this repo** at about 11:42Z, in his Chrome: the root
   directory `coming-soon` was saved first, then the repository was connected; the branch it
   publishes was already `main`. The old way, pasting files in through Vercel's connector, could
   not carry this page: it has nine pictures (444 KB), and pictures cannot be pasted. Checked
   before connecting: the live site was main's `coming-soon/` byte for byte (7 files of 7).
   Checked right after: Vercel had started no build, and the live site was still those same 7
   files.
+- **The page went live at 11:58:20Z.** `main` was moved forward from 097fb4e to 60fcc68, the
+  commit of pull request 5 whose private build had been checked file by file (21 of 21). Vercel's
+  production deployment is dpl_Fh6mTwE2S4HPipxiQWNRoHuNsJi2. Checked at 11:58:36Z: inspyx.com
+  served all 21 files as they are in the repo, byte for byte; `README.md`, `vercel.json`, `tools/`
+  and `backend/` are not served; www and http go to https://inspyx.com/. The self-checks run
+  against the live site: 90 pass. The real form on inspyx.com, with an address at example.com:
+  "ok", and the row is in the waitlist, marked as a test.
+- **A fix for iPhones followed at 12:14:51Z** (pull request 6, commit 2fd63bf, deployment
+  dpl_96uJXraTbbQXyeouhuJhDvdNQbY8): see "Behind Safari's bars on an iPhone" above. Checked at
+  12:15:02Z: 21 of 21 files, and 92 self-checks pass against the live site. Seen in Safari on the
+  live site with the bar tucked away: the street runs to the bottom of the screen.
+- **How `main` is moved.** By pushing the pull request's checked commit to it
+  (`git push origin <commit>:main`), when `main` is that commit's ancestor. GitHub then shows the
+  pull request as merged, the commit that goes live is the very one that was checked, and no new
+  commit is made. Merging with the button on github.com writes the account's email address into
+  this public repo as the merge's author: the four merges before 2026-11-12 carry one.
+- **The way back.** Vercel keeps every deployment. "Promote" on the one that was live before
+  puts it back: dpl_Fh6mTwE2S4HPipxiQWNRoHuNsJi2 is the page as first published, and
+  dpl_HkkT16HjoTXs2zqdVSodMsVDN4hP is the "Pilot coming soon" page with the pricing and policy
+  pages. Then put the repo right.
+
+### Still open after publishing
+
+- When a page's words change, its "Last updated" line (the terms and privacy pages have one) and
+  its date in `sitemap.xml` are set to the day the change goes live. They say 2026-11-12.
+- Nobody is told when someone joins the waitlist: the row is kept, and no email goes out. The
+  page says "We'll email you when the pilot opens."; sending that email is still to be arranged.
+- The top of the screen on an iPhone stays morning blue down the whole page (see "Behind Safari's
+  bars on an iPhone").
+- The design checklist the website chat kept is a note in the Claude Project "Inspyx"
+  (`claude/website-design-checklist.md`). It cannot be read from Claude Code on the Mac. What was
+  checked on 2026-11-12 in its place is listed below.
+- Stripe's card setup sends an inspector back to `/?payments=done`, or `/?payments=again` when
+  the setup link ran out (the app's `payments` function). No message answers either yet: the
+  page answers only `?billing=`. The two messages are item 6 of "Wording Waiting for Your OK
+  (2026-11-10)" in Drive and wait for Moises's OK. Once approved they go on this page the way the
+  three `?billing=` messages do.
+- Four merges made on github.com before 2026-11-12 carry the account's email address as their
+  author, in this public repo. Hiding the address for future merges is a setting of the GitHub
+  account ("Keep my email addresses private"); taking it out of the old commits would mean
+  rewriting `main`'s history. Both are Moises's call.
 
 ### Checked on 2026-11-12, before asking for the go
 
