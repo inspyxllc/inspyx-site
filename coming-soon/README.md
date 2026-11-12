@@ -291,8 +291,9 @@ inspyx.com or example.com are marked as tests.
 
 ### How it was published (2026-11-12)
 
-Moises said "Yes, get it ready" at about 10:58Z, "Yes, all four" at about 11:37Z (the promise's
-wording, two questions about it, and connecting Vercel to GitHub), and "Publish" at about 11:56Z.
+Moises said "Yes, get it ready" at 10:57:27Z, "Yes, all four" at 11:35:59Z (the promise's
+wording, two questions about it, and connecting Vercel to GitHub), and "Publish" at 11:56:24Z.
+The times of his words are taken from the session's log; the others from git, GitHub and Vercel.
 
 - **The live project was connected to this repo** at about 11:42Z, in his Chrome: the root
   directory `coming-soon` was saved first, then the repository was connected; the branch it
@@ -319,6 +320,12 @@ wording, two questions about it, and connecting Vercel to GitHub), and "Publish"
   commit is made. The merge button on github.com is not used: it makes a new commit, which is
   not the one that was checked. Every push to `main` makes a new production deployment, also one
   that changes only this manual; the served files are then the same as before.
+- **How a build is checked file by file.** `python3 -I tools/bytecheck.py <commit> <address>
+  [cookie jar]` fetches every file of `coming-soon/` from the address and compares it with the
+  repo's copy at that commit. Run it on the pull request's private build before `main` is moved
+  (the top of the script says how to get past Vercel's sign-in with a share link), and on
+  https://inspyx.com afterwards. On a private build the home page carries one extra line of
+  Vercel's own, which the tool reports apart; on the live site all 21 files must be the same.
 - **The way back.** Vercel keeps every deployment, and putting an earlier one back takes no
   build: "Instant Rollback" (or "Promote") on it, in the project's list of deployments.
   dpl_Fh6mTwE2S4HPipxiQWNRoHuNsJi2 is the page as first published. On 2026-11-12 Vercel listed
