@@ -71,7 +71,8 @@ took the place of "Pilot coming soon". How it was published, and what was checke
       film's last card leaves about 104 px ahead of the sheet (`.scene-last`), and a phone standing
       higher covers the card's last line on its way in.
     - On a wide screen the stage stands inside the sheet. Standing out, it covered a corner of the
-      film's picture.
+      film's picture. There too it runs the sheet's full width (into its 40 px side padding): at
+      860 px the stage's own cut otherwise shaved the two side cards.
     Between 600 px and the wide layout (a tablet upright, a phone on its side) it is the phone's
     scene, 1.3 times the size.
   - **How the pictures are made:** first `tools/report_sample_touch.js` prepares the sample, then

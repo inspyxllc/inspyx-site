@@ -435,6 +435,15 @@ async function open(browser, opts) {
       await ctx.close();
     }
 
+    // -- on the narrowest desk screen: the stage's own cut must not shave the side cards
+    {
+      const { ctx, page } = await open(browser, { w: 860, h: 700, desktop: true });
+      await bring(page, 40); await page.waitForTimeout(900);
+      const n = await page.evaluate(() => { const b = (q) => document.querySelector(q).getBoundingClientRect(); const s = b('[data-shot]'); return { l: Math.round(s.left), r: Math.round(s.right), sign: Math.round(b('.fl-sign').left), clip: Math.round(b('.fl-clip').right), sw: document.documentElement.scrollWidth }; });
+      ok('on the narrowest desk screen (860 px) the side cards are whole: neither stands out past the stage, which cuts off what does', n.sign >= n.l && n.clip <= n.r && n.sw <= 860, JSON.stringify(n));
+      await ctx.close();
+    }
+
     // -- with motion turned off
     {
       const { ctx, page } = await open(browser, { still: true });
