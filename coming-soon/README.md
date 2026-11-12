@@ -350,8 +350,18 @@ The times of his words are taken from the session's log; the others from git, Gi
 
 - When a page's words change, its "Last updated" line (the terms and privacy pages have one) and
   its date in `sitemap.xml` are set to the day the change goes live. They say 2026-11-12.
-- Nobody is told when someone joins the waitlist: the row is kept, and no email goes out. The
-  page says "We'll email you when the pilot opens."; sending that email is still to be arranged.
+- **Inspyx is told of each new sign-up since 2026-11-12, 13:32Z** (Moises's yes that day: "Yes,
+  all three"). After a new, real sign-up the database sends one line about it to a Google Form
+  owned by the support account, "Inspyx waitlist: new sign-up", and Google emails the support
+  address that the form has a new response (it came 31 seconds after the first test). The line
+  gives the number of the sign-up, the two answers tapped, and the page and the ad or link that
+  brought them. It never gives the email address, which stays in the database: so /privacy
+  needs no new sentence for this, and Claude reads the list out on request. Test rows tell
+  nobody. The code is the last part of `backend/waitlist/schema.sql`; the form's address is not
+  in this repo, which is public, and is kept in the Supabase project's Vault as
+  `waitlist_notice_url` (with that secret removed, no notice is sent and sign-ups go on).
+- The page says "We'll email you when the pilot opens." Sending that email is still to be
+  arranged: it needs the email service Moises has yet to pick.
 - The top of the screen on an iPhone stays morning blue down the whole page (see "Behind Safari's
   bars on an iPhone").
 - The design checklist the website chat kept is a note in the Claude Project "Inspyx"
