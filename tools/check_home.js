@@ -81,6 +81,21 @@ async function open(browser, opts) {
     await ctx.close();
   }
 
+  // ---- opened at its waitlist (where the pricing page's button goes): no run through the whole film first
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage();
+    const see = () => page.evaluate(() => ({ top: Math.round(document.querySelector('#waitlist').getBoundingClientRect().top), y: Math.round(window.scrollY), arrive: document.documentElement.hasAttribute('data-arrive'), glide: getComputedStyle(document.documentElement).scrollBehavior }));
+    await page.goto(url + '#waitlist', { waitUntil: 'load' });
+    const at = await see();
+    await page.waitForTimeout(900);
+    const later = await see();
+    await page.goto(url, { waitUntil: 'load' });
+    const plain = await see();
+    ok('opened at /#waitlist the page stands at the waitlist at once, then glides again for its own buttons; a plain visit starts at the top', Math.abs(at.top) <= 4 && at.y > 3000 && Math.abs(later.top) <= 4 && later.glide === 'smooth' && !later.arrive && !plain.arrive && plain.y === 0 && plain.glide === 'smooth', JSON.stringify([at, later, plain]));
+    await ctx.close();
+  }
+
   // ---- the header's Pricing link: wide screens only
   {
     const shown = async (o) => { const { ctx, page } = await open(browser, o); const r = await page.evaluate(() => { const a = document.querySelector('.bar-link'); return { vis: !!a && a.getClientRects().length > 0, href: a ? a.getAttribute('href') : null }; }); await ctx.close(); return r; };

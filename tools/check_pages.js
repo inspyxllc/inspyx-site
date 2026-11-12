@@ -143,6 +143,14 @@ async function open(browser, name, opts) {
     ok('pricing, phone: the card is whole inside the window', r.cardR > 0 && r.cardR <= PHONE && r.cardL >= 0, r.cardL + ' to ' + r.cardR + ' in ' + PHONE);
     await ctx.close();
   });
+  await group('pricing, the plan\'s button', async () => {
+    const { ctx, page } = await open(browser, 'pricing');
+    await Promise.all([page.waitForURL('**/#waitlist'), page.click('.plan .btn')]);
+    await page.waitForLoadState('load');
+    const r = await page.evaluate(() => { const s = document.querySelector('#waitlist'); const i = s && s.querySelector('input'); return { at: location.pathname + location.hash, top: s ? Math.round(s.getBoundingClientRect().top) : null, input: i ? Math.round(i.getBoundingClientRect().bottom) : null, ih: window.innerHeight }; });
+    ok('pricing: the plan\'s button opens the home page at its waitlist, with the form in the window', r.at === '/#waitlist' && r.top !== null && Math.abs(r.top) <= 4 && r.input > 0 && r.input < r.ih, JSON.stringify(r));
+    await ctx.close();
+  });
   await group('pricing, wide', async () => {
     const { ctx, page } = await open(browser, 'pricing', { w: WIDE, h: 900, desktop: true });
     const pose = () => page.evaluate(() => getComputedStyle(document.querySelector('.card3d')).transform);

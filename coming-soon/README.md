@@ -392,8 +392,9 @@ stops, and compares what follows them further down the page. Of its 11 frames (m
   back "All done. Tap ✓ at the top to go back to Inspyx.",
   canceled "No charge was made. Tap ✓ at the top to go back to Inspyx."
 - **No longer on the home page:** the "Apply for the pilot" button to the Google Form
-  "Inspyx Pilot Application" (owned by support@). The waitlist form takes its place. The pricing
-  page still links the Google Form.
+  "Inspyx Pilot Application" (owned by support@). The waitlist form takes its place. Since
+  2026-11-12 the pricing page's "Apply for the pilot" button goes to the waitlist too (see "Their new
+  look"), so nothing on the site links the Google Form any more. The form itself is kept.
 
 ### Checking it
 
@@ -633,9 +634,18 @@ Vercel's daily limit has freed.
 
 **What changed, and what did not.**
 
-- The words did not change. Not one sentence, link or head tag of the five pages (`pricing.html`,
-  `refunds.html`, `terms.html`, `privacy.html`, `404.html`) is different. `tools/page_words.json` holds every
-  one of them as it stood before the new look, and a self-check compares the served pages with it.
+- The words did not change. Not one sentence or head tag of the five pages (`pricing.html`,
+  `refunds.html`, `terms.html`, `privacy.html`, `404.html`) is different, and one link is (next point).
+  `tools/page_words.json` holds every sentence, link and head tag, and a self-check compares the served
+  pages with it.
+- One link changed, on his word. Asked "Should the pricing page's Apply button go to the waitlist instead of
+  the Google Form?", Moises answered "Yes, waitlist" (2026-11-12 21:45:08Z). The button still says "Apply for
+  the pilot"; it now goes to `/#waitlist`, the waitlist form on the home page. He was told its words stay
+  until he gives others.
+- The home page, opened at a place like that, stands there at once. Its head script marks the page
+  (`data-arrive`) while it loads, and the stylesheet turns smooth scrolling off for that moment: gliding to
+  the waitlist would first run the whole film past, about a second of it (measured). Once loaded, the page's
+  own "Join the waitlist" buttons glide as before.
 - The top is the home page's logo. On a wide screen it also has the four pages (the footer's own four
   links, the current one marked). On a phone it keeps to the logo, as the home page does; the footer has
   the four.
@@ -670,8 +680,8 @@ Vercel's daily limit has freed.
 
 ```
 node tools/serve.js &
-node tools/check_pages.js                       # 71 self-checks, about 20 seconds
-python3 -I tools/undo_checks.py . --pages       # breaks the five pages 26 ways, one at a time: each must be caught
+node tools/check_pages.js                       # 72 self-checks, about 20 seconds
+python3 -I tools/undo_checks.py . --pages       # breaks the five pages 27 ways, one at a time: each must be caught
 node tools/check_home.js                        # the home page's checks: one of them holds the promise's terms on /pricing
 ```
 

@@ -32,6 +32,13 @@ PRICING = 'coming-soon/pricing.html'
 TERMS = 'coming-soon/terms.html'
 
 MUTATIONS = [
+    # ---- opened at its waitlist, from the pricing page's button (2026-11-12)
+    ('arriving at the waitlist runs the whole film past first', HTML,
+     'html[data-arrive]{scroll-behavior:auto}\n',
+     ''),
+    ('the page never glides again after arriving at the waitlist', HTML,
+     'setTimeout(function () { root.removeAttribute("data-arrive"); }, 400);',
+     ''),
     # ---- the lid: Safari's top bar follows the page (2026-11-12)
     ('the strip no longer follows the film into the attic', JS,
      "over = !m || st < m.sheet ? this._topCol :",
@@ -235,6 +242,9 @@ REFUNDS = 'coming-soon/refunds.html'
 PRIVACY = 'coming-soon/privacy.html'
 LOST = 'coming-soon/404.html'
 PAGE_MUTATIONS = [
+    ('the pricing button no longer goes to the waitlist', PRICING,
+     '<a class="btn" href="/#waitlist">Apply for the pilot</a>',
+     '<a class="btn" href="/">Apply for the pilot</a>'),
     ('a word is changed on the pricing page', PRICING,
      'Cancel before then and you pay nothing.',
      'Cancel before then and you pay little.'),
