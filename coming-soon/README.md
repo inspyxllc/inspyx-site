@@ -35,51 +35,82 @@ took the place of "Pilot coming soon". How it was published, and what was checke
 - The Spex scene's conversation is his direction and Claude's wording. He approved the scene and
   its lines as shown on 2026-11-11 ("Yes, that's well done."). On 2026-11-12 the scene moved into
   a dark attic at his word, with two new phrases that he approved the same day.
-- **The report section shows the web report** (a draft of 2026-11-12, on the branch
-  `claude/report-section-web`; not live until Moises says so). His words that day, looking at the
-  live page: "I wanted some of those to include the web dash report. And I wanted to include some
-  of the special features. Like videos and live photos and things like that. Slow-mo photos for
-  the flickering lights." Asked "Show the web report on the home page now, tagged 'Arrives with
+- **The report section shows the web report as a product shot** (a draft of 2026-11-12, on the
+  branch `claude/report-section-web`; not live until Moises says so). His words that day, looking
+  at the live page: "I wanted some of those to include the web dash report. And I wanted to include
+  some of the special features. Like videos and live photos and things like that. Slow-mo photos
+  for the flickering lights." Asked "Show the web report on the home page now, tagged 'Arrives with
   the pilot'?", he answered "Yes, show it" (14:26:55Z).
-  - **The three pictures** at the top of the white sheet, all three of the web report: its end,
-    with the inspector's signature, his license number, the date and the button for the PDF;
-    its first screen on a phone, with the house, the address and the inspector's card with his
-    picture; and one finding, the active leak in the attic, with a video marked on its photo.
-    No page of the PDF is shown any more, and the PDF pictures' files are gone from `assets/`.
   - **His second word on it, 15:16:45Z,** as the first draft was about to be published: "I want
     a realistic address, not 1234 Main Street. It doesn't have to be a address, but it has to be
     realistic. ... I want you to also include my signature, because the reports should have, in
     fact, should have my picture and a signature of the, not just of mine, but of the inspector.
     Create whatever signature you think matches my name". He sent his photo with it.
+  - **His third word, 15:32:49Z,** as the second draft (three flat screenshots, fanned) was about
+    to be published: "I still don't like how literal it is. I mean, can't we make it at least look
+    nicer? Some 3D graphics or something cool? And by the way, that honking PDF button up top, and
+    the just like blank inspection company. Come on, we can do better than this. Make sure
+    everything looks consistent and nice. This is going on my website for people to sign up".
+  - **What the section is now: one stage** (`.shot`, at the top of the white sheet), in CSS 3D:
+    - a phone that stands at an angle and shows the web report's first screen (the company's mark
+      and name, the house, the address, the inspector's card with his picture);
+    - three white cards that float in front of it: the photo of one finding (the active leak in
+      the attic) marked as a 12-second video; the inspector's signature with his name and license;
+      and "Download the PDF";
+    - a soft glow behind and a shadow on the floor under the phone.
+    The screenshots are no longer laid out as pictures to read: they are parts of one scene.
+  - **How it moves.** The phone turns toward the reader as the stage scrolls in, and the cards
+    slide in from the sides: `home.js` writes `--p` (0 to 1) on the stage and the stylesheet does
+    the rest. With a mouse, the scene leans a little toward the pointer (`--mx`, `--my`); a touch
+    screen never does. The cards drift slowly, each at its own pace. With "reduce motion" on, the
+    stage is still, in its resting pose.
+  - **Three measures that must stay as they are:**
+    - On a phone the stage runs from edge to edge and cuts off sideways what stands out
+      (`overflow-x:clip`): a card on its way in must never make the page wider than the screen.
+    - On a phone the phone stands 88 px above the sheet's top edge, over the film. Not more: the
+      film's last card leaves about 104 px ahead of the sheet (`.scene-last`), and a phone standing
+      higher covers the card's last line on its way in.
+    - On a wide screen the stage stands inside the sheet. Standing out, it covered a corner of the
+      film's picture.
+    Between 600 px and the wide layout (a tablet upright, a phone on its side) it is the phone's
+    scene, 1.3 times the size.
   - **How the pictures are made:** first `tools/report_sample_touch.js` prepares the sample, then
-    `tools/report_pictures.js` takes the three pictures from the real report page (branch
-    `claude/web-report`) showing it. The sample is private and is not in this repo.
+    `tools/report_pictures.js` takes the pictures from the real report page (branch
+    `claude/web-report-bar`: the report page with its quieter top bar) showing it: the first
+    screen, the finding's photo, and the signature. The sample is private and is not in this repo.
     - The address is "7314 Willet Marsh Ct.", Tampa, FL 33635. It is invented. On 2026-11-12 the
       Census Bureau's address service knew no such address and no street of that name. (The
       placeholder it replaces, "1234 Main St.", matched a real address in Tampa.)
-    - The inspector is Moises himself: his name, and his photo on the inspector's card. He sent
-      the photo for this. Only the rendered picture is in this repo, not the photo's file.
+    - The inspector is Moises himself: his name, his photo on the inspector's card, and his own
+      Florida license number, HI18352 (a public record). He sent the photo for this. Only the
+      rendered picture is in this repo, not the photo's file.
     - The signature was made for his name in a pen-like hand (the Mac's "Savoye LET", tilted a
       little). It is not his real signature.
-    - Still placeholders in the sample: "Inspection Company", "HI 0000", "(555) 555-0100",
-      "inspector@example.com", "Buyer Name", "Agent Name".
-    - Two things are added to what the page draws: the number plate of the car in the cover
-      photo is blurred, and the video mark on the finding's photo (a "Video" label, a play
-      button, "0:12"). The photo and the signature are not added: the page shows both whenever
-      a report carries them.
+    - The company, "Avila Home Inspections", is invented (a web search on 2026-11-12 found no
+      Florida business of that name; that is not proof there is none). So are the client "Rachel
+      Whitaker", the agent "Dana Okafor", the telephone numbers (555 numbers) and the date. The
+      email addresses are taken out.
+    - The sample's line "Associations: InterNACHI (CPI)" is taken out (`--no-associations`): with
+      a real person as the inspector, the page must not say he belongs to a body he has not told
+      us he belongs to.
+    - Two things are added to what the report page draws: the number plate of the car in the
+      cover photo is blurred, and, on the home page's own card, the video's marks on the finding's
+      photo (a "Video" label, a play button, "0:12").
   - **What is ahead of the app,** and why the section carries the tag "Arrives with the pilot":
     no client can open a web report yet (the page is written, its tables are in the database,
     its function is not deployed, and the app cannot publish a report); and the app records
     video and slow motion today, but a report shows a clip only as its still frame. So the
-    sentence under the pictures promises that clips will play in the web report by the pilot.
+    sentence under the stage promises that clips will play in the web report by the pilot.
   - **Not shown: "live photos".** The app has none in Apple's sense (a photo that moves). He has
     not said yet which kind he means.
   - **The words** are Claude's drafts until he says yes: "Your client opens the report as a web
     page, with the PDF one tap away. A dripping leak plays as video, a flickering light in slow
     motion."; the tag "Arrives with the pilot" in this new place; "From a real Inspyx report,
     with the details anonymized." (it was "Pages from a real Inspyx report, with the details
-    anonymized."); the three pictures' descriptions for screen readers; and "Video" and "0:12" in
-    the picture. In the sample itself: the address and the signature, which are Claude's too.
+    anonymized."); on the cards: "Video", "0:12", "Recommendation", "Active leak", "Attic",
+    "Inspector of record", "Moises Avila", "License HI18352", "Download the PDF"; and the three
+    pictures' descriptions for screen readers. In the sample itself: everything listed above as
+    invented.
 - **The Spex Business scene was rebuilt on 2026-11-12**, at his word: "we don't have a section that
   includes Spex Business yet… something like the email auto scheduler, that schedules in jobs for
   you based on emails you receive or website forms filled out". Its new words (the card's paragraph
@@ -341,6 +372,7 @@ check fails. A break nobody catches means a check is missing. The work must be c
 python3 -I tools/undo_checks.py .                     # every break in its list, about 25 minutes
 python3 -I tools/undo_checks.py . very tall window    # only the breaks whose name holds these words
 python3 -I tools/undo_checks.py . --part=0/2          # half the list; the script's own notes say how to run the other half on a second copy
+python3 -I tools/undo_checks.py . --first=14          # only the first 14 breaks (the newest part of the page stands first in the list)
 ```
 `tools/make-images.js` writes `assets/share.png`; save it as `assets/share.jpg` (JPEG, quality 88).
 The tools need Playwright 1.59 (`npm i playwright@1.59.1` in a folder of its own, then
