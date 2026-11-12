@@ -26,8 +26,20 @@ import sys
 repo = sys.argv[1]
 JS = 'coming-soon/assets/home.js'
 HTML = 'coming-soon/index.html'
+PRICING = 'coming-soon/pricing.html'
+TERMS = 'coming-soon/terms.html'
 
 MUTATIONS = [
+    # ---- the promise and its terms (2026-11-12)
+    ("the promise's terms are gone from the pricing page", PRICING,
+     '<h2>Faster reports, or three months free</h2>',
+     '<h2>Faster reports</h2>'),
+    ('a condition of the promise is changed on the pricing page', PRICING,
+     'Your reports during your 30 free days are timed the same way.',
+     'Your reports during your first 60 days are timed the same way.'),
+    ('the Terms no longer name the promise', TERMS,
+     ' The one promise we make on top of this is the faster-reports promise on our <a href="/pricing">pricing page</a>, on the conditions written there.',
+     ''),
     # ---- under the film, behind Safari's bar on an iPhone (2026-11-12)
     ('the ground under the film stays white', JS,
      'if (ground !== this._ground) { this._ground = ground; this._story.style.backgroundColor = ground; }',

@@ -184,7 +184,7 @@ From the repo's top folder:
 
 ```
 node tools/serve.js &            # the site at http://localhost:4173/, with clean URLs like Vercel's
-node tools/check_home.js         # 89 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, Mia's phone call, the Spex Business requests, the Spex conversation, the ground under the film, very tall windows, tablet and wide layouts
+node tools/check_home.js         # 90 self-checks: the promise and its terms, form, calculator, Stripe messages, keyboard, tap targets, motion off, Mia's phone call, the Spex Business requests, the Spex conversation, the ground under the film, very tall windows, tablet and wide layouts
 node tools/shots.js out 390 844 -- t:1 call:0.5 desk:0.4 talk:0.6 5650   # pictures at film moments, points in Mia's phone call, the Spex Business requests or the Spex conversation, or scroll positions
 node tools/shots.js out 390 844 2 --bars=180 -- desk:1      # the same phone with its browser's bars showing: the screen people really see first
 node tools/make-images.js        # redraws the tab icons and the link-preview picture
@@ -242,6 +242,20 @@ For the Spex Business scene:
 
 And the header's link on wide screens: "Pricing".
 
+**The guarantee, approved the same day at about 11:37Z.** Asked four things at once (the
+wording, two questions about it, and how to publish), Moises answered: "Yes, all four".
+
+- W9, the section "Faster reports, or three months free" on the pricing page, and W10, the
+  sentence added to section 11 of the Terms, are approved as written (the drafts of 2026-11-11,
+  Drive: "Wording Waiting for Your OK — Website, Part 2: the Guarantee"). They are in
+  `pricing.html` and `terms.html` since that day. A self-check holds them there word for word for
+  as long as the home page makes the promise.
+- The promise is measured during the inspector's 30 free days. If their reports are not faster,
+  the three free months follow straight after those 30 days, or they walk away having paid
+  nothing.
+- The 10 pilot inspectors count as set up by Inspyx. Each one's starting report time is written
+  down with them when they start: without that, the promise has nothing to be measured against.
+
 ### The test address
 
 The Vercel project `inspyx-site-test` (prj_IJHVH8wbMeOhNA0X2yvwyI68jRHI, same team) builds this
@@ -255,14 +269,9 @@ inspyx.com or example.com are marked as tests.
 
 - Moises says to publish. Nothing else puts this page on inspyx.com. On 2026-11-12 he said to get
   it ready ("Yes, get it ready"), which is not the go.
-- The guarantee's wording (W9, W10) is approved and in `pricing.html` and `terms.html`, or the
-  guarantee line and its condition are off the home page. The drafts are in Drive ("Wording
-  Waiting for Your OK — Website, Part 2: the Guarantee (2026-11-11)"), with two questions only he
-  can settle: whether the promise is measured in the 30 free days, and whether the pilot's
-  inspectors count as set up by Inspyx. The Terms have a section headed "No guarantees" (the
-  usual "as is" clause); W10 adds one sentence to it that names the promise.
-- "Last updated" on `privacy.html` (and on `terms.html`, if W10 goes in) says the day the pages
-  go live, and `sitemap.xml` gives that day for each page that changed.
+- "Last updated" on `privacy.html` and `terms.html` says the day the pages go live, and
+  `sitemap.xml` gives that day for the home page and the pricing, terms and privacy pages. They
+  say 2026-11-12, set that day. If the go comes on another day, they are set to that day.
 - The design checklist has been walked through, test by test (the Claude Project "Inspyx",
   `claude/website-design-checklist.md`). That note cannot be read from Claude Code on the Mac.
   What was checked there on 2026-11-12 is listed under "Checked on 2026-11-12" below.

@@ -56,6 +56,21 @@ async function open(browser, opts) {
     await ctx.close();
   }
 
+  // ---- the promise on the home page has its terms written down (approved by Moises on 2026-11-12, W9 and W10)
+  {
+    const { ctx, page } = await open(browser);
+    const flat = (t) => t.replace(/\s+/g, ' ');
+    const home = flat(await page.evaluate(() => document.querySelector('.site').textContent));
+    const pricing = flat(await (await page.request.get(url + 'pricing')).text());
+    const terms = flat(await (await page.request.get(url + 'terms')).text());
+    const said = (home.match(/Faster reports, or three months free\./g) || []).length;
+    const w9 = ['<h2>Faster reports, or three months free</h2>', 'Our promise is less time to a finished report.', "It's measured against your own starting numbers: how long your reports take you today, written down with you when you start.", 'The clock starts when an inspection ends and stops when the finished report is ready to send. Your reports during your 30 free days are timed the same way.', "If your reports don't take less time, you choose: three months free, or walk away.", 'The promise covers inspection businesses Inspyx sets up. We can only stand behind a setup we did and checked ourselves.', "It isn't a promise of a certain number of minutes or a certain percentage.", 'To use it, write to <a href="mailto:support@inspyx.com">support@inspyx.com</a> or call <a href="tel:+18887722919">(888) 772-2919</a>.'];
+    const missing = w9.filter((line) => !pricing.includes(line));
+    const w10 = 'The one promise we make on top of this is the faster-reports promise on our <a href="/pricing">pricing page</a>, on the conditions written there.';
+    ok('the promise on the home page has its terms on the pricing page, word for word, and the Terms name it', said === 2 && missing.length === 0 && terms.includes(w10), 'said on the home page ' + said + ' times; missing from the pricing page: ' + (missing.join(' | ') || 'nothing') + '; in the Terms: ' + terms.includes(w10));
+    await ctx.close();
+  }
+
   // ---- header button takes you to the waitlist
   {
     const { ctx, page } = await open(browser);
