@@ -129,7 +129,9 @@ a.logo{min-height:44px}
 /* One scene of the job: a tall stretch of page with a card that stays in view */
 .scene{min-height:1300px; padding:0 max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px))}
 .scene-last{padding-bottom:104px}
-/* the Spex scene is longer: a conversation plays in it */
+/* Mia's scene is longer: a phone call plays in it */
+.scene-call{min-height:2300px}
+/* so is the Spex scene: a conversation plays in it */
 .scene-talk{min-height:2400px}
 /* so is the Spex Business scene: two requests come in and are booked */
 .scene-desk{min-height:2100px}
@@ -331,7 +333,7 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 </div>
 </section>
 
-<section class="scene" data-scene="1">
+<section class="scene scene-call" data-scene="1">
 <div class="card" data-card>
 <div class="tag">
 <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.8 V8 L10.2 9.6"></path></svg>
@@ -340,6 +342,18 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 <p class="kicker">Mia, your voice receptionist</p>
 <h2>Keep your calendar filled without answering the phone.</h2>
 <p class="say">Mia picks up every call, answers the usual questions and books the job on your calendar while you stay on the roof.</p>
+<!-- The phone call the film shows in this scene: his phone rings on the truck's dash while he is on the
+     roof, Mia answers, and the job lands on his calendar. The film draws these very words; they are also
+     here as text for anyone who can't see the film. The time booked here is the first line of the calendar
+     in the next scene (data-desk). -->
+<div class="sr" data-call data-ring="Incoming call" data-answered="Mia answered" data-booked="Tomorrow, 9:00 AM" data-booked-note="Booked on your calendar">
+<p>In the film, your phone rings while you are on the roof, and Mia answers it.</p>
+<p data-who="call" data-label="Caller">The caller: <q>How much for a 2,000-square-foot house?</q></p>
+<p data-who="mia" data-label="Mia">Mia: <q>A house that size is $425.</q></p>
+<p data-who="call" data-label="Caller">The caller: <q>Can you come tomorrow morning?</q></p>
+<p data-who="mia" data-label="Mia">Mia: <q>Yes. You're booked for 9:00 AM.</q></p>
+<p>Booked on your calendar: tomorrow at 9:00 AM.</p>
+</div>
 </div>
 </section>
 

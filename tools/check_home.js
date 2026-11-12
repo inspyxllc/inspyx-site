@@ -1,5 +1,5 @@
 // Self-checks for the home page: the form, the calculator, Stripe's return messages, the keyboard,
-// tap targets, sideways scroll, motion turned off, and the two scenes with a sequence in them. No sign-up is ever sent: the waitlist call is
+// tap targets, sideways scroll, motion turned off, and the three scenes with a sequence in them. No sign-up is ever sent: the waitlist call is
 // caught here and answered by the test.
 // usage: node tools/serve.js &   then   node tools/check_home.js
 const { chromium } = require('playwright');
@@ -200,7 +200,7 @@ async function open(browser, opts) {
   {
     const { ctx, page, errs } = await open(browser, { still: true });
     const T = [];
-    for (const y of [0, 500, 900, 2000, 2300, 4661]) {
+    for (const y of [0, 500, 900, 3000, 3300, 5661]) {
       await page.evaluate((v) => window.scrollTo(0, v), y);
       await page.waitForTimeout(250);
       T.push(await page.evaluate(() => Math.round(window.__inspyxFilm._lastT * 1000) / 1000));
@@ -214,6 +214,79 @@ async function open(browser, opts) {
     const { ctx, page, errs } = await open(browser, { w: 1440, h: 900, desktop: true });
     const r = await page.evaluate(() => { const f = document.querySelector('.film').getBoundingClientRect(); const t = document.querySelector('.hero h1').getBoundingClientRect(); return { pos: getComputedStyle(document.querySelector('.film')).position, fx: Math.round(f.left), fw: Math.round(f.width), fh: Math.round(f.height), tr: Math.round(t.right), sw: document.documentElement.scrollWidth }; });
     ok('wide screen: the film plays in its own window, to the right of the words', r.pos === 'sticky' && r.tr < r.fx && r.sw === 1440 && errs.length === 0, JSON.stringify(r));
+    await ctx.close();
+  }
+
+  // ---- the phone call in Mia's scene
+  const Q1 = '“How much for a 2,000-square-foot house?”', A1 = '“A house that size is $425.”';
+  const Q2 = '“Can you come tomorrow morning?”', A2 = '“Yes. You’re booked for 9:00 AM.”';
+  const CALL_AT = [0.09, 0.2, 0.33, 0.47, 0.62, 0.77, 1];
+  const callAt = async (page, u) => { await page.evaluate((v) => window.scrollTo(0, window.__inspyxFilm.callScroll(v)), u); await page.waitForTimeout(250); return page.evaluate(() => window.__inspyxFilm._callLive.join(' | ')); };
+  {
+    const { ctx, page, errs } = await open(browser, {});
+    const w = await page.evaluate(() => { const f = window.__inspyxFilm, c = f._call; return { say: c.say.map((l) => l.who + ' / ' + l.label + ': ' + l.text), small: [c.ring, c.answered, c.booked[0], c.booked[1]].join(' / '), next: f._desk.rows[0].when + ' / ' + f._desk.rows[0].from, text: document.querySelector('[data-call]').textContent.replace(/\s+/g, ' ').trim() }; });
+    ok('Mia\'s scene: two questions, two answers and the small cards, read from the page\'s own words',
+      w.say.length === 4 && w.say[0] === 'call / Caller: How much for a 2,000-square-foot house?' && w.say[1] === 'mia / Mia: A house that size is $425.'
+      && w.say[2] === 'call / Caller: Can you come tomorrow morning?' && w.say[3] === 'mia / Mia: Yes. You\'re booked for 9:00 AM.'
+      && w.small === 'Incoming call / Mia answered / Tomorrow, 9:00 AM / Booked on your calendar', w.say.join(' | ') + ' || ' + w.small);
+    ok('the job Mia books is the first line of the calendar in the next scene, marked Phone', w.next === 'Tomorrow, 9:00 AM / Phone' && w.small.includes(' / Tomorrow, 9:00 AM / '), w.next);
+    ok('the same call is in the page as text, for people who can\'t see the film', /your phone rings while you are on the roof, and Mia answers it\. The caller: How much for a 2,000-square-foot house\? Mia: A house that size is \$425\./.test(w.text) && /Booked on your calendar: tomorrow at 9:00 AM\./.test(w.text), w.text.slice(0, 120));
+    const seen = [];
+    for (const u of CALL_AT) seen.push(await callAt(page, u));
+    ok('scrolling: the phone rings, Mia answers, the caller asks the price and Mia gives it', seen[0] === 'Incoming call' && seen[1] === 'Mia answered' && seen[2] === Q1 && seen[3] === Q1 + ' | ' + A1 && errs.length === 0, seen.slice(0, 4).join(' || '));
+    ok('then the caller asks for tomorrow morning, and Mia books it', seen[4] === Q2 && seen[5] === Q2 + ' | ' + A2, seen.slice(4, 6).join(' || '));
+    ok('it ends with the job on the calendar, under Mia\'s last words', seen[6] === A2 + ' | Tomorrow, 9:00 AM', seen[6]);
+    const T = await page.evaluate(() => { const f = window.__inspyxFilm; return [Math.round(f._lastT * 1000) / 1000, f._callU, f._deskU]; });
+    ok('the film\'s clock waits through the call, and runs on afterwards', T[1] === 1 && T[0] > 1.6 && T[0] < 2 && T[2] === 0, T.join(', '));
+    // the caller's words are in a white card and Mia's in a black one
+    await callAt(page, 0.47);
+    const ink = await page.evaluate(() => { const f = window.__inspyxFilm, c = f._cv.getContext('2d'); return f._callBoxes.map((b) => { const d = c.getImageData(Math.round(b[1] + b[3] - 12), Math.round(b[2] + b[4] / 2), 1, 1).data; return b[0] + ':' + (d[0] + d[1] + d[2] < 150 ? 'black' : d[0] + d[1] + d[2] > 600 ? 'white' : 'other'); }).join(' '); });
+    ok('the caller\'s words show on a white card and Mia\'s on a black one', ink === 'call:white mia:black', ink);
+    await ctx.close();
+  }
+  // at every size, through the whole call: the cards stay on the screen, below the page's own card and the
+  // eave he kneels on, and clear of the phone on the dash
+  for (const [w, h, desktop, roomy] of [[390, 844, false, true], [390, 664, false, true], [375, 667, false, true], [360, 640, false, true], [430, 932, false, true], [320, 568, false, false], [768, 1024, false, true], [1440, 900, true, true], [1280, 620, true, true]]) {
+    const { ctx, page, errs } = await open(browser, { w, h, desktop });
+    const bad = [];
+    let count = '';
+    for (const u of CALL_AT) {
+      await callAt(page, u);
+      const r = await page.evaluate(() => {
+        const f = window.__inspyxFilm, G = f._G, k = f._cam.z * G.k;
+        const phone = f._pt(G.k, G.xF + 106, G.yG - 69), eave = f._pt(1, 0, -139)[1];
+        return { boxes: f._callBoxes, W: f._W, H: f._Hh, top: Math.max(f._tops[1] + 13, eave + 7), phoneTop: phone[1] - 4.8 * k, phoneBottom: phone[1] + 4.8 * k, roomy: f._callRoomy, s: f._sB };
+      });
+      count += r.boxes.length;
+      if (r.roomy !== roomy) bad.push(u + ': roomy ' + r.roomy);
+      if (r.phoneBottom > r.H - 4) bad.push(u + ': the phone on the dash is off the screen');
+      if (r.s < 0.78) bad.push(u + ': the cards are drawn too small, ' + r.s.toFixed(2));
+      for (const b of r.boxes) {
+        if (b[1] < 11.5 || b[1] + b[3] > r.W - 11.5) bad.push(u + ': ' + b[0] + ' runs off the side');
+        if (b[2] < r.top - 0.5) bad.push(u + ': ' + b[0] + ' sits too high');
+        if (b[2] + b[4] > r.phoneTop + 0.5) bad.push(u + ': ' + b[0] + ' covers the phone on the dash');
+      }
+    }
+    ok(w + ' x ' + h + ': through the whole call the cards keep to their place' + (roomy ? ', a question over its answer' : ', one at a time'), bad.length === 0 && count === (roomy ? '1112122' : '1111111') && errs.length === 0, bad.join(' ; ') + ' cards: ' + count);
+    await ctx.close();
+  }
+  {
+    // a phone with its browser bars showing: the truck sits lower, so the cards keep their full size
+    const { ctx, page } = await open(browser, { w: 390, h: 664 });
+    await callAt(page, 0.47);
+    const r = await page.evaluate(() => { const f = window.__inspyxFilm, G = f._G; return { s: f._sB, ground: f._pt(G.k, 0, G.yG)[1], H: f._Hh }; });
+    ok('a phone with its bars showing: the cards keep their full size, and the truck still stands on the screen', r.s > 0.95 && r.ground < r.H, JSON.stringify(r));
+    await ctx.close();
+  }
+  {
+    const { ctx, page, errs } = await open(browser, { still: true });
+    const seen = [];
+    for (const u of [0.05, 0.5, 0.95]) {
+      await page.evaluate((v) => window.scrollTo(0, window.__inspyxFilm.callScroll(v)), u);
+      await page.waitForTimeout(250);
+      seen.push(await page.evaluate(() => window.__inspyxFilm._callU + ':' + window.__inspyxFilm._callLive.length));
+    }
+    ok('motion off: the call is a row of stills, one piece at a time', JSON.stringify(seen) === JSON.stringify(['0.09:1', '0.47:2', '1:2']) && errs.length === 0, seen.join(', '));
     await ctx.close();
   }
 

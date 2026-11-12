@@ -11,11 +11,14 @@
 // whatever still differs is in the page itself and not in a picture's file format.
 //
 // The footer is left out: the real page's footer differs on purpose (three links to pages that don't exist were removed).
-// The Spex scene is left out too: Moises had it redrawn on 2026-11-11 (the iPhone at its real size, and a
-// conversation between the inspector and Spex). So is the Spex Business scene, rebuilt on 2026-11-12 at his
-// word (requests coming in by email and from the website form, and the calendar filling). Both scenes'
-// stretches of page are longer on the real page, so everything after them is compared at the matching place
-// further down.
+// The three scenes with a sequence in them are left out too, from the moment each one's clock stops:
+//   - the Spex scene, which Moises had redrawn on 2026-11-11 (the iPhone at its real size, and a conversation
+//     between the inspector and Spex);
+//   - the Spex Business scene, rebuilt on 2026-11-12 at his word (requests coming in by email and from the
+//     website form, and the calendar filling);
+//   - Mia's scene, which became a phone call the same day at his word ("Yes, do Mia").
+// Their stretches of page are longer on the real page, so everything after them is compared at the matching
+// place further down.
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
@@ -27,10 +30,10 @@ if (!mockup || !outDir) { console.error('usage: node tools/compare_mockup.js <mo
 const SITE = 'http://localhost:4173/';
 
 // film moments (the mock-up is scrolled to (T - 1) x 1300), then places lower down: the report pages, the calculator, the form.
-// Each is [name, the mock-up's scroll position, whether it lies after the two longer scenes].
-// (2.05 is the last moment before the camera leaves for the office on the tailgate, where it now stops in a
-// different place; 4.6 is the first moment after the Spex scene has faded out)
-const frames = [1, 1.3, 1.62, 1.9, 2.05, 4.6, 4.8, 5].map((T) => ['T' + String(T).replace('.', '_'), Math.round((T - 1) * 1300), T >= 4])
+// Each is [name, the mock-up's scroll position, whether it lies after the three longer scenes].
+// (1.5 and 1.58 are the camera arriving at the truck and the phone starting to ring, the last moments before
+// the clock stops for the phone call; 4.6 is the first moment after the Spex scene has faded out)
+const frames = [1, 1.3, 1.5, 1.58, 4.6, 4.8, 5].map((T) => ['T' + String(T).replace('.', '_'), Math.round((T - 1) * 1300), T >= 4])
   .concat([5480, 5900, 6350, 6800].map((y) => ['y' + y, y, true]));
 
 (async () => {
@@ -52,8 +55,8 @@ const frames = [1, 1.3, 1.62, 1.9, 2.05, 4.6, 4.8, 5].map((T) => ['T' + String(T
     }
     await page.goto(which === 'mockup' ? 'file://' + path.resolve(mockup) : SITE, { waitUntil: 'load' });
     await page.waitForTimeout(700);
-    // how much longer the Spex Business scene's and the Spex scene's stretches are on the real page
-    const extra = which === 'real' ? await page.evaluate(() => document.querySelector('[data-scene="2"]').offsetHeight + document.querySelector('[data-scene="3"]').offsetHeight - 2600) : 0;
+    // how much longer the three scenes with a sequence in them are on the real page (each is 1,300 px in the mock-up)
+    const extra = which === 'real' ? await page.evaluate(() => [1, 2, 3].reduce((sum, n) => sum + document.querySelector('[data-scene="' + n + '"]').offsetHeight - 1300, 0)) : 0;
     for (const [name, at, after] of frames) {
       const top = at + (after ? extra : 0);
       await page.evaluate(([w, y]) => {

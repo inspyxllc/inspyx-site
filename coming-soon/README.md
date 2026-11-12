@@ -29,6 +29,9 @@ still shows the "Pilot coming soon" page until Moises says to publish.**
   you based on emails you receive or website forms filled out". Its new words (the card's paragraph
   and every line in the film) are Claude's drafts and wait for his OK: see "Words waiting for his
   OK" below.
+- **Mia's scene became a phone call the same day**, at his word ("Yes, do Mia"), so that all three
+  scenes are told the same way: two parties talking, then what came of it. The caller's two
+  questions and Mia's two answers are Claude's drafts and wait for his OK too.
 - The branch can be seen at a private test address: the Vercel project `inspyx-site-test`
   (see "The test address" below).
 
@@ -69,11 +72,29 @@ Changed from the mock-up on purpose since then:
   room.
 - **The header links Pricing** on wide screens (2026-11-12). On phones it keeps to the logo and
   the button: there is no room for more.
+- **Mia's scene is a phone call** since 2026-11-12, at his word ("Yes, do Mia"). In the mock-up
+  three small chips came up over the truck: "Incoming call", "Mia answered", and the job on the
+  calendar. Those three are still there, with the call between them: the caller asks what callers
+  ask (the price, then a time) and Mia answers, the caller's words in white cards and Mia's in
+  black ones, the way the Spex scene shows a conversation. The phone on the dash rings until Mia
+  answers, stays lit through the call and dims once the job is booked. The time she books,
+  "Tomorrow, 9:00 AM", is the first line of the calendar in the Spex Business scene, marked
+  "Phone". The scene's stretch of page is 2,300 px. On a 390 x 844 phone the camera stops exactly
+  where it did in the mock-up.
 
-The comparison now leaves the Spex Business scene and the Spex scene out, and compares what
-follows them further down the page. Of its 12 frames, 6 are identical to the mock-up to the last
-pixel, 5 differ only where the inspector on the roof is drawn, and one differs in the same 8
-pixels as before (measured on 2026-11-12 with `--same-pictures`).
+The comparison now leaves all three scenes with a sequence out, from the moment each one's clock
+stops, and compares what follows them further down the page. Of its 11 frames (measured on
+2026-11-12 with `--same-pictures`):
+
+- 3 are identical to the mock-up to the last pixel;
+- 4 differ only where the inspector on the roof is drawn (the camera arriving at the truck, up to
+  the moment the phone starts to ring, is among them);
+- 3 differ in at most 150 pixels, by at most 10 steps of 255, inside the three tilted report
+  pictures. Nothing in the page changed there: the browser draws a tilted picture a touch
+  differently once it sits more than about 8,000 px down a page, and Mia's longer stretch pushed
+  the pictures past that. The real page against itself shows the very same 150 pixels when only
+  Mia's stretch is set back to 1,300 px, and none at 2,100 px or more;
+- one differs in the same 8 pixels as before.
 
 - `index.html` holds every word and all the styles. `assets/home.js` draws the film and runs the
   calculator and the form. No libraries, no web fonts, no cookies, no trackers.
@@ -87,11 +108,29 @@ pixels as before (measured on 2026-11-12 with `--same-pictures`).
 - **The film** is drawn in code. Scrolling sets the film time: 1 at the top of the page, then one
   unit for each scene's stretch of page (`data-scene="1"` to `"4"`). With "reduce motion" on, each
   scene holds still at its start and then at its end.
-- **Two scenes have a sequence in them**, and a longer stretch of page for it: the Spex Business
-  scene (2,100 px) and the Spex scene (2,400 px). In each, the film's clock runs its usual 1,300 px
-  with a pause in the middle, and the sequence plays through the pause (`SEQ_HOLD` in `home.js`
-  says where each clock stops). With "reduce motion" on, each piece of a sequence is a still of
-  its own.
+- **Three scenes have a sequence in them**, and a longer stretch of page for it: Mia's scene
+  (2,300 px), the Spex Business scene (2,100 px) and the Spex scene (2,400 px). In each, the
+  film's clock runs its usual 1,300 px with a pause in the middle, and the sequence plays through
+  the pause (`SEQ_HOLD` in `home.js` says where each clock stops). With "reduce motion" on, each
+  piece of a sequence is a still of its own.
+- **The phone call in Mia's scene** is written in `index.html` (the block marked `data-call`,
+  hidden from sight and read by screen readers): the caller's lines are marked `data-who="call"`
+  and Mia's `data-who="mia"`, and the block itself carries the words of the small cards
+  (`data-ring`, `data-answered`, `data-booked`, `data-booked-note`). The film draws those very
+  words, so to change one, change it there; `data-booked` must stay the same as the first
+  `data-when` of the calendar in the next scene (a self-check says so). The cards hang between
+  the eave, where he kneels on the roof, and the roof of the truck. That gap belongs to the
+  drawing (the house and the truck sit on two layers that move almost together), so it holds one
+  question with its answer and no more, and the cards are sized to it. Where the page's own card
+  comes lower than the eave (a phone with its browser bars showing), the truck sits lower on the
+  screen to keep the gap; on a small phone there is room for one card at a time, and each takes
+  the place of the one before. What the scene promises is what the page's own card says, which
+  Moises approved on 2026-11-11: Mia "picks up every call, answers the usual questions and books
+  the job on your calendar". The Mia that is built today answers, quotes from the inspector's
+  price list, puts the caller through to the inspector and takes messages; it does not book
+  (`backend/supabase/functions/mia-webhook/core.ts` in the app's repo, read on 2026-11-12 at
+  0edf7a8: "No booking"). By his decision of 2026-11-08, booking comes once Inspyx holds the
+  inspector's calendar. The page's tag says "Arrives with the pilot".
 - **The two requests in the Spex Business scene** are written in `index.html` (the block marked
   `data-desk`, hidden from sight and read by screen readers): each request and reply is a line
   marked `data-who` (`mail`, `form` or `biz`), and each line of the calendar is marked `data-row`
@@ -133,8 +172,8 @@ From the repo's top folder:
 
 ```
 node tools/serve.js &            # the site at http://localhost:4173/, with clean URLs like Vercel's
-node tools/check_home.js         # 66 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, the Spex Business requests, the Spex conversation, tablet and wide layouts
-node tools/shots.js out 390 844 -- t:1 t:1.9 desk:0.4 talk:0.6 5650   # pictures at film moments, points in the Spex Business requests or the Spex conversation, or scroll positions
+node tools/check_home.js         # 85 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, Mia's phone call, the Spex Business requests, the Spex conversation, tablet and wide layouts
+node tools/shots.js out 390 844 -- t:1 call:0.5 desk:0.4 talk:0.6 5650   # pictures at film moments, points in Mia's phone call, the Spex Business requests or the Spex conversation, or scroll positions
 node tools/shots.js out 390 844 2 --bars=180 -- desk:1      # the same phone with its browser's bars showing: the screen people really see first
 node tools/make-images.js        # redraws the tab icons and the link-preview picture
 
@@ -151,7 +190,18 @@ The tools need Playwright 1.59 (`npm i playwright@1.59.1` in a folder of its own
 
 ### Words waiting for his OK
 
-Drafted by Claude on 2026-11-12 for the Spex Business scene. None is approved yet.
+Drafted by Claude on 2026-11-12. None is approved yet.
+
+For Mia's scene (the phone call):
+
+- "Caller" / "How much for a 2,000-square-foot house?"; "Mia" / "A house that size is $425.";
+  "Caller" / "Can you come tomorrow morning?"; "Mia" / "Yes. You're booked for 9:00 AM."
+- For screen readers only: the sentences around those lines in the `data-call` block.
+- Not new: "Incoming call", "Mia answered", "Tomorrow, 9:00 AM" and "Booked on your calendar"
+  were in the mock-up he approved. They are now written in `index.html` and no longer in
+  `home.js`.
+
+For the Spex Business scene:
 
 - The card's paragraph: "A request comes in by email or through the form on your website. Spex
   Business reads it, books the job on your calendar and writes back with the time and your price."
@@ -176,8 +226,8 @@ inspyx.com or example.com are marked as tests.
 
 ### Before publishing
 
-- The Spex Business scene's words are approved (see "Words waiting for his OK"), or changed to
-  the words he gives.
+- The words of Mia's phone call and of the Spex Business scene are approved (see "Words waiting
+  for his OK"), or changed to the words he gives.
 - The guarantee's wording (W9, W10) is approved and in `pricing.html` and `terms.html`, or the
   guarantee line and its condition are off the home page.
 - `privacy.html` says "Last updated" with the day the pages go live.
