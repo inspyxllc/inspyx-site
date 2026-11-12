@@ -403,11 +403,28 @@ async function open(browser, opts) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(browser, { w: 1440, h: 900, desktop: true });
+    // with Safari's bar tucked away, an iPhone shows the body's background under the page: it follows whatever
+    // lies at the bottom of the screen
+    const { ctx, page, errs } = await open(browser, {});
+    const seen = [];
+    for (const stop of ['top', 'call', 'talk', 'last', 'sheet', 'wait', 'end']) {
+      seen.push(await page.evaluate(async (stop) => {
+        const f = window.__inspyxFilm, top = (sel) => document.querySelector(sel).getBoundingClientRect().top + window.pageYOffset;
+        const y = stop === 'top' ? 0 : stop === 'last' ? f._scn[3].top - f._V + 900 : stop === 'sheet' ? top('.sheet') + 500 - window.innerHeight : stop === 'wait' ? top('.wait') + 200 - window.innerHeight : stop === 'end' ? document.documentElement.scrollHeight : f.seqScroll({ call: 1, talk: 3 }[stop], 0.5);
+        window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 300));
+        const body = getComputedStyle(document.body).backgroundColor, story = getComputedStyle(document.querySelector('[data-story]')).backgroundColor;
+        return stop + ':' + (body === story ? 'film' : body === 'rgb(255, 255, 255)' ? 'white' : body === 'rgb(0, 0, 0)' ? 'black' : body);
+      }, stop));
+    }
+    ok('a phone: the body\'s ground follows what lies at the bottom of the screen (the film, the white sheet, the black waitlist, the white footer)', seen.join(' ') === 'top:film call:film talk:film last:film sheet:white wait:black end:white' && errs.length === 0, seen.join(' '));
+    await ctx.close();
+  }
+  for (const [w, h, desktop, want] of [[1440, 900, true, 'rgb(245, 245, 247)'], [768, 1024, false, 'rgb(11, 11, 12)']]) {
+    const { ctx, page } = await open(browser, { w, h, desktop });
     await page.evaluate(() => window.scrollTo(0, window.__inspyxFilm.callScroll(0.5)));
     await page.waitForTimeout(300);
-    const g = await page.evaluate(() => getComputedStyle(document.querySelector('[data-story]')).backgroundColor);
-    ok('a wide screen: the story keeps no ground colour of its own (the film is in a window there)', g === 'rgba(0, 0, 0, 0)', g);
+    const g = await page.evaluate(() => getComputedStyle(document.querySelector('[data-story]')).backgroundColor + ' / ' + getComputedStyle(document.body).backgroundColor + ' / ' + (document.body.style.backgroundColor || 'unset'));
+    ok(w + ' px wide: the story and the body keep the grounds the stylesheet gives them', g === 'rgba(0, 0, 0, 0) / ' + want + ' / unset', g);
     await ctx.close();
   }
 

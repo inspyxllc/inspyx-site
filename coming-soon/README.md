@@ -112,18 +112,29 @@ stops, and compares what follows them further down the page. Of its 11 frames (m
 - **Phones:** the film fills the screen behind the page (a fixed canvas) and glass cards tell the
   story over it. The page scrolls the normal way. The canvas is as tall as the screen with the
   browser's bars tucked away; the scene is composed for the shorter screen you see first.
-- **Behind Safari's bar on an iPhone** (iOS 26): Safari's own bar floats over the bottom of the
-  page, and behind it Safari draws only the page that scrolls. A picture pinned to the screen,
-  like the film, stops at the bar, so the page's white ground showed there as a strip under the
-  street: about 98 px tall with the bar open, 58 px with it tucked away (measured on 2026-11-12 in
-  the iOS Simulator, iPhone 17, iOS 26.2; making the film taller did not help). Since then the
-  story's own ground (`[data-story]`) takes the colour of the film's last row, set by `home.js`
-  as the film is drawn: the street in the light of the hour, the wall in the Spex scene. Everywhere
-  else that ground lies hidden behind the film, and on wide screens it is not set.
-- **Wide screens (860 px and up, at least 520 px tall):** the words sit on the left and the film
-  plays in a window on the right.
-- **Between the two** (tablets held upright, narrow windows): the phone page, footer included, centred on a
-  dark ground.
+- **Behind Safari's bars on an iPhone** (iOS 26). Safari floats its own bars over the page and
+  colours what shows behind them itself. Measured on 2026-11-12 in the iOS Simulator (iPhone 17,
+  iOS 26.2), with test pages in loud colours:
+  - behind the bottom of the screen, with Safari's bar open: the page that scrolls. A picture
+    pinned to the screen, like the film, stops at the bar (making the film taller did not help);
+  - behind the bottom, with the bar tucked away, as it is while you scroll: the `body`'s
+    background. A strip pinned to the bottom of the screen changes nothing there, and neither
+    does the `html` element's background;
+  - behind the top: the background of whatever is pinned to the top edge when the page loads,
+    here the film's box as the stylesheet colours it, morning blue. Safari reads that once. A
+    colour set later by script, a forced new layout, a nudge of the box and a `theme-color` tag
+    were tried, and none changed it. So the top stays morning blue down the whole page, over the
+    wall of the Spex scene, the dusk and the black waitlist too. That is known and left as it is.
+
+  Left alone, the bottom was a white strip under the street: about 98 px tall with the bar open
+  and 58 px with it tucked away. So on phones `home.js` (`_bars`) keeps two grounds in step with
+  the picture: the story's own ground (`[data-story]`) takes the colour of the film's last row,
+  the street in the light of the hour or the wall in the Spex scene; and the `body` takes the
+  colour of whatever lies at the bottom of the screen: the film's last row, the white sheet, the
+  black waitlist, the white footer. Everywhere else those grounds lie hidden, and on wider
+  screens nothing is set. The first try, published at 11:58Z that day, set only the story's
+  ground and so mended the strip only while Safari's bar was open; the body's ground followed
+  the same day.
 - **The film** is drawn in code. Scrolling sets the film time: 1 at the top of the page, then one
   unit for each scene's stretch of page (`data-scene="1"` to `"4"`). With "reduce motion" on, each
   scene holds still at its start and then at its end.
@@ -195,7 +206,7 @@ From the repo's top folder:
 
 ```
 node tools/serve.js &            # the site at http://localhost:4173/, with clean URLs like Vercel's
-node tools/check_home.js         # 90 self-checks: the promise and its terms, form, calculator, Stripe messages, keyboard, tap targets, motion off, Mia's phone call, the Spex Business requests, the Spex conversation, the ground under the film, very tall windows, tablet and wide layouts
+node tools/check_home.js         # 92 self-checks: the promise and its terms, form, calculator, Stripe messages, keyboard, tap targets, motion off, Mia's phone call, the Spex Business requests, the Spex conversation, the ground under the film, very tall windows, tablet and wide layouts
 node tools/shots.js out 390 844 -- t:1 call:0.5 desk:0.4 talk:0.6 5650   # pictures at film moments, points in Mia's phone call, the Spex Business requests or the Spex conversation, or scroll positions
 node tools/shots.js out 390 844 2 --bars=180 -- desk:1      # the same phone with its browser's bars showing: the screen people really see first
 node tools/make-images.js        # redraws the tab icons and the link-preview picture

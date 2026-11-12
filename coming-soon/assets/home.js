@@ -80,8 +80,9 @@ const rs = desk.querySelectorAll('[data-row]');
 for (let i = 0; i < rs.length; i++) rows.push({ when: rs[i].getAttribute('data-when') || '', from: rs[i].getAttribute('data-from') || '' });
 if (say.length >= 4 && rows.length >= 3) this._desk = { say: say, rows: rows, title: desk.getAttribute('data-cal') || '', count: desk.getAttribute('data-count') || '' };
 }
-/* the page's own ground under the film (see _draw: what an iPhone shows behind Safari's bar) */
-this._story = doc.querySelector('[data-story]'); this._ground = null;
+/* what an iPhone's Safari shows behind its own bars (see _bars) */
+this._story = doc.querySelector('[data-story]'); this._groundOn = null; this._underOn = null;
+this._groundCol = ''; this._marks = null;
 this._mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 this._wide = window.matchMedia ? window.matchMedia('(min-width: 860px) and (min-height: 520px)') : null;
 this._initFilm();
@@ -108,6 +109,7 @@ this._layout(y0, st, now);
 /* nothing to draw once the story has scrolled away */
 const off = st > this._end;
 if (off !== this._isOff) { this._isOff = off; this._box.classList.toggle('off', off); }
+this._bars(st);
 if (off) return;
 const W = cv.clientWidth, Hc = cv.clientHeight;
 if (!W || !Hc) return;
@@ -128,6 +130,32 @@ if (!resized && hk === this._lastHk && Math.abs(T - this._lastT) < 0.0004 && Mat
 this._lastT = T; this._lastTalk = talk; this._lastDesk = desk; this._lastCall = call; this._lastDraw = now; this._lastHk = hk;
 this._Hc = Hc;
 this._draw(this._ctx, W, H, dpr, T, still ? 0 : now / 1000);
+this._bars(st);
+}
+
+/* An iPhone's Safari (iOS 26) floats its own bars over the page and colours what shows behind them itself.
+   Measured in the iOS Simulator on 2026-11-12 (iPhone 17, iOS 26.2), with pages in loud colours:
+   - behind the bottom of the screen, with Safari's bar open: the page that scrolls, here the story's own
+     ground (a picture pinned to the screen, like the film, stops at the bar);
+   - behind the bottom, with the bar tucked away: the body's background. A strip pinned to the bottom of the
+     screen changes nothing there, and neither does the html element's background;
+   - behind the top: the background of whatever is pinned to the top edge when the page loads, here the film's
+     box as the stylesheet colours it (morning blue). Safari reads that once: a colour set later by script, a
+     forced new layout, a nudge of the box and a theme-color tag were all tried, and none changed it.
+   Left alone, the bottom was a white strip under the street. So on phones the story's ground takes the colour
+   of the film's last row, and the body the colour of whatever lies at the bottom of the screen: the film's
+   last row, the white sheet, the black waitlist, the white footer.
+   On wider screens nothing is set: the film plays in a window there, and the page keeps its own grounds. */
+_bars(st) {
+const phone = !this._isWide && window.innerWidth <= 520 && !!this._groundCol;
+const ground = phone ? this._groundCol : '';
+if (this._story && ground !== this._groundOn) { this._groundOn = ground; this._story.style.backgroundColor = ground; }
+let under = '';
+if (phone) {
+const m = this._marks, b = st + (window.innerHeight || 0);
+under = !m || b < m.sheet ? ground : b < m.wait ? 'rgb(255, 255, 255)' : b < m.foot ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
+}
+if (under !== this._underOn) { this._underOn = under; doc.body.style.backgroundColor = under; }
 }
 
 /* Reads where the sections and cards sit, and fades a card out as the next section pushes it away. */
@@ -170,6 +198,8 @@ this._end = wide ? (story ? top(story) + story.offsetHeight : Infinity) : (sheet
 const sig = (wide ? 'w' : 'n') + hb + '|' + tops[1] + '|' + tops[2] + '|' + tops[3] + '|' + tops[4] + '|' + this._Hs;
 if (sig !== this._geoSig) { this._geoSig = sig; this._lastT = -1; }
 this._scn = scn; this._geo = geo; this._tops = tops; this._heroB0 = hb;
+const wait = doc.querySelector('.wait'), foot = doc.querySelector('.foot');
+this._marks = sheet && wait && foot ? { sheet: top(sheet), wait: top(wait), foot: top(foot) } : null;
 }
 this._heroY = this._heroB0 - st;
 for (let i = 0; i < this._geo.length; i++) {
@@ -431,17 +461,12 @@ this._screen(ctx);
 const vg = ctx.createRadialGradient(W / 2, Hc * 0.56, Hc * 0.34, W / 2, Hc * 0.56, Hc * 0.82);
 vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.24)');
 ctx.fillStyle = vg; ctx.fillRect(0, 0, W, Hc);
-/* Under the film. On an iPhone, Safari's own bar floats over the bottom of the page, and behind it Safari
-   draws only the page that scrolls: a picture pinned to the screen, like this film, stops at the bar, and the
-   page's white ground showed there as a strip under the street. So on phones the story's ground takes the
-   colour of the film's last row: the street, in the light of the hour, or the wall in the Spex scene.
-   Everywhere else that ground lies hidden behind the film. */
-if (this._story) {
+/* The colour of the film's last row, for _bars: the street in the light of the hour, or the wall in the Spex
+   scene (its last row lies in his shadow and under the darkened corners, a little darker than the wall).
+   Stepped by fours, so that the page's grounds are repainted now and then and not at every pixel of scroll. */
+const step = (v) => Math.max(0, Math.min(255, Math.round(v / 4) * 4));
 const street = this._rgb(this._P.street2, 0.3), wall = this._rgb(this._P.siding, 0.3);
-/* (the wall's last row lies in his shadow and under the darkened corners, a little darker than the wall itself) */
-const ground = this._isWide ? '' : 'rgb(' + [0, 1, 2].map((i) => Math.round(street[i] + (wall[i] * 0.88 - street[i]) * aD)).join(', ') + ')';
-if (ground !== this._ground) { this._ground = ground; this._story.style.backgroundColor = ground; }
-}
+this._groundCol = 'rgb(' + [0, 1, 2].map((i) => step(street[i] + (wall[i] * 0.88 - street[i]) * aD)).join(', ') + ')';
 }
 
 _sky(ctx, W, H, t) {
