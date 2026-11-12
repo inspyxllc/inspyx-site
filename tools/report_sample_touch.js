@@ -1,6 +1,11 @@
 // Prepares the private sample for the home page's pictures: a realistic address that is nobody's home, the
 // inspector's own name, his photo on the inspector's card, and a signature made for his name.
-// usage: node sample_touch.js <sample folder> --address "7314 Willet Marsh Ct." --inspector "Moises Avila" --photo <picture file>
+// usage: node tools/report_sample_touch.js <sample folder> --address "7314 Willet Marsh Ct." --inspector "Moises Avila"
+//          --photo <picture file> [--no-associations] [--swap "old words=new words"]...
+// --no-associations empties the inspector's list of associations: the sample's inspector is a real person, and
+// the sample must not say he belongs to a body he has not told us he belongs to.
+// --swap replaces words wherever they stand in the report (the company, the license, the client, the dates);
+// "old=" with nothing after it takes the words out.
 const fs = require('fs'); const path = require('path'); const { chromium } = require('playwright');
 const args = process.argv.slice(2); const dir = args[0];
 const opt = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null; };
@@ -29,10 +34,13 @@ const address = opt('--address'), who = opt('--inspector'), photo = opt('--photo
   let txt = fs.readFileSync(path.join(dir, 'report.json'), 'utf8');
   const before = { address: (txt.match(/1234 Main St\./g) || []).length, name: (txt.match(/Inspector Name/g) || []).length };
   txt = txt.split('1234 Main St.').join(address).split('Inspector Name').join(who);
+  const swaps = args.map((a, i) => (a === '--swap' ? args[i + 1] : null)).filter(Boolean).map((p) => { const k = p.indexOf('='); return [p.slice(0, k), p.slice(k + 1)]; });
+  for (const [from, to] of swaps) { before[from] = txt.split(JSON.stringify(from).slice(1, -1)).length - 1; txt = txt.split(JSON.stringify(from).slice(1, -1)).join(JSON.stringify(to).slice(1, -1)); }
   const d = JSON.parse(txt);
   d.files.inspector = { url: '/sample-report/files/inspector.jpg', thumb: '/sample-report/files/inspector.jpg', w: 360, h: 360 };
   d.files.signature = { url: '/sample-report/files/signature.png', thumb: '/sample-report/files/signature.png', w: Math.round(sb.width * 3), h: Math.round(sb.height * 3) };
   d.report.cover.inspector.photo = 'inspector';
+  if (args.includes('--no-associations')) d.report.cover.inspector.associations = [];
   d.report.signature.image = 'signature';
   fs.writeFileSync(path.join(dir, 'report.json'), JSON.stringify(d));
   console.log('replaced', JSON.stringify(before), '| photo cut', JSON.stringify(face.from), '| signature', Math.round(sb.width) + 'x' + Math.round(sb.height), 'pt');

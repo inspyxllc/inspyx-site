@@ -47,7 +47,7 @@ async function open(browser, opts) {
     ok('one main heading, and the page says it is in English', head.h1 === 1 && head.lang === 'en');
     const film = await page.evaluate(() => { const c = document.querySelector('canvas[data-film]'); const d = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height * 0.7), 1, 1).data; return { w: c.width, h: c.height, a: d[3] }; });
     ok('the film is drawing', film.w > 0 && film.a === 255, JSON.stringify(film));
-    for (const f of ['assets/share.jpg', 'assets/favicon.svg', 'assets/favicon-32.png', 'assets/apple-touch-icon.png', 'robots.txt', 'sitemap.xml', 'assets/report-web.webp', 'assets/report-web.jpg', 'assets/report-clip.webp', 'assets/report-clip.jpg', 'assets/report-signed.webp', 'assets/report-signed.jpg']) {
+    for (const f of ['assets/share.jpg', 'assets/favicon.svg', 'assets/favicon-32.png', 'assets/apple-touch-icon.png', 'robots.txt', 'sitemap.xml', 'assets/report-web.webp', 'assets/report-web.jpg', 'assets/report-leak.webp', 'assets/report-leak.jpg', 'assets/report-signature.png']) {
       const r = await page.request.get(url + f);
       ok('file is served: ' + f, r.status() === 200, String(r.status()));
     }
@@ -355,27 +355,94 @@ async function open(browser, opts) {
     await ctx.close();
   }
 
-  // ---- the report section: the signed end of the web report, its first screen on a phone, and a finding with a video
+  // ---- the report section: the web report on a phone that stands at an angle, with three cards floating beside it
   {
-    const { ctx, page, errs } = await open(browser, {});
-    await page.evaluate(() => { const e = document.querySelector('.pages'); window.scrollTo(0, e.getBoundingClientRect().top + window.pageYOffset - 200); });
-    await page.waitForTimeout(700);
-    const r = await page.evaluate(() => {
-      const imgs = [...document.querySelectorAll('.pages img')];
+    // what is on the stage, measured as the screen shows it (a box turned in 3D is measured as it is drawn)
+    const stage = () => {
+      const box = (q) => { const e = document.querySelector(q); if (!e) return null; const b = e.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height }; };
       // words count only where they can be seen
       const t = (q) => { const e = document.querySelector(q); return e && e.getBoundingClientRect().height > 0 && getComputedStyle(e).visibility !== 'hidden' ? e.textContent.replace(/\s+/g, ' ').trim() : null; };
-      return { imgs: imgs.map((i) => ({ src: (i.currentSrc || i.src).replace(/^.*\/assets\//, ''), ok: i.complete && i.naturalWidth === 600, alt: i.alt, w: Math.round(i.getBoundingClientRect().width), both: [i.getAttribute('src'), i.parentElement.querySelector('source').getAttribute('srcset')] })), say: t('.pages-say'), tag: t('.pages-tag'), note: t('.pages-note'), sw: document.documentElement.scrollWidth, iw: window.innerWidth };
-    });
-    // a browser takes the WebP and never asks for the JPEG that stands behind it: both addresses are asked for here
-    const both = [];
-    for (const i of r.imgs) for (const a of i.both) both.push(a + ' ' + (await page.request.get(new URL(a, url).href)).status());
+      const shot = document.querySelector('[data-shot]');
+      const imgs = [...shot.querySelectorAll('img')];
+      return {
+        imgs: imgs.map((i) => ({ src: (i.currentSrc || i.src).replace(/^.*\/assets\//, ''), nw: i.complete ? i.naturalWidth : 0, alt: i.alt, all: [i.getAttribute('src')].concat(i.parentElement.tagName === 'PICTURE' ? [i.parentElement.querySelector('source').getAttribute('srcset')] : []) })),
+        ph: box('.ph-body'), clip: box('.fl-clip'), sign: box('.fl-sign'), pdf: box('.fl-pdf'), sheet: box('[data-sheet]'),
+        turn: getComputedStyle(document.querySelector('.ph')).transform, cards: ['.fl-clip', '.fl-sign', '.fl-pdf'].map((q) => getComputedStyle(document.querySelector(q)).transform),
+        drift: getComputedStyle(document.querySelector('.fl-clip')).animationName, ease: getComputedStyle(document.querySelector('.ph')).transitionDuration,
+        p: shot.style.getPropertyValue('--p'), mx: shot.style.getPropertyValue('--mx'),
+        words: [t('.fl-kind'), t('.fl-time'), t('.fl-clip figcaption'), t('.fl-lab'), t('.fl-sign figcaption'), t('.fl-pdf')],
+        say: t('.pages-say'), tag: t('.pages-tag'), note: t('.pages-note'), sw: document.documentElement.scrollWidth, iw: window.innerWidth, vh: window.innerHeight,
+      };
+    };
+    // puts the stage's top edge this far below the top of the screen
+    const bring = async (page, down) => { await page.evaluate((down) => { const e = document.querySelector('[data-shot]'); window.scrollTo(0, e.getBoundingClientRect().top + window.pageYOffset - down); }, down); };
+    const whole = (r, wide) => [r.ph, r.clip, r.sign, r.pdf].every((b) => b && b.l >= 0 && b.r <= wide && b.w > 0) && r.sw <= wide && r.iw === wide;
+    const places = (r) => ['ph', 'clip', 'sign', 'pdf'].map((k) => k + ' ' + Math.round(r[k].l) + '..' + Math.round(r[k].r)).join(', ') + '; page ' + r.sw + ' wide, screen ' + r.iw;
+
+    // -- on a phone
+    const { ctx, page, errs } = await open(browser, {});
     const wide = page.viewportSize().width;
-    ok('the report section shows three pictures that load: the signed end of the report, the web report on a phone, a finding with a video', r.imgs.length === 3 && r.imgs.every((i) => i.ok) && /^report-signed\./.test(r.imgs[0].src) && /^report-web\./.test(r.imgs[1].src) && /^report-clip\./.test(r.imgs[2].src) && errs.length === 0, r.imgs.map((i) => i.src + (i.ok ? '' : ' NOT LOADED')).join(', '));
-    ok('each picture\'s two addresses, the WebP and the JPEG behind it, are both served', both.length === 6 && both.every((b) => / 200$/.test(b)), both.join(', '));
-    ok('each of the three says what it shows, for people who can\'t see it', /signature/.test(r.imgs[0].alt) && /PDF/.test(r.imgs[0].alt) && /web page on a phone/.test(r.imgs[1].alt) && /with his picture/.test(r.imgs[1].alt) && /video/.test(r.imgs[2].alt), r.imgs.map((i) => i.alt.slice(0, 40)).join(' | '));
-    ok('the phone is the widest of the three, and the page does not scroll sideways for it', r.imgs[1].w > r.imgs[0].w && r.imgs[1].w > r.imgs[2].w && r.sw <= wide && r.iw === wide, r.imgs.map((i) => i.w).join(', ') + '; page ' + r.sw + ' wide on a ' + wide + ' px screen');
+    // on its way in: a stage that has just come up from the bottom of the screen
+    await bring(page, 844 - 150); await page.waitForTimeout(600);
+    const way = await page.evaluate(stage);
+    // and then every 24 px of the way up, the phone against the film's last card
+    const covers = [];
+    for (let down = 844; down >= 40; down -= 24) {
+      await bring(page, down); await page.waitForTimeout(50);
+      const c = await page.evaluate(() => { const k = document.querySelector('[data-scene="4"] [data-card]').getBoundingClientRect(), p = document.querySelector('.ph-body').getBoundingClientRect(), o = parseFloat(getComputedStyle(document.querySelector('[data-scene="4"] [data-card]')).opacity); return { over: o > 0.05 && k.bottom > 0 && p.top < k.bottom - 1 && p.bottom > k.top && p.left < k.right && p.right > k.left, by: Math.round(k.bottom - p.top) }; });
+      if (c.over) covers.push(down + ' px down: by ' + c.by + ' px');
+    }
+    await bring(page, 120); await page.waitForTimeout(900);
+    const r = await page.evaluate(stage);
+    // a browser takes the WebP and never asks for the JPEG that stands behind it: every address is asked for here
+    const all = [];
+    for (const i of r.imgs) for (const a of i.all) all.push(a + ' ' + (await page.request.get(new URL(a, url).href)).status());
+    ok('the report section shows three pictures that load: the web report on a phone, the photo of a finding, the inspector\'s signature', r.imgs.length === 3 && /^report-web\./.test(r.imgs[0].src) && r.imgs[0].nw === 600 && /^report-leak\./.test(r.imgs[1].src) && r.imgs[1].nw === 480 && /^report-signature\.png$/.test(r.imgs[2].src) && r.imgs[2].nw === 560 && errs.length === 0, r.imgs.map((i) => i.src + ' ' + i.nw).join(', ') + (errs.length ? ' | ' + errs.join(' | ') : ''));
+    ok('every address those pictures name is served: the WebP and the JPEG behind it, twice, and the signature', all.length === 5 && all.every((b) => / 200$/.test(b)), all.join(', '));
+    ok('each of the three says what it shows, for people who can\'t see it', /web page on a phone/.test(r.imgs[0].alt) && /with his picture/.test(r.imgs[0].alt) && /leak/.test(r.imgs[1].alt) && /signature/.test(r.imgs[2].alt), r.imgs.map((i) => i.alt.slice(0, 40)).join(' | '));
+    const area = (b) => b.w * b.h;
+    ok('the phone stands at an angle with the three cards floating in front of it, all drawn in 3D, and the phone is the largest', /^matrix3d/.test(r.turn) && r.cards.every((c) => /^matrix3d/.test(c)) && [r.clip, r.sign, r.pdf].every((b) => area(b) < area(r.ph)) && r.drift === 'shot-drift', 'phone ' + r.turn.slice(0, 9) + ', cards ' + r.cards.map((c) => c.slice(0, 9)).join(' ') + ', drift ' + r.drift);
+    ok('on a phone, at rest: the phone and the three cards are whole on the screen, and the page does not scroll sideways', whole(r, wide), places(r));
+    ok('the cards\' words can be read: a video of 12 seconds, the finding, the inspector of record, the PDF', JSON.stringify(r.words) === JSON.stringify(['Video', '0:12', 'RecommendationActive leakAttic', 'Inspector of record', 'Moises AvilaLicense HI18352', 'Download the PDF']), r.words.join(' | '));
     ok('the section\'s words, each where it can be seen: what the web report does, that it arrives with the pilot, and where the sample comes from', r.say === 'Your client opens the report as a web page, with the PDF one tap away. A dripping leak plays as video, a flickering light in slow motion.' && r.tag === 'Arrives with the pilot' && r.note === 'From a real Inspyx report, with the details anonymized.', [r.say, r.tag, r.note].join(' | '));
+    ok('the phone turns toward the reader as the stage scrolls in, and the page stays as wide as the screen on the way', parseFloat(way.p) > 0 && parseFloat(way.p) < 0.5 && r.p === '1.000' && way.turn !== r.turn && way.sw <= wide && way.iw === wide, 'on the way in --p ' + way.p + ', at rest ' + r.p + '; page ' + way.sw + ' wide on the way');
+    ok('on its way in, the phone never covers the film\'s last card', covers.length === 0, covers.slice(0, 3).join('; '));
+    await page.mouse.move(300, 400); await page.waitForTimeout(120);
+    const touch = await page.evaluate(stage);
+    ok('on a touch screen nothing leans toward a pointer', touch.mx === '', 'mx ' + JSON.stringify(touch.mx));
     await ctx.close();
+
+    // -- on a small phone
+    {
+      const { ctx, page } = await open(browser, { w: 320, h: 568 });
+      await bring(page, 30); await page.waitForTimeout(900);
+      const s = await page.evaluate(stage);
+      ok('on a small phone, at rest: the phone and the three cards are whole on the screen, and the page does not scroll sideways', s.p === '1.000' && whole(s, 320), '--p ' + s.p + '; ' + places(s));
+      await ctx.close();
+    }
+
+    // -- on a wide screen, with a mouse
+    {
+      const { ctx, page, errs } = await open(browser, { w: 1440, h: 900, desktop: true });
+      await bring(page, 80); await page.waitForTimeout(900);
+      const w = await page.evaluate(stage);
+      ok('on a wide screen: the stage is whole, inside the sheet (the phone does not stand out over the film), with no sideways scroll', whole(w, 1440) && w.ph.t >= w.sheet.t && w.ph.w > 280 && errs.length === 0, places(w) + '; phone top ' + Math.round(w.ph.t) + ', sheet top ' + Math.round(w.sheet.t));
+      await page.mouse.move(w.ph.r + 180, w.ph.b - 60); await page.waitForTimeout(500);
+      const lean = await page.evaluate(stage);
+      await page.mouse.move(700, 5); await page.waitForTimeout(500);
+      const back = await page.evaluate(stage);
+      ok('a mouse over the stage leans the scene toward it, and it settles back when the mouse leaves', parseFloat(lean.mx) > 0.2 && lean.turn !== w.turn && back.mx === '0' && back.turn === w.turn, 'mx over ' + lean.mx + ', after leaving ' + back.mx);
+      await ctx.close();
+    }
+
+    // -- with motion turned off
+    {
+      const { ctx, page } = await open(browser, { still: true });
+      await bring(page, 844 - 150); await page.waitForTimeout(500);
+      const q = await page.evaluate(stage);
+      ok('motion off: the phone rests in its final pose from the start, and the cards do not drift', q.p === '' && q.turn === r.turn && q.drift === 'none' && q.ease === '0s', '--p ' + JSON.stringify(q.p) + ', drift ' + q.drift + ', easing ' + q.ease);
+      await ctx.close();
+    }
   }
 
   // ---- the conversation in the Spex scene

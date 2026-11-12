@@ -148,16 +148,63 @@ a.logo{min-height:44px}
 /* The sheet that slides over the film: the report, then the calculator */
 .sheet{position:relative; z-index:2; display:flex; flex-direction:column; background:var(--bg); border-radius:32px 32px 0 0; padding:0 max(20px, env(safe-area-inset-right, 0px)) 44px max(20px, env(safe-area-inset-left, 0px)); box-shadow:0 -30px 60px -30px rgba(0,0,0,.5)}
 .sheet-in{display:flex; flex-direction:column}
-.pages{display:flex; justify-content:center; align-items:flex-end; margin-top:-124px}
-.pages picture{flex:none}
-.pg{display:block; max-width:none; height:auto; background:#fff; border-radius:8px; box-shadow:0 18px 36px -14px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.06)}
-.pg-l,.pg-r{width:min(118px, 30.3vw)}
-.pg-l{transform:translate(20px, 12px) rotate(-7deg)}
-.pg-r{transform:translate(-20px, 12px) rotate(7deg)}
-.pg-c{position:relative; z-index:2; width:min(150px, 38.5vw); border-radius:9px; box-shadow:0 24px 44px -16px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.06)}
-/* the web report is shown on a phone: a dark edge and a phone's corners */
-.pg-phone{box-sizing:border-box; border:4px solid #16181C; border-radius:22px; background:#16181C}
-.pages-say{margin:26px auto 0; max-width:31em; text-align:center; font-size:16px; line-height:1.45; color:var(--ink-soft)}
+/* The finished report as a product shot: the web report on a phone that stands at an angle, with three cards
+   floating beside it (a finding's video, the inspector's signature, the PDF). The stage gives all of them one
+   point of view, so they read as one scene.
+   --p runs from 0 to 1 as the stage scrolls into view (home.js) and turns the phone toward the reader; with
+   no script, or with "reduce motion" on, it stays at 1, the resting pose. --mx and --my follow a mouse over
+   the stage (each from -1 to 1) and lean the scene a little toward it; they stay 0 on touch screens. */
+/* The stage runs from edge to edge of the screen and cuts off what would stand out sideways: a card on its way
+   in may not make the page wider than the screen (a phone's browser would then shrink the whole page). */
+/* The phone stands 88 px above the sheet's top edge, over the film. Not more: the film's last card leaves about
+   105 px ahead of the sheet, and a phone standing higher than that would cover the card's last line on its way in. */
+.shot{position:relative; margin:-88px calc(-1 * max(20px, env(safe-area-inset-right, 0px))) 0 calc(-1 * max(20px, env(safe-area-inset-left, 0px))); overflow-x:clip}
+.shot-stage{position:relative; height:532px; perspective:1250px; perspective-origin:50% 45%}
+.shot-glow{position:absolute; left:0; right:0; top:120px; height:380px; margin:0 auto; max-width:470px; border-radius:50%; background:radial-gradient(closest-side, rgba(31,78,121,.22), rgba(31,78,121,0)); pointer-events:none}
+.shot-floor{position:absolute; left:50%; top:466px; width:250px; height:44px; margin-left:-125px; border-radius:50%; background:radial-gradient(closest-side, rgba(8,12,24,.24), rgba(8,12,24,0)); pointer-events:none}
+.ph{position:absolute; left:50%; top:0; width:212px; margin-left:-106px; transform-style:preserve-3d; transition:transform .3s ease-out;
+  transform:rotateY(calc(-34deg + 16deg * var(--p, 1) + 5deg * var(--mx, 0))) rotateX(calc(13deg - 6deg * var(--p, 1) - 4deg * var(--my, 0))) rotateZ(calc(3deg - 2deg * var(--p, 1)))}
+.ph-edge{position:absolute; inset:0; border-radius:38px; background:linear-gradient(180deg, #2B2E34, #050506); transform:translateZ(-9px)}
+.ph-body{position:relative; padding:7px; border-radius:38px; background:linear-gradient(145deg, #4A4E57 0%, #111216 30%, #1D1F24 100%); box-shadow:0 0 0 1px rgba(255,255,255,.10) inset, 0 50px 60px -30px rgba(8,12,24,.6), 0 22px 28px -18px rgba(8,12,24,.45)}
+.ph-in{position:relative; overflow:hidden; border-radius:31px; background:#fff}
+.ph-bar{display:flex; align-items:center; justify-content:space-between; height:30px; padding:0 18px 0 22px; font-size:11px; font-weight:600; color:#111}
+.ph-bar svg{display:block; width:42px; height:11px; fill:currentColor}
+.ph-screen{display:block; width:100%; height:auto}
+.ph-island{position:absolute; left:50%; top:14px; width:58px; height:17px; margin-left:-29px; border-radius:9px; background:#000}
+.ph-gloss{position:absolute; inset:0; background:linear-gradient(rgba(255,255,255,0) 88%, #fff 98%), linear-gradient(118deg, rgba(255,255,255,.24) 0%, rgba(255,255,255,0) 30%); pointer-events:none}
+.fl{position:absolute; margin:0; border-radius:18px; background:#fff; box-shadow:0 34px 50px -24px rgba(8,12,24,.5), 0 10px 18px -10px rgba(8,12,24,.22), 0 0 0 1px rgba(8,12,24,.06); transition:transform .3s ease-out}
+.fl b{display:block; font-size:13.5px; font-weight:700; letter-spacing:-.01em; color:var(--ink)}
+.fl-sub{display:block; font-size:11.5px; color:var(--ink-faint)}
+.fl figcaption{padding:8px 4px 0}
+.fl-clip{right:max(16px, calc(50% - 176px)); top:264px; width:142px; padding:7px 7px 10px;
+  transform:translate3d(calc(36px * (1 - var(--p, 1)) + 9px * var(--mx, 0)), calc(6px * var(--my, 0)), 80px) rotateY(-16deg) rotateX(5deg)}
+.fl-media{position:relative; overflow:hidden; border-radius:12px}
+.fl-media img{display:block; width:100%; height:auto}
+.fl-kind{position:absolute; left:6px; top:6px; display:flex; align-items:center; gap:4px; height:20px; padding:0 8px 0 6px; border-radius:10px; background:rgba(255,255,255,.94); font-size:10.5px; font-weight:700; color:var(--ink)}
+.fl-kind svg{display:block; width:12px; height:10px; fill:currentColor}
+.fl-play{position:absolute; left:50%; top:50%; display:grid; place-items:center; width:40px; height:40px; margin:-20px 0 0 -20px; border-radius:50%; background:rgba(255,255,255,.95); box-shadow:0 6px 16px rgba(0,0,0,.35)}
+.fl-play svg{display:block; width:15px; height:16px; margin-left:3px; fill:#1F4E79}
+.fl-time{position:absolute; right:6px; bottom:6px; height:18px; padding:0 6px; border-radius:9px; background:rgba(0,0,0,.66); color:#fff; font-size:10.5px; font-weight:600; line-height:18px}
+.fl-cat{display:inline-block; margin-bottom:3px; padding:2px 7px; border-radius:6px; background:#FDEFD9; color:#A4560A; font-size:10px; font-weight:700}
+.fl-sign{left:max(26px, calc(50% - 172px)); top:388px; width:158px; padding:11px 12px 11px;
+  transform:translate3d(calc(-36px * (1 - var(--p, 1)) + 6px * var(--mx, 0)), calc(4px * var(--my, 0)), 60px) rotateY(20deg) rotateX(4deg) rotateZ(-2deg)}
+.fl-sign figcaption{padding:5px 0 0}
+.fl-lab{display:block; font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; color:var(--ink-faint)}
+.fl-sig{display:block; width:100%; height:auto; margin-top:3px; padding-bottom:2px; border-bottom:1px solid rgba(0,0,0,.14)}
+.fl-pdf{left:max(28px, calc(50% - 170px)); top:108px; display:flex; align-items:center; gap:8px; height:40px; padding:0 14px 0 6px; border-radius:14px; font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap;
+  transform:translate3d(calc(-18px * (1 - var(--p, 1)) + 12px * var(--mx, 0)), calc(8px * var(--my, 0)), 100px) rotateY(18deg) rotateX(6deg)}
+.fl-ic{display:grid; place-items:center; width:28px; height:28px; border-radius:9px; background:#1F4E79; color:#fff}
+.fl-ic svg{display:block; width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+/* the cards drift a little, each at its own pace */
+@keyframes shot-drift{0%,100%{translate:0 0} 50%{translate:0 -7px}}
+.fl{animation:shot-drift 6.6s ease-in-out infinite}
+.fl-sign{animation-duration:7.8s; animation-delay:-2.2s}
+.fl-pdf{animation-duration:5.8s; animation-delay:-3.5s}
+/* between a phone and a desk screen (a tablet upright, a phone on its side) the same scene, a size larger */
+@media (min-width:600px){
+  .shot-stage{transform:scale(1.3); transform-origin:50% 0; margin-bottom:160px}
+}
+.pages-say{margin:22px auto 0; max-width:31em; text-align:center; font-size:16px; line-height:1.45; color:var(--ink-soft)}
 .pages-tag{align-self:center; margin-top:14px}
 .pages-note{margin-top:12px; text-align:center; font-size:14px; color:var(--ink-faint)}
 
@@ -252,13 +299,36 @@ a.logo{min-height:44px}
   .card .say{margin-top:4px; font-size:19px; line-height:1.5}
   .sheet{border-radius:56px 56px 0 0; padding:0 40px 96px}
   .sheet-in{width:100%; max-width:1040px; margin:0 auto}
-  .pages{margin-top:-190px}
-  .pg-l,.pg-r{width:210px; border-radius:12px}
-  .pg-l{transform:translate(34px, 20px) rotate(-7deg)}
-  .pg-r{transform:translate(-34px, 20px) rotate(7deg)}
-  .pg-c{width:264px; border-radius:14px}
-  .pg-phone{border-width:6px; border-radius:38px}
-  .pages-say{margin-top:44px; font-size:19px}
+  .shot{margin:64px 0 0}
+  .shot-stage{height:750px; perspective:1700px; transform:none; margin-bottom:0}
+  .shot-glow{top:150px; max-width:780px; height:580px}
+  .shot-floor{top:662px; width:360px; height:62px; margin-left:-180px}
+  .ph{width:300px; margin-left:-150px}
+  .ph-edge,.ph-body{border-radius:52px}
+  .ph-edge{transform:translateZ(-12px)}
+  .ph-body{padding:10px}
+  .ph-in{border-radius:43px}
+  .ph-bar{height:42px; padding:0 26px 0 32px; font-size:15px}
+  .ph-bar svg{width:58px; height:15px}
+  .ph-island{top:20px; width:82px; height:24px; margin-left:-41px; border-radius:12px}
+  .fl{border-radius:24px}
+  .fl b{font-size:19px}
+  .fl-sub{font-size:15px}
+  .fl figcaption{padding:12px 6px 2px}
+  .fl-clip{right:calc(50% - 372px); top:356px; width:232px; padding:10px 10px 14px}
+  .fl-media{border-radius:16px}
+  .fl-kind{left:9px; top:9px; height:28px; padding:0 11px 0 9px; border-radius:14px; font-size:13.5px; gap:6px}
+  .fl-kind svg{width:15px; height:13px}
+  .fl-play{width:60px; height:60px; margin:-30px 0 0 -30px}
+  .fl-play svg{width:22px; height:24px; margin-left:4px}
+  .fl-time{right:9px; bottom:9px; height:25px; padding:0 9px; border-radius:13px; font-size:13.5px; line-height:25px}
+  .fl-cat{margin-bottom:5px; padding:3px 9px; border-radius:8px; font-size:12.5px}
+  .fl-sign{left:calc(50% - 380px); top:540px; width:232px; padding:16px 18px 16px}
+  .fl-lab{font-size:11.5px; letter-spacing:.12em}
+  .fl-pdf{left:calc(50% - 356px); top:150px; height:56px; padding:0 20px 0 9px; border-radius:19px; font-size:16.5px; gap:11px}
+  .fl-ic{width:38px; height:38px; border-radius:12px}
+  .fl-ic svg{width:20px; height:20px}
+  .pages-say{margin-top:34px; font-size:19px}
   .pages-tag{margin-top:18px}
   .pages-note{margin-top:14px; font-size:15px}
   .calc{margin-top:64px; display:grid; grid-template-columns:minmax(0, 1.08fr) minmax(0, .92fr); gap:32px 56px; align-items:start; padding:48px; border-radius:40px}
@@ -280,6 +350,8 @@ a.logo{min-height:44px}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .btn,.step,.pill,.bar-link{transition:none}
+  .fl{animation:none}
+  .ph,.fl{transition:none}
 }
 
 /* After Stripe's checkout (?billing=done, back or canceled): the message alone */
@@ -427,10 +499,37 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 
 <div class="sheet" data-sheet>
 <div class="sheet-in">
-<div class="pages">
-<picture><source srcset="/assets/report-signed.webp" type="image/webp"><img class="pg pg-l" src="/assets/report-signed.jpg" width="600" height="683" loading="lazy" decoding="async" alt="The end of the web report: the inspector's signature, his license number, the date, and a button to download the PDF"></picture>
-<picture><source srcset="/assets/report-web.webp" type="image/webp"><img class="pg pg-c pg-phone" src="/assets/report-web.jpg" width="600" height="985" loading="lazy" decoding="async" alt="The report as a web page on a phone: a photo of the house, the address, the inspector with his picture, and a PDF button"></picture>
-<picture><source srcset="/assets/report-clip.webp" type="image/webp"><img class="pg pg-r" src="/assets/report-clip.jpg" width="600" height="955" loading="lazy" decoding="async" alt="A finding in the web report, an active roof leak in the attic, with a 12-second video on its photo"></picture>
+<div class="shot" data-shot>
+<div class="shot-stage">
+<div class="shot-glow" aria-hidden="true"></div>
+<div class="shot-floor" aria-hidden="true"></div>
+<div class="ph">
+<div class="ph-edge" aria-hidden="true"></div>
+<div class="ph-body">
+<div class="ph-in">
+<div class="ph-bar" aria-hidden="true"><span>9:41</span><svg viewBox="0 0 46 12"><path d="M1 9.5h2v2H1zM5 7.5h2v4H5zM9 5.3h2v6.2H9zM13 3h2v8.5h-2z"></path><path d="M20.5 5.2a6 6 0 0 1 8 0M22.4 7.4a3.4 3.4 0 0 1 4.2 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.5" cy="10" r="1.2"></circle><rect x="33.5" y="2.5" width="10" height="7.6" rx="2.2" fill="none" stroke="currentColor" stroke-width="1"></rect><rect x="34.9" y="3.9" width="7.2" height="4.8" rx="1.1"></rect></svg></div>
+<picture><source srcset="/assets/report-web.webp" type="image/webp"><img class="ph-screen" src="/assets/report-web.jpg" width="600" height="1298" loading="lazy" decoding="async" alt="The report as a web page on a phone: the inspection company's name, a photo of the house, the address, and the inspector with his picture and license"></picture>
+<span class="ph-gloss" aria-hidden="true"></span>
+</div>
+<span class="ph-island" aria-hidden="true"></span>
+</div>
+</div>
+<figure class="fl fl-clip">
+<div class="fl-media">
+<picture><source srcset="/assets/report-leak.webp" type="image/webp"><img src="/assets/report-leak.jpg" width="480" height="360" loading="lazy" decoding="async" alt="A photo from the report: an active roof leak in the attic, circled"></picture>
+<span class="fl-kind"><svg viewBox="0 0 14 12" aria-hidden="true"><rect x=".8" y="1.3" width="8.6" height="9.4" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"></rect><path d="M9.6 4.6l3.4-2v6.8l-3.4-2z"></path></svg>Video</span>
+<span class="fl-play" aria-hidden="true"><svg viewBox="0 0 26 28"><path d="M2 1.8v24.4a1.3 1.3 0 0 0 2 1.1l20-12.2a1.3 1.3 0 0 0 0-2.2L4 .7a1.3 1.3 0 0 0-2 1.1z"></path></svg></span>
+<span class="fl-time">0:12</span>
+</div>
+<figcaption><span class="fl-cat">Recommendation</span><b>Active leak</b><span class="fl-sub">Attic</span></figcaption>
+</figure>
+<figure class="fl fl-sign">
+<span class="fl-lab">Inspector of record</span>
+<img class="fl-sig" src="/assets/report-signature.png" width="560" height="174" loading="lazy" decoding="async" alt="The inspector's signature">
+<figcaption><b>Moises Avila</b><span class="fl-sub">License HI18352</span></figcaption>
+</figure>
+<div class="fl fl-pdf"><span class="fl-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v10m0 0l-4.2-4.2M12 14l4.2-4.2M5.5 19h13"></path></svg></span><span>Download the PDF</span></div>
+</div>
 </div>
 <p class="pages-say">Your client opens the report as a web page, with the PDF one tap away. A dripping leak plays as video, a flickering light in slow motion.</p>
 <div class="tag pages-tag">

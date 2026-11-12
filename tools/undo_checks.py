@@ -4,9 +4,10 @@ Passing checks prove little by themselves: a check that cannot fail guards nothi
 is one way to break the page (a piece of text in home.js or index.html, and what to put in its place). The script
 makes the change, runs tools/check_home.js, counts the change as caught if a check fails, and takes it back.
 
-usage: python3 -I tools/undo_checks.py <site repo> [--part=i/n] [words]
+usage: python3 -I tools/undo_checks.py <site repo> [--part=i/n] [--first=N] [words]
   The page must be served at $URL, or at http://localhost:4173/ (node tools/serve.js).
   With words given, only the changes whose name holds them are tried.
+  --first=N tries only the first N changes of the list (the newest part of the page stands first).
   --part=0/2 and --part=1/2 split the list in two, for two copies of the repo served on two ports:
       git worktree add --detach ../copy HEAD && node ../copy/tools/serve.js 4174 &
       URL=http://localhost:4174/ python3 -I tools/undo_checks.py ../copy --part=1/2
@@ -30,19 +31,49 @@ PRICING = 'coming-soon/pricing.html'
 TERMS = 'coming-soon/terms.html'
 
 MUTATIONS = [
-    # ---- the report section with the web report (2026-11-12)
+    # ---- the report section: the web report as a product shot (2026-11-12)
     ('the web report picture is missing from the report section', HTML,
      'srcset="/assets/report-web.webp"',
      'srcset="/assets/report-wb.webp"'),
     ("the JPEG behind the web report picture has a wrong address in the report section", HTML,
      'src="/assets/report-web.jpg"',
      'src="/assets/report-wb.jpg"'),
+    ("the signature's picture has a wrong address", HTML,
+     'src="/assets/report-signature.png"',
+     'src="/assets/report-signatur.png"'),
     ('the report section no longer says the web report arrives with the pilot', HTML,
      '<div class="tag pages-tag">',
      '<div class="tag pages-tag" hidden>'),
-    ("the phone's edge makes the page scroll sideways", HTML,
-     '.pg-phone{box-sizing:border-box; border:4px solid #16181C;',
-     '.pg-phone{box-sizing:content-box; border:14px solid #16181C;'),
+    ('the phone lies flat again', HTML,
+     'transform:rotateY(calc(-34deg + 16deg * var(--p, 1) + 5deg * var(--mx, 0))) rotateX(calc(13deg - 6deg * var(--p, 1) - 4deg * var(--my, 0))) rotateZ(calc(3deg - 2deg * var(--p, 1)))}',
+     'transform:none}'),
+    ("the video card stands out past the screen's edge", HTML,
+     '.fl-clip{right:max(16px, calc(50% - 176px));',
+     '.fl-clip{right:max(-30px, calc(50% - 226px));'),
+    ('the stage no longer cuts off a card on its way in, and the page gets wider than the screen', HTML,
+     '0 calc(-1 * max(20px, env(safe-area-inset-left, 0px))); overflow-x:clip}',
+     '0 calc(-1 * max(20px, env(safe-area-inset-left, 0px))); overflow-x:visible}'),
+    ("the phone stands 150 px above the sheet again, over the film card's last line", HTML,
+     '.shot{position:relative; margin:-88px calc(',
+     '.shot{position:relative; margin:-150px calc('),
+    ('on a wide screen the phone stands out over the film again', HTML,
+     '  .shot{margin:64px 0 0}',
+     '  .shot{margin:-210px 0 0}'),
+    ('the phone no longer turns as the stage scrolls in', JS,
+     "shot.style.setProperty('--p', Math.max(0, Math.min(1, p)).toFixed(3));",
+     "shot.style.setProperty('--p', '1.000');"),
+    ('a touch screen leans the scene toward a pointer too', JS,
+     "if (!window.matchMedia || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;",
+     ""),
+    ('a mouse over the stage no longer leans the scene', JS,
+     "shot.style.setProperty('--mx', (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3));",
+     "shot.style.setProperty('--mx', '0');"),
+    ('with motion off the cards still drift', HTML,
+     '  .fl{animation:none}',
+     '  .fl{animation-duration:9s}'),
+    ('a word on a card is changed (the license)', HTML,
+     '<figcaption><b>Moises Avila</b><span class="fl-sub">License HI18352</span></figcaption>',
+     '<figcaption><b>Moises Avila</b><span class="fl-sub">License HI0000</span></figcaption>'),
     # ---- the attic in the Spex scene (2026-11-12)
     ("Spex's light never comes on in the attic", JS,
      'const amb = (0.86 - 0.16 * light) * (1 - 0.95 * flash), core = amb * (1 - 0.96 * light);',
@@ -177,6 +208,9 @@ only = ' '.join(a for a in args if not a.startswith('--'))
 if only:
     MUTATIONS = [m for m in MUTATIONS if only in m[0]]
     assert MUTATIONS, 'no change is named like that'
+first = [a for a in args if a.startswith('--first=')]
+if first:
+    MUTATIONS = MUTATIONS[:int(first[0][8:])]
 if part:
     i, n = part[0][7:].split('/')
     MUTATIONS = MUTATIONS[int(i)::int(n)]

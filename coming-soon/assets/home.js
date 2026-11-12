@@ -1785,4 +1785,36 @@ showFail(MSG.fail);
 });
 })();
 
+/* The report's product shot under the film: --p runs 0 to 1 as it scrolls into view, and the stylesheet
+   turns the phone toward the reader by it. With "reduce motion" on it is left alone, at its resting pose. */
+(function () {
+var shot = doc.querySelector('[data-shot]');
+if (!shot || !window.requestAnimationFrame) return;
+if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+var asked = false;
+function turn() {
+asked = false;
+var r = shot.getBoundingClientRect(), vh = window.innerHeight || 1;
+var p = (vh - r.top) / (vh * 0.62 + r.height * 0.3);
+shot.style.setProperty('--p', Math.max(0, Math.min(1, p)).toFixed(3));
+}
+function ask() { if (!asked) { asked = true; window.requestAnimationFrame(turn); } }
+window.addEventListener('scroll', ask, { passive: true });
+window.addEventListener('resize', ask);
+turn();
+// a mouse over the stage leans the scene a little toward it (never on touch screens, where a finger is scrolling)
+if (!window.matchMedia || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+shot.addEventListener('pointermove', function (e) {
+if (e.pointerType && e.pointerType !== 'mouse') return;
+var r = shot.getBoundingClientRect();
+if (!r.width || !r.height) return;
+shot.style.setProperty('--mx', (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3));
+shot.style.setProperty('--my', (((e.clientY - r.top) / r.height) * 2 - 1).toFixed(3));
+});
+shot.addEventListener('pointerleave', function () {
+shot.style.setProperty('--mx', '0');
+shot.style.setProperty('--my', '0');
+});
+})();
+
 })();
