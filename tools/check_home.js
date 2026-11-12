@@ -362,13 +362,19 @@ async function open(browser, opts) {
     await page.waitForTimeout(700);
     const r = await page.evaluate(() => {
       const imgs = [...document.querySelectorAll('.pages img')];
-      const t = (q) => { const e = document.querySelector(q); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; };
-      return { imgs: imgs.map((i) => ({ src: (i.currentSrc || i.src).replace(/^.*\/assets\//, ''), ok: i.complete && i.naturalWidth === 600, alt: i.alt, w: Math.round(i.getBoundingClientRect().width) })), say: t('.pages-say'), tag: t('.pages-tag'), note: t('.pages-note'), sw: document.documentElement.scrollWidth, iw: window.innerWidth };
+      // words count only where they can be seen
+      const t = (q) => { const e = document.querySelector(q); return e && e.getBoundingClientRect().height > 0 && getComputedStyle(e).visibility !== 'hidden' ? e.textContent.replace(/\s+/g, ' ').trim() : null; };
+      return { imgs: imgs.map((i) => ({ src: (i.currentSrc || i.src).replace(/^.*\/assets\//, ''), ok: i.complete && i.naturalWidth === 600, alt: i.alt, w: Math.round(i.getBoundingClientRect().width), both: [i.getAttribute('src'), i.parentElement.querySelector('source').getAttribute('srcset')] })), say: t('.pages-say'), tag: t('.pages-tag'), note: t('.pages-note'), sw: document.documentElement.scrollWidth, iw: window.innerWidth };
     });
+    // a browser takes the WebP and never asks for the JPEG that stands behind it: both addresses are asked for here
+    const both = [];
+    for (const i of r.imgs) for (const a of i.both) both.push(a + ' ' + (await page.request.get(new URL(a, url).href)).status());
+    const wide = page.viewportSize().width;
     ok('the report section shows three pictures that load: a PDF page, the web report on a phone, a finding with a video', r.imgs.length === 3 && r.imgs.every((i) => i.ok) && /^report-findings\./.test(r.imgs[0].src) && /^report-web\./.test(r.imgs[1].src) && /^report-clip\./.test(r.imgs[2].src) && errs.length === 0, r.imgs.map((i) => i.src + (i.ok ? '' : ' NOT LOADED')).join(', '));
+    ok('each picture\'s two addresses, the WebP and the JPEG behind it, are both served', both.length === 6 && both.every((b) => / 200$/.test(b)), both.join(', '));
     ok('each of the three says what it shows, for people who can\'t see it', /PDF/.test(r.imgs[0].alt) && /web page on a phone/.test(r.imgs[1].alt) && /video/.test(r.imgs[2].alt), r.imgs.map((i) => i.alt.slice(0, 40)).join(' | '));
-    ok('the phone is the widest of the three, and the page does not scroll sideways for it', r.imgs[1].w > r.imgs[0].w && r.imgs[1].w > r.imgs[2].w && r.sw <= r.iw, r.imgs.map((i) => i.w).join(', ') + ' in ' + r.iw);
-    ok('the section\'s words: what the web report does, that it arrives with the pilot, and where the sample comes from', r.say === 'Your client opens the report as a web page, with the PDF one tap away. A dripping leak plays as video, a flickering light in slow motion.' && r.tag === 'Arrives with the pilot' && r.note === 'From a real Inspyx report, with the details anonymized.', [r.say, r.tag, r.note].join(' | '));
+    ok('the phone is the widest of the three, and the page does not scroll sideways for it', r.imgs[1].w > r.imgs[0].w && r.imgs[1].w > r.imgs[2].w && r.sw <= wide && r.iw === wide, r.imgs.map((i) => i.w).join(', ') + '; page ' + r.sw + ' wide on a ' + wide + ' px screen');
+    ok('the section\'s words, each where it can be seen: what the web report does, that it arrives with the pilot, and where the sample comes from', r.say === 'Your client opens the report as a web page, with the PDF one tap away. A dripping leak plays as video, a flickering light in slow motion.' && r.tag === 'Arrives with the pilot' && r.note === 'From a real Inspyx report, with the details anonymized.', [r.say, r.tag, r.note].join(' | '));
     await ctx.close();
   }
 

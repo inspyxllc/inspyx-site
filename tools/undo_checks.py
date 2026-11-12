@@ -32,6 +32,9 @@ TERMS = 'coming-soon/terms.html'
 MUTATIONS = [
     # ---- the report section with the web report (2026-11-12)
     ('the web report picture is missing from the report section', HTML,
+     'srcset="/assets/report-web.webp"',
+     'srcset="/assets/report-wb.webp"'),
+    ("the JPEG behind the web report picture has a wrong address in the report section", HTML,
      'src="/assets/report-web.jpg"',
      'src="/assets/report-wb.jpg"'),
     ('the report section no longer says the web report arrives with the pilot', HTML,
