@@ -1006,17 +1006,17 @@ this._sayDraw(ctx, it.ref, x0, it.y, fade * it.a, it.p, s, t);
 if (it.a * it.p >= 0.5) live.push(it.ref.rows.join(' '));
 continue;
 }
+/* (_chip saves the drawing state and moves to the card's corner; the restore below gives it back) */
+const answered = it.kind === 'answered';
+this._chip(ctx, x0, it.y, it.w, h, fade * it.a, it.p, it.kind === 'booked' ? 20 * s : null);
 ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
 if (it.kind === 'booked') {
-this._chip(ctx, x0, it.y, it.w, h, fade * it.a, it.p, 20 * s);
 this._icon(ctx, 'cal', 31 * s, h / 2, 17 * s);
 ctx.fillStyle = '#1D1D1F'; ctx.font = '700 ' + (15.5 * s) + 'px ' + F;
 ctx.fillText(D.booked[0], 58 * s, h / 2 - 9.5 * s);
 ctx.fillStyle = '#424245'; ctx.font = '500 ' + (13.5 * s) + 'px ' + F;
 ctx.fillText(D.booked[1], 58 * s, h / 2 + 10.5 * s);
 } else {
-const answered = it.kind === 'answered';
-this._chip(ctx, x0, it.y, it.w, h, fade * it.a, it.p);
 this._icon(ctx, answered ? 'check' : 'ring', h / 2, h / 2, 15 * s);
 ctx.fillStyle = '#1D1D1F'; ctx.font = '600 ' + (15 * s) + 'px ' + F;
 ctx.fillText(answered ? D.answered : D.ring, h / 2 + 22 * s, h / 2 + 0.5);

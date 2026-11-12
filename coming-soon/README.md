@@ -188,6 +188,17 @@ node tools/compare_mockup.js /tmp/mockup.html /tmp/compare --same-pictures   # w
 ```
 
 The checks never send a sign-up: the waitlist call is caught and answered by the test.
+
+**Undo checks** (`tools/undo_checks.py`, since 2026-11-12) test the checks themselves: the script
+breaks the page one way at a time (Mia never answers, the calendar tag is changed, a small phone
+stacks the cards anyway, and so on), runs the self-checks, and counts the break as caught if a
+check fails. A break nobody catches means a check is missing. The work must be committed first.
+
+```
+python3 -I tools/undo_checks.py .                     # every break in its list, about 25 minutes
+python3 -I tools/undo_checks.py . very tall window    # only the breaks whose name holds these words
+python3 -I tools/undo_checks.py . --part=0/2          # half the list; the script's own notes say how to run the other half on a second copy
+```
 `tools/make-images.js` writes `assets/share.png`; save it as `assets/share.jpg` (JPEG, quality 88).
 The tools need Playwright 1.59 (`npm i playwright@1.59.1` in a folder of its own, then
 `NODE_PATH=<that folder>/node_modules`).
