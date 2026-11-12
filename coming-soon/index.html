@@ -85,6 +85,15 @@ body{margin:0; font-family:var(--font); color:var(--ink); line-height:1.45; back
 @media (max-width:520px){
   html,body{background:var(--sky)}
 }
+/* The lid: a strip pinned to the top edge of a phone's screen, in the colour of what lies under it (the film's
+   top row, then the white sheet, the black waitlist, the white footer). Safari colours its own top bar from
+   the element pinned to that edge and follows it when its colour changes; it follows nothing else on the page
+   (measured 2026-11-12, see _bars in home.js). So the bar turns dark with the attic and white with the sheet.
+   The script switches the lid on, on an iPhone only: elsewhere no browser reads it. */
+.lid{display:none}
+@media (max-width:520px){
+  html.lid-on .lid{display:block; position:fixed; top:0; left:0; right:0; height:12px; z-index:7; pointer-events:none; background-color:var(--sky)}
+}
 h1,h2,p{margin:0}
 a{color:var(--ink)}
 a:hover{color:#000}
@@ -388,6 +397,7 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 </style>
 </head>
 <body>
+<div class="lid" data-lid aria-hidden="true"></div>
 <div class="site">
 <a class="skip" href="#main">Skip to content</a>
 <div class="svh" data-svh aria-hidden="true"></div>

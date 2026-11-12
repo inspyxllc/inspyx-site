@@ -84,6 +84,11 @@ if (say.length >= 4 && rows.length >= 3) this._desk = { say: say, rows: rows, ti
 }
 /* what an iPhone's Safari shows behind its own bars (see _bars) */
 this._story = doc.querySelector('[data-story]'); this._groundOn = null; this._underOn = null;
+/* The lid: the strip pinned to the top edge of a phone's screen, from which Safari colours its own top bar
+   (see _bars). On an iPhone only: every browser there is Safari underneath, and no other browser reads it. */
+this._lid = doc.querySelector('[data-lid]'); this._lidOn = null; this._topCol = ''; this._topAt = 0;
+this._lidUse = !!this._lid && /iP(hone|od)/.test(navigator.userAgent || '');
+if (this._lidUse) doc.documentElement.classList.add('lid-on');
 this._groundCol = ''; this._marks = null;
 this._mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 this._wide = window.matchMedia ? window.matchMedia('(min-width: 860px) and (min-height: 520px)') : null;
@@ -132,7 +137,18 @@ if (!resized && hk === this._lastHk && Math.abs(T - this._lastT) < 0.0004 && Mat
 this._lastT = T; this._lastTalk = talk; this._lastDesk = desk; this._lastCall = call; this._lastDraw = now; this._lastHk = hk;
 this._Hc = Hc;
 this._draw(this._ctx, W, H, dpr, T, still ? 0 : now / 1000);
+this._top(now, pw);
 this._bars(st);
+}
+
+/* The colour of the film's top row, for the lid: read from the picture itself, a few times a second. It is the
+   middle one of five points across the row, so that a star or the edge of a cloud is not taken for the sky. */
+_top(now, pw) {
+if (!this._lidUse || this._isWide || (this._topCol && now - this._topAt < 160)) return;
+this._topAt = now;
+let d; try { d = this._ctx.getImageData(0, 0, pw, 1).data; } catch (e) { return; }
+const mid = (k) => [0.04, 0.27, 0.5, 0.73, 0.96].map((x) => d[Math.min(pw - 1, Math.round(pw * x)) * 4 + k]).sort((a, b) => a - b)[2];
+this._topCol = 'rgb(' + mid(0) + ', ' + mid(1) + ', ' + mid(2) + ')';
 }
 
 /* An iPhone's Safari (iOS 26) floats its own bars over the page and colours what shows behind them itself.
@@ -158,6 +174,12 @@ const m = this._marks, b = st + (window.innerHeight || 0);
 under = !m || b < m.sheet ? ground : b < m.wait ? 'rgb(255, 255, 255)' : b < m.foot ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)';
 }
 if (under !== this._underOn) { this._underOn = under; doc.body.style.backgroundColor = under; }
+/* The top of the screen: the lid takes the colour of what lies under it there. */
+if (this._lidUse) {
+let over = '';
+if (phone && this._topCol) { const m = this._marks; over = !m || st < m.sheet ? this._topCol : st < m.wait ? 'rgb(255, 255, 255)' : st < m.foot ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)'; }
+if (over !== this._lidOn) { this._lidOn = over; this._lid.style.backgroundColor = over; }
+}
 }
 
 /* Reads where the sections and cards sit, and fades a card out as the next section pushes it away. */
