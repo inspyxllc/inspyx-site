@@ -17,6 +17,7 @@ const SKELETON = (body) => `<!doctype html><html><head><meta charset=utf8><meta 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.txt': 'text/plain', '.xml': 'application/xml' };
 
 function serve(root, port) {
+  root = path.resolve(root);
   const server = http.createServer((req, res) => {
     let p = decodeURIComponent(req.url.split('?')[0]);
     if (p === '/') p = '/index.html';
