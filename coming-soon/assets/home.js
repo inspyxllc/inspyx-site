@@ -1342,26 +1342,66 @@ ctx.fillStyle = g; ctx.fillRect(X(100), Y(240), 330 * s, 330 * s);
 /* The phone is low at first and comes up to aim once the camera opens. */
 const wx = 181 - 4 * raise, wy = 372 - 36 * raise;
 
-/* the inspector, from behind: the same man as before, standing a step further back */
-ctx.save();
-const f = 0.66;
-ctx.translate(X(272), Y(300)); ctx.scale(f, f); ctx.translate(-X(319), -Y(304));
-const yB = Math.max(Y(541), Y(304) + (Hc + 90 - Y(300)) / f);
-g = ctx.createLinearGradient(0, Y(350), 0, Y(520));
+/* The inspector, from behind. He is drawn to a man's proportions, counted in heads (his head with its cap
+   is 67 units tall): his shoulders two heads wide with his arms, the hem of his vest three heads below the top
+   of his head, his legs under it, and arms that are thicker above the elbow than below it.
+   Until 2026-11-12 his body was one slab, two and three quarter heads wide, that ran off the bottom of the
+   screen with no waist and no legs, and his arms were two thin bars. On a phone with its bars tucked away the
+   slab was four heads long. Moises saw it on the live page: he did not look like a person. */
+const mx = 272, yFloor = Y(492) + Math.max(0, Hc - Y(492)) + 90;
+/* his jeans: his hips, and two legs with a gap between them */
+ctx.fillStyle = c(P.jeans, 0.12);
+ctx.beginPath();
+ctx.moveTo(X(mx - 52.8), Y(466)); ctx.lineTo(X(mx + 52.8), Y(466));
+ctx.bezierCurveTo(X(mx + 57.2), Y(500), X(mx + 56.1), Y(560), X(mx + 50.6), Y(640));
+ctx.lineTo(X(mx + 50.6), yFloor); ctx.lineTo(X(mx + 7.7), yFloor); ctx.lineTo(X(mx + 5.5), Y(640));
+ctx.quadraticCurveTo(X(mx + 3.3), Y(560), X(mx), Y(534));
+ctx.quadraticCurveTo(X(mx - 3.3), Y(560), X(mx - 5.5), Y(640));
+ctx.lineTo(X(mx - 7.7), yFloor); ctx.lineTo(X(mx - 50.6), yFloor); ctx.lineTo(X(mx - 50.6), Y(640));
+ctx.bezierCurveTo(X(mx - 56.1), Y(560), X(mx - 57.2), Y(500), X(mx - 52.8), Y(466));
+ctx.closePath(); ctx.fill();
+ctx.fillStyle = 'rgba(12,18,34,0.2)';
+this._rr(ctx, X(mx - 40), Y(494), 28 * s, 29 * s, 5 * s); ctx.fill();
+this._rr(ctx, X(mx + 12), Y(494), 28 * s, 29 * s, 5 * s); ctx.fill();
+/* his navy shirt: his shoulders and his sides, where the vest leaves them bare */
+ctx.fillStyle = c(P.cap, 0.2);
+ctx.beginPath();
+ctx.moveTo(X(mx - 18.7), Y(344));
+ctx.quadraticCurveTo(X(mx - 44), Y(348), X(mx - 64.9), Y(357));
+ctx.lineTo(X(mx - 57.2), Y(404)); ctx.lineTo(X(mx - 51.7), Y(472)); ctx.lineTo(X(mx + 51.7), Y(472)); ctx.lineTo(X(mx + 57.2), Y(404));
+ctx.lineTo(X(mx + 64.9), Y(357));
+ctx.quadraticCurveTo(X(mx + 44), Y(348), X(mx + 18.7), Y(344));
+ctx.closePath(); ctx.fill();
+/* his vest: straps over his shoulders, cut in at the arms, and a hem at his hips */
+g = ctx.createLinearGradient(0, Y(350), 0, Y(484));
 g.addColorStop(0, c(P.vest)); g.addColorStop(1, c(P.vest, 0.7));
 ctx.fillStyle = g;
 ctx.beginPath();
-ctx.moveTo(X(206), yB); ctx.lineTo(X(206), Y(540));
-ctx.bezierCurveTo(X(204), Y(440), X(232), Y(392), X(286), Y(376));
-ctx.lineTo(X(352), Y(376));
-ctx.bezierCurveTo(X(392), Y(384), X(420), Y(402), X(440), Y(430));
-ctx.lineTo(X(440), yB);
+ctx.moveTo(X(mx - 23.1), Y(346));
+ctx.quadraticCurveTo(X(mx - 41.8), Y(349), X(mx - 55), Y(356));
+ctx.quadraticCurveTo(X(mx - 47.3), Y(380), X(mx - 56.1), Y(406));
+ctx.bezierCurveTo(X(mx - 57.2), Y(430), X(mx - 55), Y(456), X(mx - 56.1), Y(478));
+ctx.quadraticCurveTo(X(mx), Y(486), X(mx + 56.1), Y(478));
+ctx.bezierCurveTo(X(mx + 55), Y(456), X(mx + 57.2), Y(430), X(mx + 56.1), Y(406));
+ctx.quadraticCurveTo(X(mx + 47.3), Y(380), X(mx + 55), Y(356));
+ctx.quadraticCurveTo(X(mx + 41.8), Y(349), X(mx + 23.1), Y(346));
+ctx.quadraticCurveTo(X(mx), Y(374), X(mx - 23.1), Y(346));
 ctx.closePath(); ctx.fill();
-/* the vest's pale stripes: one across his back, two down from his shoulders */
+/* the vest's pale stripes, kept inside the vest: one around his back, two down from his shoulders */
+ctx.save(); ctx.clip();
 ctx.fillStyle = 'rgba(245,245,235,0.78)';
-this._poly(ctx, [[X(206), Y(471)], [X(440), Y(450)], [X(440), Y(468)], [X(206), Y(489)]]); ctx.fill();
-this._poly(ctx, [[X(258), Y(383)], [X(274), Y(379)], [X(270), Y(466)], [X(253), Y(467.5)]]); ctx.fill();
-this._poly(ctx, [[X(364), Y(378)], [X(380), Y(380.5)], [X(388), Y(454.5)], [X(371), Y(456)]]); ctx.fill();
+ctx.beginPath();
+ctx.moveTo(X(mx - 61.6), Y(436)); ctx.quadraticCurveTo(X(mx), Y(443), X(mx + 61.6), Y(436));
+ctx.lineTo(X(mx + 61.6), Y(450)); ctx.quadraticCurveTo(X(mx), Y(457), X(mx - 61.6), Y(450));
+ctx.closePath(); ctx.fill();
+this._poly(ctx, [[X(mx - 44), Y(344)], [X(mx - 31.9), Y(344)], [X(mx - 30.8), Y(441)], [X(mx - 42.9), Y(440)]]); ctx.fill();
+this._poly(ctx, [[X(mx + 44), Y(344)], [X(mx + 31.9), Y(344)], [X(mx + 30.8), Y(441)], [X(mx + 42.9), Y(440)]]); ctx.fill();
+ctx.restore();
+/* His neck, his ears, his collar, his hair and his cap keep the size and the place they had: the lines from
+   the captions end at his head. */
+ctx.save();
+const f = 0.66;
+ctx.translate(X(272), Y(300)); ctx.scale(f, f); ctx.translate(-X(319), -Y(304));
 /* his neck, and his ears either side of his hair: the same skin as his hand */
 ctx.fillStyle = c(P.skin, 0.28); this._rr(ctx, X(292), Y(338), 54 * s, 50 * s, 14 * s); ctx.fill();
 ctx.fillStyle = c(P.skin, 0.25);
@@ -1376,10 +1416,16 @@ ctx.fillStyle = c(P.cap, 0.5); this._rr(ctx, X(303), Y(310), 32 * s, 8 * s, 4 * 
 ctx.fillStyle = c(P.cap); this._poly(ctx, [[X(272), Y(296)], [X(248), Y(304)], [X(250), Y(311)], [X(274), Y(306)]]); ctx.fill();
 ctx.restore();
 
-/* his arms: the sleeves of his navy shirt. One hangs at his side; the other holds the phone up. */
-ctx.strokeStyle = c(P.cap, 0.2); ctx.lineWidth = 23 * s; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-ctx.beginPath(); ctx.moveTo(X(343), Y(384)); ctx.lineTo(X(349), Y(492) + Math.max(0, Hc - Y(492)) / zoom + 60); ctx.stroke();
-ctx.beginPath(); ctx.moveTo(X(207), Y(380)); ctx.lineTo(X(193), Y(418)); ctx.lineTo(X(wx), Y(wy)); ctx.stroke();
+/* His arms, in the sleeves of his navy shirt. One hangs at his side, with his hand below the cuff; the other
+   holds the phone up, his elbow low and his forearm rising to it. */
+ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+ctx.fillStyle = c(P.skin, 0.25); this._rr(ctx, X(mx + 56), Y(526), 17 * s, 38 * s, 8 * s); ctx.fill();
+ctx.strokeStyle = c(P.cap, 0.2);
+ctx.lineWidth = 22 * s; ctx.beginPath(); ctx.moveTo(X(mx + 68), Y(456)); ctx.lineTo(X(mx + 65), Y(528)); ctx.stroke();
+ctx.lineWidth = 26 * s; ctx.beginPath(); ctx.moveTo(X(mx + 63), Y(368)); ctx.lineTo(X(mx + 68), Y(456)); ctx.stroke();
+const ex = 194 - 2 * raise, ey = 416 - 6 * raise;
+ctx.lineWidth = 22 * s; ctx.beginPath(); ctx.moveTo(X(ex), Y(ey)); ctx.lineTo(X(wx), Y(wy)); ctx.stroke();
+ctx.lineWidth = 26 * s; ctx.beginPath(); ctx.moveTo(X(mx - 63), Y(368)); ctx.lineTo(X(ex), Y(ey)); ctx.stroke();
 
 /* his hand and the iPhone, at its real size beside his head */
 const hx = wx - 9, hy = wy - 27;

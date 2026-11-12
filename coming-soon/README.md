@@ -73,6 +73,17 @@ Changed from the mock-up on purpose since then:
   in his hand at its real size, and the scene is a conversation: his words in white captions,
   Spex's answers in black ones. The scene does what Spex says: the camera comes up, the light
   comes on, the flash fires. The scene's stretch of page is 2,400 px, where the others are 1,300.
+- **The inspector at the panel was redrawn** on 2026-11-12, at Moises's word. He saw the live
+  page on his iPhone: "the guy's body is abnormally wide and long ... he doesn't look like a
+  normal human being". His body was one orange slab, two and three quarter heads wide, that ran
+  off the bottom of the screen with no waist and no legs, and his arms were two thin bars. On a
+  phone with Safari's bar tucked away the slab was four heads long: on a person that reaches the
+  knees. He is now drawn to a man's proportions, counted in heads: shoulders a little over two
+  heads wide with his arms, the hem of his vest three heads below the top of his head, his jeans
+  and two legs under it, and arms that are thicker above the elbow than below it. His head, his
+  hand and the phone are where they were, because the captions' lines end at them. The figure is
+  `_shotD` in `home.js`; a figure that is cut off by the bottom of the screen needs its waist
+  and legs drawn all the same, because a phone shows more of it once its bars tuck away.
 
 - **The Spex Business scene was rebuilt** on 2026-11-12, at his word (above). In the mock-up three
   small chips over the tailgate turned a question into "Reply ready" with a Send button. Now the
