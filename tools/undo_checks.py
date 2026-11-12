@@ -31,6 +31,16 @@ PRICING = 'coming-soon/pricing.html'
 TERMS = 'coming-soon/terms.html'
 
 MUTATIONS = [
+    # ---- the calculator's starting numbers (2026-11-12)
+    ('the calculator starts at the old, high numbers again', JS,
+     'var v = { insp: 3, hrs: 1, calls: 1, fee: 400 };',
+     'var v = { insp: 8, hrs: 2, calls: 5, fee: 400 };'),
+    ("the page's own starting number of calls differs from the script's", HTML,
+     '<span class="val" data-v="calls" aria-live="polite">1</span>',
+     '<span class="val" data-v="calls" aria-live="polite">5</span>'),
+    ('one hour a week reads "1 hours" again', JS,
+     "put('hoursUnit', v.insp * v.hrs === 1 ? 'hour' : 'hours');",
+     ""),
     # ---- the report section: the web report as a product shot (2026-11-12)
     ('the web report picture is missing from the report section', HTML,
      'srcset="/assets/report-web.webp"',

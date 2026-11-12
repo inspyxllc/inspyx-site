@@ -1659,14 +1659,15 @@ window.__inspyxFilm = film;
 (function () {
 var box = doc.querySelector('[data-calc]');
 if (!box) return;
-var v = { insp: 8, hrs: 2, calls: 5, fee: 400 };
+/* The starting numbers are low on purpose (Moises, 2026-11-12): the visitor raises them to their own. */
+var v = { insp: 3, hrs: 1, calls: 1, fee: 400 };
 var lim = { insp: [1, 20, 1], hrs: [0.5, 8, 0.5], calls: [0, 40, 1], fee: [150, 1500, 25] };
 var num = function (n) { return String(Math.round(n * 10) / 10); };
 var put = function (k, t) { var el = box.querySelector('[data-v="' + k + '"]'); if (el && el.textContent !== t) el.textContent = t; };
 var render = function () {
 var callsMonth = Math.round(v.calls * 52 / 12);
 put('insp', String(v.insp)); put('hrs', num(v.hrs)); put('calls', String(v.calls)); put('fee', '$' + v.fee);
-put('hoursWeek', num(v.insp * v.hrs));
+put('hoursWeek', num(v.insp * v.hrs)); put('hoursUnit', v.insp * v.hrs === 1 ? 'hour' : 'hours');
 put('dollars', '$' + (callsMonth * v.fee).toLocaleString('en-US'));
 var btns = box.querySelectorAll('[data-step]');
 for (var i = 0; i < btns.length; i++) {

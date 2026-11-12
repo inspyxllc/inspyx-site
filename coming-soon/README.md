@@ -335,7 +335,14 @@ stops, and compares what follows them further down the page. Of its 11 frames (m
   (`backend/spex_relay/relay/spex.py` in the app's repo, read on 2026-11-11 at 7e35c44): it opens
   the camera when asked, sets zoom, light and flash by voice, never takes the photo by itself,
   and says back only what was really set.
-- **The calculator** multiplies the visitor's own numbers. Nothing is sent anywhere.
+- **The calculator** multiplies the visitor's own numbers. Nothing is sent anywhere. It starts at
+  3 inspections a week, 1 hour writing each report, 1 call to voicemail a week and a $400 fee
+  (so "3 hours a week" and "$1,600 a month"). Those are Moises's numbers, 2026-11-12 16:41:27Z: "I
+  want that set to default three inspections a week, 1 hour writing each report, and one call to
+  voicemail a week. Let's have the people raise that themselves so that it's more impactful on
+  them how much they're missing out on." Before that it started at 8, 2, 5 and $400 (16 hours,
+  $8,800), which were Claude's. The numbers stand twice, in `index.html` and in `home.js`, and a
+  check holds the two equal. One hour reads "1 hour a week" (it read "1 hours").
 - **The waitlist form** sends the email and the two taps to `join_waitlist()` in Inspyx's own
   database (Supabase), with the project's publishable key. See `../backend/waitlist/schema.sql`.
   That database piece was applied to inspyx-prod on 2026-11-11 (the migration `website_waitlist`),

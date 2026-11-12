@@ -92,17 +92,28 @@ async function open(browser, opts) {
   {
     const { ctx, page } = await open(browser);
     const val = (k) => page.textContent('[data-v="' + k + '"]');
-    ok('calculator starts at 8 inspections, 2 hours, 5 calls, $400: 16 hours and $8,800', (await val('hoursWeek')) === '16' && (await val('dollars')) === '$8,800');
+    // what the page itself carries, before any script has run: the same starting numbers
+    const html = await (await page.request.get(url)).text();
+    const inPage = (k) => { const m = html.match(new RegExp('data-v="' + k + '"[^>]*>([^<]*)<')); return m ? m[1] : null; };
+    ok('calculator starts at 3 inspections, 1 hour, 1 call, $400: 3 hours and $1,600', (await val('insp')) === '3' && (await val('hrs')) === '1' && (await val('calls')) === '1' && (await val('fee')) === '$400' && (await val('hoursWeek')) === '3' && (await val('dollars')) === '$1,600');
+    ok('the page carries the same starting numbers before its script runs', ['insp', 'hrs', 'calls', 'fee', 'hoursWeek', 'dollars'].map(inPage).join(' ') === '3 1 1 $400 3 $1,600', ['insp', 'hrs', 'calls', 'fee', 'hoursWeek', 'dollars'].map(inPage).join(' '));
     await page.click('[data-step="insp"][data-d="1"]');
     await page.click('[data-step="hrs"][data-d="1"]');
-    ok('more inspections and longer reports: 9 x 2.5 = 22.5 hours', (await val('insp')) === '9' && (await val('hrs')) === '2.5' && (await val('hoursWeek')) === '22.5');
+    ok('more inspections and longer reports: 4 x 1.5 = 6 hours', (await val('insp')) === '4' && (await val('hrs')) === '1.5' && (await val('hoursWeek')) === '6');
     await page.click('[data-step="fee"][data-d="-1"]');
-    ok('fee steps by $25: 22 calls a month x $375 = $8,250', (await val('fee')) === '$375' && (await val('dollars')) === '$8,250');
+    ok('fee steps by $25: 4 calls a month x $375 = $1,500', (await val('fee')) === '$375' && (await val('dollars')) === '$1,500');
     for (let i = 0; i < 6; i++) await page.click('[data-step="calls"][data-d="-1"]', { force: true }).catch(() => {});
     const minusOff = await page.isDisabled('[data-step="calls"][data-d="-1"]');
     ok('calls stop at 0, the minus button switches off, and the dollars read $0', (await val('calls')) === '0' && minusOff && (await val('dollars')) === '$0');
-    for (let i = 0; i < 14; i++) await page.click('[data-step="insp"][data-d="1"]', { force: true }).catch(() => {});
+    for (let i = 0; i < 20; i++) await page.click('[data-step="insp"][data-d="1"]', { force: true }).catch(() => {});
     ok('inspections stop at 20 and the plus button switches off', (await val('insp')) === '20' && (await page.isDisabled('[data-step="insp"][data-d="1"]')));
+    // one hour is "1 hour", not "1 hours": 1 inspection x 1 hour
+    for (let i = 0; i < 22; i++) await page.click('[data-step="insp"][data-d="-1"]', { force: true }).catch(() => {});
+    await page.click('[data-step="hrs"][data-d="-1"]');
+    const one = (await val('hoursWeek')) + ' ' + (await page.textContent('.fig-l'));
+    await page.click('[data-step="hrs"][data-d="-1"]');
+    const half = (await val('hoursWeek')) + ' ' + (await page.textContent('.fig-l'));
+    ok('one inspection of one hour reads "1 hour a week", and half an hour "0.5 hours a week"', one === '1 hour a week writing reports' && half === '0.5 hours a week writing reports', one + ' | ' + half);
     await ctx.close();
   }
 
