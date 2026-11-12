@@ -31,6 +31,16 @@ PRICING = 'coming-soon/pricing.html'
 TERMS = 'coming-soon/terms.html'
 
 MUTATIONS = [
+    # ---- the colour of a phone browser's top bar (2026-11-12)
+    ("the page's grounds on a phone are white again", HTML,
+     '  html,body{background:var(--sky)}',
+     '  html,body{background:var(--bg)}'),
+    ("the film's box has no colour of its own again, only its gradient", HTML,
+     'z-index:0; background:var(--sky) linear-gradient(180deg, #A9CBE8 0%, #D9E4EA 55%, #F8DDBE 100%)}',
+     'z-index:0; background:linear-gradient(180deg, #A9CBE8 0%, #D9E4EA 55%, #F8DDBE 100%)}'),
+    ('the theme-color tag names another colour', HTML,
+     '<meta name="theme-color" media="(max-width: 520px)" content="#A9CBE8">',
+     '<meta name="theme-color" media="(max-width: 520px)" content="#FFFFFF">'),
     # ---- the calculator's starting numbers (2026-11-12)
     ('the calculator starts at the old, high numbers again', JS,
      'var v = { insp: 3, hrs: 1, calls: 1, fee: 400 };',

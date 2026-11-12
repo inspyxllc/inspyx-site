@@ -88,6 +88,30 @@ async function open(browser, opts) {
     ok('the header links Pricing on a wide screen, and keeps to the logo and the button on a phone', !phone.vis && wide.vis && wide.href === '/pricing', JSON.stringify([phone, wide]));
   }
 
+  // ---- the colour a phone's browser gives its own top bar: every part of the page it may read names the sky's blue
+  {
+    const SKY = 'rgb(169, 203, 232)';
+    const { ctx, page } = await open(browser, {});
+    const on = await page.evaluate(() => {
+      const film = document.querySelector('.film');
+      // the grounds as the stylesheet gives them: the script's own inline colour on the body is put aside for the reading
+      const inline = document.body.style.backgroundColor; document.body.style.backgroundColor = '';
+      const r = { html: getComputedStyle(document.documentElement).backgroundColor, body: getComputedStyle(document.body).backgroundColor, film: getComputedStyle(film).backgroundColor, filmTop: Math.round(film.getBoundingClientRect().top), filmW: Math.round(film.getBoundingClientRect().width), pos: getComputedStyle(film).position, media: window.matchMedia(document.querySelector('meta[name="theme-color"]').getAttribute('media')).matches, tint: document.querySelector('meta[name="theme-color"]').getAttribute('content') };
+      document.body.style.backgroundColor = inline;
+      return r;
+    });
+    await ctx.close();
+    ok('on a phone the page names the sky\'s blue wherever a browser may read its top bar\'s colour: the theme-color tag, both grounds, and the film\'s box pinned to the top edge', on.html === SKY && on.body === SKY && on.film === SKY && on.pos === 'fixed' && on.filmTop === 0 && on.filmW === 390 && on.media && on.tint.toUpperCase() === '#A9CBE8', JSON.stringify(on));
+    const wideCtx = await open(browser, { w: 1440, h: 900, desktop: true });
+    const off = await wideCtx.page.evaluate(() => ({ html: getComputedStyle(document.documentElement).backgroundColor, media: window.matchMedia(document.querySelector('meta[name="theme-color"]').getAttribute('media')).matches }));
+    await wideCtx.ctx.close();
+    ok('on a wide screen the page keeps its own ground and names no bar colour', off.html === 'rgb(245, 245, 247)' && off.media === false, JSON.stringify(off));
+    // the page as it is served, before any script has run
+    const served = await (await browser.newContext()).request.get(url);
+    const tag = ((await served.text()).match(/<meta name="theme-color"[^>]*>/) || [''])[0];
+    ok('the tag is in the page itself, before any script runs', /media="\(max-width: 520px\)"/.test(tag) && /content="#A9CBE8"/.test(tag), tag);
+  }
+
   // ---- calculator
   {
     const { ctx, page } = await open(browser);
