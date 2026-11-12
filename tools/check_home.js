@@ -47,7 +47,7 @@ async function open(browser, opts) {
     ok('one main heading, and the page says it is in English', head.h1 === 1 && head.lang === 'en');
     const film = await page.evaluate(() => { const c = document.querySelector('canvas[data-film]'); const d = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height * 0.7), 1, 1).data; return { w: c.width, h: c.height, a: d[3] }; });
     ok('the film is drawing', film.w > 0 && film.a === 255, JSON.stringify(film));
-    for (const f of ['assets/share.jpg', 'assets/favicon.svg', 'assets/favicon-32.png', 'assets/apple-touch-icon.png', 'robots.txt', 'sitemap.xml', 'assets/report-web.webp', 'assets/report-web.jpg', 'assets/report-clip.webp', 'assets/report-clip.jpg', 'assets/report-findings.webp', 'assets/report-findings.jpg']) {
+    for (const f of ['assets/share.jpg', 'assets/favicon.svg', 'assets/favicon-32.png', 'assets/apple-touch-icon.png', 'robots.txt', 'sitemap.xml', 'assets/report-web.webp', 'assets/report-web.jpg', 'assets/report-clip.webp', 'assets/report-clip.jpg', 'assets/report-signed.webp', 'assets/report-signed.jpg']) {
       const r = await page.request.get(url + f);
       ok('file is served: ' + f, r.status() === 200, String(r.status()));
     }
@@ -355,7 +355,7 @@ async function open(browser, opts) {
     await ctx.close();
   }
 
-  // ---- the report section: the PDF page, the web report on a phone, and a finding with a video
+  // ---- the report section: the signed end of the web report, its first screen on a phone, and a finding with a video
   {
     const { ctx, page, errs } = await open(browser, {});
     await page.evaluate(() => { const e = document.querySelector('.pages'); window.scrollTo(0, e.getBoundingClientRect().top + window.pageYOffset - 200); });
@@ -370,9 +370,9 @@ async function open(browser, opts) {
     const both = [];
     for (const i of r.imgs) for (const a of i.both) both.push(a + ' ' + (await page.request.get(new URL(a, url).href)).status());
     const wide = page.viewportSize().width;
-    ok('the report section shows three pictures that load: a PDF page, the web report on a phone, a finding with a video', r.imgs.length === 3 && r.imgs.every((i) => i.ok) && /^report-findings\./.test(r.imgs[0].src) && /^report-web\./.test(r.imgs[1].src) && /^report-clip\./.test(r.imgs[2].src) && errs.length === 0, r.imgs.map((i) => i.src + (i.ok ? '' : ' NOT LOADED')).join(', '));
+    ok('the report section shows three pictures that load: the signed end of the report, the web report on a phone, a finding with a video', r.imgs.length === 3 && r.imgs.every((i) => i.ok) && /^report-signed\./.test(r.imgs[0].src) && /^report-web\./.test(r.imgs[1].src) && /^report-clip\./.test(r.imgs[2].src) && errs.length === 0, r.imgs.map((i) => i.src + (i.ok ? '' : ' NOT LOADED')).join(', '));
     ok('each picture\'s two addresses, the WebP and the JPEG behind it, are both served', both.length === 6 && both.every((b) => / 200$/.test(b)), both.join(', '));
-    ok('each of the three says what it shows, for people who can\'t see it', /PDF/.test(r.imgs[0].alt) && /web page on a phone/.test(r.imgs[1].alt) && /video/.test(r.imgs[2].alt), r.imgs.map((i) => i.alt.slice(0, 40)).join(' | '));
+    ok('each of the three says what it shows, for people who can\'t see it', /signature/.test(r.imgs[0].alt) && /PDF/.test(r.imgs[0].alt) && /web page on a phone/.test(r.imgs[1].alt) && /with his picture/.test(r.imgs[1].alt) && /video/.test(r.imgs[2].alt), r.imgs.map((i) => i.alt.slice(0, 40)).join(' | '));
     ok('the phone is the widest of the three, and the page does not scroll sideways for it', r.imgs[1].w > r.imgs[0].w && r.imgs[1].w > r.imgs[2].w && r.sw <= wide && r.iw === wide, r.imgs.map((i) => i.w).join(', ') + '; page ' + r.sw + ' wide on a ' + wide + ' px screen');
     ok('the section\'s words, each where it can be seen: what the web report does, that it arrives with the pilot, and where the sample comes from', r.say === 'Your client opens the report as a web page, with the PDF one tap away. A dripping leak plays as video, a flickering light in slow motion.' && r.tag === 'Arrives with the pilot' && r.note === 'From a real Inspyx report, with the details anonymized.', [r.say, r.tag, r.note].join(' | '));
     await ctx.close();

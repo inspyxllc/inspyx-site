@@ -41,15 +41,32 @@ took the place of "Pilot coming soon". How it was published, and what was checke
   of the special features. Like videos and live photos and things like that. Slow-mo photos for
   the flickering lights." Asked "Show the web report on the home page now, tagged 'Arrives with
   the pilot'?", he answered "Yes, show it" (14:26:55Z).
-  - **The three pictures** at the top of the white sheet: a page of the report's PDF (as before);
-    the client's report page on a phone, its first screen; and one finding of that page, the
-    active leak in the attic, with a video marked on its photo. The PDF's cover page and its page
-    of roof photos are no longer shown, and their files are gone from `assets/`.
-  - **How the two new pictures are made:** `tools/report_pictures.js`, from the real report page
-    (branch `claude/web-report`) showing the anonymized sample report. The sample is private and
-    is not in this repo. Two things are added to what the page draws: the number plate of the car
-    in the cover photo is blurred, and the video mark on the finding's photo (a "Video" label, a
-    play button, "0:12").
+  - **The three pictures** at the top of the white sheet, all three of the web report: its end,
+    with the inspector's signature, his license number, the date and the button for the PDF;
+    its first screen on a phone, with the house, the address and the inspector's card with his
+    picture; and one finding, the active leak in the attic, with a video marked on its photo.
+    No page of the PDF is shown any more, and the PDF pictures' files are gone from `assets/`.
+  - **His second word on it, 15:16:45Z,** as the first draft was about to be published: "I want
+    a realistic address, not 1234 Main Street. It doesn't have to be a address, but it has to be
+    realistic. ... I want you to also include my signature, because the reports should have, in
+    fact, should have my picture and a signature of the, not just of mine, but of the inspector.
+    Create whatever signature you think matches my name". He sent his photo with it.
+  - **How the pictures are made:** first `tools/report_sample_touch.js` prepares the sample, then
+    `tools/report_pictures.js` takes the three pictures from the real report page (branch
+    `claude/web-report`) showing it. The sample is private and is not in this repo.
+    - The address is "7314 Willet Marsh Ct.", Tampa, FL 33635. It is invented. On 2026-11-12 the
+      Census Bureau's address service knew no such address and no street of that name. (The
+      placeholder it replaces, "1234 Main St.", matched a real address in Tampa.)
+    - The inspector is Moises himself: his name, and his photo on the inspector's card. He sent
+      the photo for this. Only the rendered picture is in this repo, not the photo's file.
+    - The signature was made for his name in a pen-like hand (the Mac's "Savoye LET", tilted a
+      little). It is not his real signature.
+    - Still placeholders in the sample: "Inspection Company", "HI 0000", "(555) 555-0100",
+      "inspector@example.com", "Buyer Name", "Agent Name".
+    - Two things are added to what the page draws: the number plate of the car in the cover
+      photo is blurred, and the video mark on the finding's photo (a "Video" label, a play
+      button, "0:12"). The photo and the signature are not added: the page shows both whenever
+      a report carries them.
   - **What is ahead of the app,** and why the section carries the tag "Arrives with the pilot":
     no client can open a web report yet (the page is written, its tables are in the database,
     its function is not deployed, and the app cannot publish a report); and the app records
@@ -62,7 +79,7 @@ took the place of "Pilot coming soon". How it was published, and what was checke
     motion."; the tag "Arrives with the pilot" in this new place; "From a real Inspyx report,
     with the details anonymized." (it was "Pages from a real Inspyx report, with the details
     anonymized."); the three pictures' descriptions for screen readers; and "Video" and "0:12" in
-    the picture.
+    the picture. In the sample itself: the address and the signature, which are Claude's too.
 - **The Spex Business scene was rebuilt on 2026-11-12**, at his word: "we don't have a section that
   includes Spex Business yet… something like the email auto scheduler, that schedules in jobs for
   you based on emails you receive or website forms filled out". Its new words (the card's paragraph

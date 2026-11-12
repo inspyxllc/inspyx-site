@@ -1,6 +1,7 @@
-// Makes the two pictures of the web report that the home page's report section shows:
-//   assets/report-web.(jpg|webp)   the client's report page on a phone, its first screen
-//   assets/report-clip.(jpg|webp)  one finding of it (the active leak in the attic), with a video marked on its photo
+// Makes the three pictures of the web report that the home page's report section shows:
+//   assets/report-web.(jpg|webp)     the client's report page on a phone, its first screen
+//   assets/report-clip.(jpg|webp)    one finding of it (the active leak in the attic), with a video marked on its photo
+//   assets/report-signed.(jpg|webp)  its end: the inspector's signature, his licence, the date, and the PDF button
 // Both are taken from the real report page (branch claude/web-report: coming-soon/report.html) showing the
 // anonymized sample report. Neither the page nor the sample is in this branch: the sample is private (this
 // repo is public), and the page is not live yet.
@@ -9,7 +10,10 @@
 // picture addresses start with /sample-report/ :
 //   node tools/report_serve.js --sample <sample folder> --port 4176 &
 //   node <this file> <out folder>
-// then copy report-web.* and report-clip.* from <out folder> into coming-soon/assets/.
+// then copy report-web.*, report-clip.* and report-signed.* from <out folder> into coming-soon/assets/.
+//
+// The sample is first prepared with tools/report_sample_touch.js: a realistic address that is nobody's home,
+// the inspector's own name, his photo, and a signature made for his name.
 //
 // Two things are added to what the page itself draws, and both are said in the manual:
 //   - the number plate of the car in the cover photo is blurred (the place is given in page pixels below, for
@@ -62,9 +66,26 @@ const out = process.argv[2];
   await el.scrollIntoViewIfNeeded(); await p.waitForTimeout(500);
   await el.screenshot({ path: path.join(out, 'clip.png') });
   await p.close();
+  // ---- 3. the end of the report: the last lines of its standards, the signature, and the PDF button
+  p = await b.newPage({ viewport: { width: 390, height: 700 }, deviceScaleFactor: 3 });
+  await p.goto('http://127.0.0.1:4176/r/sample', { waitUntil: 'networkidle' }); await p.waitForTimeout(600);
+  const span = await p.evaluate(() => {
+    const sig = document.querySelector('.sig'), end = document.querySelector('.end') || sig, part = document.querySelector('#standards') || sig;
+    // from the top of the report's last part (its heading and its one paragraph) to the end of the PDF button's part
+    const top = part.getBoundingClientRect().top + scrollY - 10, bottom = end.getBoundingClientRect().bottom + scrollY - 8;
+    return { top: Math.round(top), h: Math.round(bottom - top), signed: !!document.querySelector('.sig-img') };
+  });
+  console.log('signed end:', JSON.stringify(span));
+  await p.setViewportSize({ width: 390, height: Math.min(900, span.h) });
+  await p.evaluate((y) => { document.documentElement.style.scrollBehavior = 'auto'; scrollTo(0, y); }, span.top);
+  await p.waitForTimeout(700);
+  // the page's own bar stays at the top of the screen as you scroll: it is left out of this picture of the end
+  await p.evaluate(() => { const bar = document.querySelector('.bar'); if (bar) bar.style.visibility = 'hidden'; });
+  await p.screenshot({ path: path.join(out, 'signed.png') });
+  await p.close();
   // ---- to the sizes and formats the page serves: 600 px wide, JPEG and WebP
   p = await b.newPage();
-  for (const [name, file] of [['report-web', 'phone.png'], ['report-clip', 'clip.png']]) {
+  for (const [name, file] of [['report-web', 'phone.png'], ['report-clip', 'clip.png'], ['report-signed', 'signed.png']]) {
     const data = 'data:image/png;base64,' + fs.readFileSync(path.join(out, file)).toString('base64');
     const res = await p.evaluate(async (data) => {
       const img = new Image(); img.src = data; await img.decode();
