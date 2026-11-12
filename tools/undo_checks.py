@@ -4,8 +4,9 @@ Passing checks prove little by themselves: a check that cannot fail guards nothi
 is one way to break the page (a piece of text in home.js or index.html, and what to put in its place). The script
 makes the change, runs tools/check_home.js, counts the change as caught if a check fails, and takes it back.
 
-usage: python3 -I tools/undo_checks.py <site repo> [--part=i/n] [--first=N] [words]
+usage: python3 -I tools/undo_checks.py <site repo> [--pages] [--part=i/n] [--first=N] [words]
   The page must be served at $URL, or at http://localhost:4173/ (node tools/serve.js).
+  --pages tries the changes to the pricing and policy pages instead, against tools/check_pages.js.
   With words given, only the changes whose name holds them are tried.
   --first=N tries only the first N changes of the list (the newest part of the page stands first).
   --part=0/2 and --part=1/2 split the list in two, for two copies of the repo served on two ports:
@@ -227,9 +228,98 @@ MUTATIONS = [
 ]
 
 
+# ---- the pricing and policy pages (--pages): each of these must make tools/check_pages.js fail
+CSS = 'coming-soon/assets/page.css'
+PJS = 'coming-soon/assets/page.js'
+REFUNDS = 'coming-soon/refunds.html'
+PRIVACY = 'coming-soon/privacy.html'
+LOST = 'coming-soon/404.html'
+PAGE_MUTATIONS = [
+    ('a word is changed on the pricing page', PRICING,
+     'Cancel before then and you pay nothing.',
+     'Cancel before then and you pay little.'),
+    ('a sentence is dropped from the refunds page', REFUNDS,
+     '<li><strong>Where the law requires a refund.</strong></li>\n',
+     ''),
+    ('a link in the Terms goes somewhere else', TERMS,
+     'on our <a href="/pricing">pricing page</a>',
+     'on our <a href="/">pricing page</a>'),
+    ('the privacy page\'s title is changed', PRIVACY,
+     '<title>Inspyx — Privacy Policy</title>',
+     '<title>Inspyx — Privacy</title>'),
+    ('the page-not-found page loses its button', LOST,
+     '<a class="btn" href="/">Go to the home page</a>\n',
+     ''),
+    ('a typeface is fetched from another site', CSS,
+     ':root{\n  color-scheme:light;',
+     '@import url("https://fonts.googleapis.com/css2?family=Inter&display=swap");\n:root{\n  color-scheme:light;'),
+    ('the pages are set in another typeface', CSS,
+     'body{font-family:var(--font);',
+     'body{font-family:Georgia, serif;'),
+    ('a tile is too wide for a phone', CSS,
+     '.includes li{position:relative; flex:1 1 200px; min-width:0;',
+     '.includes li{position:relative; flex:1 1 200px; min-width:460px;'),
+    ('the price breaks onto two lines', CSS,
+     '.price span{font-size:22px;',
+     '.price span{display:block; font-size:22px;'),
+    ('the top links show on a phone', CSS,
+     '  .bar nav{display:none}',
+     '  .bar nav{display:flex}'),
+    ('the top links are too small to tap', CSS,
+     '.bar nav a{display:inline-flex; align-items:center; min-height:44px;',
+     '.bar nav a{display:inline-flex; align-items:center; min-height:30px;'),
+    ('the footer links are too small to tap', CSS,
+     'footer a{display:inline-flex; align-items:center; min-height:44px; padding:0 4px; color:var(--ink-soft)}',
+     'footer a{color:var(--ink-soft)}'),
+    ('the pricing page no longer marks itself in the top links', PRICING,
+     '<a href="/pricing" aria-current="page">Pricing</a>',
+     '<a href="/pricing">Pricing</a>'),
+    ('the card says something the plan does not', PRICING,
+     '<span class="y">or $649 a year, and save $179</span>',
+     '<span class="y">or $599 a year</span>'),
+    ('the card is read out a second time by a screen reader', PRICING,
+     '<div class="hero-art" aria-hidden="true">',
+     '<div class="hero-art">'),
+    ('the card no longer leans', PJS,
+     'if (hero && !calm) {',
+     'if (hero && false) {'),
+    ('the card leans with motion turned off', PJS,
+     'if (hero && !calm) {',
+     'if (hero) {'),
+    ('motion turned off no longer stills the card', CSS,
+     '  .hero::before, .hero::after, .floor, .glow, .float, .sweep{animation:none}',
+     '  .hero::before, .hero::after, .floor, .glow, .sweep{animation:none}'),
+    ('the script is gone from the pricing page', PRICING,
+     '<script src="/assets/page.js" defer></script>\n',
+     ''),
+    ('the Terms\' list of headings loses an entry', TERMS,
+     '<a href="#the-pilot">8. The pilot</a>\n',
+     ''),
+    ('a heading\'s address no longer matches the list', PRIVACY,
+     '<h2 id="security">Security</h2>',
+     '<h2 id="safe">Security</h2>'),
+    ('the list of headings follows the page on a phone', CSS,
+     '  .toc{position:static; flex:1 1 100%; max-height:none}',
+     '  .toc{flex:1 1 100%; max-height:none}'),
+    ('the list of headings scrolls away on a wide screen', CSS,
+     '.toc{flex:0 1 250px; min-width:200px; position:sticky;',
+     '.toc{flex:0 1 250px; min-width:200px; position:static;'),
+    ('choosing a heading no longer marks it', PJS,
+     "a.addEventListener('click', function () { chosen = i; landed = null; mark(); });",
+     "a.addEventListener('click', function () { });"),
+    ('a line of policy text grows too long to read', CSS,
+     '.doc article > *{max-width:720px}',
+     '.doc article > *{max-width:none}'),
+    ('a policy title runs out of a phone\'s window', CSS,
+     '  .title h1{font-size:34px}',
+     '  .title h1{font-size:64px}'),
+]
+CHECK = 'tools/check_home.js'
+
+
 def run_checks():
     env = dict(os.environ)
-    out = subprocess.run(['node', 'tools/check_home.js'], cwd=repo, env=env, capture_output=True, text=True, timeout=600)
+    out = subprocess.run(['node', CHECK], cwd=repo, env=env, capture_output=True, text=True, timeout=600)
     lines = (out.stdout + out.stderr).splitlines()
     fails = [l[6:].split('  [')[0] for l in lines if l.startswith('FAIL')]
     passes = sum(1 for l in lines if l.startswith('PASS'))
@@ -242,6 +332,8 @@ def git(*args):
 
 assert git('status', '--porcelain', '--', 'coming-soon', 'tools').stdout.strip() == '', 'commit first'
 args = sys.argv[2:]
+if '--pages' in args:
+    MUTATIONS, CHECK = PAGE_MUTATIONS, 'tools/check_pages.js'
 part = [a for a in args if a.startswith('--part=')]
 only = ' '.join(a for a in args if not a.startswith('--'))
 if only:

@@ -622,3 +622,64 @@ but for one sentence added to the privacy page: what the waitlist keeps (approve
 2026-11-11, item W8).
 `404.html` is the page a wrong address gets. `robots.txt` lets every reader in, and
 `sitemap.xml` lists the five pages.
+
+### Their new look (built 2026-11-12, NOT published yet)
+
+Moises approved the look as a mock-up on 2026-11-12 at 21:07:49Z ("Yes, that's it", to "Is this the look you
+want for the pricing and policy pages?"). That approves the look. Publishing it is a change to what
+inspyx.com shows, so it waits for his word, and it goes out as one publish.
+
+**What changed, and what did not.**
+
+- The words did not change. Not one sentence, link or head tag of the five pages (`pricing.html`,
+  `refunds.html`, `terms.html`, `privacy.html`, `404.html`) is different. `tools/page_words.json` holds every
+  one of them as it stood before the new look, and a self-check compares the served pages with it.
+- The top is the home page's logo. On a wide screen it also has the four pages (the footer's own four
+  links, the current one marked). On a phone it keeps to the logo, as the home page does; the footer has
+  the four.
+- `/pricing`: the opening and the plan stand on the home page's morning sky; beside the plan is the plan
+  again as a card with depth. The card repeats the plan's own words (INSPYX, Founding inspector, $69 a
+  month, or $649 a year, and save $179) and is hidden from screen readers, so nothing is read twice. Then
+  "What your plan includes" as five tiles, "30 days free" as four ticks (ticks, not numbers: the four lines
+  are not in time order), the promise as a dark band, billing and cancelling side by side, and Questions.
+- `/refunds`, `/terms`, `/privacy`: the title on a short sky, a list of the page's own headings, and the
+  text in one card. The list stands beside the text on a wide screen and stays in view; on a phone it stands
+  above the text. Each heading has an address made from its words (`/terms#your-plan-and-payments`). If a
+  heading is reworded later, keep its `id`: links to it may be out in the world.
+- The page a wrong address gets has the same top and a sky panel.
+- Two labels were added that only a screen reader says: "Pages" for the top links and "On this page" for
+  the list of headings. Moises was told of both.
+
+**How it is made.**
+
+- `assets/page.css` is the whole look. It says no words; the tiles' badges and the ticks are drawn by it.
+- `assets/page.js` is two small movements: the card leans to the pointer (it gives the page two numbers,
+  `--mx` and `--my`, and the stylesheet does the rest), and the list of headings marks the section being
+  read. A heading the reader chose stays marked until they scroll away, because a short last section can
+  never reach the top by itself. With the file missing the pages read the same.
+- The card takes its size from its own column (`cqw`), not from the window, so it is never cut off.
+- The type is the home page's own (`-apple-system` and its fallbacks). Nothing is fetched from another
+  site: a web font would send each visitor's address to its host, which the privacy page does not allow for.
+- With motion turned off nothing floats, drifts or leans.
+- The site now serves 22 files: the 21 from before and `assets/page.js`.
+
+**Checking it.**
+
+```
+node tools/serve.js &
+node tools/check_pages.js                       # 71 self-checks, about 20 seconds
+python3 -I tools/undo_checks.py . --pages       # breaks the five pages 26 ways, one at a time: each must be caught
+node tools/check_home.js                        # the home page's checks: one of them holds the promise's terms on /pricing
+```
+
+`check_pages.js` checks, for each page, on a phone and on a wide screen: every word, every link, the
+title and link-preview tags; that it loads with no errors and asks no other site for anything; that
+nothing scrolls sideways; the top; tap sizes; the type. Then the pricing card (its words, its lean, motion
+off) and the policy pages' list of headings (it is the page's own headings, it stays in view, choosing an
+entry brings its section up and marks it).
+
+**Changing a word on these pages.** Only with Moises's approval. Change the page, then run
+`node tools/check_pages.js --keep` to write the new `tools/page_words.json`, and name his approval and its
+date in the commit. A changed word without that fails the checks, which is the point.
+One check on the home page (`check_home.js`) looks for the promise's lines in `pricing.html` as they are
+written, tags included: `<h2>Faster reports, or three months free</h2>` must stay bare, with no class or id.
