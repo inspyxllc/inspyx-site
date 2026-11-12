@@ -366,6 +366,36 @@ async function open(browser, opts) {
     await ctx.close();
   }
 
+  // ---- under the film: what an iPhone shows behind Safari's own bar
+  {
+    const { ctx, page, errs } = await open(browser, {});
+    const seen = [];
+    for (const stop of ['top', 'call', 'desk', 'talk', 'last']) {
+      seen.push(await page.evaluate(async (stop) => {
+        const f = window.__inspyxFilm;
+        const y = stop === 'top' ? 0 : stop === 'last' ? f._scn[3].top - f._V + 900 : f.seqScroll({ call: 1, desk: 2, talk: 3 }[stop], 0.5);
+        window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 300));
+        // the film's last rows at its right-hand end, away from the truck and the man (forty rows, so that the
+        // wall's siding lines in the Spex scene average out)
+        const c = f._cv, d = c.getContext('2d').getImageData(c.width - 14, c.height - 40, 6, 40).data, film = [0, 0, 0];
+        for (let i = 0; i < d.length; i += 4) { film[0] += d[i]; film[1] += d[i + 1]; film[2] += d[i + 2]; }
+        const g = (getComputedStyle(document.querySelector('[data-story]')).backgroundColor.match(/[\d.]+/g) || []).map(Number);
+        return { stop, ground: g, film: film.map((v) => Math.round(v / (d.length / 4))) };
+      }, stop));
+    }
+    const far = seen.filter((r) => r.ground.length !== 3 || Math.max(...r.ground.map((v, i) => Math.abs(v - r.film[i]))) > 20);
+    ok('a phone: the page\'s ground under the film takes the colour of the film\'s last rows, scene by scene', far.length === 0 && errs.length === 0, seen.map((r) => r.stop + ' ' + r.ground.join(',') + ' / ' + r.film.join(',')).join(' ; '));
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(browser, { w: 1440, h: 900, desktop: true });
+    await page.evaluate(() => window.scrollTo(0, window.__inspyxFilm.callScroll(0.5)));
+    await page.waitForTimeout(300);
+    const g = await page.evaluate(() => getComputedStyle(document.querySelector('[data-story]')).backgroundColor);
+    ok('a wide screen: the story keeps no ground colour of its own (the film is in a window there)', g === 'rgba(0, 0, 0, 0)', g);
+    await ctx.close();
+  }
+
   // ---- a very tall window (a large monitor, or one turned upright): each sequence still plays out inside its own stretch
   for (const [w, h] of [[1600, 1900], [1200, 2300]]) {
     const { ctx, page, errs } = await open(browser, { w, h, desktop: true });

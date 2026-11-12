@@ -28,6 +28,13 @@ JS = 'coming-soon/assets/home.js'
 HTML = 'coming-soon/index.html'
 
 MUTATIONS = [
+    # ---- under the film, behind Safari's bar on an iPhone (2026-11-12)
+    ('the ground under the film stays white', JS,
+     'if (ground !== this._ground) { this._ground = ground; this._story.style.backgroundColor = ground; }',
+     'this._ground = ground;'),
+    ('a wide screen gets the ground colour too', JS,
+     "const ground = this._isWide ? '' : 'rgb('",
+     "const ground = false ? '' : 'rgb('"),
     # ---- very tall windows (2026-11-12)
     ('on a very tall window a sequence runs on past the end of its stretch again', JS,
      'const t0 = Math.max(SEQ_HOLD[n] + 40, Math.min(Math.max(SEQ_HOLD[n], V - 80) + 40, t1 - 900));',

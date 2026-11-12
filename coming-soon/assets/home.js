@@ -80,6 +80,8 @@ const rs = desk.querySelectorAll('[data-row]');
 for (let i = 0; i < rs.length; i++) rows.push({ when: rs[i].getAttribute('data-when') || '', from: rs[i].getAttribute('data-from') || '' });
 if (say.length >= 4 && rows.length >= 3) this._desk = { say: say, rows: rows, title: desk.getAttribute('data-cal') || '', count: desk.getAttribute('data-count') || '' };
 }
+/* the page's own ground under the film (see _draw: what an iPhone shows behind Safari's bar) */
+this._story = doc.querySelector('[data-story]'); this._ground = null;
 this._mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 this._wide = window.matchMedia ? window.matchMedia('(min-width: 860px) and (min-height: 520px)') : null;
 this._initFilm();
@@ -279,6 +281,13 @@ if (dp) { const h = L.hazeAmt * dp; r += (L.haze[0] - r) * h; g += (L.haze[1] - 
 return a == null ? 'rgb(' + (r | 0) + ',' + (g | 0) + ',' + (bl | 0) + ')' : 'rgba(' + (r | 0) + ',' + (g | 0) + ',' + (bl | 0) + ',' + a + ')';
 }
 
+/* The same colour sum as _c, as three numbers, for mixing two colours. */
+_rgb(b, sh) {
+const L = this._L, o = [];
+for (let i = 0; i < 3; i++) { let v = b[i] * L.tint[i] / 255 * L.shade; if (sh) v += (v * L.sh[i] / 255 - v) * sh; o.push(v); }
+return o;
+}
+
 _rgba(c, a) { return 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' + (a == null ? 1 : Math.max(0, a).toFixed(3)) + ')'; }
 
 _glass() {
@@ -422,6 +431,17 @@ this._screen(ctx);
 const vg = ctx.createRadialGradient(W / 2, Hc * 0.56, Hc * 0.34, W / 2, Hc * 0.56, Hc * 0.82);
 vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.24)');
 ctx.fillStyle = vg; ctx.fillRect(0, 0, W, Hc);
+/* Under the film. On an iPhone, Safari's own bar floats over the bottom of the page, and behind it Safari
+   draws only the page that scrolls: a picture pinned to the screen, like this film, stops at the bar, and the
+   page's white ground showed there as a strip under the street. So on phones the story's ground takes the
+   colour of the film's last row: the street, in the light of the hour, or the wall in the Spex scene.
+   Everywhere else that ground lies hidden behind the film. */
+if (this._story) {
+const street = this._rgb(this._P.street2, 0.3), wall = this._rgb(this._P.siding, 0.3);
+/* (the wall's last row lies in his shadow and under the darkened corners, a little darker than the wall itself) */
+const ground = this._isWide ? '' : 'rgb(' + [0, 1, 2].map((i) => Math.round(street[i] + (wall[i] * 0.88 - street[i]) * aD)).join(', ') + ')';
+if (ground !== this._ground) { this._ground = ground; this._story.style.backgroundColor = ground; }
+}
 }
 
 _sky(ctx, W, H, t) {

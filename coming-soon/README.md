@@ -101,6 +101,14 @@ stops, and compares what follows them further down the page. Of its 11 frames (m
 - **Phones:** the film fills the screen behind the page (a fixed canvas) and glass cards tell the
   story over it. The page scrolls the normal way. The canvas is as tall as the screen with the
   browser's bars tucked away; the scene is composed for the shorter screen you see first.
+- **Behind Safari's bar on an iPhone** (iOS 26): Safari's own bar floats over the bottom of the
+  page, and behind it Safari draws only the page that scrolls. A picture pinned to the screen,
+  like the film, stops at the bar, so the page's white ground showed there as a strip under the
+  street: about 98 px tall with the bar open, 58 px with it tucked away (measured on 2026-11-12 in
+  the iOS Simulator, iPhone 17, iOS 26.2; making the film taller did not help). Since then the
+  story's own ground (`[data-story]`) takes the colour of the film's last row, set by `home.js`
+  as the film is drawn: the street in the light of the hour, the wall in the Spex scene. Everywhere
+  else that ground lies hidden behind the film, and on wide screens it is not set.
 - **Wide screens (860 px and up, at least 520 px tall):** the words sit on the left and the film
   plays in a window on the right.
 - **Between the two** (tablets held upright, narrow windows): the phone page, footer included, centred on a
@@ -176,7 +184,7 @@ From the repo's top folder:
 
 ```
 node tools/serve.js &            # the site at http://localhost:4173/, with clean URLs like Vercel's
-node tools/check_home.js         # 87 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, Mia's phone call, the Spex Business requests, the Spex conversation, very tall windows, tablet and wide layouts
+node tools/check_home.js         # 89 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, Mia's phone call, the Spex Business requests, the Spex conversation, the ground under the film, very tall windows, tablet and wide layouts
 node tools/shots.js out 390 844 -- t:1 call:0.5 desk:0.4 talk:0.6 5650   # pictures at film moments, points in Mia's phone call, the Spex Business requests or the Spex conversation, or scroll positions
 node tools/shots.js out 390 844 2 --bars=180 -- desk:1      # the same phone with its browser's bars showing: the screen people really see first
 node tools/make-images.js        # redraws the tab icons and the link-preview picture
