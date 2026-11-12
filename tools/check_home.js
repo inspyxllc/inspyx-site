@@ -2,6 +2,7 @@
 // tap targets, sideways scroll, motion turned off, and the three scenes with a sequence in them. No sign-up is ever sent: the waitlist call is
 // caught here and answered by the test.
 // usage: node tools/serve.js &   then   node tools/check_home.js
+//        (the page served somewhere else: URL=http://localhost:4174/ node tools/check_home.js)
 const { chromium } = require('playwright');
 
 const url = process.env.URL || 'http://localhost:4173/';
@@ -112,7 +113,7 @@ async function open(browser, opts) {
     await page.click('[data-submit]');
     await page.waitForTimeout(300);
     const c = calls[0] || { body: {}, headers: {} };
-    ok('a good email is sent once, with the two taps and the page', calls.length === 1 && c.body.p_email === 'Pat@Example.com' && c.body.p_who === 'solo' && c.body.p_uses === 'other' && /localhost:4173\/$/.test(c.body.p_page) && c.body.p_source === '', JSON.stringify(c.body));
+    ok('a good email is sent once, with the two taps and the page', calls.length === 1 && c.body.p_email === 'Pat@Example.com' && c.body.p_who === 'solo' && c.body.p_uses === 'other' && c.body.p_page === new URL(url).host + '/' && c.body.p_source === '', JSON.stringify(c.body));
     ok('the call carries the public key', /^sb_publishable_/.test(c.headers.apikey || ''));
     s = await page.evaluate(() => ({ form: document.querySelector('[data-join]').hidden, done: !document.querySelector('[data-joined]').hidden, text: document.querySelector('[data-joined]').textContent.replace(/\s+/g, ' ').trim(), focus: document.activeElement.hasAttribute('data-joined') }));
     ok('then: "You\'re on the list." replaces the form and takes the focus', s.form && s.done && s.text === "You're on the list. We'll email you when the pilot opens." && s.focus, s.text);
