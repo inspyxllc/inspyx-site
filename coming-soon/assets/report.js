@@ -143,6 +143,7 @@
   var ICONS = {
     download: 'M12 3v11m0 0l-4.5-4.5M12 14l4.5-4.5M5 19h14',
     list: 'M5 7h14M5 12h14M5 17h14',
+    home: 'M4.5 11.2L12 4.6l7.5 6.6M6.6 9.8V19h10.8V9.8M10.2 19v-5h3.6v5',
     close: 'M6 6l12 12M18 6L6 18',
     left: 'M14.5 5.5L8 12l6.5 6.5',
     right: 'M9.5 5.5L16 12l-6.5 6.5',
@@ -903,11 +904,16 @@
     ) : null;
 
     var company = report.cover.inspector.company || report.cover.inspector.name || report.title;
+    var barLogo = report.cover.logo ? fileOf(report.cover.logo) : null;
     var bar = h('div', { class: 'bar' },
       h('div', { class: 'bar-in' },
-        h('p', { class: 'bar-t' }, h('span', { class: 'bar-co' }, company)),
-        h('button', { class: 'btn btn-ghost bar-toc', type: 'button', on: { click: openContents } }, icon('list'), h('span', null, WORDS.contents)),
-        pdfButton('btn', false)
+        /* The company's own logo when the report has one; a small house on the company's colour when it has none. */
+        h('p', { class: 'bar-t' },
+          barLogo ? shows(h('img', { class: 'bar-mark bar-logo', alt: '', src: barLogo.small }), report.cover.logo, 'small') : h('span', { class: 'bar-mark', 'aria-hidden': 'true' }, icon('home')),
+          h('span', { class: 'bar-co' }, company)),
+        /* Two quiet buttons of one kind. The full "Download the PDF" button stands at the end of the report. */
+        pdfButton('btn btn-ghost bar-pdf', false),
+        h('button', { class: 'btn btn-ghost bar-toc', type: 'button', on: { click: openContents } }, icon('list'), h('span', null, WORDS.contents))
       )
     );
 

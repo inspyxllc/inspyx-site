@@ -62,7 +62,14 @@ a{color:var(--blue); text-underline-offset:2px}
 .bar-in{display:flex; align-items:center; gap:8px; height:var(--bar); padding:0 var(--gr) 0 var(--gl); max-width:1188px; margin:0 auto}
 .bar-t{flex:1; min-width:0; display:flex; align-items:center; gap:8px; font-weight:650; font-size:15.5px}
 .bar-co{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.bar .btn{padding:0 13px}
+.bar .btn{min-height:44px; padding:0 11px; border-radius:13px; font-size:14.5px; gap:6px}
+.bar .btn .ic{width:18px; height:18px}
+.bar-toc{min-width:44px; justify-content:center}
+/* The company's mark beside its name: its logo, or a small house on navy. */
+.bar-mark{flex:none; display:grid; place-items:center; width:32px; height:32px; border-radius:10px; background:var(--navy); color:#fff}
+.bar-mark .ic{width:19px; height:19px; stroke-width:1.8}
+.bar-logo{object-fit:contain; background:var(--wash)}
+.bar-t{gap:10px; font-size:15px; letter-spacing:-.005em}
 /* On a phone the contents button is its icon alone, so the company's name has the room. */
 @media (max-width:519px){ .bar-toc span{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%)} .bar-toc{padding:0 10px} }
 
