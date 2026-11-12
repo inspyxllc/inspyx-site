@@ -33,7 +33,8 @@ took the place of "Pilot coming soon". How it was published, and what was checke
 - The promise's terms (W9 and W10) are on the pricing page and in the Terms since that day: see
   "Words approved on 2026-11-12" below.
 - The Spex scene's conversation is his direction and Claude's wording. He approved the scene and
-  its lines as shown on 2026-11-11 ("Yes, that's well done.").
+  its lines as shown on 2026-11-11 ("Yes, that's well done."). On 2026-11-12 the scene moved into
+  a dark attic at his word, with two new phrases that he approved the same day.
 - He wants the report section to show the web report in place of the three PDF pages, once a web
   report exists. It does not yet: today the app makes a PDF on the phone.
 - **The Spex Business scene was rebuilt on 2026-11-12**, at his word: "we don't have a section that
@@ -106,9 +107,9 @@ Changed from the mock-up on purpose since then:
   - **The page under the film** on a phone takes the colour of the attic's floor at that moment
     (`_atticGround`): dark, a little lighter once the light is on, bright for the flash.
   - **The words.** Five of the scene's lines are as Moises approved them on 2026-11-11. Two
-    phrases are new with the attic and are drafts until he says yes: "Spex, open the camera."
-    (it was "Spex, take a photo of that breaker.") and "Filed under Attic" (it was "Filed under
-    Electrical").
+    phrases are new with the attic: "Spex, open the camera." (it was "Spex, take a photo of that
+    breaker.") and "Filed under Attic" (it was "Filed under Electrical"). He approved both, and
+    the scene, on 2026-11-12 at 13:41:27Z: see "Words approved on 2026-11-12" below.
   - **Checks.** Three self-checks read the film's own brightness: the attic is dark before the
     light, the light opens a patch that is bright against the half-dark, and the flash lights
     all of it.
@@ -318,6 +319,17 @@ wording, two questions about it, and how to publish), Moises answered: "Yes, all
   nothing.
 - The 10 pilot inspectors count as set up by Inspyx. Each one's starting report time is written
   down with them when they start: without that, the promise has nothing to be measured against.
+
+For the Spex scene in the attic, approved later that day, at 13:41:27Z. He had seen the scene's
+five moments in a picture and on his private preview, with the two new phrases named. Asked
+"Publish the attic scene, with its two new phrases?", he answered: "Yes, publish it".
+
+- "Spex, open the camera." (his first line; it was "Spex, take a photo of that breaker.")
+- "Filed under Attic" (the card at the end; it was "Filed under Electrical"), and the sentence
+  for screen readers that goes with it: "Filed under Attic. Photo taken at 4×."
+- Not new: "Camera open."; "Spex, put the flash on, put the light on, and zoom in 4×."; "Flash
+  on, light on, 4×."; "Take it."; "Got it."; "Photo taken at 4×". He approved those on
+  2026-11-11.
 
 ### The test address
 
