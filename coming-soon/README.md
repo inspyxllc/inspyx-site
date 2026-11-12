@@ -48,6 +48,11 @@ the Client, with the PDF on It (2026-11-11)").
 - The addresses the function signs for pictures and the PDF stop working after two hours. A page left
   open asks for the report again when its reader comes back to it after 90 minutes, or when a picture
   fails by then, and takes only the new addresses: what is on screen stays.
+- The bar at the top (2026-11-12): the company's mark beside its name (its logo when the report carries one,
+  `cover.logo`; otherwise a small house on navy), then two quiet buttons of one kind and one size: "PDF" and
+  the contents. The filled "Download the PDF" button stands once, at the end of the report. Before this the
+  bar had a filled navy PDF button and the bare name; the founder's words on seeing it on the home page's
+  sample: "that honking PDF button up top, and the just like blank inspection company".
 - Three rules it keeps: a report's words go on the page as text, never as markup; a photo, the PDF and the
   pay page load only from this site, inspyx.com or the Supabase project; nothing about the visit is sent
   anywhere else.

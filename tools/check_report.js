@@ -297,6 +297,15 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
     const shown = links.filter((l) => l.shown);
     ok('the PDF button is in the bar and again at the end, and downloads the file under the app\'s name for it',
       shown.length === 2 && shown.every((l) => l.href.endsWith(sample.pdf.url) && l.name === report.pdf_name && l.label === 'Download the PDF') && shown[0].text === 'PDF' && shown[1].text === 'Download the PDF', JSON.stringify(shown.map((l) => [l.text, l.name])));
+    // the bar's look: the company's mark and name, then two quiet buttons of one kind and one height
+    const bar = await page.evaluate(() => {
+      const b = document.querySelector('.bar'), mark = b.querySelector('.bar-mark'), pdfB = b.querySelector('a[data-pdf]'), toc = b.querySelector('.bar-toc');
+      const look = (e) => { const c = getComputedStyle(e), r = e.getBoundingClientRect(); return [c.backgroundColor, c.color, Math.round(r.height)].join(' '); };
+      return { mark: mark ? Math.round(mark.getBoundingClientRect().width) + ' ' + getComputedStyle(mark).backgroundColor : null, logo: !!b.querySelector('img.bar-logo'), co: b.querySelector('.bar-co').textContent, pdf: look(pdfB), toc: look(toc), order: Array.from(b.querySelectorAll('.bar-in > *')).map((e) => e.className.split(' ').pop()).join(' ') };
+    });
+    const company = report.cover.inspector.company || report.cover.inspector.name || report.title;
+    ok('the bar shows the company\'s mark beside its name, then the PDF and the contents as two quiet buttons of one kind',
+      bar.mark === '32 rgb(31, 78, 121)' && bar.logo === !!report.cover.logo && bar.co === company && bar.pdf === bar.toc && !/^rgb\(31, 78, 121\)/.test(bar.pdf) && bar.order === 'bar-t bar-pdf bar-toc', JSON.stringify(bar));
     const pdf = await page.request.get(base + sample.pdf.url);
     const body = await pdf.body();
     ok('the file it points to is a PDF', pdf.status() === 200 && /application\/pdf/.test(pdf.headers()['content-type']) && body.slice(0, 5).toString() === '%PDF-', pdf.status() + ' ' + body.length + ' bytes');
