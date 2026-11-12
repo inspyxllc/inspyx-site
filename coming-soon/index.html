@@ -105,6 +105,10 @@ a.logo{min-height:44px}
 /* The floating header */
 .bar-wrap{position:fixed; top:0; left:0; right:0; z-index:6; display:flex; justify-content:center; pointer-events:none; padding:0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px))}
 .bar{pointer-events:auto; width:100%; max-width:calc(var(--col) - 32px); height:56px; margin-top:calc(12px + env(safe-area-inset-top, 0px)); padding:6px 6px 6px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:rgba(255,255,255,.74); -webkit-backdrop-filter:blur(20px) saturate(1.5); backdrop-filter:blur(20px) saturate(1.5); border:1px solid rgba(255,255,255,.65); border-radius:999px; box-shadow:0 12px 28px -12px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.05)}
+.bar-r{display:flex; align-items:center; gap:4px}
+/* the header's Pricing link: wide screens only, where there is room for it */
+.bar-link{display:none; align-items:center; height:44px; padding:0 16px; border-radius:999px; color:var(--ink); font:600 15px/1 var(--font); text-decoration:none; transition:background-color .15s ease}
+.bar-link:hover{background:rgba(0,0,0,.06)}
 
 /* The film: fixed behind the page on phones */
 .film{position:fixed; top:0; left:max(0px, calc(50% - var(--col) / 2)); width:min(100%, var(--col)); height:100vh; height:100lvh; z-index:0; background:linear-gradient(180deg, #A9CBE8 0%, #D9E4EA 55%, #F8DDBE 100%)}
@@ -127,6 +131,8 @@ a.logo{min-height:44px}
 .scene-last{padding-bottom:104px}
 /* the Spex scene is longer: a conversation plays in it */
 .scene-talk{min-height:2400px}
+/* so is the Spex Business scene: two requests come in and are booked */
+.scene-desk{min-height:2100px}
 .card{position:sticky; top:calc(80px + env(safe-area-inset-top, 0px)); padding:18px 20px 20px; display:flex; flex-direction:column; gap:8px; background:var(--glass); -webkit-backdrop-filter:blur(22px) saturate(1.6); backdrop-filter:blur(22px) saturate(1.6); border:1px solid rgba(255,255,255,.7); border-radius:28px; box-shadow:0 24px 60px -24px rgba(0,0,0,.4), 0 0 0 1px rgba(0,0,0,.05)}
 .tag{align-self:flex-start; display:flex; align-items:center; gap:6px; height:26px; padding:0 11px 0 8px; border-radius:999px; background:rgba(0,0,0,.06); color:var(--ink-soft); font-size:12.5px; font-weight:600}
 .tag svg{display:block; width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
@@ -219,6 +225,7 @@ a.logo{min-height:44px}
   .wrap{max-width:none}
   .bar-wrap{padding:0 40px}
   .bar{max-width:1200px; margin-top:calc(16px + env(safe-area-inset-top, 0px))}
+  .bar-link{display:flex}
   .story{display:grid; grid-template-columns:minmax(0, 1fr) auto; column-gap:clamp(40px, 7vw, 112px); align-items:start; max-width:1280px; margin:0 auto; padding:0 40px}
   .film{position:sticky; top:calc((100vh - var(--sh)) / 2 + 30px); left:auto; grid-column:2; grid-row:1; width:var(--sw); height:var(--sh); z-index:1; border-radius:44px; overflow:hidden; box-shadow:0 44px 90px -44px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.06)}
   .film.off{visibility:visible}
@@ -263,7 +270,7 @@ a.logo{min-height:44px}
 
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
-  .btn,.step,.pill{transition:none}
+  .btn,.step,.pill,.bar-link{transition:none}
 }
 
 /* After Stripe's checkout (?billing=done, back or canceled): the message alone */
@@ -298,7 +305,10 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 <svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
 <span>INSPYX</span>
 </a>
+<div class="bar-r">
+<a class="bar-link" href="/pricing">Pricing</a>
 <a class="btn btn-sm" href="#waitlist">Join the waitlist</a>
+</div>
 </header>
 </div>
 
@@ -333,7 +343,7 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 </div>
 </section>
 
-<section class="scene" data-scene="2">
+<section class="scene scene-desk" data-scene="2">
 <div class="card" data-card>
 <div class="tag">
 <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.8 V8 L10.2 9.6"></path></svg>
@@ -341,7 +351,20 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 </div>
 <p class="kicker">Spex Business, your office</p>
 <h2>Grow your inspection business and leave the office to us.</h2>
-<p class="say">Spex Business writes your replies, schedules your jobs and answers questions about your business. You read it, tap Send and get back to work.</p>
+<p class="say">A request comes in by email or through the form on your website. Spex Business reads it, books the job on your calendar and writes back with the time and your price.</p>
+<!-- What the film shows in this scene: two requests come in, Spex Business answers each one, and each job
+     lands on the calendar under the one Mia booked by phone. The film draws these very words; they are
+     also here as text for anyone who can't see the film. -->
+<div class="sr" data-desk data-cal="Your calendar" data-count="booked">
+<p>In the film, two requests come in and Spex Business books them both.</p>
+<p data-row data-when="Tomorrow, 9:00 AM" data-from="Phone">Already on your calendar: tomorrow at 9:00 AM, booked by Mia on the phone.</p>
+<p data-who="mail" data-label="Email from Dana, an agent">An email from Dana, an agent: <q>Can you inspect 412 Palm Ave on Friday afternoon?</q></p>
+<p data-who="biz" data-label="Spex Business replied">Spex Business replies: <q>Friday at 2:00 PM is open. The inspection is $425.</q></p>
+<p data-row data-when="Friday, 2:00 PM" data-from="Email">Booked on your calendar: Friday at 2:00 PM.</p>
+<p data-who="form" data-label="Your website form, from Marcus">The form on your website, filled out by Marcus: <q>I need a pre-listing inspection early next week.</q></p>
+<p data-who="biz" data-label="Spex Business replied">Spex Business replies: <q>Monday at 10:00 AM is open. The inspection is $375.</q></p>
+<p data-row data-when="Monday, 10:00 AM" data-from="Website">Booked on your calendar: Monday at 10:00 AM.</p>
+</div>
 </div>
 </section>
 

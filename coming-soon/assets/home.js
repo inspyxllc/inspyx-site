@@ -10,6 +10,17 @@ var doc = document;
    when the visitor has motion turned off. */
 var TALK_BEATS = [0.05, 0.19, 0.34, 0.49, 0.65, 0.79, 0.90];
 var TALK_STILLS = [0.12, 0.27, 0.42, 0.60, 0.72, 0.87, 1];
+/* The Spex Business scene, the same way: a request comes in, Spex Business replies, the job lands on the
+   calendar; then the same again for the second request. */
+var DESK_BEATS = [0.04, 0.19, 0.33, 0.50, 0.65, 0.79];
+var DESK_STILLS = [0.12, 0.27, 0.42, 0.60, 0.72, 1];
+/* A scene with a sequence in it has a longer stretch of page than the others. Its clock stops this many px
+   into the stretch, once the scene is fully on, and the sequence plays through the pause. */
+var SEQ_HOLD = { 2: 845, 3: 735 };
+var SEQ_STILLS = { 2: DESK_STILLS, 3: TALK_STILLS };
+/* How tall the Spex Business scene's cards stand, before scaling: a request with its reply under it and
+   the full calendar (roomy), or one card's place and the full calendar (tight). */
+var DESK_ROOMY = 310, DESK_TIGHT = 225;
 /* After Stripe's checkout the page shows one message and nothing else runs. */
 if (doc.documentElement.hasAttribute('data-billing')) return;
 
@@ -38,6 +49,21 @@ const q = ps[i].querySelector('q');
 this._say.push({ who: ps[i].getAttribute('data-who'), label: ps[i].getAttribute('data-label') || '', text: (q ? q.textContent : ps[i].textContent).trim() });
 }
 if (talk.getAttribute('data-filed')) this._filed = [talk.getAttribute('data-filed'), talk.getAttribute('data-filed-note') || ''];
+}
+/* The Spex Business scene's words are written in the page the same way ([data-desk]): two requests with
+   their replies, and the three lines of the calendar. */
+this._desk = null; this._deskU = 0; this._lastDesk = -1; this._deskLive = [];
+const desk = doc.querySelector('[data-desk]');
+if (desk) {
+const say = [], rows = [];
+const ps = desk.querySelectorAll('[data-who]');
+for (let i = 0; i < ps.length; i++) {
+const q = ps[i].querySelector('q');
+say.push({ who: ps[i].getAttribute('data-who'), label: ps[i].getAttribute('data-label') || '', text: (q ? q.textContent : ps[i].textContent).trim() });
+}
+const rs = desk.querySelectorAll('[data-row]');
+for (let i = 0; i < rs.length; i++) rows.push({ when: rs[i].getAttribute('data-when') || '', from: rs[i].getAttribute('data-from') || '' });
+if (say.length >= 4 && rows.length >= 3) this._desk = { say: say, rows: rows, title: desk.getAttribute('data-cal') || '', count: desk.getAttribute('data-count') || '' };
 }
 this._mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 this._wide = window.matchMedia ? window.matchMedia('(min-width: 860px) and (min-height: 520px)') : null;
@@ -79,10 +105,10 @@ if (!this._ctx) { this._ctx = cv.getContext('2d'); resized = true; }
 if (H !== this._lastH) { this._lastH = H; resized = true; }
 const still = this._still();
 const T = this._filmTime(st, still);
-const talk = this._talkU;
+const talk = this._talkU, desk = this._deskU;
 const hk = Math.max(-120, Math.round(this._heroY));
-if (!resized && hk === this._lastHk && Math.abs(T - this._lastT) < 0.0004 && Math.abs(talk - this._lastTalk) < 0.0004 && (still || now - this._lastDraw < 45)) return;
-this._lastT = T; this._lastTalk = talk; this._lastDraw = now; this._lastHk = hk;
+if (!resized && hk === this._lastHk && Math.abs(T - this._lastT) < 0.0004 && Math.abs(talk - this._lastTalk) < 0.0004 && Math.abs(desk - this._lastDesk) < 0.0004 && (still || now - this._lastDraw < 45)) return;
+this._lastT = T; this._lastTalk = talk; this._lastDesk = desk; this._lastDraw = now; this._lastHk = hk;
 this._Hc = Hc;
 this._draw(this._ctx, W, H, dpr, T, still ? 0 : now / 1000);
 }
@@ -138,53 +164,60 @@ if (g.el.style.opacity !== op) g.el.style.opacity = op;
 }
 
 /* Film time: 1 at the top of the page, then one unit for each scene's stretch of page.
-   The Spex scene's stretch is longer than the others. There the film's clock runs its usual 1,300 px
-   with a pause in the middle, and the conversation plays through the pause: this._talkU goes 0 to 1. */
+   The Spex Business scene and the Spex scene have longer stretches than the others. There the film's clock
+   runs its usual 1,300 px with a pause in the middle, and the scene's own sequence plays through the pause:
+   this._deskU (the two requests) and this._talkU (the conversation) each go 0 to 1. */
 _filmTime(st, still) {
 const V = this._V, a = this._scn || [];
-let T = 1, talk = 0;
+let T = 1, talk = 0, desk = 0;
 for (let i = 0; i < a.length; i++) {
 const e = st + V - a[i].top;
 if (e <= 0) break;
-const n = a[i].n, h = a[i].h;
-if (n === 3 && h > 1300) {
-const sp = this._talkSpan(V, h);
+const n = a[i].n, h = a[i].h, hold = SEQ_HOLD[n];
+if (n > 2) desk = 1;
+if (n > 3) talk = 1;
+if (hold && h > 1300) {
+const sp = this._seqSpan(n, V, h);
 const raw = Math.min(1, Math.max(0, (e - sp[0]) / (sp[1] - sp[0])));
-/* the clock stops at 735 px, just after the scene has faded in, and starts again that far from the end */
-const pl = e <= 735 ? e : Math.max(735, e - (h - 1300));
+/* the clock stops just after the scene is fully on, and starts again that far from the end */
+const pl = e <= hold ? e : Math.max(hold, e - (h - 1300));
+let u;
 if (still) {
-/* motion off: the scene before holds until the conversation starts; then each line is a still of its own */
-T = 3 + (e < sp[0] ? 0 : 0.995);
-talk = e < sp[0] ? 0 : TALK_STILLS[Math.min(TALK_STILLS.length - 1, Math.floor(raw * TALK_STILLS.length))];
+/* motion off: the scene before holds until the sequence starts; then each piece is a still of its own */
+const stills = SEQ_STILLS[n];
+T = n + (e < sp[0] ? 0 : 0.995);
+u = e < sp[0] ? 0 : stills[Math.min(stills.length - 1, Math.floor(raw * stills.length))];
 } else {
-T = 3 + Math.min(1, pl / 1300);
-talk = raw;
+T = n + Math.min(1, pl / 1300);
+u = raw;
 }
+if (n === 2) desk = u; else talk = u;
 } else {
 const q = Math.min(1, e / h);
 T = n + (still ? (q < 0.5 ? 0 : 0.995) : q);
-if (n > 3) talk = 1;
 }
 }
-this._talkU = talk;
+this._talkU = talk; this._deskU = desk;
 return T;
 }
 
-/* Where the conversation starts and ends, in px from where the Spex scene's stretch enters the screen:
+/* Where a scene's sequence starts and ends, in px from where its stretch enters the screen:
    from just after the scene is fully on and its card has settled, to a little before the stretch ends. */
-_talkSpan(V, h) {
-const t0 = Math.max(735, V - 80) + 40;
+_seqSpan(n, V, h) {
+const t0 = Math.max(SEQ_HOLD[n], V - 80) + 40;
 return [t0, Math.max(t0 + 600, h - 150)];
 }
 
-/* For the tools: the scroll position that shows the conversation at u (0 at its start, 1 at its end). */
-talkScroll(u) {
+/* For the tools: the scroll position that shows scene n's sequence at u (0 at its start, 1 at its end). */
+seqScroll(n, u) {
 const a = this._scn || [];
 for (let i = 0; i < a.length; i++) {
-if (a[i].n === 3) { const sp = this._talkSpan(this._V, a[i].h); return Math.round(a[i].top - this._V + sp[0] + u * (sp[1] - sp[0])); }
+if (a[i].n === n) { const sp = this._seqSpan(n, this._V, a[i].h); return Math.round(a[i].top - this._V + sp[0] + u * (sp[1] - sp[0])); }
 }
 return 0;
 }
+talkScroll(u) { return this.seqScroll(3, u); }
+deskScroll(u) { return this.seqScroll(2, u); }
 
 _initFilm() {
 const H = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
@@ -293,14 +326,18 @@ this._L = this._lightAt(d);
 
 const G = this._G, tops = this._tops;
 /* first screen: the trees sit below the words where there is room, and the truck stays clear of the scroll hint;
-   office scene: the tablet stays below its reply chips on shorter screens */
+   office scene: the tablet stays below its cards on shorter screens. Where there is room (a wide window,
+   a tall tablet) a request and its reply sit one above the other; on a phone, where the page's own card
+   covers the top of the film, the reply takes the request's place. */
 const zA = W / 620;
 const ayTree = (this._heroB0 + 12 + 0.84 * 290 * zA) / (0.84 * H) - 0.0952;
 const ayTruck = (0.5 * (1 + G.k) * H - 64 - G.k * G.yG * zA) / (G.k * H);
 const ayA = Math.min(ayTruck, Math.max(0.8, ayTree));
-const sC = Math.max(0.82, Math.min(1.12, W / 390, (H - tops[2] - 98) / 221));
-const ayC = Math.min(0.95, Math.max(0.77, (tops[2] + 14 + 221 * sC + 27 * G.k * W / 262) / H));
-this._sC = sC;
+const roomC = H - tops[2] - 98;
+const roomy = roomC >= DESK_ROOMY;
+const sC = roomy ? Math.min(1.3, W / 390, roomC / DESK_ROOMY) : Math.max(0.82, Math.min(1.12, W / 390, roomC / DESK_TIGHT));
+const ayC = Math.min(0.95, Math.max(0.77, (tops[2] + 14 + (roomy ? DESK_ROOMY : DESK_TIGHT) * sC + 27 * G.k * W / 262) / H));
+this._sC = sC; this._deskRoomy = roomy;
 const A = this._pose(1, -40, 0, 0.5, ayA, 620);
 const B = this._pose(G.k, G.xF + 118, G.yG - 75, 0.56, 0.76, 292);
 const B2 = this._pose(G.k, G.xF + 118, G.yG - 75, 0.56, 0.76, 274);
@@ -328,7 +365,7 @@ this._world(ctx, W, H, t, T);
 this._fx(ctx, W, H, t, T);
 if (T < 1.8) this._mist(ctx, W, H);
 if (T > 1.5 && T < 2.25) this._chipsB(ctx, W, H, t, T);
-if (T > 2.5 && T < 3.56) this._chipsC(ctx, W, H, t, T);
+if (T > 2.5 && T < 3.56) this._office(ctx, W, H, t, T);
 if (T > 4.5) this._pagesE(ctx, W, H, t, T);
 }
 if (aD >= 1) {
@@ -789,11 +826,28 @@ ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 ctx.lineWidth = 1; ctx.strokeStyle = dark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.95)'; ctx.stroke();
 }
 
-_icon(ctx, kind, cx, cy, r) {
+/* A round badge with a small sign in it: white on black, or (inv) black on white for the dark cards. */
+_icon(ctx, kind, cx, cy, r, inv) {
+const disc = inv ? '#FFFFFF' : '#000000', ink = inv ? '#101114' : '#FFFFFF';
 ctx.save();
-ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
-ctx.strokeStyle = '#FFFFFF'; ctx.fillStyle = '#FFFFFF'; ctx.lineWidth = r * 0.17; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-if (kind === 'check') {
+ctx.fillStyle = disc; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
+ctx.strokeStyle = ink; ctx.fillStyle = ink; ctx.lineWidth = r * 0.17; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+if (kind === 'mail') {
+/* an envelope */
+this._rr(ctx, cx - r * 0.5, cy - r * 0.35, r, r * 0.7, r * 0.12); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(cx - r * 0.44, cy - r * 0.26); ctx.lineTo(cx, cy + r * 0.08); ctx.lineTo(cx + r * 0.44, cy - r * 0.26); ctx.stroke();
+} else if (kind === 'form') {
+/* a web page with a form on it: its top bar, a field and a button */
+this._rr(ctx, cx - r * 0.48, cy - r * 0.42, r * 0.96, r * 0.84, r * 0.14); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(cx - r * 0.48, cy - r * 0.16); ctx.lineTo(cx + r * 0.48, cy - r * 0.16);
+ctx.moveTo(cx - r * 0.24, cy + r * 0.06); ctx.lineTo(cx + r * 0.24, cy + r * 0.06); ctx.stroke();
+this._rr(ctx, cx - r * 0.26, cy + r * 0.2, r * 0.3, r * 0.1, r * 0.05); ctx.fill();
+} else if (kind === 'sent') {
+/* a paper plane: the reply has gone */
+ctx.beginPath(); ctx.moveTo(cx - r * 0.52, cy - r * 0.04); ctx.lineTo(cx + r * 0.5, cy - r * 0.46); ctx.lineTo(cx + r * 0.1, cy + r * 0.52); ctx.lineTo(cx - r * 0.08, cy + r * 0.12); ctx.closePath(); ctx.fill();
+ctx.strokeStyle = disc; ctx.lineWidth = r * 0.1;
+ctx.beginPath(); ctx.moveTo(cx - r * 0.08, cy + r * 0.12); ctx.lineTo(cx + r * 0.42, cy - r * 0.38); ctx.stroke();
+} else if (kind === 'check') {
 ctx.beginPath(); ctx.moveTo(cx - r * 0.42, cy + r * 0.04); ctx.lineTo(cx - r * 0.1, cy + r * 0.36); ctx.lineTo(cx + r * 0.46, cy - r * 0.32); ctx.stroke();
 } else if (kind === 'ring') {
 ctx.beginPath(); ctx.arc(cx - r * 0.3, cy + r * 0.3, r * 0.14, 0, 6.2832); ctx.fill();
@@ -866,50 +920,107 @@ ctx.restore();
 }
 }
 
-_chipsC(ctx, W, H, t, T) {
-const ramp = this._ramp, ease = this._ease, G = this._G;
-const s = this._sC || Math.min(1.12, W / 390);
-const a = ramp(2.62, 2.99, T);
+/* The Spex Business scene. The office runs itself on the tailgate while he is on the roof: a request comes
+   in (an email, then the form on his website), Spex Business replies with the time and the price, and the
+   job lands on his calendar, under the one Mia booked by phone.
+   The words are read from the page (index.html, [data-desk]); u runs 0 to 1 through the scene. */
+_office(ctx, W, H, t, T) {
+const D = this._desk;
+const ramp = this._ramp, ease = this._ease, G = this._G, F = this._FONT;
 const inn = ease(ramp(2.575, 2.635, T));
-const fade = (1 - ramp(3.36, 3.52, T));
-if (fade <= 0 || inn <= 0) return;
+const fade = 1 - ramp(3.36, 3.52, T);
+if (!D || fade <= 0 || inn <= 0) { this._deskLive = []; return; }
+const s = this._sC || Math.min(1.12, W / 390), roomy = !!this._deskRoomy;
+const u = this._deskU || 0, B = DESK_BEATS;
+const pop = (i) => ease(ramp(B[i], B[i] + 0.035, u));
+const A = fade * inn;
 this._screen(ctx);
-const tp = this._pt(G.k, G.xF + 324, G.yG - 79);
-const rows = [
-['Agent', 'Can you do Friday at 2?', 'Friday at 2 works.'],
-['Client', 'What does it include?', 'Here is the full list.'],
-['Client', 'Can we move to Monday?', 'Monday at 10 is open.']
-];
-const w = 262 * s, h = 56 * s, gap = 9 * s;
-const x = Math.max(12, Math.min(W - w - 12, tp[0] - 44 * s));
-const yTop = Math.max(this._tops[2] + 14, tp[1] - (h + gap) * 3 - 26 * s);
-ctx.strokeStyle = 'rgba(255,255,255,' + (0.85 * fade * inn).toFixed(3) + ')'; ctx.lineWidth = 1.5 * s;
-ctx.beginPath(); ctx.moveTo(tp[0], tp[1] - 4 * s); ctx.lineTo(x + 44 * s, yTop + (h + gap) * 3 - gap + 4 * s); ctx.stroke();
+/* the top of the tablet on the tailgate, and its middle */
+const tp = this._pt(G.k, G.xF + 324, G.yG - 79), tc = this._pt(G.k, G.xF + 323, G.yG - 66);
+const cr = W - 12, maxW = Math.min(W - 24, 372 * s), gap = 8 * s;
+const box = [];
+let slot = 0;
+for (let i = 0; i < 4; i++) { box.push(this._sayBox(ctx, D.say[i], s, maxW)); slot = Math.max(slot, box[i].h); }
+const rowH = 34 * s, headH = 32 * s, calW = Math.min(W - 24, 300 * s);
+const calH = (n) => headH + n * rowH + 8 * s;
+/* with room, a request and its reply sit one above the other; without, the reply takes the request's place */
+const exH = roomy ? slot * 2 + gap : slot;
+const yTop = Math.max(this._tops[2] + 14, tp[1] - (exH + gap + calH(3)) - 26 * s);
+const p2 = pop(2), p5 = pop(5);
+const hCal = calH(1 + p2 + p5);
+/* On a short screen the cards can't all fit. There, once a job is on the calendar its reply makes way
+   and the calendar moves up to show every line, until the next request comes in. */
+const cramped = !roomy && yTop + exH + gap + calH(3) > H - 6;
+const up1 = cramped ? ease(ramp(B[2] + 0.04, B[2] + 0.08, u)) : 0;
+const up2 = cramped ? ease(ramp(B[5] + 0.04, B[5] + 0.08, u)) : 0;
+const lift = Math.max(up1 * (1 - ease(ramp(B[3] - 0.07, B[3] - 0.02, u))), up2);
+const yCal = yTop + (exH + gap) * (1 - lift), xCal = cr - calW;
+const live = [];
+
+/* a ring spreads from the tablet as each request lands */
+for (let e = 0; e < 2; e++) {
+const ph = ramp(B[3 * e] - 0.025, B[3 * e] + 0.075, u);
+if (ph <= 0 || ph >= 1) continue;
+for (let i = 0; i < 2; i++) {
+const q = (ph + i * 0.5) % 1;
+ctx.strokeStyle = 'rgba(255,255,255,' + (0.8 * (1 - q) * A).toFixed(3) + ')'; ctx.lineWidth = 2 * s;
+ctx.beginPath(); ctx.arc(tc[0], tc[1], (8 + q * 32) * s, 0, 6.2832); ctx.stroke();
+}
+}
+
+/* the calendar hangs over the tablet on a thin line, where there is room for one */
+if (yCal + hCal + 10 * s < tp[1]) {
+ctx.strokeStyle = 'rgba(255,255,255,' + (0.85 * A).toFixed(3) + ')'; ctx.lineWidth = 1.5 * s;
+ctx.beginPath(); ctx.moveTo(tp[0], tp[1] - 4 * s); ctx.lineTo(Math.max(xCal + 30 * s, Math.min(cr - 30 * s, tp[0])), yCal + hCal + 4 * s); ctx.stroke();
+}
+
+/* the two requests, each with its reply; the first pair makes way for the second */
+for (let e = 0; e < 2; e++) {
+const out = e === 0 ? (cramped ? 1 - up1 : 1 - ramp(B[3] - 0.03, B[3], u)) : 1 - up2;
+const pq = pop(3 * e), pr = pop(3 * e + 1);
+if (out <= 0 || pq <= 0) continue;
+const q = box[2 * e], r = box[2 * e + 1];
+const yR = yTop + exH - r.h;
+if (roomy) this._sayDraw(ctx, q, cr - q.w, yR - gap - q.h, A * out, pq, s, t);
+else if (pr < 1) this._sayDraw(ctx, q, cr - q.w, yTop + exH - q.h, A * out * (1 - pr), pq, s, t);
+if (pr > 0) this._sayDraw(ctx, r, cr - r.w, yR, A * out, pr, s, t);
+if (out > 0.5) {
+if (roomy || pr < 0.5) live.push(q.rows.join(' '));
+if (pr >= 0.5) live.push(r.rows.join(' '));
+}
+}
+
+/* the calendar: one line a job, each with the door it came in through */
+this._chip(ctx, xCal, yCal, calW, hCal, A, 1, 18 * s);
+this._icon(ctx, 'cal', 23 * s, headH / 2 + 2 * s, 10.5 * s);
+ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+ctx.fillStyle = '#424245'; ctx.font = '600 ' + (12.5 * s) + 'px ' + F;
+ctx.fillText(D.title, 41 * s, headH / 2 + 2.5 * s);
+const n = 1 + (p2 >= 0.5 ? 1 : 0) + (p5 >= 0.5 ? 1 : 0);
+ctx.textAlign = 'right'; ctx.fillStyle = '#1D1D1F';
+ctx.fillText(n + ' ' + D.count, calW - 16 * s, headH / 2 + 2.5 * s);
 for (let i = 0; i < 3; i++) {
-const done = ease(ramp(0.10 + i * 0.28, 0.22 + i * 0.28, a));
-const y = yTop + i * (h + gap);
-this._chip(ctx, x, y, w, h, fade, inn, 19 * s);
-if (done < 0.5) {
-ctx.globalAlpha = ctx.globalAlpha * (1 - done * 2);
-this._icon(ctx, 'msg', 28 * s, h / 2, 16 * s);
-ctx.fillStyle = '#424245'; ctx.font = '600 ' + (12.5 * s) + 'px ' + this._FONT; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-ctx.fillText(rows[i][0], 54 * s, h / 2 - 10 * s);
-ctx.fillStyle = '#1D1D1F'; ctx.font = '600 ' + (15 * s) + 'px ' + this._FONT;
-ctx.fillText(rows[i][1], 54 * s, h / 2 + 9 * s);
-} else {
-ctx.globalAlpha = ctx.globalAlpha * (done * 2 - 1);
-this._icon(ctx, 'check', 28 * s, h / 2, 16 * s);
-ctx.fillStyle = '#424245'; ctx.font = '600 ' + (12.5 * s) + 'px ' + this._FONT; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-ctx.fillText('Reply ready', 54 * s, h / 2 - 10 * s);
-ctx.fillStyle = '#1D1D1F'; ctx.font = '500 ' + (13.5 * s) + 'px ' + this._FONT;
-ctx.fillText(rows[i][2], 54 * s, h / 2 + 9 * s, w - 124 * s);
-ctx.fillStyle = '#000000'; this._rr(ctx, w - 62 * s, h / 2 - 15 * s, 52 * s, 30 * s, 15 * s); ctx.fill();
-ctx.fillStyle = '#FFFFFF'; ctx.font = '600 ' + (13 * s) + 'px ' + this._FONT; ctx.textAlign = 'center';
-ctx.fillText('Send', w - 36 * s, h / 2 + 0.5);
-ctx.textAlign = 'left';
-}
+const p = i === 0 ? 1 : (i === 1 ? p2 : p5);
+if (p <= 0) continue;
+/* the newest line's tag is black until the next request comes in */
+const fresh = i === 0 ? 0 : (i === 1 ? p2 * (1 - ramp(B[3] - 0.03, B[3] + 0.02, u)) : p5);
+const y = headH + i * rowH, row = D.rows[i];
+ctx.save();
+ctx.globalAlpha = ctx.globalAlpha * p;
+ctx.fillStyle = 'rgba(0,0,0,0.09)'; ctx.fillRect(16 * s, y, calW - 32 * s, 1);
+ctx.textAlign = 'left'; ctx.fillStyle = '#1D1D1F'; ctx.font = '700 ' + (14.5 * s) + 'px ' + F;
+ctx.fillText(row.when, 16 * s, y + rowH / 2 + 0.5);
+ctx.font = '600 ' + (11.5 * s) + 'px ' + F;
+const pw = ctx.measureText(row.from).width + 18 * s, ph = 21 * s, px = calW - 14 * s - pw, py = y + rowH / 2 - ph / 2 + 0.5;
+ctx.fillStyle = 'rgba(0,0,0,' + (0.07 + 0.93 * fresh).toFixed(3) + ')'; this._rr(ctx, px, py, pw, ph, ph / 2); ctx.fill();
+ctx.fillStyle = 'rgb(' + Math.round(66 + 189 * fresh) + ',' + Math.round(66 + 189 * fresh) + ',' + Math.round(69 + 186 * fresh) + ')'; ctx.textAlign = 'center';
+ctx.fillText(row.from, px + pw / 2, y + rowH / 2 + 0.5);
 ctx.restore();
+if (p >= 0.5) live.push(row.when);
 }
+ctx.textAlign = 'left';
+ctx.restore();
+this._deskLive = live;
 }
 
 _panel(ctx, cx, cy, s, mark) {
@@ -969,17 +1080,21 @@ return { who: line.who, label: line.label, rows: rows, w: Math.min(maxW, 54 * cs
 }
 
 _sayDraw(ctx, box, x, y, alpha, pop, cs, t) {
-const F = this._FONT, dark = box.who === 'spex', h = box.h;
+const F = this._FONT, dark = box.who === 'spex' || box.who === 'biz', h = box.h;
 this._chip(ctx, x, y, box.w, h, alpha, pop, 19 * cs, dark);
-if (dark) {
+if (box.who === 'spex') {
 /* Spex: a white disc with its voice in it */
 ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(28 * cs, h / 2, 16 * cs, 0, 6.2832); ctx.fill();
 for (let i = 0; i < 4; i++) {
 const hh = (5 + 11 * Math.abs(Math.sin(t * 5.2 + i * 1.3 + 0.6))) * cs;
 ctx.fillStyle = '#101114'; this._rr(ctx, (20.3 + i * 4.4) * cs, h / 2 - hh / 2, 2.4 * cs, hh, 1.2 * cs); ctx.fill();
 }
+} else if (box.who === 'biz') {
+/* Spex Business writes, it doesn't speak: a white disc with a sent reply in it */
+this._icon(ctx, 'sent', 28 * cs, h / 2, 16 * cs, true);
 } else {
-this._icon(ctx, 'mic', 28 * cs, h / 2, 16 * cs);
+/* a person: speaking to Spex, writing an email, or filling out the form on the website */
+this._icon(ctx, box.who === 'mail' ? 'mail' : box.who === 'form' ? 'form' : 'mic', 28 * cs, h / 2, 16 * cs);
 }
 ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
 const n = box.rows.length, y0 = n > 1 ? 16 * cs : h / 2 - 10 * cs;

@@ -2,6 +2,7 @@
 // usage: node tools/shots.js <outDir> <W> <H> [dsf] [--still] [--bars=N] -- <scrollTop or t:FILMTIME> ...
 //   t:2.3 scrolls to film time 2.3 (1 is the top of the page, 5 is the end of the film)
 //   talk:0.5 scrolls to the middle of the conversation in the Spex scene (0 is its start, 1 its end)
+//   desk:0.5 scrolls to the middle of the two requests in the Spex Business scene (0 is the start, 1 the end)
 //   --still   turns the visitor's "reduce motion" setting on
 //   --bars=N  pretends a phone browser's bars take N pixels at first (the canvas is then taller than the screen you compose for)
 // Needs the page served: node tools/serve.js
@@ -43,6 +44,9 @@ const url = process.env.URL || 'http://localhost:4173/';
       if (stop.startsWith('talk:')) {
         // a point in the Spex scene's conversation: talk:0 is its start, talk:1 its end
         y = window.__inspyxFilm.talkScroll(parseFloat(stop.slice(5)));
+      } else if (stop.startsWith('desk:')) {
+        // a point in the Spex Business scene's two requests: desk:0 is the start, desk:1 the end
+        y = window.__inspyxFilm.deskScroll(parseFloat(stop.slice(5)));
       } else if (stop.startsWith('t:')) {
         const T = parseFloat(stop.slice(2));
         const secs = Array.from(document.querySelectorAll('[data-scene]')).filter((e) => parseFloat(e.getAttribute('data-scene')) >= 1);
@@ -57,7 +61,7 @@ const url = process.env.URL || 'http://localhost:4173/';
       return Math.round(window.pageYOffset);
     }, s);
     await page.waitForTimeout(420);
-    const name = (s.startsWith('talk:') ? 'talk' + s.slice(5).replace('.', '_') : s.startsWith('t:') ? 'T' + s.slice(2).replace('.', '_') : 'y' + String(top).padStart(5, '0')) + '.png';
+    const name = (s.startsWith('talk:') ? 'talk' + s.slice(5).replace('.', '_') : s.startsWith('desk:') ? 'desk' + s.slice(5).replace('.', '_') : s.startsWith('t:') ? 'T' + s.slice(2).replace('.', '_') : 'y' + String(top).padStart(5, '0')) + '.png';
     await page.screenshot({ path: path.join(outDir, name) });
     console.log(name + '  scrollTop ' + top);
   }

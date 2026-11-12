@@ -1,5 +1,5 @@
 // Self-checks for the home page: the form, the calculator, Stripe's return messages, the keyboard,
-// tap targets, sideways scroll and motion turned off. No sign-up is ever sent: the waitlist call is
+// tap targets, sideways scroll, motion turned off, and the two scenes with a sequence in them. No sign-up is ever sent: the waitlist call is
 // caught here and answered by the test.
 // usage: node tools/serve.js &   then   node tools/check_home.js
 const { chromium } = require('playwright');
@@ -63,6 +63,13 @@ async function open(browser, opts) {
     const at = await page.evaluate(() => Math.round(document.getElementById('waitlist').getBoundingClientRect().top));
     ok('"Join the waitlist" in the header jumps to the form', Math.abs(at) < 4, 'top ' + at);
     await ctx.close();
+  }
+
+  // ---- the header's Pricing link: wide screens only
+  {
+    const shown = async (o) => { const { ctx, page } = await open(browser, o); const r = await page.evaluate(() => { const a = document.querySelector('.bar-link'); return { vis: !!a && a.getClientRects().length > 0, href: a ? a.getAttribute('href') : null }; }); await ctx.close(); return r; };
+    const phone = await shown({}), wide = await shown({ w: 1280, h: 800, desktop: true });
+    ok('the header links Pricing on a wide screen, and keeps to the logo and the button on a phone', !phone.vis && wide.vis && wide.href === '/pricing', JSON.stringify([phone, wide]));
   }
 
   // ---- calculator
@@ -182,7 +189,7 @@ async function open(browser, opts) {
       seen.push(a.t);
       if (!/^solid 3px/.test(a.o)) ring = false;
     }
-    const want = ['Skip to content', 'Inspyx, home', 'Join the waitlist', 'Join the waitlist', 'Fewer inspections a week', 'More inspections a week', 'Fewer hours per report', 'More hours per report', 'Fewer calls to voicemail', 'More calls to voicemail', 'Lower average fee', 'Higher average fee', 'Join the waitlist', 'email', 'Solo inspector', 'Team owner', 'Agent', 'Investor', 'Spectora', 'Another app', 'Nothing yet', 'Join the waitlist', 'Pricing', 'Terms', 'Privacy', 'Cancellation and refunds', 'support@inspyx.com', '(888) 772-2919'];
+    const want = ['Skip to content', 'Inspyx, home', 'Pricing', 'Join the waitlist', 'Join the waitlist', 'Fewer inspections a week', 'More inspections a week', 'Fewer hours per report', 'More hours per report', 'Fewer calls to voicemail', 'More calls to voicemail', 'Lower average fee', 'Higher average fee', 'Join the waitlist', 'email', 'Solo inspector', 'Team owner', 'Agent', 'Investor', 'Spectora', 'Another app', 'Nothing yet', 'Join the waitlist', 'Pricing', 'Terms', 'Privacy', 'Cancellation and refunds', 'support@inspyx.com', '(888) 772-2919'];
     const norm = seen.map((t) => (t === '' ? 'email' : t));
     ok('Tab reaches every control in page order (' + seen.length + ' stops)', JSON.stringify(norm) === JSON.stringify(want), norm.join(' > '));
     ok('each stop shows a focus ring', ring);
@@ -193,12 +200,12 @@ async function open(browser, opts) {
   {
     const { ctx, page, errs } = await open(browser, { still: true });
     const T = [];
-    for (const y of [0, 500, 900, 3861]) {
+    for (const y of [0, 500, 900, 2000, 2300, 4661]) {
       await page.evaluate((v) => window.scrollTo(0, v), y);
       await page.waitForTimeout(250);
       T.push(await page.evaluate(() => Math.round(window.__inspyxFilm._lastT * 1000) / 1000));
     }
-    ok('motion off: each scene holds still at its start, then at its end', JSON.stringify(T) === JSON.stringify([1, 1, 1.995, 3.995]) && errs.length === 0, T.join(', '));
+    ok('motion off: each scene holds still at its start, then at its end', JSON.stringify(T) === JSON.stringify([1, 1, 1.995, 2, 2.995, 3.995]) && errs.length === 0, T.join(', '));
     await ctx.close();
   }
 
@@ -207,6 +214,55 @@ async function open(browser, opts) {
     const { ctx, page, errs } = await open(browser, { w: 1440, h: 900, desktop: true });
     const r = await page.evaluate(() => { const f = document.querySelector('.film').getBoundingClientRect(); const t = document.querySelector('.hero h1').getBoundingClientRect(); return { pos: getComputedStyle(document.querySelector('.film')).position, fx: Math.round(f.left), fw: Math.round(f.width), fh: Math.round(f.height), tr: Math.round(t.right), sw: document.documentElement.scrollWidth }; });
     ok('wide screen: the film plays in its own window, to the right of the words', r.pos === 'sticky' && r.tr < r.fx && r.sw === 1440 && errs.length === 0, JSON.stringify(r));
+    await ctx.close();
+  }
+
+  // ---- the two requests in the Spex Business scene
+  {
+    const { ctx, page, errs } = await open(browser, {});
+    const w = await page.evaluate(() => { const d = window.__inspyxFilm._desk; return { say: d.say.map((l) => l.who + ' / ' + l.label + ': ' + l.text), rows: d.rows.map((r) => r.when + ' / ' + r.from), title: d.title, count: d.count, text: document.querySelector('[data-desk]').textContent.replace(/\s+/g, ' ').trim() }; });
+    ok('the Spex Business scene: two requests, two replies and three calendar lines, read from the page\'s own words',
+      w.say.length === 4 && w.say[0] === 'mail / Email from Dana, an agent: Can you inspect 412 Palm Ave on Friday afternoon?' && w.say[1] === 'biz / Spex Business replied: Friday at 2:00 PM is open. The inspection is $425.'
+      && w.say[2] === 'form / Your website form, from Marcus: I need a pre-listing inspection early next week.' && w.say[3] === 'biz / Spex Business replied: Monday at 10:00 AM is open. The inspection is $375.'
+      && JSON.stringify(w.rows) === JSON.stringify(['Tomorrow, 9:00 AM / Phone', 'Friday, 2:00 PM / Email', 'Monday, 10:00 AM / Website']) && w.title === 'Your calendar' && w.count === 'booked', w.say.join(' | ') + ' || ' + w.rows.join(' | '));
+    ok('the same story is in the page as text, for people who can\'t see the film', /An email from Dana, an agent: Can you inspect 412 Palm Ave on Friday afternoon\? Spex Business replies: Friday at 2:00 PM is open\./.test(w.text) && /Booked on your calendar: Monday at 10:00 AM\./.test(w.text), w.text.slice(0, 120));
+    const at = async (u) => { await page.evaluate((v) => window.scrollTo(0, window.__inspyxFilm.deskScroll(v)), u); await page.waitForTimeout(250); return page.evaluate(() => window.__inspyxFilm._deskLive.join(' | ')); };
+    const a = await at(0.12), b = await at(0.27), c = await at(0.42), d = await at(0.6), e = await at(1);
+    const Q1 = '\u201CCan you inspect 412 Palm Ave on Friday afternoon?\u201D', R1 = '\u201CFriday at 2:00 PM is open. The inspection is $425.\u201D';
+    const Q2 = '\u201CI need a pre-listing inspection early next week.\u201D', R2 = '\u201CMonday at 10:00 AM is open. The inspection is $375.\u201D';
+    ok('scrolling: the email comes in with one job on the calendar, and Spex Business replies', a === Q1 + ' | Tomorrow, 9:00 AM' && b === Q1 + ' | ' + R1 + ' | Tomorrow, 9:00 AM' && errs.length === 0, [a, b].join(' || '));
+    ok('then the job is on the calendar, and the website form comes in', c === Q1 + ' | ' + R1 + ' | Tomorrow, 9:00 AM | Friday, 2:00 PM' && d === Q2 + ' | Tomorrow, 9:00 AM | Friday, 2:00 PM', [c, d].join(' || '));
+    ok('it ends with three jobs on the calendar', e === Q2 + ' | ' + R2 + ' | Tomorrow, 9:00 AM | Friday, 2:00 PM | Monday, 10:00 AM', e);
+    const T = await page.evaluate(() => { const f = window.__inspyxFilm; return [Math.round(f._lastT * 1000) / 1000, f._deskU, f._talkU]; });
+    ok('the film\'s clock waits while the requests come in, and runs on afterwards', T[1] === 1 && T[0] > 2.65 && T[0] < 3 && T[2] === 0, T.join(', '));
+    await ctx.close();
+  }
+  {
+    // a phone with its browser bars showing: the reply takes the request's place, and the calendar stays
+    const { ctx, page, errs } = await open(browser, { w: 390, h: 664 });
+    const at = async (u) => { await page.evaluate((v) => window.scrollTo(0, window.__inspyxFilm.deskScroll(v)), u); await page.waitForTimeout(250); return page.evaluate(() => window.__inspyxFilm._deskLive.length + ':' + window.__inspyxFilm._deskLive[0].slice(1, 7)); };
+    const seen = [await at(0.12), await at(0.27), await at(1)];
+    ok('a shorter phone: one card at a time above the calendar', JSON.stringify(seen) === JSON.stringify(['2:Can yo', '2:Friday', '4:Monday']) && errs.length === 0, seen.join(', '));
+    await ctx.close();
+  }
+  {
+    // a small phone: once a job is booked, the calendar moves up and shows every line
+    const { ctx, page, errs } = await open(browser, { w: 320, h: 568 });
+    await page.evaluate(() => window.scrollTo(0, window.__inspyxFilm.deskScroll(1)));
+    await page.waitForTimeout(250);
+    const live = await page.evaluate(() => window.__inspyxFilm._deskLive.join(' | '));
+    ok('a small phone: it ends on the calendar alone, with all three jobs', live === 'Tomorrow, 9:00 AM | Friday, 2:00 PM | Monday, 10:00 AM' && errs.length === 0, live);
+    await ctx.close();
+  }
+  {
+    const { ctx, page, errs } = await open(browser, { still: true });
+    const seen = [];
+    for (const u of [0.05, 0.5, 0.95]) {
+      await page.evaluate((v) => window.scrollTo(0, window.__inspyxFilm.deskScroll(v)), u);
+      await page.waitForTimeout(250);
+      seen.push(await page.evaluate(() => window.__inspyxFilm._deskU + ':' + window.__inspyxFilm._deskLive.length));
+    }
+    ok('motion off: the requests are a row of stills, one piece at a time', JSON.stringify(seen) === JSON.stringify(['0.12:2', '0.6:3', '1:5']) && errs.length === 0, seen.join(', '));
     await ctx.close();
   }
 

@@ -13,7 +13,7 @@ Since 2026-11-08 ~02:15Z, inspyx.com is served from this folder, in place of the
 
 ## The home page (index.html)
 
-**Status on 2026-11-11: built on the branch `claude/new-home-page`. It is not live. inspyx.com
+**Status on 2026-11-12: built on the branch `claude/new-home-page`. It is not live. inspyx.com
 still shows the "Pilot coming soon" page until Moises says to publish.**
 
 - Moises approved the new words on these pages that day (the list W1 to W8 in the Drive folder
@@ -24,6 +24,11 @@ still shows the "Pilot coming soon" page until Moises says to publish.**
   its lines as shown on 2026-11-11 ("Yes, that's well done.").
 - He wants the report section to show the web report in place of the three PDF pages, once a web
   report exists. It does not yet: today the app makes a PDF on the phone.
+- **The Spex Business scene was rebuilt on 2026-11-12**, at his word: "we don't have a section that
+  includes Spex Business yet… something like the email auto scheduler, that schedules in jobs for
+  you based on emails you receive or website forms filled out". Its new words (the card's paragraph
+  and every line in the film) are Claude's drafts and wait for his OK: see "Words waiting for his
+  OK" below.
 - The branch can be seen at a private test address: the Vercel project `inspyx-site-test`
   (see "The test address" below).
 
@@ -53,9 +58,22 @@ Changed from the mock-up on purpose since then:
   Spex's answers in black ones. The scene does what Spex says: the camera comes up, the light
   comes on, the flash fires. The scene's stretch of page is 2,400 px, where the others are 1,300.
 
-The comparison now leaves the Spex scene out and compares what follows it further down the
-page. Of its 16 frames, 6 are identical to the mock-up to the last pixel, 9 differ only where
-the inspector on the roof is drawn, and one differs in the same 8 pixels as before.
+- **The Spex Business scene was rebuilt** on 2026-11-12, at his word (above). In the mock-up three
+  small chips over the tailgate turned a question into "Reply ready" with a Send button. Now the
+  scene shows the office running itself while he is on the roof: an email comes in from an agent,
+  Spex Business replies with the time and the price, and the job lands on his calendar; then the
+  same from the form on his website. The calendar starts with the job Mia booked by phone in the
+  scene before, and ends with three, each tagged with the door it came in through: Phone, Email,
+  Website. A ring spreads from the tablet as each request lands. The scene's stretch of page is
+  2,100 px. The camera stops in a slightly different place over the tailgate, to leave the cards
+  room.
+- **The header links Pricing** on wide screens (2026-11-12). On phones it keeps to the logo and
+  the button: there is no room for more.
+
+The comparison now leaves the Spex Business scene and the Spex scene out, and compares what
+follows them further down the page. Of its 12 frames, 6 are identical to the mock-up to the last
+pixel, 5 differ only where the inspector on the roof is drawn, and one differs in the same 8
+pixels as before (measured on 2026-11-12 with `--same-pictures`).
 
 - `index.html` holds every word and all the styles. `assets/home.js` draws the film and runs the
   calculator and the form. No libraries, no web fonts, no cookies, no trackers.
@@ -69,11 +87,26 @@ the inspector on the roof is drawn, and one differs in the same 8 pixels as befo
 - **The film** is drawn in code. Scrolling sets the film time: 1 at the top of the page, then one
   unit for each scene's stretch of page (`data-scene="1"` to `"4"`). With "reduce motion" on, each
   scene holds still at its start and then at its end.
+- **Two scenes have a sequence in them**, and a longer stretch of page for it: the Spex Business
+  scene (2,100 px) and the Spex scene (2,400 px). In each, the film's clock runs its usual 1,300 px
+  with a pause in the middle, and the sequence plays through the pause (`SEQ_HOLD` in `home.js`
+  says where each clock stops). With "reduce motion" on, each piece of a sequence is a still of
+  its own.
+- **The two requests in the Spex Business scene** are written in `index.html` (the block marked
+  `data-desk`, hidden from sight and read by screen readers): each request and reply is a line
+  marked `data-who` (`mail`, `form` or `biz`), and each line of the calendar is marked `data-row`
+  with its time (`data-when`) and its door (`data-from`). The film draws those very words, so to
+  change one, change it there. How the cards are laid out depends on the room under the page's
+  own card: with room (a wide window, a tablet, a tall phone) a request and its reply sit one
+  above the other over the calendar; on a phone with its browser bars showing, the reply takes
+  the request's place; on a small phone, once a job is booked the reply makes way and the
+  calendar moves up to show every line. What the scene promises follows Moises's rules for Spex
+  Business (interview of 2026-11-09): for a new request it replies with a time and a price from
+  the inspector's own price list and books the job; everything else it writes waits for the
+  inspector's tap on Send.
 - **The conversation in the Spex scene** is written in `index.html` (the block marked
   `data-talk`, hidden from sight and read by screen readers). The film draws those very words, so
-  to change a line, change it there. In that scene the film's clock runs its usual 1,300 px with a
-  pause in the middle, and the conversation plays through the pause; with "reduce motion" on,
-  each line is a still of its own. Spex's answers follow how Spex really runs the camera
+  to change a line, change it there. Spex's answers follow how Spex really runs the camera
   (`backend/spex_relay/relay/spex.py` in the app's repo, read on 2026-11-11 at 7e35c44): it opens
   the camera when asked, sets zoom, light and flash by voice, never takes the photo by itself,
   and says back only what was really set.
@@ -100,8 +133,9 @@ From the repo's top folder:
 
 ```
 node tools/serve.js &            # the site at http://localhost:4173/, with clean URLs like Vercel's
-node tools/check_home.js         # 56 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, the Spex conversation, tablet and wide layouts
-node tools/shots.js out 390 844 -- t:1 t:1.9 talk:0.6 5650   # pictures at film moments, points in the Spex conversation, or scroll positions
+node tools/check_home.js         # 66 self-checks: form, calculator, Stripe messages, keyboard, tap targets, motion off, the Spex Business requests, the Spex conversation, tablet and wide layouts
+node tools/shots.js out 390 844 -- t:1 t:1.9 desk:0.4 talk:0.6 5650   # pictures at film moments, points in the Spex Business requests or the Spex conversation, or scroll positions
+node tools/shots.js out 390 844 2 --bars=180 -- desk:1      # the same phone with its browser's bars showing: the screen people really see first
 node tools/make-images.js        # redraws the tab icons and the link-preview picture
 
 # the real page against the mock-up it was built from, frame by frame
@@ -112,6 +146,24 @@ node tools/compare_mockup.js /tmp/mockup.html /tmp/compare --same-pictures   # w
 
 The checks never send a sign-up: the waitlist call is caught and answered by the test.
 `tools/make-images.js` writes `assets/share.png`; save it as `assets/share.jpg` (JPEG, quality 88).
+The tools need Playwright 1.59 (`npm i playwright@1.59.1` in a folder of its own, then
+`NODE_PATH=<that folder>/node_modules`).
+
+### Words waiting for his OK
+
+Drafted by Claude on 2026-11-12 for the Spex Business scene. None is approved yet.
+
+- The card's paragraph: "A request comes in by email or through the form on your website. Spex
+  Business reads it, books the job on your calendar and writes back with the time and your price."
+  (It replaces "Spex Business writes your replies, schedules your jobs and answers questions about
+  your business. You read it, tap Send and get back to work.", which he approved on 2026-11-11.)
+- In the film: "Email from Dana, an agent" / "Can you inspect 412 Palm Ave on Friday afternoon?";
+  "Spex Business replied" / "Friday at 2:00 PM is open. The inspection is $425."; "Your website
+  form, from Marcus" / "I need a pre-listing inspection early next week."; "Spex Business replied"
+  / "Monday at 10:00 AM is open. The inspection is $375."
+- The calendar: "Your calendar", "1 booked" to "3 booked", "Tomorrow, 9:00 AM", "Friday, 2:00 PM",
+  "Monday, 10:00 AM", and the tags "Phone", "Email", "Website".
+- For screen readers only: the sentences around those lines in the `data-desk` block.
 
 ### The test address
 
@@ -124,6 +176,8 @@ inspyx.com or example.com are marked as tests.
 
 ### Before publishing
 
+- The Spex Business scene's words are approved (see "Words waiting for his OK"), or changed to
+  the words he gives.
 - The guarantee's wording (W9, W10) is approved and in `pricing.html` and `terms.html`, or the
   guarantee line and its condition are off the home page.
 - `privacy.html` says "Last updated" with the day the pages go live.
