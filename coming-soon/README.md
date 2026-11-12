@@ -3,13 +3,24 @@
 Since 2026-11-08 ~02:15Z, inspyx.com is served from this folder, in place of the old
 "Inspyx Voice" site (Replit, 34.111.179.208).
 
+**Since 2026-11-12, about 11:42Z, a push to the `main` branch publishes this folder to
+inspyx.com.** Moises approved that change the same day ("Yes, all four"). Before it, pushing to
+GitHub changed nothing live.
+
 - Vercel project: `inspyx-coming-soon` (prj_gzZo96kf3nQclwNHhgVbA4zGXiuK), team moises-avilas-projects.
-  Deployed by API upload, not from git: first deploy dpl_DjvxehQCQcNBswFpEmzR6KSa8psh.
-  To change the site, edit these files and redeploy them to that project.
+  It is connected to this repo, with `coming-soon` as its root directory and `main` as the branch
+  it publishes. Every other branch and every pull request gets a private build of its own on
+  that project (a Vercel sign-in or a share link opens it).
+- So, to change the site: open a pull request, check its private build, and merge it once Moises
+  has said to publish. Never push to `main` directly.
+- The way back after a bad publish: put the deployment that was live before it back in its place
+  (Vercel keeps them; "Promote" on that deployment), then put the repo right.
+- Until 2026-11-12 the project took files uploaded through Vercel's API, not from git. Its first
+  deployment was dpl_DjvxehQCQcNBswFpEmzR6KSa8psh and its last one made that way is
+  dpl_HkkT16HjoTXs2zqdVSodMsVDN4hP (2026-11-09), the "Pilot coming soon" page with the pricing
+  and policy pages.
 - Domains on that project: inspyx.com (serves the site), www.inspyx.com (308 to inspyx.com).
 - DNS at Porkbun: A @ and A www changed from 34.111.179.208 to 76.76.21.21. Mail records untouched.
-- Deploy every file in this folder together (index.html, the four pages, 404.html, robots.txt,
-  sitemap.xml, vercel.json, assets/).
 
 ## The home page (index.html)
 
@@ -282,14 +293,14 @@ inspyx.com or example.com are marked as tests.
   Once approved they go on this page the way the three `?billing=` messages do. The branch the
   other chat named for them, `claude/payments-return`, is not on GitHub. This does not hold the
   page back: today's live page does not answer them either.
-- **How the files get to Vercel.** Until now the live project `inspyx-coming-soon` has taken
-  files pasted in through Vercel's connector. That cannot carry this page: it has nine pictures
-  (444 KB), and pictures cannot be pasted. The way put to Moises on 2026-11-12: connect that
-  project to this repo on GitHub, with `coming-soon` as its root directory and `main` as the
-  branch it publishes. Publishing is then merging a pull request, and every pull request gets a
-  private build on the real project first. It is a change to a setting of his Vercel account, so
-  it needs his yes. Checked that day: the live site is main's `coming-soon/` byte for byte
-  (7 files of 7), so the first build after connecting changes nothing.
+- **How it gets published: by merging the pull request into `main`.** The live project was
+  connected to this repo on 2026-11-12 at about 11:42Z, in Moises's Chrome, on his yes: the root
+  directory `coming-soon` was saved first, then the repository was connected; the branch it
+  publishes was already `main`. The old way, pasting files in through Vercel's connector, could
+  not carry this page: it has nine pictures (444 KB), and pictures cannot be pasted. Checked
+  before connecting: the live site was main's `coming-soon/` byte for byte (7 files of 7).
+  Checked right after: Vercel had started no build, and the live site was still those same 7
+  files.
 
 ### Checked on 2026-11-12, before asking for the go
 
