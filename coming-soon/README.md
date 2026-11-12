@@ -35,8 +35,10 @@ took the place of "Pilot coming soon". How it was published, and what was checke
 - The Spex scene's conversation is his direction and Claude's wording. He approved the scene and
   its lines as shown on 2026-11-11 ("Yes, that's well done."). On 2026-11-12 the scene moved into
   a dark attic at his word, with two new phrases that he approved the same day.
-- **The report section shows the web report as a product shot** (a draft of 2026-11-12, on the
-  branch `claude/report-section-web`; not live until Moises says so). His words that day, looking
+- **The report section shows the web report as a product shot** (built 2026-11-12 on the branch
+  `claude/report-section-web`, and published that day at his word: shown this third draft on his
+  private preview and in two pictures, and asked "Publish the redesigned report section to
+  inspyx.com?", he answered "Yes, publish it" at 16:29:45Z). His words earlier that day, looking
   at the live page: "I wanted some of those to include the web dash report. And I wanted to include
   some of the special features. Like videos and live photos and things like that. Slow-mo photos
   for the flickering lights." Asked "Show the web report on the home page now, tagged 'Arrives with
@@ -104,7 +106,9 @@ took the place of "Pilot coming soon". How it was published, and what was checke
     sentence under the stage promises that clips will play in the web report by the pilot.
   - **Not shown: "live photos".** The app has none in Apple's sense (a photo that moves). He has
     not said yet which kind he means.
-  - **The words** are Claude's drafts until he says yes: "Your client opens the report as a web
+  - **The words** were drafted by Claude. He was shown the section with them, and his "Yes,
+    publish it" (16:29:45Z) was his answer to the section as a whole; he was not asked about
+    them one by one. They are: "Your client opens the report as a web
     page, with the PDF one tap away. A dripping leak plays as video, a flickering light in slow
     motion."; the tag "Arrives with the pilot" in this new place; "From a real Inspyx report,
     with the details anonymized." (it was "Pages from a real Inspyx report, with the details
@@ -112,6 +116,9 @@ took the place of "Pilot coming soon". How it was published, and what was checke
     "Inspector of record", "Moises Avila", "License HI18352", "Download the PDF"; and the three
     pictures' descriptions for screen readers. In the sample itself: everything listed above as
     invented.
+  - **Asked of him with the publish, not answered yet:** whether the invented company name
+    "Avila Home Inspections" stays; whether "Moises Avila" is the spelling he wants (he dictated
+    "Moses"); what he means by "live photos".
 - **The Spex Business scene was rebuilt on 2026-11-12**, at his word: "we don't have a section that
   includes Spex Business yet… something like the email auto scheduler, that schedules in jobs for
   you based on emails you receive or website forms filled out". Its new words (the card's paragraph
