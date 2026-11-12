@@ -148,14 +148,18 @@ a.logo{min-height:44px}
 /* The sheet that slides over the film: the report, then the calculator */
 .sheet{position:relative; z-index:2; display:flex; flex-direction:column; background:var(--bg); border-radius:32px 32px 0 0; padding:0 max(20px, env(safe-area-inset-right, 0px)) 44px max(20px, env(safe-area-inset-left, 0px)); box-shadow:0 -30px 60px -30px rgba(0,0,0,.5)}
 .sheet-in{display:flex; flex-direction:column}
-.pages{display:flex; justify-content:center; align-items:flex-end; margin-top:-76px}
+.pages{display:flex; justify-content:center; align-items:flex-end; margin-top:-124px}
 .pages picture{flex:none}
 .pg{display:block; max-width:none; height:auto; background:#fff; border-radius:8px; box-shadow:0 18px 36px -14px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.06)}
 .pg-l,.pg-r{width:min(118px, 30.3vw)}
 .pg-l{transform:translate(20px, 12px) rotate(-7deg)}
 .pg-r{transform:translate(-20px, 12px) rotate(7deg)}
 .pg-c{position:relative; z-index:2; width:min(150px, 38.5vw); border-radius:9px; box-shadow:0 24px 44px -16px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.06)}
-.pages-note{margin-top:28px; text-align:center; font-size:14px; color:var(--ink-faint)}
+/* the web report is shown on a phone: a dark edge and a phone's corners */
+.pg-phone{box-sizing:border-box; border:4px solid #16181C; border-radius:22px; background:#16181C}
+.pages-say{margin:26px auto 0; max-width:31em; text-align:center; font-size:16px; line-height:1.45; color:var(--ink-soft)}
+.pages-tag{align-self:center; margin-top:14px}
+.pages-note{margin-top:12px; text-align:center; font-size:14px; color:var(--ink-faint)}
 
 .calc{margin-top:32px; display:flex; flex-direction:column; gap:18px; background:var(--alt); border-radius:28px; padding:24px 18px 22px}
 .calc h2{font-size:24px; line-height:1.14; letter-spacing:-.02em; font-weight:700; text-wrap:balance}
@@ -248,12 +252,15 @@ a.logo{min-height:44px}
   .card .say{margin-top:4px; font-size:19px; line-height:1.5}
   .sheet{border-radius:56px 56px 0 0; padding:0 40px 96px}
   .sheet-in{width:100%; max-width:1040px; margin:0 auto}
-  .pages{margin-top:-96px}
+  .pages{margin-top:-190px}
   .pg-l,.pg-r{width:210px; border-radius:12px}
   .pg-l{transform:translate(34px, 20px) rotate(-7deg)}
   .pg-r{transform:translate(-34px, 20px) rotate(7deg)}
   .pg-c{width:264px; border-radius:14px}
-  .pages-note{margin-top:44px; font-size:15px}
+  .pg-phone{border-width:6px; border-radius:38px}
+  .pages-say{margin-top:44px; font-size:19px}
+  .pages-tag{margin-top:18px}
+  .pages-note{margin-top:14px; font-size:15px}
   .calc{margin-top:64px; display:grid; grid-template-columns:minmax(0, 1.08fr) minmax(0, .92fr); gap:32px 56px; align-items:start; padding:48px; border-radius:40px}
   .calc h2{grid-column:1 / -1; max-width:760px; font-size:36px; line-height:1.1}
   .rows{gap:14px}
@@ -421,11 +428,16 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 <div class="sheet" data-sheet>
 <div class="sheet-in">
 <div class="pages">
-<picture><source srcset="/assets/report-findings.webp" type="image/webp"><img class="pg pg-l" src="/assets/report-findings.jpg" width="600" height="776" loading="lazy" decoding="async" alt="Report page listing two findings with a photo"></picture>
-<picture><source srcset="/assets/report-cover.webp" type="image/webp"><img class="pg pg-c" src="/assets/report-cover.jpg" width="600" height="776" loading="lazy" decoding="async" alt="Cover page of an inspection report with a photo of the house"></picture>
-<picture><source srcset="/assets/report-photos.webp" type="image/webp"><img class="pg pg-r" src="/assets/report-photos.jpg" width="600" height="776" loading="lazy" decoding="async" alt="Report page with six roof photos"></picture>
+<picture><source srcset="/assets/report-findings.webp" type="image/webp"><img class="pg pg-l" src="/assets/report-findings.jpg" width="600" height="776" loading="lazy" decoding="async" alt="A page of the report's PDF, listing two findings with a photo"></picture>
+<picture><source srcset="/assets/report-web.webp" type="image/webp"><img class="pg pg-c pg-phone" src="/assets/report-web.jpg" width="600" height="985" loading="lazy" decoding="async" alt="The report as a web page on a phone: a photo of the house, the address, the inspector, and a PDF button"></picture>
+<picture><source srcset="/assets/report-clip.webp" type="image/webp"><img class="pg pg-r" src="/assets/report-clip.jpg" width="600" height="955" loading="lazy" decoding="async" alt="A finding in the web report, an active roof leak in the attic, with a 12-second video on its photo"></picture>
 </div>
-<p class="pages-note">Pages from a real Inspyx report, with the details anonymized.</p>
+<p class="pages-say">Your client opens the report as a web page, with the PDF one tap away. A dripping leak plays as video, a flickering light in slow motion.</p>
+<div class="tag pages-tag">
+<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.8 V8 L10.2 9.6"></path></svg>
+<span>Arrives with the pilot</span>
+</div>
+<p class="pages-note">From a real Inspyx report, with the details anonymized.</p>
 
 <div class="calc" data-calc>
 <h2>Two minutes could show you the hours you'd get back each week.</h2>

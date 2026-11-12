@@ -30,6 +30,16 @@ PRICING = 'coming-soon/pricing.html'
 TERMS = 'coming-soon/terms.html'
 
 MUTATIONS = [
+    # ---- the report section with the web report (2026-11-12)
+    ('the web report picture is missing from the report section', HTML,
+     'src="/assets/report-web.jpg"',
+     'src="/assets/report-wb.jpg"'),
+    ('the report section no longer says the web report arrives with the pilot', HTML,
+     '<div class="tag pages-tag">',
+     '<div class="tag pages-tag" hidden>'),
+    ("the phone's edge makes the page scroll sideways", HTML,
+     '.pg-phone{box-sizing:border-box; border:4px solid #16181C;',
+     '.pg-phone{box-sizing:content-box; border:14px solid #16181C;'),
     # ---- the attic in the Spex scene (2026-11-12)
     ("Spex's light never comes on in the attic", JS,
      'const amb = (0.86 - 0.16 * light) * (1 - 0.95 * flash), core = amb * (1 - 0.96 * light);',

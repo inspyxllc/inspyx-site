@@ -47,7 +47,7 @@ async function open(browser, opts) {
     ok('one main heading, and the page says it is in English', head.h1 === 1 && head.lang === 'en');
     const film = await page.evaluate(() => { const c = document.querySelector('canvas[data-film]'); const d = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height * 0.7), 1, 1).data; return { w: c.width, h: c.height, a: d[3] }; });
     ok('the film is drawing', film.w > 0 && film.a === 255, JSON.stringify(film));
-    for (const f of ['assets/share.jpg', 'assets/favicon.svg', 'assets/favicon-32.png', 'assets/apple-touch-icon.png', 'robots.txt', 'sitemap.xml', 'assets/report-cover.webp', 'assets/report-cover.jpg']) {
+    for (const f of ['assets/share.jpg', 'assets/favicon.svg', 'assets/favicon-32.png', 'assets/apple-touch-icon.png', 'robots.txt', 'sitemap.xml', 'assets/report-web.webp', 'assets/report-web.jpg', 'assets/report-clip.webp', 'assets/report-clip.jpg', 'assets/report-findings.webp', 'assets/report-findings.jpg']) {
       const r = await page.request.get(url + f);
       ok('file is served: ' + f, r.status() === 200, String(r.status()));
     }
@@ -352,6 +352,23 @@ async function open(browser, opts) {
       seen.push(await page.evaluate(() => window.__inspyxFilm._deskU + ':' + window.__inspyxFilm._deskLive.length));
     }
     ok('motion off: the requests are a row of stills, one piece at a time', JSON.stringify(seen) === JSON.stringify(['0.12:2', '0.6:3', '1:5']) && errs.length === 0, seen.join(', '));
+    await ctx.close();
+  }
+
+  // ---- the report section: the PDF page, the web report on a phone, and a finding with a video
+  {
+    const { ctx, page, errs } = await open(browser, {});
+    await page.evaluate(() => { const e = document.querySelector('.pages'); window.scrollTo(0, e.getBoundingClientRect().top + window.pageYOffset - 200); });
+    await page.waitForTimeout(700);
+    const r = await page.evaluate(() => {
+      const imgs = [...document.querySelectorAll('.pages img')];
+      const t = (q) => { const e = document.querySelector(q); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; };
+      return { imgs: imgs.map((i) => ({ src: (i.currentSrc || i.src).replace(/^.*\/assets\//, ''), ok: i.complete && i.naturalWidth === 600, alt: i.alt, w: Math.round(i.getBoundingClientRect().width) })), say: t('.pages-say'), tag: t('.pages-tag'), note: t('.pages-note'), sw: document.documentElement.scrollWidth, iw: window.innerWidth };
+    });
+    ok('the report section shows three pictures that load: a PDF page, the web report on a phone, a finding with a video', r.imgs.length === 3 && r.imgs.every((i) => i.ok) && /^report-findings\./.test(r.imgs[0].src) && /^report-web\./.test(r.imgs[1].src) && /^report-clip\./.test(r.imgs[2].src) && errs.length === 0, r.imgs.map((i) => i.src + (i.ok ? '' : ' NOT LOADED')).join(', '));
+    ok('each of the three says what it shows, for people who can\'t see it', /PDF/.test(r.imgs[0].alt) && /web page on a phone/.test(r.imgs[1].alt) && /video/.test(r.imgs[2].alt), r.imgs.map((i) => i.alt.slice(0, 40)).join(' | '));
+    ok('the phone is the widest of the three, and the page does not scroll sideways for it', r.imgs[1].w > r.imgs[0].w && r.imgs[1].w > r.imgs[2].w && r.sw <= r.iw, r.imgs.map((i) => i.w).join(', ') + ' in ' + r.iw);
+    ok('the section\'s words: what the web report does, that it arrives with the pilot, and where the sample comes from', r.say === 'Your client opens the report as a web page, with the PDF one tap away. A dripping leak plays as video, a flickering light in slow motion.' && r.tag === 'Arrives with the pilot' && r.note === 'From a real Inspyx report, with the details anonymized.', [r.say, r.tag, r.note].join(' | '));
     await ctx.close();
   }
 

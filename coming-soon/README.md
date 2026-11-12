@@ -35,8 +35,34 @@ took the place of "Pilot coming soon". How it was published, and what was checke
 - The Spex scene's conversation is his direction and Claude's wording. He approved the scene and
   its lines as shown on 2026-11-11 ("Yes, that's well done."). On 2026-11-12 the scene moved into
   a dark attic at his word, with two new phrases that he approved the same day.
-- He wants the report section to show the web report in place of the three PDF pages, once a web
-  report exists. It does not yet: today the app makes a PDF on the phone.
+- **The report section shows the web report** (a draft of 2026-11-12, on the branch
+  `claude/report-section-web`; not live until Moises says so). His words that day, looking at the
+  live page: "I wanted some of those to include the web dash report. And I wanted to include some
+  of the special features. Like videos and live photos and things like that. Slow-mo photos for
+  the flickering lights." Asked "Show the web report on the home page now, tagged 'Arrives with
+  the pilot'?", he answered "Yes, show it" (14:26:55Z).
+  - **The three pictures** at the top of the white sheet: a page of the report's PDF (as before);
+    the client's report page on a phone, its first screen; and one finding of that page, the
+    active leak in the attic, with a video marked on its photo. The PDF's cover page and its page
+    of roof photos are no longer shown, and their files are gone from `assets/`.
+  - **How the two new pictures are made:** `tools/report_pictures.js`, from the real report page
+    (branch `claude/web-report`) showing the anonymized sample report. The sample is private and
+    is not in this repo. Two things are added to what the page draws: the number plate of the car
+    in the cover photo is blurred, and the video mark on the finding's photo (a "Video" label, a
+    play button, "0:12").
+  - **What is ahead of the app,** and why the section carries the tag "Arrives with the pilot":
+    no client can open a web report yet (the page is written, its tables are in the database,
+    its function is not deployed, and the app cannot publish a report); and the app records
+    video and slow motion today, but a report shows a clip only as its still frame. So the
+    sentence under the pictures promises that clips will play in the web report by the pilot.
+  - **Not shown: "live photos".** The app has none in Apple's sense (a photo that moves). He has
+    not said yet which kind he means.
+  - **The words** are Claude's drafts until he says yes: "Your client opens the report as a web
+    page, with the PDF one tap away. A dripping leak plays as video, a flickering light in slow
+    motion."; the tag "Arrives with the pilot" in this new place; "From a real Inspyx report,
+    with the details anonymized." (it was "Pages from a real Inspyx report, with the details
+    anonymized."); the three pictures' descriptions for screen readers; and "Video" and "0:12" in
+    the picture.
 - **The Spex Business scene was rebuilt on 2026-11-12**, at his word: "we don't have a section that
   includes Spex Business yet… something like the email auto scheduler, that schedules in jobs for
   you based on emails you receive or website forms filled out". Its new words (the card's paragraph
