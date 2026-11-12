@@ -4,7 +4,9 @@
 // leave the site is stopped and counted as a failure.
 // usage: node tools/serve.js &   then   node tools/check_signin.js
 //        (served somewhere else: URL=http://localhost:4174/ node tools/check_signin.js)
-const { chromium } = require('playwright');
+//        (in Safari's engine instead of Chrome's: BROWSER=webkit node tools/check_signin.js)
+const playwright = require('playwright');
+const engine = process.env.BROWSER === 'webkit' ? playwright.webkit : playwright.chromium;
 const fs = require('fs');
 const path = require('path');
 
@@ -77,7 +79,8 @@ const shown = (page) => page.evaluate(() => [...document.querySelectorAll('[data
 async function fill(page, pass) { await page.fill('#signin-email', WHO); await page.fill('#signin-password', pass === undefined ? PASS : pass); }
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await engine.launch();
+  console.log('browser: ' + engine.name() + ' ' + browser.version());
 
   // ---- the page as it opens: on a phone and on a wide screen
   for (const [label, w, desktop] of [['phone', PHONE, false], ['wide', WIDE, true]]) {
@@ -306,9 +309,17 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
   // ---- the keyboard, and motion turned off
   await group('the keyboard', async () => {
     const { ctx, page } = await open(browser, 'signin', { w: WIDE, h: 900, desktop: true });
+    // Safari's Tab key stops at the boxes only, and Option+Tab stops at everything (its own long-standing way);
+    // Chrome's Tab stops at everything. So the full round is walked with the key that makes it in each.
+    const safari = engine.name() === 'webkit';
+    const here = () => page.evaluate(() => { const e = document.activeElement; return e.id || e.getAttribute('aria-label') || e.textContent.trim().slice(0, 18); });
     const order = [];
-    for (let i = 0; i < 5; i++) { await page.keyboard.press('Tab'); order.push(await page.evaluate(() => { const e = document.activeElement; return e.id || e.getAttribute('aria-label') || e.textContent.trim().slice(0, 18); })); }
+    for (let i = 0; i < 5; i++) { await page.keyboard.press(safari ? 'Alt+Tab' : 'Tab'); order.push(await here()); }
     ok('the Tab key goes: logo, email, password, Sign in, then the help lines; never into the picture', order[0] === 'Inspyx, home' && order[1] === 'signin-email' && order[2] === 'signin-password' && order[3] === 'Sign in' && order[4] === 'support@inspyx.com', order.join(' > '));
+    if (safari) {
+      await page.focus('#signin-email'); await page.keyboard.press('Tab');
+      ok('in Safari the plain Tab key goes from the email box to the password box', (await here()) === 'signin-password', await here());
+    }
     await ctx.close();
   });
   await group('motion', async () => {

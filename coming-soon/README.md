@@ -785,6 +785,7 @@ about a forgotten password (the website adds how to reach support). `tools/check
 ```
 node tools/serve.js &
 node tools/check_signin.js                      # 58 self-checks, about 45 seconds
+BROWSER=webkit node tools/check_signin.js       # the same in Safari's engine: 59 (one more, for Safari's Tab key)
 python3 -I tools/undo_checks.py . --signin      # breaks signing in 74 ways, one at a time: each must be caught
 ```
 
@@ -804,10 +805,18 @@ and without a connection, and that it ends this browser's sign-in only; two tabs
 the Tab key; motion; and the files (the same public key and server as the waitlist form, no secret key,
 nothing links to the pages, the scripts say no words).
 
+Two things to know when reading a run. Safari's Tab key stops at the boxes only (Option+Tab stops at
+everything), so in Safari's engine the round of the Tab key is walked with Option+Tab, and one extra check
+walks plain Tab from the email box to the password box. And a picture taken by Playwright in Safari's engine
+prints "Refused to apply a stylesheet...": that is Playwright's own style for hiding the text cursor, refused
+by the pages' rule, which is the rule working. The page itself prints nothing (probed on 2026-11-12: no
+message before a picture is taken, one after).
+
 **Not checked, and known gaps.**
 
-- **Safari, and a real iPhone.** Everything above ran in Chromium. What Chromium does is not what Safari
-  draws.
+- **Real Safari, and a real iPhone.** The checks pass in Chrome's engine (Chromium 147: 58) and in Safari's
+  engine as Playwright ships it (WebKit 26.4: 59), and both draw the page whole, on a phone and on a wide
+  screen. That is still not Safari on Moises's iPhone (iOS 27), which is checked by hand.
 - **A real sign-in.** Claude never types a password and makes no accounts. The first real sign-in is
   Moises's, with his own account, at a plain inspyx.com address.
 - **A real Back in Safari.** The checks send the browser's "page brought back" signal themselves, because
