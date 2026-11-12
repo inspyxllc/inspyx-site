@@ -85,7 +85,8 @@ Changed from the mock-up on purpose since then:
   hand and the phone are where they were, because the captions' lines end at them. The figure is
   `_shotD` in `home.js`; a figure that is cut off by the bottom of the screen needs its waist
   and legs drawn all the same, because a phone shows more of it once its bars tuck away.
-- **The Spex scene moved into a dark attic** on 2026-11-12, at Moises's word: "it'd send a
+- **The Spex scene moved into a dark attic** on 2026-11-12, at Moises's word (live since
+  13:47:32Z that day, pull request 11): "it'd send a
   bolder statement to have them like in an attic and have you talk to specs and have them turn
   the flashlight on and the flash on to take photos and basically light up the dark attic".
   Until then he stood at an electrical panel on an outside wall, in daylight.
@@ -177,6 +178,33 @@ stops, and compares what follows them further down the page. Of its 11 frames (m
   screens nothing is set. The first try, published at 11:58Z that day, set only the story's
   ground and so mended the strip only while Safari's bar was open; the body's ground followed
   the same day.
+
+  **Corrected the same day, after a scroll by finger down the whole live page (14:00Z to 14:15Z):
+  the strip does not follow the film.** The page's code does what is written above: a copy of
+  the page that reported its own colours while it was scrolled showed the `body` and the story
+  dark in the attic, bright for the flash, and white over the sheet. But with Safari's bar at
+  the bottom, Safari takes the colour for what shows behind the bar once, early in a visit, and
+  keeps it. On the live page the strip stayed the first scene's street grey (84, 80, 80) in the
+  attic and under the white sheet; on the copy it stayed (84, 88, 92) in two runs. Tried, and
+  none of it made Safari take a new colour: the page's own later changes of the `body`'s
+  colour; the bar opening again; the bar tucking away again; a change of one step and back once
+  the scroll had come to rest. Only with the page at rest and the bar never yet tucked away did
+  a colour set by script show, through the open bar.
+  - **What a visitor sees** on an iPhone with Safari's bar at the bottom (the way iOS ships): the
+    strip under the bar suits the street scenes, is lighter than the attic's floor, and is grey
+    under the white sections. On an iPhone with the bar at the top (Moises's) there is no strip:
+    the page runs to the bottom of the screen.
+  - **What was wrong in the claim.** That the body's ground makes the strip follow "the white
+    sheet, the black waitlist, the white footer" was checked in Chromium, where the self-check
+    reads the colour the page sets, and in Safari only in the first scenes, where the colour
+    hardly changes. The self-check proves the page's code, not what Safari draws.
+  - **Two tests spoiled themselves that day,** both in the same way: the test page changed the
+    page. In the morning a probe put a fixed box of its own on the page; in the afternoon a
+    reporting page switched `_bars` off. A page for testing this must add nothing and change
+    nothing: it may only report (a `fetch` to the test server), and the scroll must be by finger.
+  - **Open.** Either find what makes Safari take a new colour, or decide which one colour serves
+    the whole page best. Until then `_bars` stays as it is: the colour Safari keeps is the
+    street's, which suits most of the film.
 - **The film** is drawn in code. Scrolling sets the film time: 1 at the top of the page, then one
   unit for each scene's stretch of page (`data-scene="1"` to `"4"`). With "reduce motion" on, each
   scene holds still at its start and then at its end.
@@ -386,6 +414,24 @@ The times of his words are taken from the session's log; the others from git, Gi
   this repo: a pull request that puts `coming-soon/` back as it was at commit 097fb4e. Either
   way, put the repo right afterwards, so that the next push does not undo the step back.
 
+**Later the same day,** each published the same way (a pull request, Vercel's private build of
+it checked file by file, `main` moved to that commit, the live site checked file by file):
+
+- 12:58:27Z, pull request 10 (963a09b): the inspector in the Spex scene redrawn. 92 self-checks
+  pass against the live site.
+- 12:57:37Z: the protection rule on `main` was repaired through GitHub's API. It now requires
+  the check "Vercel – inspyx-coming-soon"; it had required "Vercel", a name no check has carried
+  since more than one Vercel project builds this repo. Pushes since are accepted with no
+  "Bypassed rule violations" line.
+- 13:33:45Z, pull request 12 (b9667ef): the waitlist's notice (the manual and
+  `backend/waitlist/schema.sql`; nothing served changed).
+- 13:47:32Z, pull request 11 (7a5944c): the Spex scene in the attic, on Moises's "Yes, publish
+  it" of 13:41:27Z. Production deployment dpl_72QztidzUdwBPBjetHWbtirBVHfL. Checked: 21 of 21
+  files at 13:47:45Z; 95 self-checks pass against the live site (13:48:00Z to 13:52:10Z); the
+  scene seen in Safari on a simulated iPhone 17, scrolled by finger, in the dark, lit and
+  flash-lit. The way back to the page before the attic: "Instant Rollback" in Vercel to
+  dpl_BsxkGQcME28jJAow1ACyC6wUG86w, then put the repo right.
+
 ### Still open after publishing
 
 - When a page's words change, its "Last updated" line (the terms and privacy pages have one) and
@@ -404,6 +450,9 @@ The times of his words are taken from the session's log; the others from git, Gi
   arranged: it needs the email service Moises has yet to pick.
 - The top of the screen on an iPhone stays morning blue down the whole page (see "Behind Safari's
   bars on an iPhone").
+- On an iPhone with Safari's bar at the bottom, the strip under the bar keeps the colour of the
+  first scene's street all the way down the page: lighter than the attic's floor, and grey under
+  the white sections (the same section, "Corrected the same day").
 - The design checklist the website chat kept is a note in the Claude Project "Inspyx"
   (`claude/website-design-checklist.md`). It cannot be read from Claude Code on the Mac. What was
   checked on 2026-11-12 in its place is listed below.
