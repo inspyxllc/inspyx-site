@@ -860,7 +860,14 @@ message before a picture is taken, one after).
 ## Your plan on the website (/plan)
 
 **Not published.** Built on 2026-11-13 on the branch `claude/web-plan`, which stands on `claude/web-signin`.
-It stays off inspyx.com until Moises says so.
+
+**Approved to go out hidden, after his sign-in try.** Moises, 2026-11-13 02:53:13Z: "Yes, after sign-in", to
+"Publish the hidden plan page after you've tried the sign-in tomorrow?". So it is published once two things
+have happened: the publish of 2026-11-13, which carries the hidden sign-in pages, and his own try of the
+sign-in on his iPhone, with his word that it works. Hidden means what it means for the sign-in pages: search
+engines are told to skip it, the sitemap leaves it out, and no public page links to it (the account page,
+itself hidden, does). His yes does not cover the pricing page's sentence about where a plan starts, nor a
+public link to this page; and it is held back if his try shows a problem or a check fails.
 
 **His words.** 2026-11-12 19:50:44Z, "Website too": inspectors can start their plan on the website as well
 as in the app. 2026-11-13 01:44:03Z, "Yes, start", to "Start on "Your plan" for the website tonight?".
@@ -970,9 +977,18 @@ are answered by the test itself, and the sign-in in the browser is a made-up one
 - **The pricing page still says** the plan starts in the app ("You start your plan in the Inspyx app").
   That sentence changes when this page is published, with his words.
 
-**Before it is published** (each needs Moises's word, or his hands):
+**Before it is published:**
 
-1. His look at the page (pictures sent on 2026-11-13) and at what it leaves out.
-2. The sign-in pages published and tried by him first (they go out hidden on 2026-11-13).
-3. His word to publish this page, hidden like the sign-in pages or linked from somewhere.
-4. The pricing page's sentence about where a plan starts.
+1. The sign-in pages published (2026-11-13) and tried by him, with his word that the sign-in works.
+2. Every check here passing again on the day, on the branch as it will be pushed.
+
+**Before any public page links to it** (each needs Moises's word):
+
+1. The pricing page's sentence about where a plan starts.
+2. Where the site links to the sign-in and the plan.
+
+**Checked on 2026-11-13, on commit d0f4b3f** (the commits after it change only this manual): `check_plan.js`
+113 of 113 in Chromium 147 and in WebKit 26.4; `check_signin.js` 58 and 59; `check_pages.js` 72;
+`check_home.js` 124; `check_rules.js` 4; the sentences word for word the app's. Broken on purpose: 114 of
+114 caught on the first commit, then the 20 that are new or whose lines changed, 20 of 20 on d0f4b3f (122 in
+the list today); the sign-in's 74 of 74 again on this branch.
