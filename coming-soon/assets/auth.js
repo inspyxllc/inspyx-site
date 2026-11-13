@@ -80,7 +80,7 @@
 
   /* Signing in with Google (2026-11-13, his decision of 2026-11-12). The browser goes to the account server,
      which sends it on to Google and takes it back, and returns it to /signin with a code good once. The code is
-     worth nothing alone: it is exchanged together with a secret this tab made before leaving and never sent
+     worth nothing alone: it is exchanged together with a verifier this tab made before leaving and never sent
      anywhere until then (PKCE). So a code read off an address bar, a history or a log signs nobody in.
      Google can only sign in someone who already has an Inspyx account with that address: the server makes no
      new accounts. */
@@ -94,10 +94,15 @@
     if (!c || !c.subtle || !c.getRandomValues || typeof TextEncoder !== 'function') return Promise.reject(new Refusal('google'));
     var raw = new Uint8Array(48);
     c.getRandomValues(raw);
-    var secret = b64url(raw);
-    return c.subtle.digest('SHA-256', new TextEncoder().encode(secret)).then(function (hash) {
-      try { root.sessionStorage.setItem(GOING, secret); } catch (e) { throw new Refusal('storage'); }
-      if (root.sessionStorage.getItem(GOING) !== secret) throw new Refusal('storage');
+    var verifier = b64url(raw);
+    return c.subtle.digest('SHA-256', new TextEncoder().encode(verifier)).then(function (hash) {
+      // The verifier has to outlast the trip to Google and back, so it is kept, in the narrowest place a browser
+      // has: this tab's own storage, gone when the tab closes, read once on the way back and removed then. It is
+      // not a password and not a token: without the code Google's return brings, it signs nobody in, and that code
+      // is good once and for minutes. (GitHub's code scanning flags this line as "clear text storage of sensitive
+      // information"; it was looked at on 2026-11-13 and left as it is, for these reasons.)
+      try { root.sessionStorage.setItem(GOING, verifier); } catch (e) { throw new Refusal('storage'); }
+      if (root.sessionStorage.getItem(GOING) !== verifier) throw new Refusal('storage');
       root.location.assign(BASE + '/authorize?provider=google&redirect_to=' + encodeURIComponent(root.location.origin + '/signin') +
         '&code_challenge=' + b64url(new Uint8Array(hash)) + '&code_challenge_method=s256');
     }, function () { throw new Refusal('google'); });
@@ -110,14 +115,14 @@
     var code = q.get('code');
     var error = q.get('error') || h.get('error'), errorCode = q.get('error_code') || h.get('error_code');
     if (!code && !error && !errorCode) return Promise.resolve(null);
-    var secret = null;
-    try { secret = root.sessionStorage.getItem(GOING); root.sessionStorage.removeItem(GOING); } catch (e) { secret = null; }
+    var verifier = null;
+    try { verifier = root.sessionStorage.getItem(GOING); root.sessionStorage.removeItem(GOING); } catch (e) { verifier = null; }
     try { root.history.replaceState(null, '', root.location.pathname); } catch (e) { /* the address stays; the code is still good only once */ }
     if (error || errorCode) {
       return Promise.reject(new Refusal(errorCode === 'signup_disabled' ? 'noaccount' : error === 'access_denied' && (!errorCode || errorCode === 'access_denied') ? 'cancelled' : 'google'));
     }
-    if (!secret || !/^[A-Za-z0-9._~-]{1,512}$/.test(code)) return Promise.reject(new Refusal('google'));
-    return send('POST', BASE + '/token?grant_type=pkce', null, { auth_code: code, code_verifier: secret }).then(function (r) {
+    if (!verifier || !/^[A-Za-z0-9._~-]{1,512}$/.test(code)) return Promise.reject(new Refusal('google'));
+    return send('POST', BASE + '/token?grant_type=pkce', null, { auth_code: code, code_verifier: verifier }).then(function (r) {
       if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404) throw new Refusal('google', r.status);
       if (r.status !== 200) throw new Refusal('server', r.status);
       var s = whole(r.json);
