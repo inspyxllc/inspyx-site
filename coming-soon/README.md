@@ -882,12 +882,12 @@ The card goes to Stripe, on Stripe's page. It never passes through Inspyx.
 | --- | --- |
 | `plan.html` | Every sentence the page can say, all hidden but the true one; the pricing page's panel and card. |
 | `assets/plan.js` | Asks the billing server, shows the sentence, opens Stripe's pages. It says no words. |
-| `assets/auth.js` | `ask(name, body, deadline)`: one request to one of Inspyx's server functions, as the signed-in inspector. |
+| `assets/auth.js` | `ask(name, body, deadline)`: one request to one of Inspyx's server functions, as the signed-in inspector. `who()`: the signed-in person's address and id, without the sign-in. |
 | `assets/app.css` | The page's few styles of its own (the rest is `page.css`). |
 | `account.html` | A link to the plan page ("Your plan"), now its solid button; "Sign out" is the quiet one beside it. |
 | `vercel.json` | The signed-in pages' rule now covers `/plan` too. |
 | `tools/check_plan.js` | Its checks. |
-| `tools/undo_checks.py --plan` | 119 ways to break it, each of which a check must notice. |
+| `tools/undo_checks.py --plan` | 122 ways to break it, each of which a check must notice. |
 | `tools/check_plan_words.py` | Compares the page's sentences with the app's own file. Run by hand, with the app's repo beside it. |
 
 **How it works.**
@@ -899,7 +899,8 @@ The card goes to Stripe, on Stripe's page. It never passes through Inspyx.
   since 02:22:29Z). From the website it sends Stripe's pages back to `/plan`; from the app, to the home
   page's message, as before.
 - **The sign-in never reaches the page's script.** `plan.js` says what it wants; `auth.js` adds the sign-in
-  and sends the request. `plan.js` reads no storage and sends no request of its own.
+  and sends the request. `plan.js` reads no storage and sends no request of its own, and when it asks who is
+  signed in (`who()`), it is told their address and their id and nothing that could sign anyone in.
 - **A sign-in that was ended somewhere else.** The app's "Sign out" ends every sign-in the person has, and
   for up to an hour such a sign-in still looks good from the browser. So when the billing function refuses
   the sign-in (401), `auth.js` asks the sign-in server: if it renews the sign-in, the request is sent once
@@ -945,9 +946,9 @@ sends a signed-out browser to the sign-in page instead).
 
 ```
 node tools/serve.js &
-node tools/check_plan.js                    # 112 checks, Chrome's engine
+node tools/check_plan.js                    # 113 checks, Chrome's engine
 BROWSER=webkit node tools/check_plan.js     # the same, Safari's engine
-python3 -I tools/undo_checks.py . --plan    # 119 breaks; each must fail a check
+python3 -I tools/undo_checks.py . --plan    # 122 breaks; each must fail a check
 ```
 
 Nothing real is asked or paid by a check: the billing server, the account server and Stripe's two pages

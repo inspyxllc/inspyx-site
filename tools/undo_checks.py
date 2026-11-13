@@ -676,6 +676,9 @@ PLAN_MUTATIONS = [
     # -- who is signed in
     ('the page does not name who is signed in', PJS2, "  name(s);\n  main.hidden = false;", "  main.hidden = false;"),
     ('the plan never shows', PJS2, "  name(s);\n  main.hidden = false;", "  name(s);"),
+    ('a page is handed the whole sign-in when it asks who is signed in', AUTH, "return s ? { id: s.id, email: s.email } : null;", "return s;"),
+    ('the plan page takes the whole sign-in to read the address from', PJS2, "  var s = auth.who();\n", "  var s = auth.stored();\n"),
+    ('the plan page takes the whole sign-in again when another tab signs in', PJS2, "    var now = auth.who();\n", "    var now = auth.stored();\n"),
     # -- the page itself
     ('the plan page has no gate', PLAN, '<html lang="en" data-gate="in">', '<html lang="en">'),
     ('the plan page shows before anybody is known to be signed in', PLAN, '<main class="planpage" data-plan hidden>', '<main class="planpage" data-plan>'),

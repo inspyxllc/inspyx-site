@@ -86,8 +86,8 @@
   }
   function say(kind) { says.forEach(function (p) { p.hidden = p.getAttribute('data-say') !== kind; }); }
 
-  /* One ask of Inspyx's billing server, as the signed-in inspector (auth.js holds the sign-in; this file never
-     sees it). gone: nobody is signed in any more. trouble: why there is no answer to show. */
+  /* One ask of Inspyx's billing server, as the signed-in inspector (auth.js holds the sign-in; this file is
+     never handed it: it asks who is signed in and gets an address and an id). gone: nobody is signed in any more. trouble: why there is no answer to show. */
   function billing(action) {
     return auth.ask('billing', { action: action }, DEADLINE).then(function (r) {
       if (r === null) return { gone: true };
@@ -138,7 +138,7 @@
   }
 
   function name(s) { names.forEach(function (e) { e.textContent = s.email; }); }
-  var s = auth.stored();
+  var s = auth.who();
   if (!s) { signedOut(); return; }
   name(s);
   main.hidden = false;
@@ -163,7 +163,7 @@
   // looked at again, for whoever is signed in now. (With nobody signed in, auth.js has already sent this tab to
   // the sign-in page.)
   function again() {
-    var now = auth.stored();
+    var now = auth.who();
     if (!now) return;
     name(now);
     busy = false;

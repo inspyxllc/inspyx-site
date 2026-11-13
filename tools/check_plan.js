@@ -447,6 +447,8 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     await slow.ctx.close();
 
     const t = await open(browser, 'plan', { store: kept(18, HOUR), stripe: true, answers: (c) => (action(c) === 'status' ? bill(plan({})) : { status: 200, json: { url: CHECKOUT } }) });
+    const handed = await t.page.evaluate(() => { const w = window.InspyxAuth.who(); return w ? Object.keys(w).sort().join(',') + ' ' + JSON.stringify(w) : 'nobody'; });
+    ok('what a page is told about who is signed in is their address and their id, and nothing that could sign anyone in', handed === 'email,id {"id":"11111111-1111-4111-8111-111111111111","email":"' + WHO + '"}' && !/test-access|test-renew/.test(handed), handed);
     const where = await t.page.evaluate(() => document.documentElement.outerHTML + ' ' + location.href + ' ' + document.cookie + ' ' + JSON.stringify(sessionStorage));
     await t.page.click('[data-do="start"]'); await t.page.waitForURL(CHECKOUT, { timeout: 5000 });
     ok('the sign-in is sent to Inspyx\'s server only, and in a header: it is never in the page, an address or a cookie, and never goes along to Stripe', !/test-access|test-renew/.test(where) && t.calls.every((c) => !/test-access|test-renew/.test(c.path) && !/test-access|test-renew/.test(c.body || '')) && !/test-access|test-renew/.test(t.arrived.join(' ')) && t.away.length === 0, t.arrived.join(' '));
@@ -498,7 +500,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     const text = (f) => fs.readFileSync(path.join(root, f), 'utf8');
     const code = (f) => text(f).replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
     const js = code('assets/plan.js');
-    ok('the plan page\'s script never holds the sign-in: it reads no storage, sends no request of its own and names no key', !/localStorage|sessionStorage|\.access|\.renew|Bearer|Authorization|apikey|fetch\s*\(|XMLHttpRequest|sendBeacon|sb_publishable|supabase/.test(js));
+    ok('the plan page\'s script never holds the sign-in: it reads no storage, is never handed the sign-in, sends no request of its own and names no key', !/localStorage|sessionStorage|\.access|\.renew|\.stored\b|\.current\b|Bearer|Authorization|apikey|fetch\s*\(|XMLHttpRequest|sendBeacon|sb_publishable|supabase/.test(js) && (js.match(/auth\.who\(\)/g) || []).length === 2);
     ok('it says no words: every sentence is in the page', !/[A-Z][a-z]+ [a-z]+ [a-z]+[.!?]['"`]/.test(js) && !/['"`][A-Z][a-z]+ [a-z]+ /.test(js));
     ok('it sends nobody anywhere but Stripe\'s two pages, the sign-in page, and where the server\'s checked address says', (js.match(/location\.(assign|replace)\(/g) || []).length === 2 && /location\.replace\('\/signin'\)/.test(js) && /location\.assign\(to\.href\)/.test(js) && !/location\.href\s*=|window\.open|\.innerHTML|document\.write|eval\(/.test(js));
     ok('the sign-in script asks only Inspyx\'s own server, and a function\'s name can be nothing but plain letters', /var SERVER = 'https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co';/.test(text('assets/auth.js')) && (text('assets/auth.js').match(/https?:\/\//g) || []).length === 1 && /\^\[a-z\]\[a-z-\]\*\$/.test(text('assets/auth.js')));

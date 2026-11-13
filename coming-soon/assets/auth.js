@@ -123,8 +123,8 @@
   }
 
   /* One request to one of Inspyx's own server functions, as the signed-in inspector: the function's name and
-     what to send. It answers { status, json }, or null when nobody is signed in. The token never leaves this
-     file: a page's script says what it wants, and never holds what would let it be asked for by someone else.
+     what to send. It answers { status, json }, or null when nobody is signed in. The token stays in this file:
+     a page's script says what it wants, and never holds what would let it be asked for by someone else.
      A function that refuses the sign-in (401) may be right: the app's own "Sign out" ends every sign-in the
      person has, this browser's too, and until its hour is up a sign-in ended that way still looks good from
      here. So the sign-in server is asked: renewed, the request goes once more with the new sign-in; rejected,
@@ -142,7 +142,14 @@
     });
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask };
+  /* Who is signed in: their address and their id, and nothing that could sign anyone in. What a page needs to
+     name its reader; a page that only shows things takes this, never the sign-in itself. */
+  function who() {
+    var s = stored();
+    return s ? { id: s.id, email: s.email } : null;
+  }
+
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, who: who };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the account page. It asks three times:
