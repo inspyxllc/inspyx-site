@@ -146,7 +146,16 @@
   buttons.forEach(function (b) {
     b.addEventListener('click', function () {
       var what = b.getAttribute('data-do');
-      if (what === 'again') check(false); else open(what === 'start' ? 'start' : 'portal');
+      if (what !== 'again') { open(what === 'start' ? 'start' : 'portal'); return; }
+      // The button that was pressed goes away while the plan is looked at, and the keyboard's place with it:
+      // the next Tab would start from the top of the page. When the look is over, whoever has not moved on is
+      // put on the button that shows now, or on the sentence when there is none.
+      check(false).then(function () {
+        var here = document.activeElement;
+        if (here && here !== document.body && here !== b) return;
+        var next = buttons.filter(function (x) { return !x.hidden; })[0] || main.querySelector('.stands');
+        if (next) next.focus();
+      });
     });
   });
 

@@ -219,11 +219,28 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     let up = false;
     const t = await open(browser, 'plan', { answers: () => (up ? { wait: 700, status: 200, json: ACTIVE } : 'offline') });
     up = true;
-    await t.page.click('[data-do="again"]'); await t.page.waitForTimeout(250);
+    await t.page.focus('[data-do="again"]'); await t.page.keyboard.press('Enter'); await t.page.waitForTimeout(250);
     const between = await sees(t.page);
     await t.page.waitForTimeout(900);
     ok('"Try again" asks again: the page says it is checking, with nothing to press, then shows the plan once the server answers', shows(between, CHECKING, '') && shows(await sees(t.page), 'Active. Next payment on December 9, 2026.', 'Manage billing') && t.calls.length === 2 && t.calls.every((c) => c.body === '{"action":"status"}'), JSON.stringify(between) + ' calls: ' + t.calls.length);
+    const on = () => t.page.evaluate(() => { const e = document.activeElement; return e === document.body ? '(the top of the page)' : e.getAttribute('data-do') || e.className; });
+    ok('the button pressed goes away, but the keyboard is not sent back to the top of the page: it is on the button that shows now', (await on()) === 'manage', await on());
     await t.ctx.close();
+    let then = 'offline';
+    const u = await open(browser, 'plan', { answers: () => then });
+    then = { status: 404, json: {} };
+    await u.page.focus('[data-do="again"]'); await u.page.keyboard.press('Enter'); await u.page.waitForTimeout(400);
+    const where = await u.page.evaluate(() => document.activeElement.className);
+    ok('with no button to show afterwards, the keyboard is on the sentence', shows(await sees(u.page), NOT_SET_UP, '') && where === 'stands', where);
+    await u.ctx.close();
+    then = 'offline';
+    const w = await open(browser, 'plan', { answers: () => then });
+    then = { wait: 600, status: 200, json: ACTIVE };
+    await w.page.focus('[data-do="again"]'); await w.page.keyboard.press('Enter'); await w.page.waitForTimeout(150);
+    await w.page.focus('.more a'); await w.page.waitForTimeout(800);
+    const kept = await w.page.evaluate(() => document.activeElement.getAttribute('href'));
+    ok('someone who has moved on meanwhile is left where they are', kept === '/account' && shows(await sees(w.page), 'Active. Next payment on December 9, 2026.', 'Manage billing'), String(kept));
+    await w.ctx.close();
     const s = await open(browser, 'plan', { clock: true, answers: () => 'silent' });
     const first = await sees(s.page);
     await s.page.clock.fastForward(19000); await s.page.waitForTimeout(200);
@@ -439,11 +456,12 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
   // ---- getting there and back, and the keys
   await group('getting around', async () => {
     const a = await open(browser, 'account', { answers: () => bill(FREE) });
-    const link = await a.page.evaluate(() => { const l = document.querySelector('.account a[href="/plan"]'); const b = l ? l.getBoundingClientRect() : { height: 0, width: 0 }; return l ? { text: l.textContent.trim(), h: Math.round(b.height), sw: document.documentElement.scrollWidth, out: document.querySelector('[data-signout]').getBoundingClientRect().height } : null; });
+    const link = await a.page.evaluate(() => { const l = document.querySelector('.account a[href="/plan"]'); const b = l ? l.getBoundingClientRect() : { height: 0, width: 0 }; const o = document.querySelector('[data-signout]'); return l ? { text: l.textContent.trim(), h: Math.round(b.height), sw: document.documentElement.scrollWidth, out: o.getBoundingClientRect().height, solid: getComputedStyle(l).backgroundColor, quiet: getComputedStyle(o).backgroundColor, row: Math.abs(o.getBoundingClientRect().top - b.top) < 2 } : null; });
     await a.page.click('.account a[href="/plan"]'); await a.page.waitForURL('**/plan'); await a.page.waitForTimeout(400);
     const there = shows(await sees(a.page), 'Free until December 9, 2026, then $69 a month.', 'Manage billing');
     await a.page.click('.more a'); await a.page.waitForURL('**/account');
     ok('the account page has a link to the plan page, big enough to tap, and the plan page one back', !!link && link.text === 'Your plan' && link.h >= 44 && link.out >= 44 && link.sw <= PHONE && there && (await at(a.page)) === '/account', JSON.stringify(link));
+    ok('on the account page the plan is the solid button and signing out the quiet one beside it', !!link && link.solid === 'rgb(0, 0, 0)' && link.quiet === 'rgb(255, 255, 255)' && link.row, JSON.stringify(link));
     await a.ctx.close();
 
     const k = await open(browser, 'plan', { w: WIDE, h: 900, desktop: true, stripe: true, answers: (c) => (action(c) === 'status' ? bill(plan({})) : { status: 200, json: { url: CHECKOUT } }) });

@@ -884,10 +884,10 @@ The card goes to Stripe, on Stripe's page. It never passes through Inspyx.
 | `assets/plan.js` | Asks the billing server, shows the sentence, opens Stripe's pages. It says no words. |
 | `assets/auth.js` | `ask(name, body, deadline)`: one request to one of Inspyx's server functions, as the signed-in inspector. |
 | `assets/app.css` | The page's few styles of its own (the rest is `page.css`). |
-| `account.html` | A link to the plan page ("Your plan"). |
+| `account.html` | A link to the plan page ("Your plan"), now its solid button; "Sign out" is the quiet one beside it. |
 | `vercel.json` | The signed-in pages' rule now covers `/plan` too. |
 | `tools/check_plan.js` | Its checks. |
-| `tools/undo_checks.py --plan` | 114 ways to break it, each of which a check must notice. |
+| `tools/undo_checks.py --plan` | 119 ways to break it, each of which a check must notice. |
 | `tools/check_plan_words.py` | Compares the page's sentences with the app's own file. Run by hand, with the app's repo beside it. |
 
 **How it works.**
@@ -914,6 +914,9 @@ The card goes to Stripe, on Stripe's page. It never passes through Inspyx.
   address at once, so loading the page again does not repeat it.
 - **Stripe's word is only said when the plan agrees.** "You're all set." shows only with a plan running,
   "No charge was made." only with none: an address can be typed by hand.
+- **The keyboard keeps its place.** "Try again" goes away while the plan is looked at. Afterwards someone
+  using the keyboard is put on the button that shows, or on the sentence when there is none, not back at the
+  top of the page; someone who has moved on meanwhile is left alone.
 - **One ask may take 20 seconds**, as in the app.
 - **The date is the inspector's own calendar's**, as in the app. A free month ends at 10:00 UTC (the billing
   function moves it there), so it reads the same date from UTC to Hawaii.
@@ -942,9 +945,9 @@ sends a signed-out browser to the sign-in page instead).
 
 ```
 node tools/serve.js &
-node tools/check_plan.js                    # 108 checks, Chrome's engine
+node tools/check_plan.js                    # 112 checks, Chrome's engine
 BROWSER=webkit node tools/check_plan.js     # the same, Safari's engine
-python3 -I tools/undo_checks.py . --plan    # 114 breaks; each must fail a check
+python3 -I tools/undo_checks.py . --plan    # 119 breaks; each must fail a check
 ```
 
 Nothing real is asked or paid by a check: the billing server, the account server and Stripe's two pages
