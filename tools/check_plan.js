@@ -140,7 +140,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
         };
       });
       ok('plan page, ' + label + ': nothing scrolls sideways, and nothing is written into the page as a script or a style', r.sw <= w && r.inline === 0, r.sw + ' wide in ' + w + '; written in: ' + r.inline);
-      ok('plan page, ' + label + ': kept out of search results, one main heading, the home page\'s own type, the footer\'s four pages', r.robots === 'noindex' && r.title === 'Inspyx — Your plan' && r.h1 === 1 && /^-apple-system/.test(r.font) && r.foot === '/pricing,/refunds,/terms,/privacy', JSON.stringify({ robots: r.robots, title: r.title, h1: r.h1, foot: r.foot }));
+      ok('plan page, ' + label + ': kept out of search results, one main heading, the home page\'s own type, the footer\'s six pages', r.robots === 'noindex' && r.title === 'Inspyx — Your plan' && r.h1 === 1 && /^-apple-system/.test(r.font) && r.foot === '/about,/support,/pricing,/refunds,/terms,/privacy', JSON.stringify({ robots: r.robots, title: r.title, h1: r.h1, foot: r.foot }));
       ok('plan page, ' + label + ': the button, the logo and the link to the account page are big enough to tap; the heading stands clear of the card under it', r.btn >= 44 && r.logo >= 44 && r.more >= 44 && r.moreTo === '/account' && r.plan.t - r.h1box.b >= 12, JSON.stringify({ btn: r.btn, logo: r.logo, more: r.more, gap: r.plan.t - r.h1box.b }));
       ok('plan page, ' + label + ': names who is signed in, on the page and on the card', r.who === 'Signed in as ' + WHO && r.holder === WHO, r.who + ' / ' + r.holder);
       const a = r.art, inside = a.card.l >= a.hero.l - 2 && a.card.r <= a.hero.r + 2 && a.card.t >= a.hero.t - 2 && a.card.b <= a.hero.b + 2;

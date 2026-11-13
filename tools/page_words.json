@@ -1,5 +1,5 @@
 {
- "about": "The approved words, links and head of the pricing and policy pages. Written by: node tools/check_pages.js --keep. Change it only with a change of words Moises approved.",
+ "note": "The approved words, links and head of the pricing and policy pages. Written by: node tools/check_pages.js --keep. Change it only with a change of words Moises approved.",
  "pricing": {
   "words": [
    "h1: Pricing",
@@ -40,7 +40,7 @@
    "p: The details are in our cancellation and refund policy.",
    "h2: Questions",
    "p: Write to support@inspyx.com or call (888) 772-2919.",
-   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 PricingCancellation and refundsTermsPrivacy"
+   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 AboutSupportPricingCancellation and refundsTermsPrivacy"
   ],
   "links": [
    "/#waitlist | Join the waitlist",
@@ -51,6 +51,8 @@
    "tel:+18887722919 | (888) 772-2919",
    "mailto:support@inspyx.com | support@inspyx.com",
    "tel:+18887722919 | (888) 772-2919",
+   "/about | About",
+   "/support | Support",
    "/pricing | Pricing",
    "/refunds | Cancellation and refunds",
    "/terms | Terms",
@@ -95,7 +97,7 @@
    "li: If the payment still hasn't gone through after two weeks, your plan is canceled. You can start it again anytime.",
    "h2: Questions about a charge",
    "p: Please talk to us before disputing a charge with your bank. Write to support@inspyx.com or call (888) 772-2919, and we'll make it right.",
-   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 PricingCancellation and refundsTermsPrivacy"
+   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 AboutSupportPricingCancellation and refundsTermsPrivacy"
   ],
   "links": [
    "mailto:support@inspyx.com | support@inspyx.com",
@@ -104,6 +106,8 @@
    "tel:+18887722919 | (888) 772-2919",
    "mailto:support@inspyx.com | support@inspyx.com",
    "tel:+18887722919 | (888) 772-2919",
+   "/about | About",
+   "/support | Support",
    "/pricing | Pricing",
    "/refunds | Cancellation and refunds",
    "/terms | Terms",
@@ -191,7 +195,7 @@
    "li: Changes. We'll post changes to these terms on this page. For a change that matters, we'll tell you in the app or by email at least 30 days before it takes effect. If you keep using Inspyx after that, you accept the change.",
    "li: The law. These terms are governed by Florida law.",
    "li: Disputes. Before going to court, write to support@inspyx.com, and we'll try to settle it within 30 days. Disputes go to the state or federal courts in Miami-Dade County, Florida. Either side may use small-claims court instead, where it qualifies.",
-   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 PricingCancellation and refundsTermsPrivacy"
+   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 AboutSupportPricingCancellation and refundsTermsPrivacy"
   ],
   "links": [
    "/privacy | Privacy Policy",
@@ -202,6 +206,8 @@
    "mailto:support@inspyx.com | support@inspyx.com",
    "mailto:support@inspyx.com | support@inspyx.com",
    "tel:+18887722919 | (888) 772-2919",
+   "/about | About",
+   "/support | Support",
    "/pricing | Pricing",
    "/refunds | Cancellation and refunds",
    "/terms | Terms",
@@ -266,7 +272,7 @@
    "p: Inspyx is for professionals, and it isn't meant for children under 13. We don't knowingly collect their information.",
    "h2: Changes",
    "p: We'll post changes on this page, and tell you in the app when a change matters.",
-   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 PricingCancellation and refundsTermsPrivacy"
+   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 AboutSupportPricingCancellation and refundsTermsPrivacy"
   ],
   "links": [
    "mailto:support@inspyx.com | support@inspyx.com",
@@ -274,6 +280,8 @@
    "mailto:support@inspyx.com | support@inspyx.com",
    "mailto:support@inspyx.com | support@inspyx.com",
    "tel:+18887722919 | (888) 772-2919",
+   "/about | About",
+   "/support | Support",
    "/pricing | Pricing",
    "/refunds | Cancellation and refunds",
    "/terms | Terms",
@@ -292,17 +300,126 @@
    "lang": "en"
   }
  },
+ "about": {
+  "words": [
+   "h1: About Inspyx",
+   "h2: Who we are",
+   "p: Inspyx is made by INSPYX LLC, a Florida company based in Miami Gardens, Florida.",
+   "p: The company was founded in 2026 by Moises Avila, a licensed Florida home inspector.",
+   "h2: What we make",
+   "p: Inspyx is an iPhone app for home inspectors, with a voice companion.",
+   "li: Spex is the companion you talk to during an inspection. You say what you see, and Spex takes the photo, marks it and files the finding in the right room. Every finding goes straight into the report.",
+   "li: Mia is a voice receptionist. She answers the phone, answers the usual questions and books the job on your calendar.",
+   "li: Spex Business handles the requests that come in by email or through the form on your website.",
+   "h2: Where we are today",
+   "p: Inspyx is getting ready for a pilot with its first 10 inspectors. Spex works today. Mia and Spex Business arrive with the pilot.",
+   "p: If you are a home inspector and would like to take part, you can join the waitlist.",
+   "h2: Company details",
+   "li: Legal name: INSPYX LLC",
+   "li: Kind of company: a Florida limited liability company, formed in June 2026",
+   "li: Based in: Miami Gardens, Florida, United States",
+   "li: Founder and owner: Moises Avila, Florida home inspector license HI18352",
+   "li: Email: support@inspyx.com",
+   "li: Phone: (888) 772-2919",
+   "p: For help with the app or your plan, see Support.",
+   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 AboutSupportPricingCancellation and refundsTermsPrivacy"
+  ],
+  "links": [
+   "/#waitlist | join the waitlist",
+   "mailto:support@inspyx.com | support@inspyx.com",
+   "tel:+18887722919 | (888) 772-2919",
+   "/support | Support",
+   "mailto:support@inspyx.com | support@inspyx.com",
+   "tel:+18887722919 | (888) 772-2919",
+   "/about | About",
+   "/support | Support",
+   "/pricing | Pricing",
+   "/refunds | Cancellation and refunds",
+   "/terms | Terms",
+   "/privacy | Privacy"
+  ],
+  "head": {
+   "title": "Inspyx — About",
+   "description": "Who makes Inspyx: INSPYX LLC, a Florida company based in Miami Gardens.",
+   "canonical": "https://inspyx.com/about",
+   "robots": null,
+   "ogTitle": "Inspyx — About",
+   "ogDescription": "Who makes Inspyx: INSPYX LLC, a Florida company based in Miami Gardens.",
+   "ogUrl": "https://inspyx.com/about",
+   "ogImage": "https://inspyx.com/assets/share.jpg",
+   "card": "summary_large_image",
+   "lang": "en"
+  }
+ },
+ "support": {
+  "words": [
+   "h1: Support",
+   "h2: Contact us",
+   "li: Email: support@inspyx.com",
+   "li: Phone: (888) 772-2919. Mia, our voice receptionist, answers. She can take a message or connect you.",
+   "p: We answer every message, usually within one business day.",
+   "h2: Your plan and billing",
+   "li: See or change your plan in the app: ☰ → Settings → Your plan.",
+   "li: Update your card: ☰ → Settings → Your plan → Update card.",
+   "li: Cancel: ☰ → Settings → Your plan → Manage billing, then Cancel subscription. Or ask us, and we'll cancel it for you.",
+   "p: What happens when you cancel, and when we refund, is in our cancellation and refund policy. Prices are on the pricing page.",
+   "h2: Your account",
+   "li: Forgot your password? Contact us and we will start a reset for you.",
+   "li: Delete your account: in the app, ☰ → Account → Delete your account.",
+   "h2: Your data",
+   "p: Your inspections stay on your iPhone, and you can export them anytime: ☰ → Export.",
+   "p: What we collect and what we never do is in our privacy policy. The rules for using Inspyx are in our terms.",
+   "h2: Report a problem",
+   "p: Write to support@inspyx.com and tell us:",
+   "li: what you were doing when it happened,",
+   "li: what you expected, and what happened instead,",
+   "li: your iPhone model.",
+   "p: A screenshot or a screen recording helps us most.",
+   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 AboutSupportPricingCancellation and refundsTermsPrivacy"
+  ],
+  "links": [
+   "mailto:support@inspyx.com | support@inspyx.com",
+   "tel:+18887722919 | (888) 772-2919",
+   "/refunds | cancellation and refund policy",
+   "/pricing | pricing page",
+   "/privacy | privacy policy",
+   "/terms | terms",
+   "mailto:support@inspyx.com | support@inspyx.com",
+   "mailto:support@inspyx.com | support@inspyx.com",
+   "tel:+18887722919 | (888) 772-2919",
+   "/about | About",
+   "/support | Support",
+   "/pricing | Pricing",
+   "/refunds | Cancellation and refunds",
+   "/terms | Terms",
+   "/privacy | Privacy"
+  ],
+  "head": {
+   "title": "Inspyx — Support",
+   "description": "How to reach Inspyx, and where to find the most common answers.",
+   "canonical": "https://inspyx.com/support",
+   "robots": null,
+   "ogTitle": "Inspyx — Support",
+   "ogDescription": "How to reach Inspyx, and where to find the most common answers.",
+   "ogUrl": "https://inspyx.com/support",
+   "ogImage": "https://inspyx.com/assets/share.jpg",
+   "card": "summary_large_image",
+   "lang": "en"
+  }
+ },
  "no-such-page": {
   "words": [
    "h1: That page isn't here.",
    "p: The link may be old, or the address may have a typo.",
    "a: Go to the home page",
-   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 PricingCancellation and refundsTermsPrivacy"
+   "footer: INSPYX LLC · Miami Gardens, FL support@inspyx.com · (888) 772-2919 AboutSupportPricingCancellation and refundsTermsPrivacy"
   ],
   "links": [
    "/ | Go to the home page",
    "mailto:support@inspyx.com | support@inspyx.com",
    "tel:+18887722919 | (888) 772-2919",
+   "/about | About",
+   "/support | Support",
    "/pricing | Pricing",
    "/refunds | Cancellation and refunds",
    "/terms | Terms",

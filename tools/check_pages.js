@@ -1,4 +1,5 @@
-// Self-checks for the pricing and policy pages (/pricing, /refunds, /terms, /privacy) and the page a wrong address gets.
+// Self-checks for the pricing and policy pages (/pricing, /refunds, /terms, /privacy), the About and Support pages
+// (/about, /support; Moises approved their words on 2026-11-13: "Yes, publish both") and the page a wrong address gets.
 // Their LOOK may change; their WORDS may not, unless Moises says so. tools/page_words.json holds each page's approved
 // words, links and head. These checks compare the served pages with it, then look at the layout on a phone and on a
 // wide screen: the top links, tap sizes, sideways scroll, the pricing card, the policy pages' list of headings, motion off.
@@ -13,8 +14,12 @@ const path = require('path');
 const url = process.env.URL || 'http://localhost:4173/';
 const keep = process.argv.includes('--keep');
 const FILE = path.join(__dirname, 'page_words.json');
-const PAGES = ['pricing', 'refunds', 'terms', 'privacy', 'no-such-page'];   // the last is answered by 404.html
+const PAGES = ['pricing', 'refunds', 'terms', 'privacy', 'about', 'support', 'no-such-page'];   // the last is answered by 404.html
 const POLICIES = ['refunds', 'terms', 'privacy'];
+// The pages laid out as a policy is: a list of headings beside the text.
+const DOCS = [...POLICIES, 'about', 'support'];
+// The footer's links, on every page: who we are and how to reach us first, then the four pages of the top bar.
+const FOOT = [['/about', 'About'], ['/support', 'Support'], ['/pricing', 'Pricing'], ['/refunds', 'Cancellation and refunds'], ['/terms', 'Terms'], ['/privacy', 'Privacy']];
 const NAV = [['/pricing', 'Pricing'], ['/refunds', 'Cancellation and refunds'], ['/terms', 'Terms'], ['/privacy', 'Privacy']];
 // The two windows the pages are looked at in. Widths are compared with these numbers, never with the window's own
 // report of itself: a phone's browser zooms out to fit a page that is too wide, and then says the window is that wide.
@@ -69,7 +74,7 @@ async function open(browser, name, opts) {
   const browser = await chromium.launch();
 
   if (keep) {
-    const out = { about: 'The approved words, links and head of the pricing and policy pages. Written by: node tools/check_pages.js --keep. Change it only with a change of words Moises approved.' };
+    const out = { note: 'The approved words, links and head of the pricing and policy pages. Written by: node tools/check_pages.js --keep. Change it only with a change of words Moises approved.' };
     for (const name of PAGES) { const { ctx, page } = await open(browser, name); out[name] = await page.evaluate(read); await ctx.close(); console.log('kept  ' + name + ': ' + out[name].words.length + ' lines, ' + out[name].links.length + ' links'); }
     fs.writeFileSync(FILE, JSON.stringify(out, null, 1) + '\n');
     await browser.close();
@@ -105,8 +110,8 @@ async function open(browser, name, opts) {
         };
       });
       ok(name + ': nothing scrolls sideways on a phone', r.sw <= PHONE, r.sw + ' wide in a ' + PHONE + ' window');
-      ok(name + ', phone: the top keeps to the logo, and the footer has the four pages', !!r.logo && r.logo.name === 'Inspyx, home' && r.logo.mark && r.nav.length === 4 && r.nav.every((h) => h === 0) && same(r.footNav, NAV), JSON.stringify([r.logo, r.nav, r.footNav]));
-      ok(name + ', phone: the logo, the buttons and the footer links are big enough to tap', r.logo && r.logo.h >= 44 && r.foot.length >= 6 && r.foot.every((h) => h >= 44) && r.btn.every((h) => h >= 44), JSON.stringify({ logo: r.logo && r.logo.h, foot: r.foot, btn: r.btn }));
+      ok(name + ', phone: the top keeps to the logo, and the footer has its six pages', !!r.logo && r.logo.name === 'Inspyx, home' && r.logo.mark && r.nav.length === 4 && r.nav.every((h) => h === 0) && same(r.footNav, FOOT), JSON.stringify([r.logo, r.nav, r.footNav]));
+      ok(name + ', phone: the logo, the buttons and the footer links are big enough to tap', r.logo && r.logo.h >= 44 && r.foot.length >= 8 && r.foot.every((h) => h >= 44) && r.btn.every((h) => h >= 44), JSON.stringify({ logo: r.logo && r.logo.h, foot: r.foot, btn: r.btn }));
       ok(name + ': the type is the home page\'s own (nothing is fetched for it), and there is one main heading', /^-apple-system/.test(r.font) && r.h1 === 1, r.font + ' / h1: ' + r.h1);
       await ctx.close();
     });
@@ -178,7 +183,7 @@ async function open(browser, name, opts) {
   });
 
   // ---- the policy pages: the list of headings beside the text
-  for (const name of POLICIES) {
+  for (const name of DOCS) {
     await group(name + ', wide', async () => {
       const { ctx, page } = await open(browser, name, { w: WIDE, h: 900, desktop: true });
       const r = await page.evaluate(() => {
@@ -192,9 +197,10 @@ async function open(browser, name, opts) {
       });
       ok(name + ': the list of headings is the page\'s own headings, each going to its section', r.heads.length > 3 && JSON.stringify(r.heads) === JSON.stringify(r.list) && r.ids === r.heads.length && r.heads.every((h) => h[0].length > 1) && !!r.label, r.heads.length + ' headings, ' + r.list.length + ' in the list');
       ok(name + ', wide: the list stands beside the text and stays in view; a line of text is not too long to read', r.beside && r.pos === 'sticky' && r.widest <= 760, JSON.stringify({ beside: r.beside, pos: r.pos, widest: r.widest }));
+      // A short page (About) ends before its third heading can reach the top: then the page must have gone as far as it goes.
       await page.click('nav.toc a:nth-child(3)'); await page.waitForTimeout(500);
-      const j = await page.evaluate(() => { const a = document.querySelector('nav.toc a:nth-child(3)'); const h = document.querySelector(a.getAttribute('href')); return { top: Math.round(h.getBoundingClientRect().top), cur: a.getAttribute('aria-current'), marked: document.querySelectorAll('nav.toc a[aria-current]').length, toc: Math.round(document.querySelector('nav.toc').getBoundingClientRect().top), y: Math.round(window.scrollY) }; });
-      ok(name + ', wide: choosing a heading brings its section up and marks it, and the list has stayed in view', j.y > 0 && j.top >= 0 && j.top < 160 && j.cur === 'true' && j.marked === 1 && (r.tocH > 860 || (j.toc >= 0 && j.toc < 60)), JSON.stringify(j));
+      const j = await page.evaluate(() => { const a = document.querySelector('nav.toc a:nth-child(3)'); const h = document.querySelector(a.getAttribute('href')); return { end: window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2, top: Math.round(h.getBoundingClientRect().top), cur: a.getAttribute('aria-current'), marked: document.querySelectorAll('nav.toc a[aria-current]').length, toc: Math.round(document.querySelector('nav.toc').getBoundingClientRect().top), y: Math.round(window.scrollY) }; });
+      ok(name + ', wide: choosing a heading brings its section up and marks it, and the list has stayed in view', j.y > 0 && j.top >= 0 && (j.top < 160 || j.end) && j.cur === 'true' && j.marked === 1 && (r.tocH > 860 || (j.toc >= 0 && j.toc < 60)), JSON.stringify(j));
       await page.click('nav.toc a:last-child'); await page.waitForTimeout(700);
       const z = await page.evaluate(() => { const a = document.querySelector('nav.toc a:last-child'); const h = document.querySelector(a.getAttribute('href')); return { top: Math.round(h.getBoundingClientRect().top), ih: window.innerHeight, cur: a.getAttribute('aria-current'), marked: document.querySelectorAll('nav.toc a[aria-current]').length }; });
       ok(name + ', wide: the last heading, which cannot reach the top, is marked when chosen and is in the window', z.cur === 'true' && z.marked === 1 && z.top >= 0 && z.top < z.ih, JSON.stringify(z));
