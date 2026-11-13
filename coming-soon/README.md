@@ -701,10 +701,15 @@ written, tags included: `<h2>Faster reports, or three months free</h2>` must sta
 
 ## Signing in on the website (/signin and /account)
 
-Built 2026-11-12 on the local branch `claude/web-signin`, after Moises's "Yes, start" to "Start building the
-website's sign-in tonight?". **Not published, not pushed, and hidden on purpose**: no page links to it, the
-sitemap leaves it out, and both pages ask search engines not to list them. It becomes reachable only on his
-word.
+Built 2026-11-12 on the branch `claude/web-signin`, after Moises's "Yes, start" (23:04:13Z) to "Start
+building the website's sign-in tonight?". **Hidden on purpose**: no page links to it, the sitemap leaves it
+out, and both pages ask search engines not to list them.
+
+**Approved to go out hidden.** Asked "Add the hidden sign-in page to tomorrow's publish so you can try it?",
+Moises answered "Yes, add it" (2026-11-13 00:11:55Z, the evening of 11-12 his time). So it goes out with the
+publish of 2026-11-13 (the top banner, the pricing and policy pages' new look, the pricing button), in the
+same single publish, for one purpose: his own first sign-in, on his iPhone. Hidden stays hidden. It is
+linked from nowhere until he says where, and its words are still drafts.
 
 **What it does.** An inspector signs in with the email and password of their Inspyx account, the same one
 the app uses. There is no way to make an account here (accounts are made by invitation) and no button to
@@ -819,14 +824,19 @@ message before a picture is taken, one after).
   engine as Playwright ships it (WebKit 26.4: 59), and both draw the page whole, on a phone and on a wide
   screen. That is still not Safari on Moises's iPhone (iOS 27), which is checked by hand.
 - **A real sign-in.** Claude never types a password and makes no accounts. The first real sign-in is
-  Moises's, with his own account, at a plain inspyx.com address.
+  Moises's, with his own account, at a plain inspyx.com address. What could be checked without one: the
+  account server lets a page at inspyx.com make each of the three calls. A browser asks the server that
+  before a call (an `OPTIONS` request, which carries nothing of an account); asked by hand on 2026-11-13 at
+  00:12:56Z for signing in, renewing and signing out, the server answered 200 each time, allowing any site
+  and the headers each call sends.
 - **A real Back in Safari.** The checks send the browser's "page brought back" signal themselves, because
   the browser they run in always loads the page again.
 - **Vercel sending the headers.** Seen on the local server only, which reads the same `vercel.json`.
   Vercel's own route reader (`@vercel/routing-utils` 6.6.1, the library its build runs) accepts the file and
   turns the rule into `^(?:/(signin|account))$`: the two addresses and no other (`tools/check_rules.js`). A
   rule it refused would fail the whole build. The headers on Vercel itself are looked at after the first
-  publish: `curl -sI https://inspyx.com/signin`.
+  publish: `curl -sI https://inspyx.com/signin`, and `URL=https://inspyx.com/ node tools/check_signin.js`
+  runs every check against the live pages (still with no real sign-in: the test answers the calls).
 - **The app's own sign-out ends every sign-in the person has**, the website's too: it makes the same call
   without `scope=local`. The website handles that (its next renewal is rejected and the browser goes to the
   sign-in page). Whether the app should sign out the phone alone is a question for the app, not settled here.
@@ -837,7 +847,7 @@ message before a picture is taken, one after).
 - **If `auth.js` does not arrive** (a dropped connection), `/account` shows its top and footer and nothing
   between. Loading the page again fixes it.
 
-**Before publishing** (each needs Moises's word, or his hands):
+**Before any page links to it** (each needs Moises's word, or his hands):
 
 1. His approval of the words.
 2. A real screen of the app on the phone in the picture. Today it is the mock-up's "Today" screen, which is
