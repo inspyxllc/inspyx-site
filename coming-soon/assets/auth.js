@@ -14,6 +14,7 @@
   // by itself: every table sits behind row-level security, and new accounts are made by invitation only.
   var KEY = 'sb_publishable_iFfCyDj7e5cnTsWC7aDO8Q_BD5bG_io';
   var STORE = 'inspyx.signin';
+  var GOING = 'inspyx.signin.google';   // kept for this tab only, while the browser is away at Google
   var DEADLINE = 30000;   // the longest one call may take, as in the app
   var EARLY = 60000;      // a sign-in with less than a minute left is renewed before it is used
 
@@ -22,7 +23,11 @@
      network:   the server said nothing (no connection, or no answer within the deadline)
      server:    the server refused or failed
      malformed: its answer cannot make a whole sign-in
-     storage:   this browser would not keep the sign-in */
+     storage:   this browser would not keep the sign-in
+     and, back from Google only:
+     noaccount: no Inspyx account uses that Google address (accounts are made by invitation; Google makes none)
+     cancelled: the person turned back at Google's page
+     google:    anything else that went wrong on the way there or back */
   function Refusal(kind, status) { this.kind = kind; this.status = status || 0; }
 
   function send(method, url, token, body, deadline) {
@@ -66,6 +71,54 @@
   function signIn(email, password) {
     return send('POST', BASE + '/token?grant_type=password', null, { email: email, password: password }).then(function (r) {
       if (r.status === 400 || r.status === 401) throw new Refusal('rejected', r.status);
+      if (r.status !== 200) throw new Refusal('server', r.status);
+      var s = whole(r.json);
+      if (!keep(s)) { send('POST', BASE + '/logout?scope=local', s.access).then(function () {}, function () {}); throw new Refusal('storage'); }
+      return s;
+    });
+  }
+
+  /* Signing in with Google (2026-11-13, his decision of 2026-11-12). The browser goes to the account server,
+     which sends it on to Google and takes it back, and returns it to /signin with a code good once. The code is
+     worth nothing alone: it is exchanged together with a secret this tab made before leaving and never sent
+     anywhere until then (PKCE). So a code read off an address bar, a history or a log signs nobody in.
+     Google can only sign in someone who already has an Inspyx account with that address: the server makes no
+     new accounts. */
+  function b64url(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return root.btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function googleStart() {
+    var c = root.crypto;
+    if (!c || !c.subtle || !c.getRandomValues || typeof TextEncoder !== 'function') return Promise.reject(new Refusal('google'));
+    var raw = new Uint8Array(48);
+    c.getRandomValues(raw);
+    var secret = b64url(raw);
+    return c.subtle.digest('SHA-256', new TextEncoder().encode(secret)).then(function (hash) {
+      try { root.sessionStorage.setItem(GOING, secret); } catch (e) { throw new Refusal('storage'); }
+      if (root.sessionStorage.getItem(GOING) !== secret) throw new Refusal('storage');
+      root.location.assign(BASE + '/authorize?provider=google&redirect_to=' + encodeURIComponent(root.location.origin + '/signin') +
+        '&code_challenge=' + b64url(new Uint8Array(hash)) + '&code_challenge_method=s256');
+    }, function () { throw new Refusal('google'); });
+  }
+  /* Back on the sign-in page: null when the browser did not come from Google, the sign-in when it did and the
+     server gave one. Whatever came back is taken out of the address at once, before anything else happens. */
+  function googleBack() {
+    var q, h;
+    try { q = new URLSearchParams(root.location.search); h = new URLSearchParams(root.location.hash.replace(/^#/, '')); } catch (e) { return Promise.resolve(null); }
+    var code = q.get('code');
+    var error = q.get('error') || h.get('error'), errorCode = q.get('error_code') || h.get('error_code');
+    if (!code && !error && !errorCode) return Promise.resolve(null);
+    var secret = null;
+    try { secret = root.sessionStorage.getItem(GOING); root.sessionStorage.removeItem(GOING); } catch (e) { secret = null; }
+    try { root.history.replaceState(null, '', root.location.pathname); } catch (e) { /* the address stays; the code is still good only once */ }
+    if (error || errorCode) {
+      return Promise.reject(new Refusal(errorCode === 'signup_disabled' ? 'noaccount' : error === 'access_denied' && (!errorCode || errorCode === 'access_denied') ? 'cancelled' : 'google'));
+    }
+    if (!secret || !/^[A-Za-z0-9._~-]{1,512}$/.test(code)) return Promise.reject(new Refusal('google'));
+    return send('POST', BASE + '/token?grant_type=pkce', null, { auth_code: code, code_verifier: secret }).then(function (r) {
+      if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404) throw new Refusal('google', r.status);
       if (r.status !== 200) throw new Refusal('server', r.status);
       var s = whole(r.json);
       if (!keep(s)) { send('POST', BASE + '/logout?scope=local', s.access).then(function () {}, function () {}); throw new Refusal('storage'); }
@@ -149,7 +202,7 @@
     return s ? { id: s.id, email: s.email } : null;
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, who: who };
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, who: who, googleStart: googleStart, googleBack: googleBack };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the account page. It asks three times:

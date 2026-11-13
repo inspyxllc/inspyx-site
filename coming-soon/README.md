@@ -857,6 +857,46 @@ message before a picture is taken, one after).
    a wrong password. Never a Vercel share link.
 4. A decision on where the site links to it.
 
+### Signing in with Google (2026-11-13)
+
+Moises decided on 2026-11-12 that the website's sign-in gets Google, Apple, a passkey and email with password
+("google sso, passkey, stanard email and password", then "We should have also Apple SSO"). On 2026-11-13, after
+his first sign-in on the live page, he said: "there's no SSOs or passkeys to make signing in effortless", and
+"yes start google". The Apple and passkey buttons are still not on the page: nothing is shown that does not work.
+
+**What it is.** One button above the form, "Continue with Google", and the line "or with your email". Both are
+drafts, like the page's other words.
+
+**How it works** (`assets/auth.js`, `googleStart` and `googleBack`; there is no library, as for the rest):
+
+1. A tap makes a long random secret, keeps it in this tab only (`sessionStorage`), and sends the browser to the
+   account server's `/auth/v1/authorize?provider=google` with a SHA-256 of that secret and the address to come
+   back to, this site's `/signin`.
+2. The account server sends the browser to Google and takes it back, then returns it to `/signin?code=…`.
+3. The page takes the code out of the address at once, then exchanges it, together with the secret, at
+   `/auth/v1/token?grant_type=pkce`. A code alone signs nobody in.
+
+**Google makes no accounts.** The project has "Allow new users to sign up" switched off (read 2026-11-13), so
+Google signs in only someone who already has an Inspyx account with that address. Anyone else comes back with
+`error_code=signup_disabled` and reads the page's line for it. If sign-ups are ever switched on, Google would
+start making accounts: decide that on purpose.
+
+**Set up outside this repo** (2026-11-13, in Moises's Chrome): Google Cloud project `inspyx-prod`, Google Auth
+Platform: app name "Inspyx", support email support@inspyx.com, audience External, **In production** (Moises
+pressed Confirm); links to the home page, /privacy and /terms; one client, "Inspyx website sign-in", with the
+origin `https://inspyx.com` and the redirect address `https://btxlrfvqifnrnxffohsz.supabase.co/auth/v1/callback`.
+In Supabase: the Google provider on, with that client's ID and its secret (Moises pasted the secret), and
+`https://inspyx.com/signin` among the redirect addresses.
+
+**Known and not done.** Google's own page says "to continue to btxlrfvqifnrnxffohsz.supabase.co", not
+inspyx.com: changing that is a paid Supabase add-on (a custom domain), which is Moises's call. The app has no
+Google sign-in. A private build of this site cannot finish a Google sign-in (its address is not among the
+redirect addresses); the checks stand in for the account server.
+
+**Checks.** `tools/check_signin.js` holds them (the groups named "Google, …"): the hand-off and what it carries,
+the exchange, the address cleaned before the exchange, every way of coming back without a sign-in, a browser
+that cannot keep the secret, a second tap. Google itself is never reached.
+
 ## Your plan on the website (/plan)
 
 **Not published.** Built on 2026-11-13 on the branch `claude/web-plan`, which stands on `claude/web-signin`.

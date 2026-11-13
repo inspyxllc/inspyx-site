@@ -25,12 +25,14 @@ const kept = (n, endsInMs) => JSON.stringify({ access: 'test-access-' + n, renew
 
 // The words of the two pages, as drafted on 2026-11-12. They wait for Moises's approval; once he gives it, they are
 // his words, and a change here needs his word too. The sentences about a failed sign-in are the app's own.
-const SIGNIN_WORDS = ['h1: Welcome back.', 'label: Email', 'label: Password',
+const SIGNIN_WORDS = ['h1: Welcome back.', 'button: Continue with Google', 'p: or with your email', 'label: Email', 'label: Password',
   'p: That email or password was not accepted. Check both and try again.',
   'p: Inspyx could not reach the sign-in server. Check your connection and try again.',
   'p: The sign-in server answered in an unexpected way. No session was created.',
   'p: The sign-in server refused the request. Try again later.',
   'p: Sign-in did not complete. Try again.',
+  'p: No Inspyx account uses that Google address. Sign in with your email and password, or join the waitlist.',
+  'p: Google sign-in did not complete. Try again.',
   'button: Sign in',
   'p: Forgot your password? Contact Inspyx support and we will start a reset for you: support@inspyx.com or (888) 772-2919.',
   'p: New to Inspyx? Join the waitlist'];
@@ -66,6 +68,11 @@ async function open(browser, where, opts) {
     const a = o.answers ? await o.answers(call, calls.length) : { status: 200, json: granted(1) };
     if (a === 'offline') return route.abort('failed');
     if (a === 'silent') return undefined;
+    // The account server sends the browser on with a redirect. Safari's engine cannot be handed a made-up redirect
+    // by a test, so the stand-in is a page that sends the browser on at once: the browser ends at the same address.
+    if (a.redirect) return route.fulfill({ status: 200, contentType: 'text/html', body: '<!DOCTYPE html><meta http-equiv="refresh" content="0;url=' + a.redirect.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"><title>on</title>' });
+    // 'stay': the server answers with nothing to show, so the browser stays on the page it was leaving.
+    if (a === 'stay') return route.fulfill({ status: 204 });
     if (a.wait) await new Promise((r) => setTimeout(r, a.wait));
     return route.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a.json === undefined ? {} : a.json) });
   });
@@ -118,6 +125,123 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
       await ctx.close();
     });
   }
+
+  // ---- Google (2026-11-13). Google itself is never reached: the account server's hand-off is caught here and
+  // answered with what the real one sends back, a code in the sign-in page's address.
+  const sha = (v) => require('crypto').createHash('sha256').update(v).digest('base64url');
+  const secretOf = (page) => page.evaluate(() => sessionStorage.getItem('inspyx.signin.google'));
+  const rest = (page) => page.evaluate(() => { const g = document.querySelector('[data-google]'), b = document.querySelector('[data-signin] button'); return { g: g.disabled, b: b.disabled, word: g.textContent.trim(), sign: b.textContent.trim(), search: location.search, hash: location.hash, path: location.pathname }; });
+
+  await group('Google, the button', async () => {
+    const { ctx, page, errs, calls } = await open(browser, 'signin');
+    const r = await page.evaluate(() => { const g = document.querySelector('[data-google]'); const b = g.getBoundingClientRect(); const or = document.querySelector('.or'); const em = document.querySelector('#signin-email'); return { type: g.type, h: Math.round(b.height), w: Math.round(b.width), logo: g.querySelectorAll('svg path').length, above: b.bottom <= or.getBoundingClientRect().top && or.getBoundingClientRect().bottom <= em.getBoundingClientRect().top, inForm: !!g.closest('form'), sw: document.documentElement.scrollWidth, kept: sessionStorage.getItem('inspyx.signin.google') }; });
+    ok('Google, the button: a real button outside the form, big enough to tap, with Google\'s four-colour mark, above "or with your email" and the email box', r.type === 'button' && !r.inForm && r.h >= 44 && r.logo === 4 && r.above && r.sw <= PHONE, JSON.stringify(r));
+    ok('Google, the button: opening the page asks the account server for nothing and keeps nothing', calls.length === 0 && r.kept === null && errs.length === 0, calls.map((c) => c.path).join(',') + errs.join(' | '));
+    await ctx.close();
+  });
+
+  await group('Google, a good sign-in', async () => {
+    // The page is on its way out while the hand-off is answered, so nothing is read from it then: the secret is
+    // read from the exchange's own body afterwards, and checked against the challenge the hand-off carried.
+    let challenge = '', secretAtHandOff = null, pageRef = null, midExchange = null;
+    const { ctx, page, errs, away, calls } = await open(browser, 'signin', { answers: async (call) => {
+      if (call.path.startsWith('/auth/v1/authorize')) {
+        const q = new URL(SERVER + call.path).searchParams;
+        challenge = q.get('code_challenge') || '';
+        return { redirect: HOME + '/signin?code=test-code-1' };
+      }
+      if (call.path.startsWith('/auth/v1/token')) { midExchange = await rest(pageRef).catch(() => null); return { wait: 400, status: 200, json: granted(7) }; }
+      return { status: 200, json: {} };
+    } });
+    pageRef = page;
+    await page.evaluate(() => document.querySelector('[data-google]').click());
+    await page.waitForURL('**/account');
+    await page.waitForTimeout(300);
+    const hand = calls.find((c) => c.path.startsWith('/auth/v1/authorize')) || { path: '' };
+    const q = new URL(SERVER + hand.path).searchParams;
+    ok('Google, a good sign-in: the browser is handed to the account server for Google, to come back to this site\'s sign-in page, with a challenge and no secret in the address', hand.method === 'GET' && q.get('provider') === 'google' && q.get('redirect_to') === HOME + '/signin' && q.get('code_challenge_method') === 's256' && /^[A-Za-z0-9_-]{43}$/.test(challenge) && [...q.keys()].sort().join(',') === 'code_challenge,code_challenge_method,provider,redirect_to', hand.path.slice(0, 200));
+    const t = calls.find((c) => c.path.startsWith('/auth/v1/token')) || { headers: {} };
+    const body = (() => { try { return JSON.parse(t.body); } catch (e) { return {}; } })();
+    secretAtHandOff = body.code_verifier;
+    ok('Google, a good sign-in: the code is exchanged once, in a request\'s body, together with the secret', calls.filter((c) => c.path.startsWith('/auth/v1/token')).length === 1 && t.method === 'POST' && t.path === '/auth/v1/token?grant_type=pkce' && body.auth_code === 'test-code-1' && body.code_verifier === secretAtHandOff && Object.keys(body).length === 2 && !!t.headers.apikey, t.path);
+    ok('Google, a good sign-in: the secret this tab made stays in this tab, is long and random, and is what the challenge was made from', typeof secretAtHandOff === 'string' && secretAtHandOff.length >= 43 && sha(secretAtHandOff) === challenge && !hand.path.includes(secretAtHandOff), String(secretAtHandOff).length + ' long');
+    ok('Google, a good sign-in: by the time it is exchanged the code is gone from the address, and neither button takes a tap', !!midExchange && midExchange.search === '' && midExchange.hash === '' && midExchange.path === '/signin' && midExchange.g && midExchange.b && midExchange.sign === 'Signing in…', JSON.stringify(midExchange));
+    const s = JSON.parse(await stored(page) || '{}');
+    ok('Google, a good sign-in: it ends on the account page, signed in, with the secret forgotten and nothing asked of any other site', (await at(page)) === '/account' && s.access === 'test-access-7' && s.email === WHO && (await secretOf(page)) === null && away.length === 0 && errs.length === 0, away.concat(errs).join(' | '));
+    await page.goBack().catch(() => {});
+    await page.waitForTimeout(400);
+    const back = await page.evaluate(() => location.pathname + location.search);
+    ok('Google, a good sign-in: the Back button finds no code in any address the browser kept', !/code=/.test(back), back);
+    await ctx.close();
+  });
+
+  for (const [label, came, kind, why] of [
+    ['an address with no Inspyx account', '?error=access_denied&error_code=signup_disabled&error_description=Signups+not+allowed+for+this+instance', 'noaccount', 'says so'],
+    ['the same, told in the address\'s tail', '#error=access_denied&error_code=signup_disabled&error_description=Signups+not+allowed', 'noaccount', 'says so'],
+    ['turning back at Google', '?error=access_denied&error_description=The+user+denied+access', '', 'says nothing'],
+    ['a server error on the way', '?error=server_error&error_code=unexpected_failure&error_description=boom', 'google', 'says Google did not complete'],
+    ['a code this tab never asked for', '?code=test-code-9', 'google', 'says Google did not complete'],
+  ]) {
+    await group('Google, ' + label, async () => {
+      const { ctx, page, errs, calls } = await open(browser, 'signin' + came);
+      const r = await rest(page), said = await shown(page);
+      ok('Google, ' + label + ': the page ' + why + ', asks the account server for nothing, signs nobody in, cleans its address and is ready for another try', JSON.stringify(said) === JSON.stringify(kind ? [kind] : []) && calls.length === 0 && (await stored(page)) === null && r.search === '' && r.hash === '' && !r.g && !r.b && r.word === 'Continue with Google' && errs.length === 0, JSON.stringify({ said, r, calls: calls.length }));
+      await ctx.close();
+    });
+  }
+
+  for (const [label, answer, kind] of [
+    ['a code the server refuses', { status: 400, json: { error_code: 'flow_state_not_found' } }, 'google'],
+    ['a server that fails', { status: 500, json: {} }, 'server'],
+    ['no connection on the way back', 'offline', 'network'],
+    ['an answer that is no sign-in', { status: 200, json: { access_token: 'x' } }, 'malformed'],
+  ]) {
+    await group('Google, ' + label, async () => {
+      const { ctx, page, calls } = await open(browser, 'signin?code=test-code-2', { init: () => { try { if (!sessionStorage.getItem('g-seeded')) { sessionStorage.setItem('g-seeded', '1'); sessionStorage.setItem('inspyx.signin.google', 'made-up-secret-for-tests-0123456789-abcdefghij'); } } catch (e) { /* none */ } }, answers: () => answer });
+      await page.waitForTimeout(400);
+      const r = await rest(page), said = await shown(page);
+      ok('Google, ' + label + ': one try, the right message, nobody signed in, the secret used up, both buttons back', JSON.stringify(said) === JSON.stringify([kind]) && calls.length === 1 && (await stored(page)) === null && (await secretOf(page)) === null && !r.g && !r.b && r.search === '', JSON.stringify({ said, calls: calls.length, r }));
+      await ctx.close();
+    });
+  }
+
+  await group('Google, a code that is not a code', async () => {
+    const { ctx, page, calls } = await open(browser, 'signin?code=' + encodeURIComponent('a b"c<d>'), { init: () => { try { sessionStorage.setItem('inspyx.signin.google', 'made-up-secret-for-tests-0123456789-abcdefghij'); } catch (e) { /* none */ } } });
+    ok('Google, a code that is not a code: it is never sent anywhere', calls.length === 0 && JSON.stringify(await shown(page)) === '["google"]', String(calls.length));
+    await ctx.close();
+  });
+
+  await group('Google, a browser that cannot keep the secret', async () => {
+    const { ctx, page, calls } = await open(browser, 'signin', { init: () => { Storage.prototype.setItem = function () { throw new Error('full'); }; } });
+    await page.evaluate(() => { document.querySelector('[data-google]').click(); });
+    await page.waitForTimeout(400);
+    const r = await rest(page);
+    ok('Google, a browser that cannot keep the secret: it is not sent to Google, and the page says the sign-in did not complete', calls.length === 0 && r.path === '/signin' && !r.g && JSON.stringify(await shown(page)) === '["other"]', JSON.stringify(r));
+    await ctx.close();
+  });
+
+  await group('Google, a browser that only pretends to keep the secret', async () => {
+    const { ctx, page, calls } = await open(browser, 'signin', { init: () => { Storage.prototype.setItem = function () { /* says nothing, keeps nothing */ }; } });
+    await page.evaluate(() => { document.querySelector('[data-google]').click(); });
+    await page.waitForTimeout(400);
+    const r = await rest(page);
+    ok('Google, a browser that only pretends to keep the secret: it is not sent to Google either, since it could never finish coming back', calls.length === 0 && r.path === '/signin' && !r.g && JSON.stringify(await shown(page)) === '["other"]', JSON.stringify(r));
+    await ctx.close();
+  });
+
+  await group('Google, tapped twice', async () => {
+    let hands = 0;
+    const { ctx, page } = await open(browser, 'signin', { answers: (call) => { if (call.path.startsWith('/auth/v1/authorize')) { hands++; return 'stay'; } return { status: 200, json: {} }; } });
+    const tap = () => page.evaluate(() => { document.querySelector('[data-google]').click(); });
+    await tap();
+    await page.waitForTimeout(300);
+    const mid = await rest(page);
+    await tap();
+    await page.evaluate(() => document.querySelector('[data-signin]').requestSubmit());
+    await page.waitForTimeout(400);
+    ok('Google, tapped twice: one hand-off; while it is on its way the button says "Opening Google…" and neither button takes a tap', hands === 1 && mid.g && mid.b && mid.word === 'Opening Google…' && mid.sign === 'Sign in', JSON.stringify({ hands, mid }));
+    await ctx.close();
+  });
 
   // ---- a good sign-in
   await group('a good sign-in', async () => {
@@ -314,8 +438,8 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const safari = engine.name() === 'webkit';
     const here = () => page.evaluate(() => { const e = document.activeElement; return e.id || e.getAttribute('aria-label') || e.textContent.trim().slice(0, 18); });
     const order = [];
-    for (let i = 0; i < 5; i++) { await page.keyboard.press(safari ? 'Alt+Tab' : 'Tab'); order.push(await here()); }
-    ok('the Tab key goes: logo, email, password, Sign in, then the help lines; never into the picture', order[0] === 'Inspyx, home' && order[1] === 'signin-email' && order[2] === 'signin-password' && order[3] === 'Sign in' && order[4] === 'support@inspyx.com', order.join(' > '));
+    for (let i = 0; i < 6; i++) { await page.keyboard.press(safari ? 'Alt+Tab' : 'Tab'); order.push(await here()); }
+    ok('the Tab key goes: logo, Google, email, password, Sign in, then the help lines; never into the picture', order[0] === 'Inspyx, home' && order[1] === 'Continue with Goog' && order[2] === 'signin-email' && order[3] === 'signin-password' && order[4] === 'Sign in' && order[5] === 'support@inspyx.com', order.join(' > '));
     if (safari) {
       await page.focus('#signin-email'); await page.keyboard.press('Tab');
       ok('in Safari the plain Tab key goes from the email box to the password box', (await here()) === 'signin-password', await here());
