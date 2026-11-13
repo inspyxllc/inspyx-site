@@ -89,7 +89,8 @@
     for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
     return root.btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
-  function googleStart() {
+  function googleStart(back) {
+    var page = back === '/signup' ? '/signup' : '/signin';
     var c = root.crypto;
     if (!c || !c.subtle || !c.getRandomValues || typeof TextEncoder !== 'function') return Promise.reject(new Refusal('google'));
     var raw = new Uint8Array(48);
@@ -103,7 +104,7 @@
       // information"; it was looked at on 2026-11-13 and left as it is, for these reasons.)
       try { root.sessionStorage.setItem(GOING, verifier); } catch (e) { throw new Refusal('storage'); }
       if (root.sessionStorage.getItem(GOING) !== verifier) throw new Refusal('storage');
-      root.location.assign(BASE + '/authorize?provider=google&redirect_to=' + encodeURIComponent(root.location.origin + '/signin') +
+      root.location.assign(BASE + '/authorize?provider=google&redirect_to=' + encodeURIComponent(root.location.origin + page) +
         '&code_challenge=' + b64url(new Uint8Array(hash)) + '&code_challenge_method=s256');
     }, function () { throw new Refusal('google'); });
   }
@@ -251,7 +252,60 @@
     });
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword };
+  /* Making an account (2026-11-13; his rules: anyone may sign up, with Google or an email and a password; every
+     account also has a password; the Terms tick is required). Nothing here opens sign-up: while the account server
+     refuses new accounts, signUp answers 'closed'.
+     signUp asks for an account with an email and a password. The server then emails a link that proves the address;
+     until it is followed nobody is signed in. The answer never says whether the address already has an account.
+     signupBack takes the one-time sign-in that link brings (the address's fragment) out of the address at once,
+     asks the server who it belongs to, and keeps it like any sign-in.
+     setPassword gives a signed-in account a password (one that came in with Google has none yet).
+     More kinds of trouble: closed (sign-up is not open), weak (a password the server won't take), busy (too many at
+     once), expired (a link used already or too old). */
+  function signUp(email, password) {
+    var back = root.location.origin + '/signup';
+    return send('POST', BASE + '/signup?redirect_to=' + encodeURIComponent(back), null, { email: email, password: password }).then(function (r) {
+      var code = r.json && (r.json.error_code || r.json.code || r.json.msg || r.json.message);
+      if (r.status === 429) throw new Refusal('busy', r.status);
+      if (r.status === 403 || /signup_disabled|signup_closed|not allowed/i.test(String(code || ''))) throw new Refusal('closed', r.status);
+      if (r.status === 422 || r.status === 400) throw new Refusal(/weak|password/i.test(String(code || '')) ? 'weak' : 'server', r.status);
+      if (r.status !== 200) throw new Refusal('server', r.status);
+      if (r.json && r.json.access_token) {
+        var s = whole(r.json);
+        if (!keep(s)) throw new Refusal('storage');
+        return 'in';
+      }
+      return 'confirm';
+    });
+  }
+  function signupBack() {
+    var h;
+    try { h = new URLSearchParams(root.location.hash.replace(/^#/, '')); } catch (e) { return Promise.resolve(null); }
+    var token = h.get('access_token'), renewal = h.get('refresh_token'), type = h.get('type'), error = h.get('error') || h.get('error_code');
+    if (!token && !error) return Promise.resolve(null);
+    try { root.history.replaceState(null, '', root.location.pathname); } catch (e) { /* the fragment stays; it is good once */ }
+    if (error || (type !== 'signup' && type !== 'email') || !/^[A-Za-z0-9._-]{20,4096}$/.test(token || '') || !renewal) return Promise.reject(new Refusal('expired'));
+    var expires = parseInt(h.get('expires_in') || '', 10);
+    return send('GET', BASE + '/user', token).then(function (r) {
+      if (r.status === 401 || r.status === 403) throw new Refusal('expired', r.status);
+      if (r.status !== 200) throw new Refusal('server', r.status);
+      var s = whole({ access_token: token, refresh_token: renewal, expires_in: isFinite(expires) && expires > 0 ? expires : 3600, user: r.json });
+      if (!keep(s)) throw new Refusal('storage');
+      return s;
+    });
+  }
+  function setPassword(password) {
+    return current().then(function (s) {
+      if (!s) throw new Refusal('rejected');
+      return send('PUT', BASE + '/user', s.access, { password: password }).then(function (r) {
+        if (r.status === 422) throw new Refusal('weak', r.status);
+        if (r.status === 401 || r.status === 403) throw new Refusal('rejected', r.status);
+        if (r.status !== 200) throw new Refusal('server', r.status);
+      });
+    });
+  }
+
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the account page. It asks three times:
