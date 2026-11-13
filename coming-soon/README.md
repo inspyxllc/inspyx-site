@@ -833,7 +833,8 @@ message before a picture is taken, one after).
   the browser they run in always loads the page again.
 - **Vercel sending the headers.** Seen on the local server only, which reads the same `vercel.json`.
   Vercel's own route reader (`@vercel/routing-utils` 6.6.1, the library its build runs) accepts the file and
-  turns the rule into `^(?:/(signin|account))$`: the two addresses and no other (`tools/check_rules.js`). A
+  turns the rule into `^(?:/(signin|account|plan))$` (on this branch: the plan page's address too) and no
+  other address (`tools/check_rules.js`). A
   rule it refused would fail the whole build. The headers on Vercel itself are looked at after the first
   publish: `curl -sI https://inspyx.com/signin`, and `URL=https://inspyx.com/ node tools/check_signin.js`
   runs every check against the live pages (still with no real sign-in: the test answers the calls).
@@ -855,3 +856,119 @@ message before a picture is taken, one after).
 3. His own sign-in at a plain inspyx.com address, on his iPhone and on a computer: sign in, sign out, Back,
    a wrong password. Never a Vercel share link.
 4. A decision on where the site links to it.
+
+## Your plan on the website (/plan)
+
+**Not published.** Built on 2026-11-13 on the branch `claude/web-plan`, which stands on `claude/web-signin`.
+It stays off inspyx.com until Moises says so.
+
+**His words.** 2026-11-12 19:50:44Z, "Website too": inspectors can start their plan on the website as well
+as in the app. 2026-11-13 01:44:03Z, "Yes, start", to "Start on "Your plan" for the website tonight?".
+
+**What it does.** The same as the app's Settings → Your plan, for a signed-in inspector:
+
+- It says where the plan stands, in one sentence: not started, in the free month, paid up, ending, a payment
+  that did not go through, ended.
+- It has one button. "Start your plan" goes to Stripe's checkout page (where the inspector chooses monthly
+  or yearly). "Manage billing" and "Update card" go to Stripe's billing page (card, receipts, cancel).
+- Stripe sends the inspector back to `/plan?billing=done`, `canceled` or `back`, and the page looks at the
+  plan again.
+
+The card goes to Stripe, on Stripe's page. It never passes through Inspyx.
+
+**Files.**
+
+| File | What it holds |
+| --- | --- |
+| `plan.html` | Every sentence the page can say, all hidden but the true one; the pricing page's panel and card. |
+| `assets/plan.js` | Asks the billing server, shows the sentence, opens Stripe's pages. It says no words. |
+| `assets/auth.js` | `ask(name, body, deadline)`: one request to one of Inspyx's server functions, as the signed-in inspector. |
+| `assets/app.css` | The page's few styles of its own (the rest is `page.css`). |
+| `account.html` | A link to the plan page ("Your plan"). |
+| `vercel.json` | The signed-in pages' rule now covers `/plan` too. |
+| `tools/check_plan.js` | Its checks. |
+| `tools/undo_checks.py --plan` | 114 ways to break it, each of which a check must notice. |
+| `tools/check_plan_words.py` | Compares the page's sentences with the app's own file. Run by hand, with the app's repo beside it. |
+
+**How it works.**
+
+- **The server.** The page asks the app's own billing function
+  (`backend/supabase/functions/billing` in the app's repo), with the same three requests as the app:
+  `{"action": "status"}`, `"start"`, `"portal"`. The function answers pages of `https://inspyx.com` and of
+  no other site (inspyxllc/inspyx-mobile PR 329, merged on 2026-11-13 as 256f9ae; live as billing version 8
+  since 02:22:29Z). From the website it sends Stripe's pages back to `/plan`; from the app, to the home
+  page's message, as before.
+- **The sign-in never reaches the page's script.** `plan.js` says what it wants; `auth.js` adds the sign-in
+  and sends the request. `plan.js` reads no storage and sends no request of its own.
+- **A sign-in that was ended somewhere else.** The app's "Sign out" ends every sign-in the person has, and
+  for up to an hour such a sign-in still looks good from the browser. So when the billing function refuses
+  the sign-in (401), `auth.js` asks the sign-in server: if it renews the sign-in, the request is sent once
+  more; if it rejects the renewal, the browser is signed out and goes to the sign-in page. A sign-in server
+  that cannot be reached changes nothing: the page says it could not check, with "Try again".
+- **Only Stripe's two pages.** The address the server gives is followed only when it is `https` and its host
+  is exactly `checkout.stripe.com` or `billing.stripe.com`. Anything else: "Couldn't open the page. Try
+  again."
+- **Back from a checkout.** Stripe tells the inspector before it tells Inspyx's server. So with
+  `?billing=done`, a plan that is not there yet is looked for three more times, two seconds apart, and the
+  page says "Checking your plan…" meanwhile, never "Start your plan". Stripe's word is taken out of the
+  address at once, so loading the page again does not repeat it.
+- **Stripe's word is only said when the plan agrees.** "You're all set." shows only with a plan running,
+  "No charge was made." only with none: an address can be typed by hand.
+- **One ask may take 20 seconds**, as in the app.
+- **The date is the inspector's own calendar's**, as in the app. A free month ends at 10:00 UTC (the billing
+  function moves it there), so it reads the same date from UTC to Hawaii.
+- **The price in the sentence is the inspector's own**, as the server says it ("$69 a month", "$649 a
+  year", or an older price). When the server does not say, the sentence leaves it out.
+
+**The look.** The pricing page's sky panel and its card with depth, which Moises approved for the pricing
+page on 2026-11-12. Here the card names the plan and the signed-in inspector, and no price (a founding
+inspector on the yearly price would otherwise see the monthly one). The mock-up of this page
+(`Plan.dc.html` on the canvas "Inspyx Web Mock-ups") shows more; see "Left out".
+
+**Left out of the mock-up, because the server does not give them yet:** the card on file, the list of
+receipts, the reminder's date, the bar of free days left, and "Pay yearly" after starting. The first three
+are one press away on Stripe's billing page ("Manage billing"). None of them is shown as a button that does
+nothing.
+
+**The words.** Every sentence about the plan is the app's own, word for word
+(`lib/src/shell/plan_billing.dart`; Moises approved them on 2026-11-09, "Approve all"). Compared by script
+on 2026-11-13, reading the app's sentences out of that file: 17 of 17 sentences and 4 of 4 buttons the same
+(`python3 -I tools/check_plan_words.py <app repo> .`; run it again whenever the app's words change). "You're all set." and "No charge was made."
+are the home page's headings for an inspector back from Stripe. `tools/check_plan.js` holds the list; a
+change needs his word. One sentence of the app is not on the page: "Sign in to see your plan." (the website
+sends a signed-out browser to the sign-in page instead).
+
+**Checking it.**
+
+```
+node tools/serve.js &
+node tools/check_plan.js                    # 108 checks, Chrome's engine
+BROWSER=webkit node tools/check_plan.js     # the same, Safari's engine
+python3 -I tools/undo_checks.py . --plan    # 114 breaks; each must fail a check
+```
+
+Nothing real is asked or paid by a check: the billing server, the account server and Stripe's two pages
+are answered by the test itself, and the sign-in in the browser is a made-up one (pat@example.com).
+
+**Not checked, and known gaps.**
+
+- **A real plan.** Nobody has opened `/plan` signed in for real. The first time is Moises's, after it is
+  published, with his own account. The billing function runs on Stripe's TEST keys until switch day, so a
+  start from the website goes to Stripe's test checkout.
+- **His own account already has a plan** in Stripe's test set-up (active, at the older price), so he will
+  see "Active. Next payment on ..." and "Manage billing", not "Start your plan". Trying a start needs a
+  plan that has ended, or another account.
+- **Real Safari on an iPhone, and a real Back from Stripe.** As for the sign-in pages.
+- **A checkout page opened in the app** is handed back to the website (one checkout per inspector), and
+  Stripe then returns to the home page's message, not to `/plan`. The home page's message tells the
+  inspector to tap ✓, which is the app's button. Rare (the same inspector starting in both places within a
+  day), and nothing is charged twice.
+- **The pricing page still says** the plan starts in the app ("You start your plan in the Inspyx app").
+  That sentence changes when this page is published, with his words.
+
+**Before it is published** (each needs Moises's word, or his hands):
+
+1. His look at the page (pictures sent on 2026-11-13) and at what it leaves out.
+2. The sign-in pages published and tried by him first (they go out hidden on 2026-11-13).
+3. His word to publish this page, hidden like the sign-in pages or linked from somewhere.
+4. The pricing page's sentence about where a plan starts.
