@@ -207,7 +207,51 @@
     return s ? { id: s.id, email: s.email } : null;
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, who: who, googleStart: googleStart, googleBack: googleBack };
+  /* A forgotten password (2026-11-13). Two halves, on two visits.
+     requestReset asks the account server to email a reset link to an address. The answer never says whether an
+     account uses that address: the server answers the same either way, and so does the page.
+     The link comes back to /reset with a one-time sign-in in the address's fragment (the part after #, which no
+     server ever receives). resetBack takes it out of the address at once and holds it here, in this file only,
+     never in storage: closing or reloading the page drops it, and the person asks for a new link.
+     setNewPassword uses it once to set the new password, then ends that one-time sign-in. The person then signs in
+     on /signin with the new password, so a reset link never leaves anyone signed in on a borrowed computer.
+     More kinds of trouble, here only:
+     busy:    too many reset emails asked for at once (the server limits them); try again later
+     expired: the link was used already, or is too old, or this page lost it (reloaded)
+     weak:    the server would not take that password (too short, or the same as before) */
+  var recovery = null;
+  function requestReset(email) {
+    var back = root.location.origin + '/reset';
+    return send('POST', BASE + '/recover?redirect_to=' + encodeURIComponent(back), null, { email: email }).then(function (r) {
+      if (r.status === 429) throw new Refusal('busy', r.status);
+      if (r.status !== 200) throw new Refusal('server', r.status);
+    });
+  }
+  /* 'ready' when a reset link brought a one-time sign-in, 'expired' when it brought an error instead, null when
+     the page was opened without one. */
+  function resetBack() {
+    var h;
+    try { h = new URLSearchParams(root.location.hash.replace(/^#/, '')); } catch (e) { return null; }
+    var token = h.get('access_token'), type = h.get('type'), error = h.get('error') || h.get('error_code');
+    if (!token && !error) return null;
+    try { root.history.replaceState(null, '', root.location.pathname); } catch (e) { /* the fragment stays; it is good once */ }
+    if (error || type !== 'recovery' || !/^[A-Za-z0-9._-]{20,4096}$/.test(token || '')) { recovery = null; return 'expired'; }
+    recovery = token;
+    return 'ready';
+  }
+  function setNewPassword(password) {
+    var token = recovery;
+    if (!token) return Promise.reject(new Refusal('expired'));
+    return send('PUT', BASE + '/user', token, { password: password }).then(function (r) {
+      if (r.status === 401 || r.status === 403) { recovery = null; throw new Refusal('expired', r.status); }
+      if (r.status === 422) throw new Refusal('weak', r.status);
+      if (r.status !== 200) throw new Refusal('server', r.status);
+      recovery = null;
+      send('POST', BASE + '/logout?scope=local', token).then(function () {}, function () {});
+    });
+  }
+
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the account page. It asks three times:
