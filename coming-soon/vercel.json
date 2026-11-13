@@ -3,7 +3,7 @@
   "trailingSlash": false,
   "headers": [
     {
-      "source": "/(signin|account)",
+      "source": "/(signin|account|plan)",
       "headers": [
         {
           "key": "Content-Security-Policy",

@@ -1,5 +1,5 @@
-// Does Vercel's own route reader accept coming-soon/vercel.json, and does its headers rule catch the two
-// sign-in addresses and nothing else? A rule Vercel refuses fails the whole build, so run this before any
+// Does Vercel's own route reader accept coming-soon/vercel.json, and does its headers rule catch the three
+// signed-in addresses and nothing else? A rule Vercel refuses fails the whole build, so run this before any
 // publish that changes vercel.json.
 // It needs Vercel's reader, which this repo does not carry:
 //   mkdir /tmp/vercelcheck && cd /tmp/vercelcheck && npm init -y && npm i @vercel/routing-utils
@@ -17,8 +17,8 @@ const out = read(cfg);
 ok('Vercel\'s reader accepts vercel.json', !out.error, out.error ? out.error.message : out.routes.length + ' routes');
 const ruled = (out.routes || []).filter((r) => r.headers && r.headers['Content-Security-Policy']);
 const applies = (p) => ruled.some((r) => new RegExp(r.src).test(p));
-const yes = ['/signin', '/account'], no = ['/', '/pricing', '/refunds', '/terms', '/privacy', '/signin/x', '/accounts', '/assets/auth.js'];
-ok('the rule catches the two sign-in addresses', yes.every(applies), yes.filter((p) => !applies(p)).join(' '));
+const yes = ['/signin', '/account', '/plan'], no = ['/', '/pricing', '/refunds', '/terms', '/privacy', '/signin/x', '/accounts', '/plans', '/plan/x', '/myplan', '/assets/auth.js', '/assets/plan.js'];
+ok('the rule catches the three signed-in addresses', yes.every(applies), yes.filter((p) => !applies(p)).join(' '));
 ok('the rule catches no other address', !no.some(applies), no.filter(applies).join(' '));
 // The reader must be able to say no, or its yes means nothing: a pattern that is wrong on purpose.
 const bad = read({ headers: [{ source: '/(?!x)', headers: [{ key: 'A', value: 'b' }] }] });

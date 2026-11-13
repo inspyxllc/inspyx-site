@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Your plan</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/plan.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="planpage" data-plan hidden>
+<section class="hero" data-lean>
+<div class="spot"></div>
+<div class="hero-text">
+<h1>Your plan</h1>
+<section class="plan">
+<span class="badge">Founding inspector</span>
+<div class="back" role="status">
+<p data-back="done" hidden>You're all set.</p>
+<p data-back="canceled" hidden>No charge was made.</p>
+</div>
+<div class="stands" role="status">
+<p data-stands="checking">Checking your plan…</p>
+<p data-stands="offer-free" hidden>30 days free, then $69 a month or $649 a year. Your card is saved when you start and first charged when the free month ends. Cancel before then and you pay nothing.</p>
+<p data-stands="offer" hidden>$69 a month or $649 a year, first charged when you start.</p>
+<p data-stands="free" data-with="date price" hidden>Free until <span data-fill="date"></span>, then <span data-fill="amount"></span> a <span data-fill="every"></span>.</p>
+<p data-stands="free" data-with="date" hidden>Free until <span data-fill="date"></span>.</p>
+<p data-stands="free" data-with="price" hidden>In your free month. Then <span data-fill="amount"></span> a <span data-fill="every"></span>.</p>
+<p data-stands="free" hidden>In your free month.</p>
+<p data-stands="active" data-with="date" hidden>Active. Next payment on <span data-fill="date"></span>.</p>
+<p data-stands="active" hidden>Active.</p>
+<p data-stands="ending" data-with="date" hidden>Ends <span data-fill="date"></span>. Nothing more will be charged.</p>
+<p data-stands="ending" hidden>Ending. Nothing more will be charged.</p>
+<p data-stands="problem" hidden>Your last payment didn't go through. Update your card to keep your plan.</p>
+<p data-stands="attention" hidden>Your plan needs attention. Open billing to fix it.</p>
+<p data-stands="ended" hidden>Your plan has ended. Start it again anytime: $69 a month or $649 a year.</p>
+<p data-stands="not-set-up" hidden>Billing isn't set up yet.</p>
+<p data-stands="failed" hidden>Couldn't check your plan. Check your connection and try again.</p>
+</div>
+<div class="say" role="alert">
+<p data-say="page" hidden>Couldn't open the page. Try again.</p>
+<p data-say="not-set-up" hidden>Billing isn't set up yet.</p>
+</div>
+<div class="acts">
+<button class="btn" type="button" data-do="start" hidden>Start your plan</button>
+<button class="btn" type="button" data-do="manage" hidden>Manage billing</button>
+<button class="btn" type="button" data-do="card" hidden>Update card</button>
+<button class="btn" type="button" data-do="again" hidden>Try again</button>
+</div>
+</section>
+<p class="who">Signed in as <strong data-email></strong></p>
+<p class="more"><a href="/account">Account</a></p>
+</div>
+<div class="hero-art" aria-hidden="true">
+<div class="scene">
+<div class="floor"></div>
+<div class="glow"></div>
+<div class="float">
+<div class="card3d">
+<div class="card3d-back"></div>
+<div class="face">
+<div class="face-top">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</div>
+<div class="face-plan">
+<span class="name">Founding inspector</span>
+<span class="holder" data-email></span>
+</div>
+<div class="sheen"></div>
+<div class="sweep"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<footer>
+INSPYX LLC · Miami Gardens, FL<br>
+<a href="mailto:support@inspyx.com">support@inspyx.com</a> · <a href="tel:+18887722919">(888) 772-2919</a>
+<nav><a href="/pricing">Pricing</a><a href="/refunds">Cancellation and refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
+</footer>
+</body>
+</html>

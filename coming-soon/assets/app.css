@@ -1,4 +1,4 @@
-/* The signed-in side of the website: the sign-in page and the account page. Loaded after page.css, whose
+/* The signed-in side of the website: the sign-in page, the account page and the plan page. Loaded after page.css, whose
    logo, buttons, footer and colours it shares. The sign-in page is the design Moises approved on 2026-11-12
    ("Yes, that's it", 20:14:05Z): the form on white, and a phone that floats on the home page's morning sky.
    This file says no words. Nothing here is written inside a page as a style: these pages are served with a
@@ -82,7 +82,31 @@
 .account .btn{position:relative; z-index:1; align-self:flex-start; margin-top:14px; border:0; font:600 16.5px var(--font); cursor:pointer}
 .account .btn:disabled{opacity:.6; cursor:default}
 .account .say p{background:#FFF1D6; color:#6B3A06}
+.account .links{position:relative; z-index:1; display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; margin-top:14px}
+.account .links .btn{margin-top:0}
+.btn.quiet{background:#FFFFFF; color:var(--ink); box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
 .app-foot{margin-top:0}
+
+/* ---- the plan page: the pricing page's panel and card, with where the inspector's own plan stands.
+        One sentence shows at a time; the page holds them all (plan.html). */
+.planpage h1{margin-bottom:26px}
+.planpage .plan{max-width:520px}
+.stands{margin-top:18px; width:100%}
+.stands p{font-size:19px; line-height:1.45; color:var(--ink)}
+.stands [data-fill]{white-space:nowrap}
+.back{width:100%}
+.back p{margin-top:16px; padding:10px 14px; border-radius:14px; background:#E7F6EC; color:#0F5A30; font-size:15.5px; font-weight:600; line-height:1.4}
+.plan .say{width:100%}
+.plan .say p{margin-top:14px}
+.acts{display:flex; flex-wrap:wrap; gap:10px; width:100%}
+.acts .btn{margin-top:22px; border:0; font:600 16.5px var(--font); cursor:pointer}
+.acts .btn:disabled{opacity:.6; cursor:default}
+.acts .btn:focus-visible, .account .btn:focus-visible{outline:3px solid #1F5FB8; outline-offset:3px}
+.planpage .who{margin-top:22px; font-size:16.5px}
+.more{position:relative; z-index:1}
+.more a{display:inline-flex; align-items:center; min-height:44px; font-size:16px; font-weight:600}
+.face-plan .name{font-size:1.5em; line-height:1.15; letter-spacing:-.015em; font-weight:700}
+.face-plan .holder{margin-top:.3em; font-size:.875em; line-height:1.35; color:#EAF2FA; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
 @media (max-width:700px){
   .side{display:none}
@@ -93,6 +117,9 @@
   .ground{left:50%}
   .signin{padding-top:28px; padding-bottom:36px; justify-content:flex-start}
   .signin h1{font-size:38px}
+  .planpage h1{margin-bottom:20px}
+  .planpage .hero-art{min-height:300px}
+  .stands p{font-size:18px}
 }
 @media (prefers-reduced-motion:reduce){
   .stage::before, .stage::after, .pulse, .phone-float, .band, .side{animation:none}
