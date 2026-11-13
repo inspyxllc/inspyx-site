@@ -26,6 +26,7 @@
 .fields .btn:disabled{opacity:.6; cursor:default}
 .say p{padding:12px 16px; border-radius:14px; background:#FDECEB; color:#8C1D18; font-size:15.5px; line-height:1.45}
 .say p + p{margin-top:8px}
+.say p.ok{background:#E8F4EC; color:#14532D}
 .help{max-width:26rem; font-size:15px; line-height:1.5; color:var(--ink-soft)}
 .help a{font-weight:600; white-space:nowrap}
 .help .line{display:inline-flex; align-items:center; min-height:44px}

@@ -34,7 +34,7 @@ const SIGNIN_WORDS = ['h1: Welcome back.', 'button: Continue with Google', 'p: o
   'p: No Inspyx account uses that Google address. Sign in with your email and password, or join the waitlist.',
   'p: Google sign-in did not complete. Try again.',
   'button: Sign in',
-  'p: Forgot your password? Contact Inspyx support and we will start a reset for you: support@inspyx.com or (888) 772-2919.',
+  'p: Forgot your password? Reset it',
   'p: New to Inspyx? Join the waitlist'];
 const ACCOUNT_WORDS = ['h1: Account', 'p: Signed in as', 'button: Sign out', 'p: Inspyx could not reach the sign-in server. Check your connection and try again.', 'p: The sign-in server refused the request. Try again later.'];
 const read = () => {
@@ -439,7 +439,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const here = () => page.evaluate(() => { const e = document.activeElement; return e.id || e.getAttribute('aria-label') || e.textContent.trim().slice(0, 18); });
     const order = [];
     for (let i = 0; i < 6; i++) { await page.keyboard.press(safari ? 'Alt+Tab' : 'Tab'); order.push(await here()); }
-    ok('the Tab key goes: logo, Google, email, password, Sign in, then the help lines; never into the picture', order[0] === 'Inspyx, home' && order[1] === 'Continue with Goog' && order[2] === 'signin-email' && order[3] === 'signin-password' && order[4] === 'Sign in' && order[5] === 'support@inspyx.com', order.join(' > '));
+    ok('the Tab key goes: logo, Google, email, password, Sign in, then the help lines; never into the picture', order[0] === 'Inspyx, home' && order[1] === 'Continue with Goog' && order[2] === 'signin-email' && order[3] === 'signin-password' && order[4] === 'Sign in' && order[5] === 'Reset it', order.join(' > '));
     if (safari) {
       await page.focus('#signin-email'); await page.keyboard.press('Tab');
       ok('in Safari the plain Tab key goes from the email box to the password box', (await here()) === 'signin-password', await here());
