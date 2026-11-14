@@ -9,7 +9,7 @@ const WORDS = [
   'p: The first 10 inspectors who help us measure Inspyx become founders.',
   'h2: What you get',
   'li: 30 days free, starting the day the app is ready to download.',
-  'li: The founding price: $69 a month, or $649 a year, instead of $79.95 a month. It stays yours for as long as your plan continues.',
+  'li: The founding price: $54.95 a month, or $593 a year, instead of $79.95 a month. It stays yours for as long as your plan continues.',
   'h2: What we ask',
   'li: Share your app numbers: how many inspections you do, how long you’re on site, and how long each report takes. Never your clients’ names, addresses or reports.',
   'li: If a founder stops sharing, the founding price ends at the next renewal. We’ll email you before that happens, and the place goes to the next inspector who ticks the box.',

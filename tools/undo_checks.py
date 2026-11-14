@@ -287,7 +287,7 @@ PAGE_MUTATIONS = [
      '<a href="/pricing" aria-current="page">Pricing</a>',
      '<a href="/pricing">Pricing</a>'),
     ('the card says something the plan does not', PRICING,
-     '<span class="y">or $649 a year, and save $179</span>',
+     '<span class="y">or $593 a year, and save $66.40</span>',
      '<span class="y">or $599 a year</span>'),
     ('the card is read out a second time by a screen reader', PRICING,
      '<div class="hero-art" aria-hidden="true">',

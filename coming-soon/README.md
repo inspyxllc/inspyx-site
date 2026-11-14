@@ -612,7 +612,7 @@ it checked file by file, `main` moved to that commit, the live site checked file
 ## The other pages
 
 Since 2026-11-09: four more pages, served with clean URLs (vercel.json cleanUrls):
-/pricing (founding price $69 a month or $649 a year, 30 days free),
+/pricing (founding price $54.95 a month or $593 a year, 30 days free),
 /refunds (cancellation and refunds), /terms and /privacy, sharing
 assets/page.css. Every page's footer links all four and gives the business
 line (888) 772-2919. Stripe's public business details link /terms and /privacy.
@@ -718,8 +718,8 @@ Vercel's daily limit has freed.
   links, the current one marked). On a phone it keeps to the logo, as the home page does; the footer has
   the four.
 - `/pricing`: the opening and the plan stand on the home page's morning sky; beside the plan is the plan
-  again as a card with depth. The card repeats the plan's own words (INSPYX, Founding inspector, $69 a
-  month, or $649 a year, and save $179) and is hidden from screen readers, so nothing is read twice. Then
+  again as a card with depth. The card repeats the plan's own words (INSPYX, Founding inspector, $54.95 a
+  month, or $593 a year, and save $66.40) and is hidden from screen readers, so nothing is read twice. Then
   "What your plan includes" as five tiles, "30 days free" as four ticks (ticks, not numbers: the four lines
   are not in time order), the promise as a dark band, billing and cancelling side by side, and Questions.
 - `/refunds`, `/terms`, `/privacy`: the title on a short sky, a list of the page's own headings, and the
@@ -1034,7 +1034,7 @@ The card goes to Stripe, on Stripe's page. It never passes through Inspyx.
 - **One ask may take 20 seconds**, as in the app.
 - **The date is the inspector's own calendar's**, as in the app. A free month ends at 10:00 UTC (the billing
   function moves it there), so it reads the same date from UTC to Hawaii.
-- **The price in the sentence is the inspector's own**, as the server says it ("$69 a month", "$649 a
+- **The price in the sentence is the inspector's own**, as the server says it ("$54.95 a month", "$593 a
   year", or an older price). When the server does not say, the sentence leaves it out.
 
 **The look.** The pricing page's sky panel and its card with depth, which Moises approved for the pricing
