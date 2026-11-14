@@ -20,7 +20,7 @@ const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8'
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
-  '.webp': 'image/webp', '.pdf': 'application/pdf', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml',
+  '.webp': 'image/webp', '.pdf': 'application/pdf', '.mp4': 'video/mp4', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml',
 };
 
 // Vercel's source patterns, as far as vercel.json uses them: ":name" is one path part, "(.*)" anything.
@@ -52,6 +52,24 @@ http.createServer((req, res) => {
     res.end('Not found');
     return;
   }
-  res.writeHead(200, { 'Content-Type': TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream' });
+  const type = TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';
+  // A byte range, as Supabase's file store answers one: Safari asks a movie for its bytes this way, and plays
+  // nothing from a server that won't.
+  const size = fs.statSync(file).size;
+  const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+  if (range && (range[1] !== '' || range[2] !== '')) {
+    let start = range[1] === '' ? size - Number(range[2]) : Number(range[1]);
+    let end = range[1] === '' || range[2] === '' ? size - 1 : Math.min(Number(range[2]), size - 1);
+    if (start < 0) start = 0;
+    if (start > end || start >= size) {
+      res.writeHead(416, { 'Content-Range': `bytes */${size}` });
+      res.end();
+      return;
+    }
+    res.writeHead(206, { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': end - start + 1 });
+    fs.createReadStream(file, { start, end }).pipe(res);
+    return;
+  }
+  res.writeHead(200, { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Content-Length': size });
   fs.createReadStream(file).pipe(res);
 }).listen(PORT, () => console.log('report page at http://localhost:' + PORT + '/r/sample' + (SAMPLE ? '' : ' (no sample given)')));

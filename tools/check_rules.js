@@ -31,6 +31,12 @@ const opensReport = (p) => (out.routes || []).some((r) => r.dest && /^\/report(\
 const reportRules = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /img-src 'self' https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']) && /noindex/.test(r.headers['X-Robots-Tag'] || ''));
 const key = 'AbCdEfGhIjKlMnOpQrStUv';
 ok('a new link\'s address (/r) and an old one (/r/<key>) both open the report page, under its own rules', ['/r', '/r/' + key].every((p) => opensReport(p) && reportRules(p)), ['/r', '/r/' + key].filter((p) => !opensReport(p) || !reportRules(p)).join(' '));
+// Movies (2026-11-14): the report page may play them from Inspyx's file store, and from nowhere else: not even
+// this site, not blob:, never *.
+const movies = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /media-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']));
+ok('the report page may play movies from Inspyx\'s file store, under both of its addresses', ['/r', '/r/' + key, '/report'].every(movies), ['/r', '/r/' + key, '/report'].filter((p) => !movies(p)).join(' '));
+ok('the movies\' rule names the file store alone', ruled.filter((r) => /media-src/.test(r.headers['Content-Security-Policy'])).every((r) => /media-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy'])));
+ok('no other page may play movies', !['/', '/signin', '/account', '/plan', '/inspections', '/pricing'].some(movies));
 ok('the report page\'s route takes no other address', !['/', '/refunds', '/rr', '/report-x', '/r/a/b'].some(opensReport), ['/', '/refunds', '/rr', '/report-x', '/r/a/b'].filter(opensReport).join(' '));
 // The reader must be able to say no, or its yes means nothing: a pattern that is wrong on purpose.
 const bad = read({ headers: [{ source: '/(?!x)', headers: [{ key: 'A', value: 'b' }] }] });
