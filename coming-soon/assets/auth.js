@@ -201,6 +201,72 @@
     });
   }
 
+  /* Hearing "something changed" (inspection sync, 2026-11-14): the server's pings for the signed-in inspector's
+     own inspections, on their private Realtime topic insp:<their id>. The sign-in goes to the server inside this
+     file, as in ask: the page gives a function to call on each ping, and gets back a way to stop. Only the
+     signed-in inspector's own topic can be asked for (the server holds the same rule). It joins again after any
+     drop, waiting a little longer each time, and with a renewed sign-in before the old one ends. A ping is only
+     a nudge: the page then asks the inspection-sync function for what changed. */
+  var REALTIME = SERVER.replace(/^https:/, 'wss:') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(KEY) + '&vsn=1.0.0';
+  function listen(onPing) {
+    var me = who();
+    if (!me || typeof onPing !== 'function' || typeof root.WebSocket !== 'function') return null;
+    var topic = 'realtime:insp:' + me.id;
+    var socket = null, beat = null, renewal = null, retry = null, stopped = false, failures = 0, ref = 0;
+    var tell = function (what) { try { onPing(what); } catch (e) { /* a page's mistake never stops the listening */ } };
+    function close() {
+      clearInterval(beat); clearTimeout(renewal); beat = renewal = null;
+      var s = socket; socket = null;
+      if (s) { try { s.onclose = s.onerror = s.onmessage = null; s.close(); } catch (e) { /* already gone */ } }
+    }
+    function dropped() {
+      close();
+      if (stopped) return;
+      failures = Math.min(failures + 1, 6);
+      clearTimeout(retry);
+      retry = setTimeout(open, 1000 * Math.pow(2, failures));   // 2 s, 4 s ... about 2 minutes
+    }
+    function open() {
+      if (stopped) return;
+      current().then(function (s) {
+        if (stopped) return;
+        if (!s || s.id !== me.id) { stopped = true; tell({ signedOut: true }); return; }   // signed out, or someone else signed in
+        var ws;
+        try { ws = new root.WebSocket(REALTIME); } catch (e) { dropped(); return; }
+        socket = ws;
+        var joinRef = String(++ref);
+        var say = function (m) { try { ws.send(JSON.stringify(m)); } catch (e) { /* the drop handler follows */ } };
+        ws.onopen = function () {
+          say({ topic: topic, event: 'phx_join', ref: joinRef, join_ref: joinRef, payload: {
+            config: { broadcast: { self: false, ack: false }, presence: { key: '' }, postgres_changes: [], private: true },
+            access_token: s.access } });
+          beat = setInterval(function () { say({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(++ref) }); }, 25000);
+          var left = s.ends - Date.now() - EARLY;
+          renewal = setTimeout(function () { close(); open(); }, Math.max(left, 30000));
+        };
+        ws.onmessage = function (ev) {
+          var m = null;
+          try { m = JSON.parse(ev.data); } catch (e) { return; }
+          if (!m || m.topic !== topic) return;
+          if (m.event === 'phx_reply' && m.ref === joinRef) {
+            if (m.payload && m.payload.status === 'ok') { failures = 0; tell({ joined: true }); return; }
+            // Refused for the sign-in (ended somewhere else, say): the sign-in server is asked, as ask does; a
+            // rejected sign-in signs this browser out, and the next try finds nobody and stops.
+            var why = String((m.payload && m.payload.response && (m.payload.response.reason || m.payload.response.message)) || '');
+            if (/auth|token|jwt|expired/i.test(why)) { close(); current(true).then(dropped, dropped); } else dropped();
+            return;
+          }
+          if (m.event === 'broadcast' && m.payload && m.payload.event === 'changed') { tell(m.payload.payload || {}); return; }
+          if (m.event === 'phx_error' || m.event === 'phx_close') dropped();
+        };
+        ws.onerror = dropped;
+        ws.onclose = dropped;
+      }, dropped);
+    }
+    open();
+    return { stop: function () { stopped = true; clearTimeout(retry); close(); } };
+  }
+
   /* Who is signed in: their address and their id, and nothing that could sign anyone in. What a page needs to
      name its reader; a page that only shows things takes this, never the sign-in itself. */
   function who() {
@@ -305,7 +371,7 @@
     });
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword };
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the account page. It asks three times:
