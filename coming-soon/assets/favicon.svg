@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 0 252 252">
+  <!-- The Inspyx house mark. Dark on light tabs, light on dark ones. -->
+  <style>path{stroke:#000}@media (prefers-color-scheme:dark){path{stroke:#fff}}</style>
+  <path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z" fill="none" stroke-width="17" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

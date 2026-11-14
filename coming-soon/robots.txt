@@ -1,0 +1,5 @@
+# inspyx.com: everyone may read every page, search engines and AI search readers included.
+User-agent: *
+Allow: /
+
+Sitemap: https://inspyx.com/sitemap.xml

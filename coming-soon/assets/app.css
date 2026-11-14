@@ -1,0 +1,141 @@
+/* The signed-in side of the website: the sign-in page, the account page and the plan page. Loaded after page.css, whose
+   logo, buttons, footer and colours it shares. The sign-in page is the design Moises approved on 2026-11-12
+   ("Yes, that's it", 20:14:05Z): the form on white, and a phone that floats on the home page's morning sky.
+   This file says no words. Nothing here is written inside a page as a style: these pages are served with a
+   rule that refuses that (vercel.json). */
+.app{background:#FFFFFF}
+[hidden]{display:none !important}
+
+/* ---- the sign-in page: the form beside the stage */
+.split{display:flex; flex-wrap:wrap; align-items:stretch; min-height:100vh; min-height:100svh}
+.signin{flex:1 1 430px; min-width:0; max-width:none; margin:0; padding:40px clamp(24px, 5vw, 72px); display:flex; flex-direction:column; justify-content:center; gap:22px}
+.signin h1{font-size:46px; line-height:1.04; letter-spacing:-.03em}
+.ways{display:flex; flex-direction:column; gap:14px; max-width:26rem}
+.ways .btn{width:100%; min-height:54px; gap:12px; border:0; font:600 17px var(--font); cursor:pointer}
+.ways .btn:disabled{opacity:.6; cursor:default}
+.ways .btn:focus-visible{outline:3px solid #1F5FB8; outline-offset:3px}
+.ways .btn svg{flex:none; width:20px; height:20px}
+.or{display:flex; align-items:center; gap:14px; font-size:14.5px; color:var(--ink-soft)}
+.or::before, .or::after{content:""; flex:1; height:1px; background:rgba(0,0,0,.12)}
+.fields{display:flex; flex-direction:column; gap:12px; max-width:26rem}
+.fields label{font-size:15px; font-weight:600}
+.fields input{width:100%; height:52px; padding:0 18px; border:1px solid #C9C9D0; border-radius:16px; background:#FFFFFF; color:var(--ink); font:400 17px var(--font)}
+.fields input::placeholder{color:#8A8A8E}
+.fields input:focus-visible{outline:3px solid #1F5FB8; outline-offset:1px; border-color:#1F5FB8}
+.fields .btn{margin-top:8px; width:100%; min-height:54px; border:0; font:600 17px var(--font); cursor:pointer}
+.fields .btn:disabled{opacity:.6; cursor:default}
+.say p{padding:12px 16px; border-radius:14px; background:#FDECEB; color:#8C1D18; font-size:15.5px; line-height:1.45}
+.say p + p{margin-top:8px}
+.say p.ok{background:#E8F4EC; color:#14532D}
+.tick{display:flex; gap:12px; align-items:flex-start; min-height:44px; font-size:15px; line-height:1.45; font-weight:400 !important}
+.tick input{width:22px; height:22px; flex:0 0 22px; margin-top:1px; accent-color:#1F5FB8}
+.tick a{font-weight:600}
+.help.more{margin-top:-6px; padding-left:34px}
+.help.more a{display:inline-flex; align-items:center; min-height:44px}
+.help{max-width:26rem; font-size:15px; line-height:1.5; color:var(--ink-soft)}
+.help a{font-weight:600; white-space:nowrap}
+.help .line{display:inline-flex; align-items:center; min-height:44px}
+
+/* ---- the stage: sky, a phone with depth, three cards. All of it is decoration, hidden from screen readers.
+        Its sizes follow its own width (cqw), so nothing is cut off at any window size. */
+.stage{flex:1.35 1 560px; min-width:0; min-height:760px; position:relative; overflow:hidden; touch-action:pan-y; container-type:inline-size; background:linear-gradient(180deg, #8DBBE6 0%, #BFD9EE 48%, #F7DDC0 100%); display:grid; place-items:center; padding:24px 12px}
+.stage::before, .stage::after{content:""; position:absolute; border-radius:50%; pointer-events:none}
+.stage::before{left:-8%; bottom:-14%; width:70%; height:62%; background:radial-gradient(closest-side, rgba(255,196,140,.85), rgba(255,196,140,0)); animation:drift-wide 16s ease-in-out infinite}
+.stage::after{right:-12%; top:-16%; width:66%; height:60%; background:radial-gradient(closest-side, rgba(255,255,255,.8), rgba(255,255,255,0)); animation:drift-wide 19s ease-in-out infinite reverse}
+.cloud{position:absolute; border-radius:50%; pointer-events:none}
+.cloud-a{left:6%; top:13%; width:30%; height:7%; background:rgba(255,255,255,.55); filter:blur(14px)}
+.cloud-b{right:4%; top:31%; width:24%; height:6%; background:rgba(255,255,255,.45); filter:blur(16px)}
+.stage .spot{width:560px; height:560px; margin:-280px 0 0 -280px; background:radial-gradient(closest-side, rgba(255,255,255,.6), rgba(255,255,255,0))}
+.scene3{position:relative; z-index:1; font-size:14px; font-size:clamp(8.5px, 2.105cqw, 16px); width:47.5em; height:45em; perspective:106em; perspective-origin:50% 44%}
+.pulse{position:absolute; left:50%; top:52%; width:32.5em; height:32.5em; margin:-16.25em 0 0 -16.25em; border-radius:50%; background:radial-gradient(closest-side, rgba(52,132,255,.5), rgba(52,132,255,0)); animation:pulse 5.5s ease-in-out infinite}
+.ground{position:absolute; left:50%; top:41.5em; width:23.75em; height:3.375em; margin-left:-11.875em; border-radius:50%; background:radial-gradient(closest-side, rgba(20,40,80,.42), rgba(20,40,80,0))}
+.phone-float{position:absolute; left:50%; top:2.5em; width:18.75em; margin-left:-9.375em; transform-style:preserve-3d; animation:rise 7s ease-in-out infinite}
+.phone3{position:relative; width:18.75em; height:39.125em; transform-style:preserve-3d; transition:transform .35s cubic-bezier(.2,.8,.2,1); transform:rotateY(calc(-16deg + var(--mx, 0) * 10deg)) rotateX(calc(8deg - var(--my, 0) * 8deg)) rotateZ(1deg)}
+.phone-back{position:absolute; inset:0; border-radius:3.375em; background:linear-gradient(180deg, #3A3D44 0%, #050506 100%); transform:translateZ(-.875em)}
+.phone-frame{position:absolute; inset:0; padding:.1875em; border-radius:3.375em; background:linear-gradient(135deg, #E3E7EE 0%, #6B7079 13%, #17181C 36%, #0B0B0D 60%, #4D515A 84%, #DCE0E7 100%); box-shadow:0 5em 5.6em -2.5em rgba(10,22,50,.6), 0 2.1em 2.5em -1.4em rgba(10,22,50,.5), 0 0 3.75em -.4em rgba(84,150,255,.55)}
+.phone-bezel{width:100%; height:100%; padding:.5em; border-radius:3.1875em; background:#050506}
+.phone-screen{position:relative; width:100%; height:100%; border-radius:2.6875em; overflow:hidden; background:#F5F5F7}
+.phone-screen img{display:block; width:100%; height:100%; object-fit:cover; object-position:top}
+.glass{position:absolute; inset:0; background:linear-gradient(120deg, rgba(255,255,255,.36) 0%, rgba(255,255,255,0) 26%, rgba(255,255,255,0) 74%, rgba(255,255,255,.14) 100%); pointer-events:none}
+.band{position:absolute; top:-10%; left:0; width:36%; height:120%; background:linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.55) 50%, rgba(255,255,255,0) 100%); animation:band 6.5s ease-in-out infinite; pointer-events:none}
+.island{position:absolute; left:50%; top:1.375em; width:5.5em; height:1.625em; margin-left:-2.75em; border-radius:.8125em; background:#000; transform:translateZ(1px)}
+
+.side{position:absolute; border-radius:1.5em; background:linear-gradient(160deg, #FFFFFF 0%, #FFFFFF 55%, #F1F7FD 100%); box-shadow:0 2.5em 3.5em -1.6em rgba(10,22,50,.55), 0 .75em 1.25em -.75em rgba(10,22,50,.3), inset 0 0 0 1px rgba(255,255,255,.9); transition:transform .35s cubic-bezier(.2,.8,.2,1); color:var(--ink)}
+.side-video{right:2.375em; top:14.75em; width:14em; padding:.625em .625em .875em; border-radius:1.625em; background:#FFFFFF; transform:translate3d(calc(var(--mx, 0) * 16px), calc(var(--my, 0) * 10px), 110px) rotateY(calc(-14deg + var(--mx, 0) * 6deg)) rotateX(calc(4deg - var(--my, 0) * 4deg)); animation:sink 8s ease-in-out infinite}
+.side-booked{left:2.85em; top:5.75em; width:12em; padding:1em 1em .9375em; display:flex; flex-direction:column; gap:.625em; transform:translate3d(calc(var(--mx, 0) * 24px), calc(var(--my, 0) * 15px), 140px) rotateY(calc(16deg + var(--mx, 0) * 6deg)) rotateX(calc(5deg - var(--my, 0) * 4deg)) rotateZ(-2deg); animation:rise 6s ease-in-out infinite}
+.side-paid{left:4.75em; top:29.625em; width:10em; padding:1em 1em .9375em; display:flex; flex-direction:column; gap:.625em; transform:translate3d(calc(var(--mx, 0) * 12px), calc(var(--my, 0) * 8px), 80px) rotateY(calc(18deg + var(--mx, 0) * 6deg)) rotateX(calc(3deg - var(--my, 0) * 4deg)) rotateZ(2deg); animation:sink 7s ease-in-out infinite}
+.clip{position:relative; overflow:hidden; border-radius:1.125em}
+.clip img{display:block; width:100%; height:auto}
+.clip-tag{position:absolute; left:.6em; top:.6em; display:inline-flex; align-items:center; gap:.4em; height:1.85em; padding:0 .75em 0 .6em; border-radius:.95em; background:rgba(255,255,255,.94); font-size:.84em; font-weight:700}
+.clip-tag svg{width:1.1em; height:1.1em}
+.clip-play{position:absolute; left:50%; top:50%; width:3.625em; height:3.625em; margin:-1.8125em 0 0 -1.8125em; border-radius:50%; background:rgba(255,255,255,.95); box-shadow:0 .5em 1.25em rgba(0,0,0,.4); display:grid; place-items:center}
+.clip-play svg{width:1.4em; height:1.4em; margin-left:.2em}
+.clip-time{position:absolute; right:.7em; bottom:.7em; padding:0 .7em; border-radius:.95em; background:rgba(0,0,0,.68); color:#fff; font-size:.81em; font-weight:600; line-height:1.85}
+.side-text{padding:.75em .375em 0; display:flex; flex-direction:column; gap:.2em}
+.side-kind{align-self:flex-start; padding:.24em .72em; border-radius:.64em; background:#FDEFD9; color:#8A4708; font-size:.78em; font-weight:700}
+.side-title{font-size:1.19em; font-weight:700; letter-spacing:-.01em}
+.side-sub{font-size:.9em; color:#5A5A60}
+.side-icon{width:2.875em; height:2.875em; border-radius:.9375em; display:grid; place-items:center}
+.side-icon svg{width:1.5em; height:1.5em}
+.side-icon.green{background:linear-gradient(180deg, #4CD17E 0%, #1E9E55 100%); box-shadow:0 .625em 1em -.5em rgba(30,158,85,.9), inset 0 1px 0 rgba(255,255,255,.45)}
+.side-icon.blue{background:linear-gradient(180deg, #5AA9FF 0%, #1F6FE0 100%); box-shadow:0 .625em 1em -.5em rgba(31,111,224,.9), inset 0 1px 0 rgba(255,255,255,.45)}
+.side-two{display:flex; flex-direction:column; gap:.06em}
+.side-two .small{font-size:.8125em; font-weight:600}
+.side-two .small.green{color:#116B3A}
+.side-two .small.blue{color:#1F5FB8}
+.side-two .big{font-size:1.03em; font-weight:700; letter-spacing:-.01em; white-space:nowrap}
+@keyframes rise{0%,100%{translate:0 0}50%{translate:0 -12px}}
+@keyframes sink{0%,100%{translate:0 0}50%{translate:0 9px}}
+@keyframes band{0%,12%{transform:translateX(-190%) skewX(-18deg)}62%,100%{transform:translateX(330%) skewX(-18deg)}}
+@keyframes drift-wide{0%,100%{translate:0 0}50%{translate:28px -20px}}
+
+/* ---- the account page */
+.who{position:relative; z-index:1; font-size:18px; color:#1D2B3A}
+.who strong{color:var(--ink); overflow-wrap:anywhere}
+.account .btn{position:relative; z-index:1; align-self:flex-start; margin-top:14px; border:0; font:600 16.5px var(--font); cursor:pointer}
+.account .btn:disabled{opacity:.6; cursor:default}
+.account .say p{background:#FFF1D6; color:#6B3A06}
+.account .links{position:relative; z-index:1; display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; margin-top:14px}
+.account .links .btn{margin-top:0}
+.btn.quiet{background:#FFFFFF; color:var(--ink); box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.app-foot{margin-top:0}
+
+/* ---- the plan page: the pricing page's panel and card, with where the inspector's own plan stands.
+        One sentence shows at a time; the page holds them all (plan.html). */
+.planpage h1{margin-bottom:26px}
+.planpage .plan{max-width:520px}
+.stands{margin-top:18px; width:100%}
+.stands:focus{outline:none}
+.stands p{font-size:19px; line-height:1.45; color:var(--ink)}
+.stands [data-fill]{white-space:nowrap}
+.back{width:100%}
+.back p{margin-top:16px; padding:10px 14px; border-radius:14px; background:#E7F6EC; color:#0F5A30; font-size:15.5px; font-weight:600; line-height:1.4}
+.plan .say{width:100%}
+.plan .say p{margin-top:14px}
+.acts{display:flex; flex-wrap:wrap; gap:10px; width:100%}
+.acts .btn{margin-top:22px; border:0; font:600 16.5px var(--font); cursor:pointer}
+.acts .btn:disabled{opacity:.6; cursor:default}
+.acts .btn:focus-visible, .account .btn:focus-visible{outline:3px solid #1F5FB8; outline-offset:3px}
+.planpage .who{margin-top:22px; font-size:16.5px}
+.more{position:relative; z-index:1}
+.more a{display:inline-flex; align-items:center; min-height:44px; font-size:16px; font-weight:600}
+.face-plan .name{font-size:1.5em; line-height:1.15; letter-spacing:-.015em; font-weight:700}
+.face-plan .holder{margin-top:.3em; font-size:.875em; line-height:1.35; color:#EAF2FA; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+@media (max-width:700px){
+  .side{display:none}
+  .stage{min-height:0; padding:28px 12px 36px}
+  .scene3{font-size:clamp(8.5px, 3cqw, 16px); width:18.75em; height:43em}
+  .phone-float{left:0; margin-left:0}
+  .pulse{left:50%}
+  .ground{left:50%}
+  .signin{padding-top:28px; padding-bottom:36px; justify-content:flex-start}
+  .signin h1{font-size:38px}
+  .planpage h1{margin-bottom:20px}
+  .planpage .hero-art{min-height:300px}
+  .stands p{font-size:18px}
+}
+@media (prefers-reduced-motion:reduce){
+  .stage::before, .stage::after, .pulse, .phone-float, .band, .side{animation:none}
+  .phone3, .side{transition:none}
+}
