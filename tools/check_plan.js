@@ -42,7 +42,7 @@ const OFFER_FREE = '30 days free, then $54.95 a month or $593 a year. Your card 
 const OFFER = '$54.95 a month or $593 a year, first charged when you start.';
 // The next 100 after the founders and everyone after them (Moises, 2026-11-14: "Yes, use them").
 const OFFER_EARLY = '$64.95 a month or $701 a year, first charged when you start.';
-const OFFER_REGULAR = '$79.95 a month, first charged when you start.';
+const OFFER_REGULAR = '$79.95 a month or $863 a year, first charged when you start.';
 const PROBLEM = 'Your last payment didn\'t go through. Update your card to keep your plan.';
 const ATTENTION = 'Your plan needs attention. Open billing to fix it.';
 // A plan whose time ran out gave its place back: starting again is the regular price, for everyone (his cancel rule,
