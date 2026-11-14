@@ -29,15 +29,17 @@
 <div class="hero-text">
 <h1>Your plan</h1>
 <section class="plan">
-<span class="badge">Founding inspector</span>
+<span class="badge" data-level="founder">Founding inspector</span><span class="badge" data-level="early" hidden>Early inspector</span><span class="badge" data-level="regular" hidden>Inspyx plan</span>
 <div class="back" role="status">
 <p data-back="done" hidden>You're all set.</p>
 <p data-back="canceled" hidden>No charge was made.</p>
 </div>
 <div class="stands" role="status" tabindex="-1">
 <p data-stands="checking">Checking your plan…</p>
-<p data-stands="offer-free" hidden>30 days free, then $54.95 a month or $593 a year. Your card is saved when you start and first charged when the free month ends. Cancel before then and you pay nothing.</p>
-<p data-stands="offer" hidden>$54.95 a month or $593 a year, first charged when you start.</p>
+<p data-stands="offer-free" data-level="founder" hidden>30 days free, then $54.95 a month or $593 a year. Your card is saved when you start and first charged when the free month ends. Cancel before then and you pay nothing.</p>
+<p data-stands="offer" data-level="founder" hidden>$54.95 a month or $593 a year, first charged when you start.</p>
+<p data-stands="offer" data-level="early" hidden>$64.95 a month or $701 a year, first charged when you start.</p>
+<p data-stands="offer" data-level="regular" hidden>$79.95 a month, first charged when you start.</p>
 <p data-stands="free" data-with="date price" hidden>Free until <span data-fill="date"></span>, then <span data-fill="amount"></span> a <span data-fill="every"></span>.</p>
 <p data-stands="free" data-with="date" hidden>Free until <span data-fill="date"></span>.</p>
 <p data-stands="free" data-with="price" hidden>In your free month. Then <span data-fill="amount"></span> a <span data-fill="every"></span>.</p>
@@ -48,7 +50,7 @@
 <p data-stands="ending" hidden>Ending. Nothing more will be charged.</p>
 <p data-stands="problem" hidden>Your last payment didn't go through. Update your card to keep your plan.</p>
 <p data-stands="attention" hidden>Your plan needs attention. Open billing to fix it.</p>
-<p data-stands="ended" hidden>Your plan has ended. Start it again anytime: $54.95 a month or $593 a year.</p>
+<p data-stands="ended" hidden>Your plan has ended. Start it again anytime: $79.95 a month.</p>
 <p data-stands="not-set-up" hidden>Billing isn't set up yet.</p>
 <p data-stands="failed" hidden>Couldn't check your plan. Check your connection and try again.</p>
 </div>
@@ -79,7 +81,7 @@
 <span>INSPYX</span>
 </div>
 <div class="face-plan">
-<span class="name">Founding inspector</span>
+<span class="name" data-level="founder">Founding inspector</span><span class="name" data-level="early" hidden>Early inspector</span><span class="name" data-level="regular" hidden>Inspyx plan</span>
 <span class="holder" data-email></span>
 </div>
 <div class="sheen"></div>

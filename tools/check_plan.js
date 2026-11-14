@@ -40,20 +40,26 @@ const action = (call) => { try { return JSON.parse(call.body).action; } catch (e
 // page's headings for an inspector back from Stripe. A change here needs his word.
 const OFFER_FREE = '30 days free, then $54.95 a month or $593 a year. Your card is saved when you start and first charged when the free month ends. Cancel before then and you pay nothing.';
 const OFFER = '$54.95 a month or $593 a year, first charged when you start.';
+// The next 100 after the founders and everyone after them (Moises, 2026-11-14: "Yes, use them").
+const OFFER_EARLY = '$64.95 a month or $701 a year, first charged when you start.';
+const OFFER_REGULAR = '$79.95 a month, first charged when you start.';
 const PROBLEM = 'Your last payment didn\'t go through. Update your card to keep your plan.';
 const ATTENTION = 'Your plan needs attention. Open billing to fix it.';
-const ENDED = 'Your plan has ended. Start it again anytime: $54.95 a month or $593 a year.';
+// A plan whose time ran out gave its place back: starting again is the regular price, for everyone (his cancel rule,
+// 2026-11-14: "Yes, keep it").
+const ENDED = 'Your plan has ended. Start it again anytime: $79.95 a month.';
 const NOT_SET_UP = 'Billing isn\'t set up yet.';
 const FAILED = 'Couldn\'t check your plan. Check your connection and try again.';
 const PAGE_FAILED = 'Couldn\'t open the page. Try again.';
 const CHECKING = 'Checking your plan…';
-const PLAN_WORDS = ['h1: Your plan', 'span: Founding inspector', 'p: You\'re all set.', 'p: No charge was made.',
-  'p: ' + CHECKING, 'p: ' + OFFER_FREE, 'p: ' + OFFER,
+const NAMES = ['span: Founding inspector', 'span: Early inspector', 'span: Inspyx plan'];
+const PLAN_WORDS = ['h1: Your plan', ...NAMES, 'p: You\'re all set.', 'p: No charge was made.',
+  'p: ' + CHECKING, 'p: ' + OFFER_FREE, 'p: ' + OFFER, 'p: ' + OFFER_EARLY, 'p: ' + OFFER_REGULAR,
   'p: Free until {date}, then {amount} a {every}.', 'p: Free until {date}.', 'p: In your free month. Then {amount} a {every}.', 'p: In your free month.',
   'p: Active. Next payment on {date}.', 'p: Active.', 'p: Ends {date}. Nothing more will be charged.', 'p: Ending. Nothing more will be charged.',
   'p: ' + PROBLEM, 'p: ' + ATTENTION, 'p: ' + ENDED, 'p: ' + NOT_SET_UP, 'p: ' + FAILED, 'p: ' + PAGE_FAILED, 'p: ' + NOT_SET_UP,
   'button: Start your plan', 'button: Manage billing', 'button: Update card', 'button: Try again',
-  'p: Signed in as', 'p: Account', 'span: Founding inspector'];
+  'p: Signed in as', 'p: Account', ...NAMES];
 const read = () => {
   const flat = (t) => t.replace(/\s+/g, ' ').trim();
   const main = document.querySelector('main').cloneNode(true);
@@ -179,13 +185,27 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       ['unpaid', plan({ status: 'unpaid', free_month: false }), ATTENTION, 'Manage billing'],
       ['paused', plan({ status: 'paused', free_month: false }), ATTENTION, 'Manage billing'],
       ['ended', plan({ status: 'canceled', free_month: false }), ENDED, 'Start your plan'],
-      ['a first payment never finished', plan({ status: 'incomplete_expired', free_month: false }), ENDED, 'Start your plan'],
+      ['a first payment never finished: no paid time ended, so its own offer stands', plan({ status: 'incomplete_expired', free_month: false }), OFFER, 'Start your plan'],
+      // Each level is told its own price (Codex on #398); free days are a founder's only.
+      ['the next 100, never started', plan({ tier: 'early', free_month: false }), OFFER_EARLY, 'Start your plan'],
+      ['the next 100, never started, an older server still saying a free month', plan({ tier: 'early' }), OFFER_EARLY, 'Start your plan'],
+      ['everyone after, never started', plan({ tier: 'regular', free_month: false }), OFFER_REGULAR, 'Start your plan'],
+      ['the next 100, ended: the regular price', plan({ tier: 'early', status: 'canceled', free_month: false }), ENDED, 'Start your plan'],
+      ['the next 100, a first payment never finished', plan({ tier: 'early', status: 'incomplete_expired', free_month: false }), OFFER_EARLY, 'Start your plan'],
+      ['a level this page does not know: the founding offer', plan({ tier: 'gold', free_month: false }), OFFER, 'Start your plan'],
       ['a word for it this page does not know: the offer, as in the app', plan({ status: 'some_new_word', free_month: false }), OFFER, 'Start your plan'],
     ];
     for (const [label, json, sentence, button] of STANDS) {
       const { ctx, page, errs, away } = await open(browser, 'plan', { answers: () => bill(json), settle: 300 });
       const v = await sees(page);
       ok('a plan ' + label, shows(v, sentence, button) && v.back.length === 0 && errs.length === 0 && away.length === 0, JSON.stringify(v) + errs.join(' | '));
+      await ctx.close();
+    }
+    // The plan's name, on the page and on the card, follows the level.
+    for (const [tier, name] of [[undefined, 'Founding inspector'], ['founder', 'Founding inspector'], ['early', 'Early inspector'], ['regular', 'Inspyx plan']]) {
+      const { ctx, page, errs } = await open(browser, 'plan', { answers: () => bill(plan(tier ? { tier } : {})), settle: 300 });
+      const names = await page.evaluate(() => [...document.querySelectorAll('.badge[data-level], .name[data-level]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()));
+      ok('the plan\'s name for ' + (tier || 'a server that says no level') + ' is "' + name + '", on the page and on the card', same(names, [name, name]) && errs.length === 0, JSON.stringify(names));
       await ctx.close();
     }
     // The date is the day on the inspector's own calendar, as in the app. 03:00 in London on the 9th is still the 8th in New York.

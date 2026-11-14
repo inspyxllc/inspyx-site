@@ -15,6 +15,7 @@
   var STRIPE = ['checkout.stripe.com', 'billing.stripe.com'];   // the only places this page ever sends anyone
 
   var all = function (sel) { return [].slice.call(main.querySelectorAll(sel)); };
+  var levels = all('.badge[data-level], .name[data-level]');
   var lines = all('[data-stands]'), says = all('[data-say]'), backs = all('[data-back]'), buttons = all('[data-do]'), names = all('[data-email]');
   var asked = 0;      // goes up with every check started here, so an older answer never replaces a newer one
   var busy = false;   // one of Stripe's pages is being asked for
@@ -50,7 +51,10 @@
       ending: json.cancel_at_period_end === true,
       freeMonth: json.free_month !== false,
       cents: typeof cents === 'number' && cents >= 0 && Math.floor(cents) === cents ? cents : null,
-      every: every === 'month' || every === 'year' ? every : null
+      every: every === 'month' || every === 'year' ? every : null,
+      // The inspector's level (2026-11-14): founder, early (the next 100) or regular; founder when the server
+      // doesn't say, as before.
+      level: json.tier === 'early' || json.tier === 'regular' ? json.tier : 'founder'
     };
   }
 
@@ -64,15 +68,23 @@
     }
     if (s === 'past_due') return { line: 'problem', button: 'card' };
     if (s === 'incomplete' || s === 'unpaid' || s === 'paused') return { line: 'attention', button: 'manage' };
-    if (s === 'canceled' || s === 'incomplete_expired') return { line: 'ended', button: 'start' };
-    return { line: plan.freeMonth ? 'offer-free' : 'offer', button: 'start' };
+    // A plan whose time ran out gave its place back: starting again is the regular price, for every level
+    // (Moises, 2026-11-14: "Yes, keep it"). One that never began keeps its own offer.
+    if (s === 'canceled') return { line: 'ended', button: 'start' };
+    if (s === 'incomplete_expired') return { line: 'offer', button: 'start' };
+    // Free days are a founder's only.
+    return { line: plan.freeMonth && plan.level === 'founder' ? 'offer-free' : 'offer', button: 'start' };
   }
 
   function fill(p, hole, text) { [].forEach.call(p.querySelectorAll('[data-fill="' + hole + '"]'), function (e) { e.textContent = text; }); }
   function show(what, plan) {
+    // Each level is told its own name and price (Codex on #398); the founding ones until the server says.
+    var level = plan && plan.level ? plan.level : 'founder';
+    levels.forEach(function (e) { e.hidden = e.getAttribute('data-level') !== level; });
     var need = [what.date ? 'date' : '', what.price ? 'price' : ''].filter(Boolean).join(' ');
     lines.forEach(function (p) {
-      var on = p.getAttribute('data-stands') === what.line && (p.getAttribute('data-with') || '') === need;
+      var on = p.getAttribute('data-stands') === what.line && (p.getAttribute('data-with') || '') === need &&
+        (!p.hasAttribute('data-level') || p.getAttribute('data-level') === level);
       p.hidden = !on;
       if (!on) return;
       fill(p, 'date', what.date ? longDate(what.date) : '');
