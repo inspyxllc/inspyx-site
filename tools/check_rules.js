@@ -25,6 +25,13 @@ const wss = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src h
 ok('the inspections page has its rule, with the live socket', applies('/inspections') && wss('/inspections'));
 ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/', '/inspections/x', '/inspection'].some(wss));
 ok('the inspections rule catches nothing else', !['/inspection', '/inspections/x', '/myinspections', '/assets/inspections.js'].some(applies));
+// The client's report page (2026-11-14): a new link is /r#<key> (the browser asks for /r alone), an old one
+// /r/<key>. Both must open the report page, under the report page's own rules.
+const opensReport = (p) => (out.routes || []).some((r) => r.dest && /^\/report(\?|$)/.test(r.dest) && new RegExp(r.src).test(p));
+const reportRules = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /img-src 'self' https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']) && /noindex/.test(r.headers['X-Robots-Tag'] || ''));
+const key = 'AbCdEfGhIjKlMnOpQrStUv';
+ok('a new link\'s address (/r) and an old one (/r/<key>) both open the report page, under its own rules', ['/r', '/r/' + key].every((p) => opensReport(p) && reportRules(p)), ['/r', '/r/' + key].filter((p) => !opensReport(p) || !reportRules(p)).join(' '));
+ok('the report page\'s route takes no other address', !['/', '/refunds', '/rr', '/report-x', '/r/a/b'].some(opensReport), ['/', '/refunds', '/rr', '/report-x', '/r/a/b'].filter(opensReport).join(' '));
 // The reader must be able to say no, or its yes means nothing: a pattern that is wrong on purpose.
 const bad = read({ headers: [{ source: '/(?!x)', headers: [{ key: 'A', value: 'b' }] }] });
 ok('a pattern that is wrong on purpose is refused by the same reader', !!bad.error, bad.error ? bad.error.code : 'it was accepted');
