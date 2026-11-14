@@ -97,6 +97,11 @@
     photo: 'Photo',
     openPhoto: 'Open photo',
     photoGone: 'This photo couldn’t be loaded.',
+    video: 'Video',
+    live: 'LIVE',
+    livePhoto: 'Live Photo',
+    playLive: 'Play the Live Photo',
+    videoGone: 'This video couldn’t be loaded.',
     call: 'Call',
     email: 'Email',
     delivered: 'Delivered by Inspyx',
@@ -176,7 +181,8 @@
     left: 'M14.5 5.5L8 12l6.5 6.5',
     right: 'M9.5 5.5L16 12l-6.5 6.5',
     lock: 'M7 11V8a5 5 0 0110 0v3M6 11h12v9H6z',
-    up: 'M12 19V6m0 0l-5 5m5-5l5 5'
+    up: 'M12 19V6m0 0l-5 5m5-5l5 5',
+    play: 'M8 5.5v13l10.5-6.5z'
   };
 
   function icon(name) {
@@ -322,6 +328,24 @@
   // ---------------------------------------------------------------------------------------- photos
 
   var files = {};
+  /* The movies the report's stills stand for (content /13, 2026-11-14): each one's web copy, by its original's
+     SHA-256. A still whose movie is not here shows as a still. */
+  var media = {};
+
+  function mediaOf(motion) {
+    if (!motion || (motion.kind !== 'clip' && motion.kind !== 'live')) return null;
+    var m = media[motion.file];
+    if (!m) return null;
+    var url = ownUrl(m.url);
+    if (!url) return null;
+    return { url: url, kind: motion.kind, ms: m.duration_ms > 0 ? m.duration_ms : 0, audio: m.audio === true };
+  }
+
+  /* A movie's length as a clock reads it: 0:06, 1:20. */
+  function clock(ms) {
+    var s = Math.round(ms / 1000);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
 
   function fileOf(sha) {
     var f = files[sha];
@@ -363,6 +387,7 @@
       .then(function (answer) {
         if (!answer || answer.state !== 'open' || !answer.files) return;
         files = answer.files;
+        media = answer.media || {};
         fetchedAt = Date.now();
         // A picture already on the screen stays as it is. One not loaded yet, or that failed, is asked for
         // again at its new address.
@@ -417,7 +442,13 @@
     var caption = h('p', { class: 'viewer-cap' });
     var prev = h('button', { class: 'ibtn viewer-prev', type: 'button', 'aria-label': WORDS.previous }, icon('left'));
     var next = h('button', { class: 'ibtn viewer-next', type: 'button', 'aria-label': WORDS.next }, icon('right'));
-    var stage = h('div', { class: 'viewer-stage' }, img, missing);
+    /* A clip plays here, and a Live Photo's movie over its still: only when asked (never on its own), with
+       its sound when it has one. A movie with no sound plays muted: nothing to turn up, nothing to fail. */
+    var video = h('video', { class: 'viewer-video', playsinline: '', preload: 'none', hidden: true });
+    video.setAttribute('webkit-playsinline', '');
+    var videoGone = h('p', { class: 'viewer-missing viewer-video-gone', hidden: true }, WORDS.videoGone);
+    var liveBtn = h('button', { class: 'btn viewer-live', type: 'button', hidden: true, 'aria-label': WORDS.playLive }, icon('play'), h('span', null, WORDS.live));
+    var stage = h('div', { class: 'viewer-stage' }, img, video, missing, videoGone, liveBtn);
     add(d, [
       h('div', { class: 'viewer-bar' }, count, closeButton()),
       stage,
@@ -426,9 +457,24 @@
     var list = [];
     var at = 0;
 
+    /* Stops a movie and lets go of it, so stepping on or closing never leaves one playing or downloading. */
+    function stopVideo() {
+      try { video.pause(); } catch (err) { /* nothing playing */ }
+      video.removeAttribute('src');
+      video.removeAttribute('poster');
+      try { video.load(); } catch (err) { /* an old browser */ }
+      video.hidden = true;
+      video.controls = false;
+      videoGone.hidden = true;
+      liveBtn.hidden = true;
+      video.onended = null;
+    }
+
     function draw() {
       var p = list[at];
       var f = fileOf(p.file);
+      var m = mediaOf(p.motion);
+      stopVideo();
       count.textContent = WORDS.photo + ' ' + (at + 1) + ' ' + WORDS.of + ' ' + list.length;
       caption.textContent = p.caption || '';
       img.hidden = !f;
@@ -440,6 +486,36 @@
         img.removeAttribute('src');
         img.removeAttribute('data-file');
       }
+      if (m && m.kind === 'clip') {
+        // A clip: its still is the poster; it plays when tapped, with its controls.
+        img.hidden = true;
+        missing.hidden = true;
+        video.hidden = false;
+        video.controls = true;
+        video.muted = !m.audio;
+        if (f) video.setAttribute('poster', f.full);
+        video.setAttribute('aria-label', (p.caption || WORDS.video) + (m.ms ? ' (' + clock(m.ms) + ')' : ''));
+        video.src = m.url;
+      } else if (m && m.kind === 'live') {
+        // A Live Photo: the still, and a button that plays its movie once, then shows the still again.
+        liveBtn.hidden = false;
+        liveBtn.onclick = function () {
+          video.hidden = false;
+          video.controls = false;
+          video.muted = !m.audio;
+          if (f) video.setAttribute('poster', f.full);
+          video.src = m.url;
+          img.hidden = true;
+          liveBtn.hidden = true;
+          video.onended = function () {
+            video.hidden = true;
+            img.hidden = !f;
+            liveBtn.hidden = false;
+          };
+          var playing = video.play();
+          if (playing && playing.catch) playing.catch(function () { video.hidden = true; img.hidden = !f; liveBtn.hidden = false; });
+        };
+      }
       prev.disabled = at === 0;
       next.disabled = at === list.length - 1;
       prev.hidden = next.hidden = list.length < 2;
@@ -450,12 +526,18 @@
 
     function step(by) {
       var to = at + by;
+      if (to >= 0 && to < list.length) stopVideo();
       if (to < 0 || to >= list.length) return;
       at = to;
       draw();
     }
 
     img.addEventListener('error', function () { img.hidden = true; missing.hidden = false; });
+    video.addEventListener('error', function () {
+      if (!video.getAttribute('src')) return;
+      video.hidden = true;
+      videoGone.hidden = false;
+    });
     prev.addEventListener('click', function () { step(-1); });
     next.addEventListener('click', function () { step(1); });
     d.addEventListener('keydown', function (e) {
@@ -481,7 +563,7 @@
         list = photos;
         at = index;
         draw();
-        openOverlay(d, function () { img.removeAttribute('src'); });
+        openOverlay(d, function () { img.removeAttribute('src'); stopVideo(); });
       }
     };
   }
@@ -508,6 +590,16 @@
         btn.appendChild(img);
       } else {
         btn.classList.add('ph-missing');
+      }
+      var m = mediaOf(p.motion);
+      if (m && m.kind === 'clip') {
+        btn.classList.add('ph-video');
+        btn.setAttribute('aria-label', label + ' (' + WORDS.video + (m.ms ? ', ' + clock(m.ms) : '') + ')');
+        btn.appendChild(h('span', { class: 'ph-badge ph-play', 'aria-hidden': 'true' }, icon('play'), m.ms ? h('span', null, clock(m.ms)) : null));
+      } else if (m && m.kind === 'live') {
+        btn.classList.add('ph-live');
+        btn.setAttribute('aria-label', label + ' (' + WORDS.livePhoto + ')');
+        btn.appendChild(h('span', { class: 'ph-badge', 'aria-hidden': 'true' }, WORDS.live));
       }
       var fig = h('figure', { class: 'fig' }, btn, p.caption ? h('figcaption', { text: p.caption }) : null);
       wrap.appendChild(fig);
@@ -705,6 +797,7 @@
   function renderOpen(answer) {
     var report = answer.report;
     files = answer.files || {};
+    media = answer.media || {};
     fetchedAt = Date.now();
     var pdfUrl = answer.pdf ? ownUrl(answer.pdf.url) : null;
     var pdfName = (answer.pdf && answer.pdf.name) || report.pdf_name || 'Inspection Report.pdf';

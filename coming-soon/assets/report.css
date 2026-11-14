@@ -291,3 +291,14 @@ dialog::backdrop{background:rgba(16,22,30,.55)}
   .shell{display:block}
   .card,.row,.item{break-inside:avoid}
 }
+
+/* Movies (content /13, 2026-11-14): a still that stands for a clip or a Live Photo says so on its tile, and
+   plays in the viewer when asked. */
+.ph{position:relative}
+.ph-badge{position:absolute; left:6px; bottom:6px; display:inline-flex; align-items:center; gap:3px; padding:2px 6px; border-radius:4px; background:rgba(0,0,0,.72); color:#fff; font-size:11px; font-weight:600; letter-spacing:.02em; line-height:16px; pointer-events:none}
+.ph-badge .ic{width:12px; height:12px; fill:#fff; stroke:none}
+.viewer-video{display:block; max-width:100%; max-height:100%; width:auto; height:auto; background:#000}
+.viewer-live{position:absolute; left:12px; top:12px; display:inline-flex; align-items:center; gap:4px; min-height:44px}
+.viewer-live .ic{width:16px; height:16px; fill:currentColor; stroke:none}
+.viewer-stage{position:relative}
+

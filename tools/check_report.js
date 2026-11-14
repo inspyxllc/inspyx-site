@@ -35,6 +35,14 @@ async function open(browser, opts) {
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('request', (r) => requests.push(r.url()));
   if (o.init) await page.addInitScript(o.init);
+  // The sample's movies, under Inspyx's file store's address as a real report gives them (the page's rules let
+  // movies come from there alone), carried to the sample folder with the browser's own byte ranges.
+  await page.route(MOVIES + '**', async (route) => {
+    const req = route.request();
+    const name = new URL(req.url()).pathname.split('/').pop();
+    const res = await route.fetch({ url: base + '/sample-report/media/' + name, headers: req.headers() });
+    return route.fulfill({ response: res });
+  });
   if (o.answer) {
     await page.route('**/sample-report/report.json', (route) => {
       const a = o.answer();
@@ -62,6 +70,8 @@ async function settle(page) {
 }
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
+/** Where the sample's movies are said to be: Inspyx's file store, as a real report's are. */
+const MOVIES = 'https://btxlrfvqifnrnxffohsz.supabase.co/storage/v1/object/sign/reports/sample/media/';
 const allFindings = () => report.sections.flatMap((s) => s.items.flatMap((i) => i.findings));
 const ranked = () => report.glance2.groups.flatMap((g) => g.rows.map((r) => r.id));
 const numberOf = (id) => allFindings().find((f) => f.id === id).number;
@@ -280,6 +290,116 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     const unknown = await keyed('/r#' + KEY.split('').reverse().join(''));
     ok('a key no link has: the function says gone, and the page says so', unknown.seen.state === 'gone' && unknown.asked.length === 1, unknown.seen.state);
     await unknown.ctx.close();
+  }
+
+  // ---- movies (content /13, 2026-11-14): a clip plays when tapped, with its sound; a slowed one silent; a
+  // Live Photo plays once and gives its still back; nothing plays on its own, and stepping on stops it
+  {
+    const moving = clone(sample);
+    const R = moving.report;
+    const withTwo = R.sections.flatMap((s) => s.items.flatMap((i) => i.findings)).find((f) => f.photos.length >= 2);
+    const owned = R.sections.flatMap((s) => s.items).find((i) => i.photos.length >= 1);
+    const MOV = { clip: 'c'.repeat(64), slow: 'd'.repeat(64), live: 'e'.repeat(64), gone: 'f'.repeat(64), unsent: 'a1'.repeat(32) };
+    withTwo.photos[0].motion = { kind: 'clip', file: MOV.clip };
+    withTwo.photos[1].motion = { kind: 'clip', file: MOV.slow };
+    owned.photos[0].motion = { kind: 'live', file: MOV.live };
+    // A movie the page was never given shows as its still.
+    const another = R.sections.flatMap((s) => s.items.flatMap((i) => i.findings)).find((f) => f !== withTwo && f.photos.length >= 1);
+    another.photos[0].motion = { kind: 'clip', file: MOV.unsent };
+    moving.media = {
+      [MOV.clip]: { url: MOVIES + 'clip_audio.mp4?token=t', w: 1280, h: 720, duration_ms: 6000, audio: true },
+      [MOV.slow]: { url: MOVIES + 'slowmo.mp4?token=t', w: 1280, h: 720, duration_ms: 80000, audio: false },
+      [MOV.live]: { url: MOVIES + 'live.mp4?token=t', w: 1280, h: 720, duration_ms: 3000, audio: true },
+    };
+    const { ctx, page, errs } = await open(browser, { answer: () => ({ body: moving }) });
+    const tile = (file) => `[data-finding-card="${withTwo.id}"] .ph:has(img[data-file="${file}"])`;
+    const tiles = await page.evaluate(([clipFile, slowFile, liveFile, unsentFile]) => {
+      const t = (f) => Array.from(document.querySelectorAll('.ph')).find((b) => { const i = b.querySelector('img'); return i && i.getAttribute('data-file') === f; });
+      const info = (b) => b ? { cls: b.className, badge: (b.querySelector('.ph-badge') || {}).textContent || '', label: b.getAttribute('aria-label') } : null;
+      return { clip: info(t(clipFile)), slow: info(t(slowFile)), live: info(t(liveFile)), unsent: info(t(unsentFile)), plain: document.querySelectorAll('.ph:not(.ph-video):not(.ph-live) .ph-badge').length };
+    }, [withTwo.photos[0].file, withTwo.photos[1].file, owned.photos[0].file, another.photos[0].file]);
+    ok('a clip\'s still says so on its tile, with its length; a slowed one too; a Live Photo says LIVE',
+      /ph-video/.test(tiles.clip.cls) && tiles.clip.badge === '0:06' && /Video, 0:06/.test(tiles.clip.label) &&
+      /ph-video/.test(tiles.slow.cls) && tiles.slow.badge === '1:20' &&
+      /ph-live/.test(tiles.live.cls) && tiles.live.badge === 'LIVE' && /Live Photo/.test(tiles.live.label), JSON.stringify(tiles));
+    ok('a movie the page was never given shows as a plain still, and no other tile has a badge', !/ph-video|ph-live/.test(tiles.unsent.cls) && tiles.unsent.badge === '' && tiles.plain === 0, JSON.stringify(tiles.unsent));
+
+    // The clip, opened: the still is its poster, the movie waits for a tap, with its sound.
+    await page.click(`[data-finding-card="${withTwo.id}"] .ph >> nth=0`);
+    await page.waitForTimeout(400);
+    const v1 = await page.evaluate(() => {
+      const v = document.querySelector('.viewer-video');
+      return { shown: !v.hidden, img: !document.querySelector('.viewer-img').hidden, controls: v.controls, src: v.getAttribute('src'), poster: v.getAttribute('poster') || '',
+        preload: v.getAttribute('preload'), playsinline: v.hasAttribute('playsinline'), muted: v.muted, paused: v.paused, t: v.currentTime, autoplay: v.autoplay };
+    });
+    ok('a clip opens as a player: its still as the poster, its controls, its sound on, and it does not play on its own',
+      v1.shown && !v1.img && v1.controls && v1.src === MOVIES + 'clip_audio.mp4?token=t' && v1.poster.length > 0 && v1.preload === 'none' && v1.playsinline &&
+      v1.muted === false && v1.paused && v1.t === 0 && !v1.autoplay, JSON.stringify(v1));
+    const played = await page.evaluate(async () => {
+      const v = document.querySelector('.viewer-video');
+      await v.play();
+      await new Promise((done) => setTimeout(done, 1500));
+      return { t: v.currentTime, paused: v.paused, d: Math.round(v.duration), err: v.error && v.error.code };
+    });
+    ok('tapped, it plays (H.264 with AAC, as the phone makes it)', played.t > 0.5 && !played.paused && played.d === 6 && !played.err, JSON.stringify(played));
+    // Stepping on stops it and lets go of it.
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(300);
+    const v2 = await page.evaluate(() => { const v = document.querySelector('.viewer-video'); return { shown: !v.hidden, src: v.getAttribute('src'), paused: v.paused, muted: v.muted, img: !document.querySelector('.viewer-img').hidden }; });
+    ok('stepping on stops the clip and lets go of it; the next one, slowed and silent, waits muted',
+      v2.shown && v2.src === MOVIES + 'slowmo.mp4?token=t' && v2.paused && v2.muted === true && !v2.img, JSON.stringify(v2));
+    const slow = await page.evaluate(async () => {
+      const v = document.querySelector('.viewer-video');
+      await v.play();
+      await new Promise((done) => setTimeout(done, 1200));
+      return { t: v.currentTime, d: Math.round(v.duration), err: v.error && v.error.code, gone: !document.querySelector('.viewer-video-gone').hidden };
+    });
+    ok('a movie with no sound plays cleanly, muted, at its slowed length', slow.t > 0.3 && slow.d === 80 && !slow.err && !slow.gone, JSON.stringify(slow));
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    const closed = await page.evaluate(() => { const v = document.querySelector('.viewer-video'); return { src: v.getAttribute('src'), paused: v.paused, open: document.querySelectorAll('dialog[open]').length }; });
+    ok('closed, nothing keeps playing or downloading', closed.src === null && closed.paused && closed.open === 0, JSON.stringify(closed));
+
+    // The Live Photo: its still, and a button that plays its movie once.
+    const ownedTile = await page.evaluateHandle((file) => Array.from(document.querySelectorAll('.ph')).find((b) => { const i = b.querySelector('img'); return i && i.getAttribute('data-file') === file; }), owned.photos[0].file);
+    await ownedTile.asElement().click();
+    await page.waitForTimeout(400);
+    const l1 = await page.evaluate(() => ({ img: !document.querySelector('.viewer-img').hidden, video: !document.querySelector('.viewer-video').hidden, btn: !document.querySelector('.viewer-live').hidden, label: document.querySelector('.viewer-live').getAttribute('aria-label') }));
+    ok('a Live Photo opens as its still, with a LIVE button, and nothing playing', l1.img && !l1.video && l1.btn && l1.label === 'Play the Live Photo', JSON.stringify(l1));
+    await page.click('.viewer-live');
+    await page.waitForTimeout(600);
+    const l2 = await page.evaluate(() => { const v = document.querySelector('.viewer-video'); return { video: !v.hidden, playing: !v.paused, muted: v.muted, controls: v.controls, img: !document.querySelector('.viewer-img').hidden }; });
+    ok('pressed, its movie plays over the still, with its sound', l2.video && l2.playing && l2.muted === false && !l2.controls && !l2.img, JSON.stringify(l2));
+    await page.waitForFunction(() => document.querySelector('.viewer-video').hidden, null, { timeout: 8000 }).catch(() => {});
+    const l3 = await page.evaluate(() => ({ img: !document.querySelector('.viewer-img').hidden, video: !document.querySelector('.viewer-video').hidden, btn: !document.querySelector('.viewer-live').hidden }));
+    ok('when it ends, the still comes back, ready to play again', l3.img && !l3.video && l3.btn, JSON.stringify(l3));
+    await page.keyboard.press('Escape');
+    ok('none of that raised an error, and the page\'s rules let the movies through', errs.filter((e) => !/Failed to load resource/.test(e)).length === 0, errs.join(' | ').slice(0, 300));
+    await ctx.close();
+
+    // A movie that can't be loaded says so, and the page stands.
+    const broken = clone(moving);
+    broken.media[MOV.clip] = { url: MOVIES + 'none.mp4?token=t', w: 1280, h: 720, duration_ms: 6000, audio: true };
+    const b = await open(browser, { answer: () => ({ body: broken }) });
+    await b.page.click(`[data-finding-card="${withTwo.id}"] .ph >> nth=0`);
+    await b.page.waitForTimeout(300);
+    await b.page.evaluate(() => document.querySelector('.viewer-video').play().catch(() => {}));
+    await b.page.waitForTimeout(1200);
+    const gone = await b.page.evaluate(() => ({ gone: !document.querySelector('.viewer-video-gone').hidden, video: !document.querySelector('.viewer-video').hidden, text: document.querySelector('.viewer-video-gone').textContent }));
+    ok('a movie that can\'t be loaded says so in its place', gone.gone && !gone.video && gone.text === 'This video couldn’t be loaded.', JSON.stringify(gone));
+    await b.ctx.close();
+
+    // A movie from anywhere but Inspyx is never played or asked for: its still shows as a plain one.
+    const foreign = clone(moving);
+    foreign.media[MOV.clip] = { url: 'https://evil.example/steal.mp4', w: 1280, h: 720, duration_ms: 6000, audio: true };
+    const fo = await open(browser, { answer: () => ({ body: foreign }) });
+    await fo.page.click(`[data-finding-card="${withTwo.id}"] .ph >> nth=0`);
+    await fo.page.waitForTimeout(400);
+    const fr = await fo.page.evaluate(() => ({ video: !document.querySelector('.viewer-video').hidden, src: document.querySelector('.viewer-video').getAttribute('src'), img: !document.querySelector('.viewer-img').hidden }));
+    const badge = await fo.page.evaluate((file) => { const b = Array.from(document.querySelectorAll('.ph')).find((x) => { const i = x.querySelector('img'); return i && i.getAttribute('data-file') === file; }); return b ? b.className : ''; }, withTwo.photos[0].file);
+    ok('a movie from anywhere but Inspyx is never played or asked for: its still shows plain',
+      !fr.video && fr.src === null && fr.img && !/ph-video/.test(badge) && fo.requests.every((u) => !u.includes('evil.example')), JSON.stringify({ fr, badge }));
+    await fo.ctx.close();
   }
 
   // ---- the filter chips
