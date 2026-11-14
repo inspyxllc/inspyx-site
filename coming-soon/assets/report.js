@@ -485,14 +485,16 @@
     return [h('h6', { class: 'eyebrow' }, label), h('p', { class: 'prose' }, text)];
   }
 
-  /* A finding in full: what the PDF's card holds. */
-  function findingBody(f, big) {
+  /* A finding in full: what the PDF's card holds, under the PDF's labels (OBSERVED, WHY IT MATTERS, WHAT TO
+     DO, WHO TO CALL). */
+  function findingBody(report, f, big) {
+    var L = report.card_labels;
     return h('div', { class: 'card-b' },
-      field(PDF.observed, f.observed),
-      field(PDF.implication, f.implication),
-      field(PDF.recommended, f.recommendation),
-      gallery(f.photos, big),
-      f.trade ? h('p', { class: 'meta' }, PDF.trade + ' ' + f.trade) : null
+      field(L.observed, f.observed),
+      field(L.why, f.implication),
+      field(L.what, f.recommendation),
+      f.trade ? field(L.who, f.trade) : null,
+      gallery(f.photos, big)
     );
   }
 
@@ -500,9 +502,10 @@
     return h('article', { class: 'card cat-' + f.category, id: 'f-' + f.id, tabindex: '-1', 'data-finding-card': f.id },
       h('header', { class: 'card-h' },
         pill(report, f.category),
-        h('h5', { class: 'card-t' }, h('span', { class: 'fid' }, f.id), ' ', f.title)
+        h('h5', { class: 'card-t' }, h('span', { class: 'fid' }, f.number), ' ', f.title),
+        f.place ? h('p', { class: 'card-place' }, f.place) : null
       ),
-      findingBody(f, false)
+      findingBody(report, f, false)
     );
   }
 
@@ -524,16 +527,43 @@
     return h('p', { class: 'ln ln-ok' }, l.text);
   }
 
+  /* An item as the PDF prints it in its chapter: its name ("Kitchen, Sink") over its own lines and photos,
+     then its findings' cards. Its status goes to the chapter's closing blocks. */
   function itemBlock(report, item) {
-    var info = item.lines.filter(function (l) { return l.kind === 'information'; });
-    var rest = item.lines.filter(function (l) { return l.kind !== 'information'; });
+    var own = item.lines2.length > 0 || item.photos.length > 0;
     return h('div', { class: 'item' },
-      h('h4', { class: 'item-t' }, item.title),
-      info.length ? h('dl', { class: 'kvs' }, info.map(line)) : null,
-      rest.map(line),
+      own ? h('h4', { class: 'item-t' }, item.heading) : null,
+      item.lines2.map(function (text) { return h('p', { class: 'ln prose' }, text); }),
       gallery(item.photos, false),
       item.findings.map(function (f) { return findingCard(report, f); })
     );
+  }
+
+  /* A chapter's closing blocks, as the PDF prints them: not inspected (each item and why), then partially
+     inspected, inspected with no deficiencies, and not present, each room's items as one line. */
+  function statusBlocks(report, s) {
+    var L = report.status_labels;
+    var out = [];
+    if (s.status.not_inspected.length) {
+      out.push(h('div', { class: 'status cat-NI' },
+        h('h6', { class: 'eyebrow' }, L.not_inspected),
+        s.status.not_inspected.map(function (n) {
+          return h('div', { class: 'status-i' }, h('p', { class: 'item-t' }, n.item), n.reason ? h('p', { class: 'prose' }, n.reason) : null);
+        })));
+    }
+    [['partial', 'status-partial'], ['clean', 'status-clean'], ['not_present', 'status-np']].forEach(function (k) {
+      var lines = s.status[k[0]];
+      if (!lines.length) return;
+      out.push(h('div', { class: 'status ' + k[1] },
+        h('h6', { class: 'eyebrow' }, L[k[0]]),
+        lines.map(function (text) {
+          var cut = text.indexOf(': ');
+          return cut > 0
+            ? h('p', { class: 'prose' }, h('strong', null, text.substring(0, cut + 2)), text.substring(cut + 2))
+            : h('p', { class: 'prose' }, text);
+        })));
+    });
+    return out;
   }
 
   function sectionBlock(report, s) {
@@ -543,13 +573,14 @@
       return h('span', { class: 'pill pill-s cat-' + c }, s.counts[c] + ' ' + label);
     });
     return h('section', { class: 'sec', id: 's-' + s.id, tabindex: '-1', 'data-section': s.id },
-      h('h3', { class: 'sec-t' }, h('span', { class: 'sec-id' }, s.id), ' — ', s.name),
-      s.standard ? h('p', { class: 'sec-std' }, s.standard) : null,
+      h('h3', { class: 'sec-t' }, h('span', { class: 'sec-id' }, s.number), ' ', s.name),
       counts.length ? h('p', { class: 'sec-counts' }, counts) : null,
       s.not_inspected ? h('p', { class: 'sec-note' }, PDF.notInspected + ': ' + s.not_inspected) : null,
       s.scope ? h('p', { class: 'sec-meta' }, PDF.scope + ' ' + s.scope) : null,
-      s.description ? h('p', { class: 'sec-meta' }, PDF.description + ' ' + s.description) : null,
-      s.items.map(function (item) { return itemBlock(report, item); })
+      s.description ? h('p', { class: 'sec-meta' }, s.description) : null,
+      s.items.map(function (item) { return itemBlock(report, item); }),
+      statusBlocks(report, s),
+      s.nothing_recorded ? h('p', { class: 'prose' }, s.nothing_recorded) : null
     );
   }
 
@@ -639,10 +670,14 @@
        has them. */
     var byId = {};
     var ranked = [];
+    /* Where each finding is in the whole report, as "At a glance" says it. */
+    var placeOf = {};
+    report.glance2.groups.forEach(function (g) { g.rows.forEach(function (r) { placeOf[r.id] = r.place; }); });
+    var hasDetails = report.details.rows.length > 0 || !!report.details.property;
     report.sections.forEach(function (s) {
       s.items.forEach(function (item) { item.findings.forEach(function (f) { byId[f.id] = f; }); });
     });
-    report.glance.groups.forEach(function (g) { g.rows.forEach(function (r) { if (byId[r.id]) ranked.push(r.id); }); });
+    report.glance2.groups.forEach(function (g) { g.rows.forEach(function (r) { if (byId[r.id]) ranked.push(r.id); }); });
     Object.keys(byId).forEach(function (id) { if (ranked.indexOf(id) < 0) ranked.push(id); });
 
     function pdfButton(cls, long) {
@@ -665,19 +700,19 @@
           h('a', { href: '#' + target, 'data-goto': target, on: { click: function (e) { e.preventDefault(); onPick(target); } } },
             h('span', { class: 'toc-l' }, label), extra || null));
       }
+      var H = report.headings;
       var list = h('ol', { class: 'toc' });
-      add(list, entry('glance', PDF.glance.split(' — ')[0]));
-      add(list, entry('details', PDF.details));
-      add(list, entry('sections', PDF.sections.split(' — ')[0]));
+      add(list, entry('glance', H.glance));
+      add(list, entry('legend', H.legend));
+      if (hasDetails) add(list, entry('details', H.details));
       report.sections.forEach(function (s) {
         var n = s.counts.SH + s.counts.MD + s.counts.MN + s.counts.NT;
         var worst = s.counts.SH ? 'SH' : s.counts.MD ? 'MD' : s.counts.MN ? 'MN' : s.counts.NT ? 'NT' : '';
-        add(list, entry('s-' + s.id, s.name,
+        add(list, entry('s-' + s.id, s.number + '  ' + s.name,
           n ? h('span', { class: 'toc-n cat-' + worst, 'aria-label': plural(n, WORDS.findingsIn) }, String(n)) : null, 'toc-sub'));
       });
-      if (report.who_to_call.length) add(list, entry('call', PDF.whoToCall.split(' — ')[0]));
-      add(list, entry('legend', PDF.legend));
-      add(list, entry('standards', PDF.standards));
+      if (report.who_to_call2.length) add(list, entry('call', H.who_to_call));
+      add(list, entry('standards', H.standards));
       return list;
     }
 
@@ -720,10 +755,10 @@
         add(body, [
           h('div', { class: 'fhead cat-' + f.category },
             pill(report, f.category),
-            h('h2', { class: 'fhead-t' }, h('span', { class: 'fid' }, f.id), ' ', f.title),
-            f.crumb ? h('p', { class: 'crumb' }, f.crumb) : null
+            h('h2', { class: 'fhead-t' }, h('span', { class: 'fid' }, f.number), ' ', f.title),
+            placeOf[f.id] ? h('p', { class: 'crumb' }, placeOf[f.id]) : null
           ),
-          findingBody(f, true),
+          findingBody(report, f, true),
           h('p', { class: 'sheet-more' },
             h('button', { class: 'link', type: 'button', on: { click: function () { closeAll(function () { goTo('f-' + f.id); flash('f-' + f.id); }); } } }, WORDS.inSection))
         ]);
@@ -770,7 +805,7 @@
 
     function visibleOrder() {
       var ids = [];
-      report.glance.groups.forEach(function (g) {
+      report.glance2.groups.forEach(function (g) {
         if (filter === 'all' || filter === g.code) g.rows.forEach(function (r) { ids.push(r.id); });
       });
       return ids;
@@ -778,8 +813,8 @@
 
     function drawGlance() {
       chips.textContent = '';
-      var options = [['all', WORDS.all]].concat(report.glance.groups.map(function (g) {
-        return [g.code, (CHIP_LABELS[g.code] || g.heading) + ' (' + g.rows.length + ')'];
+      var options = [['all', WORDS.all]].concat(report.glance2.groups.map(function (g) {
+        return [g.code, (CHIP_LABELS[g.code] || labelOf(g.code)) + ' (' + g.rows.length + ')'];
       }));
       options.forEach(function (o) {
         chips.appendChild(h('button', {
@@ -788,7 +823,7 @@
         }, o[1]));
       });
       glanceList.textContent = '';
-      report.glance.groups.forEach(function (g) {
+      report.glance2.groups.forEach(function (g) {
         if (filter !== 'all' && filter !== g.code) return;
         var rows = h('ul', { class: 'rows' });
         g.rows.forEach(function (r) {
@@ -801,13 +836,13 @@
               thumb,
               h('span', { class: 'row-b' },
                 pill(report, g.code, true),
-                h('span', { class: 'row-t' }, h('span', { class: 'fid' }, r.id), ' ', r.title),
-                r.crumb ? h('span', { class: 'crumb' }, r.crumb) : null
+                h('span', { class: 'row-t' }, h('span', { class: 'fid' }, r.number), ' ', r.title),
+                r.place ? h('span', { class: 'crumb' }, r.place) : null
               ),
               icon('right')
             )));
         });
-        add(glanceList, [h('h3', { class: 'group-t cat-' + g.code }, g.heading + ' (' + g.rows.length + ')'), rows]);
+        add(glanceList, [h('h3', { class: 'group-t cat-' + g.code }, g.head), rows]);
       });
     }
 
@@ -822,36 +857,46 @@
     }
 
     var c = report.counts;
+    var G = report.glance2;
     var glance = h('section', { class: 'part', id: 'glance', tabindex: '-1' },
-      h('h2', { class: 'part-t' }, PDF.glance),
-      h('p', { class: 'lead' }, report.glance.lead),
+      h('h2', { class: 'part-t' }, report.headings.glance),
+      h('p', { class: 'lead' }, G.lead),
       h('div', { class: 'tiles' },
         tile(c.SH, labelOf('SH'), 'cat-SH'), tile(c.MD, labelOf('MD'), 'cat-MD'),
         tile(c.MN, labelOf('MN'), 'cat-MN'), tile(c.NT, labelOf('NT'), 'cat-NT'),
         tile(c.photos, PDF.photos, ''), tile(c.not_inspected, PDF.notInspected, 'cat-NI')
       ),
-      report.glance.none
-        ? h('p', { class: 'none' }, report.glance.none)
-        : [chips, h('p', { class: 'hint' }, WORDS.tapHint), glanceList],
-      report.glance.not_inspected.length ? [
-        h('h3', { class: 'group-t cat-NI' }, PDF.notInspected + ' (' + report.glance.not_inspected.length + ')'),
-        h('ul', { class: 'ni' }, report.glance.not_inspected.map(function (n) {
+      G.none ? h('p', { class: 'none' }, G.none) : null,
+      G.groups.length ? [chips, h('p', { class: 'hint' }, WORDS.tapHint), glanceList] : null,
+      G.not_inspected ? [
+        h('h3', { class: 'group-t cat-NI' }, G.not_inspected.head),
+        h('ul', { class: 'ni' }, G.not_inspected.rows.map(function (n) {
           return h('li', null,
-            h('span', { class: 'ni-t' }, [n.section, n.item].filter(Boolean).join(' › ')),
-            n.reason ? h('span', { class: 'ni-r' }, n.reason) : null,
-            n.note ? h('span', { class: 'ni-r' }, n.note) : null);
+            h('a', { class: 'ni-t', href: '#s-' + n.section, on: { click: function (e) { e.preventDefault(); goTo('s-' + n.section); } } },
+              h('span', { class: 'fid' }, n.number), ' ', n.title),
+            h('span', { class: 'ni-r' }, [n.place, n.reason].filter(Boolean).join(' · ')));
         }))
       ] : null
     );
-    if (!report.glance.none) drawGlance();
+    if (G.groups.length) drawGlance();
+
+    // ---- in this report: the chapters, numbered (the PDF's contents)
+    var contents = h('section', { class: 'part', id: 'contents', tabindex: '-1' },
+      h('h2', { class: 'part-t' }, report.headings.contents),
+      h('ol', { class: 'toc toc-doc' }, report.contents.map(function (e) {
+        return h('li', null, h('a', { href: '#s-' + e.id, on: { click: function (ev) { ev.preventDefault(); goTo('s-' + e.id); } } },
+          h('span', { class: 'fid' }, e.number), ' ', e.name));
+      }))
+    );
 
     // ---- the rest of the report
     var d = report.details;
-    var details = h('section', { class: 'part', id: 'details', tabindex: '-1' },
-      h('h2', { class: 'part-t' }, PDF.details),
+    /* The PDF prints its details only when there are some. */
+    var details = !hasDetails ? null : h('section', { class: 'part', id: 'details', tabindex: '-1' },
+      h('h2', { class: 'part-t' }, report.headings.details),
       d.rows.length
         ? h('dl', { class: 'kvs kvs-wide' }, d.rows.map(function (r) { return h('div', { class: 'kv' }, h('dt', null, r[0]), h('dd', { class: 'prose' }, r[1])); }))
-        : h('p', { class: 'none' }, d.none || ''),
+        : null,
       d.property ? [
         h('h3', { class: 'sub-t' }, d.property.heading),
         d.property.groups.map(function (g) {
@@ -862,34 +907,46 @@
       ] : null
     );
 
+    /* The chapters follow one another, as in the PDF, with no heading of their own over them. */
     var sections = h('section', { class: 'part', id: 'sections', tabindex: '-1' },
-      h('h2', { class: 'part-t' }, PDF.sections),
       report.sections.map(function (s) { return sectionBlock(report, s); })
     );
 
-    var call = report.who_to_call.length ? h('section', { class: 'part', id: 'call', tabindex: '-1' },
-      h('h2', { class: 'part-t' }, PDF.whoToCall),
-      h('ul', { class: 'calls' }, report.who_to_call.map(function (w) {
-        return h('li', null,
-          h('button', { class: 'call', type: 'button', 'data-finding': w.id, on: { click: function () { openFinding(w.id, report.who_to_call.map(function (x) { return x.id; })); } } },
-            pill(report, w.category, true),
-            h('span', { class: 'call-t' }, h('span', { class: 'fid' }, w.id), ' — ' + w.text + (w.trade ? ' (' + w.trade + ')' : ''))));
-      }))
+    /* Who to call: each trade once, the most urgent first, with the findings it is called for. */
+    var callOrder = [];
+    report.who_to_call2.forEach(function (g) { g.findings.forEach(function (x) { callOrder.push(x.id); }); });
+    var call = report.who_to_call2.length ? h('section', { class: 'part', id: 'call', tabindex: '-1' },
+      h('h2', { class: 'part-t' }, report.headings.who_to_call),
+      report.who_to_call2.map(function (g) {
+        return h('div', { class: 'call-g' },
+          h('h3', { class: 'sub-t' }, g.head),
+          h('ul', { class: 'calls' }, g.findings.map(function (x) {
+            return h('li', null,
+              h('button', { class: 'call', type: 'button', 'data-finding': x.id, on: { click: function () { openFinding(x.id, callOrder); } } },
+                byId[x.id] ? pill(report, byId[x.id].category, true) : null,
+                h('span', { class: 'call-t' }, x.text)));
+          })));
+      })
     ) : null;
 
     var legend = h('section', { class: 'part', id: 'legend', tabindex: '-1' },
-      h('h2', { class: 'part-t' }, PDF.legend),
-      h('p', { class: 'lead' }, report.legend.intro),
-      h('dl', { class: 'legend' }, report.legend.rows.map(function (r) {
+      h('h2', { class: 'part-t' }, report.headings.legend),
+      h('dl', { class: 'legend' }, report.legend2.rows.map(function (r) {
         return h('div', { class: 'legend-r' }, h('dt', null, h('span', { class: 'pill cat-' + r.code }, r.label)), h('dd', null, r.definition));
-      }))
+      })),
+      report.legend2.numbers ? h('p', { class: 'fine' }, report.legend2.numbers) : null
     );
 
     var sig = report.signature;
     var sigFile = sig.image ? fileOf(sig.image) : null;
     var standards = h('section', { class: 'part', id: 'standards', tabindex: '-1' },
-      h('h2', { class: 'part-t' }, PDF.standards),
+      h('h2', { class: 'part-t' }, report.headings.standards),
       h('p', { class: 'prose' }, report.standards),
+      /* The inspector's own notices, in his words, as text (never markup), paragraphs as he wrote them. */
+      (report.notices || []).map(function (n) {
+        return h('div', { class: 'notice' }, h('h3', { class: 'sub-t' }, n.heading),
+          n.text.split(/\n+/).filter(function (t) { return t.trim(); }).map(function (t) { return h('p', { class: 'prose' }, t); }));
+      }),
       h('div', { class: 'sig' },
         sigFile ? shows(h('img', { class: 'sig-img', alt: PDF.signature, src: sigFile.full }), sig.image, 'full') : null,
         sig.name ? h('p', null, PDF.signature + ': ' + sig.name) : null,
@@ -924,7 +981,7 @@
     );
 
     var foot = h('footer', { class: 'foot' },
-      h('p', null, [report.cover.address, WORDS.reportId + ' ' + report.report_id].filter(Boolean).join(' · ')),
+      h('p', null, [report.cover.address, WORDS.reportId + ' ' + (report.report_number || report.report_id)].filter(Boolean).join(' · ')),
       h('p', null, WORDS.delivered, ' · ', h('a', { href: 'https://inspyx.com/privacy', rel: 'noopener' }, WORDS.privacy))
     );
 
@@ -933,7 +990,7 @@
       bar,
       h('div', { class: 'shell' },
         side,
-        h('main', { class: 'doc', id: 'report', tabindex: '-1' }, coverBlock(report, answer.sample === true), glance, details, sections, call, legend, standards, end)
+        h('main', { class: 'doc', id: 'report', tabindex: '-1' }, coverBlock(report, answer.sample === true), glance, contents, legend, details, sections, call, standards, end)
       ),
       foot
     ]);
@@ -958,6 +1015,10 @@
     // A link straight to one finding: inspyx.com/r/<key>#C6.2 opens it.
     var wanted = (location.hash || '').replace(/^#/, '');
     try { wanted = decodeURIComponent(wanted); } catch (err) { wanted = ''; }
+    /* …or its printed number: inspyx.com/r/<key>#3.1. */
+    if (!byId[wanted]) {
+      Object.keys(byId).forEach(function (id) { if (byId[id].number === wanted) wanted = id; });
+    }
     if (byId[wanted]) openFinding(wanted, ranked);
   }
 
