@@ -160,6 +160,50 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     await ctx.close();
   }
 
+  // ---- the PDF's parts, in its order; the contents; the numbers line; a finding opened by its printed number
+  {
+    const { ctx, page } = await open(browser);
+    const seen = await page.evaluate(() => ({
+      parts: Array.from(document.querySelectorAll('main.doc > section.part')).map((e) => e.id).filter(Boolean),
+      toc: Array.from(document.querySelectorAll('#contents .toc-doc li')).map((e) => e.textContent.trim()),
+      numbers: Array.from(document.querySelectorAll('#legend .fine')).map((e) => e.textContent.trim()),
+    }));
+    const want = ['glance', 'contents', 'legend', ...(report.details.rows.length || report.details.property ? ['details'] : []), 'sections', ...(report.who_to_call2.length ? ['call'] : []), 'standards'];
+    ok('the parts come in the PDF\'s order: at a glance, the contents, the categories, the details, the chapters, who to call, the standards', same(seen.parts, want), seen.parts.join(','));
+    ok('in this report: every chapter, numbered as printed', same(seen.toc, report.contents.map((e) => e.number + ' ' + e.name)), String(seen.toc.length));
+    ok('the line about finding numbers is under the categories', report.legend2.numbers !== '' && seen.numbers.includes(report.legend2.numbers), seen.numbers.join(' / '));
+    await ctx.close();
+    const f = allFindings()[2];
+    const byNumber = await open(browser, { path: '/r/sample#' + f.number });
+    const head = await byNumber.page.evaluate(() => { const d = document.querySelector('dialog[open] .fhead-t'); return d ? d.textContent.trim() : ''; });
+    ok('a link with a finding\'s printed number (#' + f.number + ') opens that finding', head === f.number + ' ' + f.title, head);
+    await byNumber.ctx.close();
+  }
+
+  // ---- the inspector's own notices: under the standards, in his words, as text, paragraphs as written
+  {
+    const noticed = clone(sample);
+    noticed.report.notices = [
+      { heading: 'What this inspection covers', text: 'First paragraph of the inspector\'s own words.\n\nSecond <b>one</b><img src=x onerror="window.__pwned=9">.' },
+      { heading: 'Limitations', text: 'One limitation.' },
+    ];
+    const { ctx, page } = await open(browser, { answer: () => ({ body: noticed }) });
+    const n = await page.evaluate(() => ({
+      heads: Array.from(document.querySelectorAll('#standards .notice h3')).map((e) => e.textContent),
+      paras: Array.from(document.querySelectorAll('#standards .notice')).map((e) => Array.from(e.querySelectorAll('p')).map((p) => p.textContent)),
+      pwned: window.__pwned, imgs: document.querySelectorAll('#standards .notice img').length,
+    }));
+    ok('the notices print under the standards, each under its heading, paragraphs as he wrote them, as text',
+      same(n.heads, ['What this inspection covers', 'Limitations']) &&
+      same(n.paras, [['First paragraph of the inspector\'s own words.', 'Second <b>one</b><img src=x onerror="window.__pwned=9">.'], ['One limitation.']]) &&
+      n.pwned === undefined && n.imgs === 0, JSON.stringify(n));
+    await ctx.close();
+    const none = await open(browser);
+    const zero = await none.page.evaluate(() => document.querySelectorAll('#standards .notice').length);
+    ok('a report with no notices prints none', report.notices.length > 0 || zero === 0, String(zero));
+    await none.ctx.close();
+  }
+
   // ---- the filter chips
   {
     const { ctx, page } = await open(browser);
