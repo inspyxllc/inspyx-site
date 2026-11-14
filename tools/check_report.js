@@ -141,6 +141,9 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     ok('the cover: address, place, who it is for, the inspection date, the inspector and the buyer\'s agent',
       [c.address, c.locality, 'Prepared for ' + c.prepared_for, 'Inspection date: ' + c.inspected, c.inspector.name, 'License number: ' + c.inspector.license, c.inspector.phone, c.inspector.email, c.agents[0].name, c.agents[0].email]
         .every((s) => seen.cover.includes(s)) && seen.sampleTag);
+    // A report made again after it was sent (content /14, 2026-11-14) says so under the inspection date.
+    ok(c.updated ? 'the cover says when the report was updated, as the PDF does' : 'a first report says nothing of an update',
+      c.updated ? seen.cover.includes('Updated ' + c.updated) : !seen.cover.includes('Updated '));
     const n = report.counts;
     ok('the six counts are the report\'s own', same(seen.tiles, [n.SH, n.MD, n.MN, n.NT, n.photos, n.not_inspected]), seen.tiles.join(','));
     ok('the counts carry the PDF\'s labels', same(seen.tileLabels, ['Safety Hazard', 'Recommendation', 'Maintenance', 'Information', 'Photos', 'Not inspected']), seen.tileLabels.join(','));

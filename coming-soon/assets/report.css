@@ -102,6 +102,7 @@ a{color:var(--blue); text-underline-offset:2px}
 .addr{margin:9px 0 7px; font:600 clamp(28px, 7.6vw, 40px)/1.1 var(--serif); letter-spacing:-.012em; color:var(--navy); text-wrap:balance; overflow-wrap:anywhere}
 .addr-s{font-size:24px; margin:0 0 4px}
 .cover-sub{color:var(--muted); font-size:15px}
+.cover-updated{color:var(--ink); font-weight:600}
 .people{display:grid; gap:10px; margin-top:18px}
 .pcard{padding:12px 14px; border:1px solid var(--line); border-radius:12px; min-width:0}
 .pcard-main{display:flex; align-items:center; gap:14px; border:1.5px solid var(--navy)}
