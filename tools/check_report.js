@@ -61,7 +61,8 @@ async function settle(page) {
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const allFindings = () => report.sections.flatMap((s) => s.items.flatMap((i) => i.findings));
-const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id));
+const ranked = () => report.glance2.groups.flatMap((g) => g.rows.map((r) => r.id));
+const numberOf = (id) => allFindings().find((f) => f.id === id).number;
 
 (async () => {
   const browser = await chromium.launch();
@@ -112,7 +113,8 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
         cards: Array.from(document.querySelectorAll('[data-finding-card]')).map((c) => c.dataset.findingCard),
         cardTitles: t('[data-finding-card] .card-t'),
         items: t('#sections .item-t').length,
-        kvs: document.querySelectorAll('#sections .kv').length,
+        kvs: document.querySelectorAll('#sections .item .ln').length,
+        statusText: Array.from(document.querySelectorAll('#sections .status')).map((e) => e.innerText).join('\n'),
         photos: document.querySelectorAll('#sections .ph').length,
         calls: Array.from(document.querySelectorAll('#call .call')).map((c) => c.dataset.finding),
         legend: t('#legend dt'),
@@ -129,29 +131,32 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
     const n = report.counts;
     ok('the six counts are the report\'s own', same(seen.tiles, [n.SH, n.MD, n.MN, n.NT, n.photos, n.not_inspected]), seen.tiles.join(','));
     ok('the counts carry the PDF\'s labels', same(seen.tileLabels, ['Safety Hazard', 'Recommendation', 'Maintenance', 'Information', 'Photos', 'Not inspected']), seen.tileLabels.join(','));
-    ok('at a glance: the lead line, the three groups with their numbers, and every finding once, most urgent first',
-      seen.lead === report.glance.lead && same(seen.groups.slice(0, report.glance.groups.length), report.glance.groups.map((g) => g.heading + ' (' + g.rows.length + ')')) && same(seen.rows, ranked()),
+    const G = report.glance2;
+    ok('at a glance, as the PDF lists it: the lead line, each group head with its count, then "Not inspected (n)", and every finding once, most urgent first',
+      seen.lead === G.lead && same(seen.groups, [...G.groups.map((g) => g.head), ...(G.not_inspected ? [G.not_inspected.head] : [])]) && same(seen.rows, ranked()),
       seen.groups.join(' / '));
-    ok('each row reads its number and its title', same(seen.rowTitles, report.glance.groups.flatMap((g) => g.rows.map((r) => r.id + ' ' + r.title))));
+    ok('each row reads its printed number and its title', same(seen.rowTitles, G.groups.flatMap((g) => g.rows.map((r) => r.number + ' ' + r.title))));
     ok('inspection details: each label with its value, in order', same(seen.details, report.details.rows));
-    ok('every section, in the report\'s order, headed as the PDF heads it', same(seen.sections, report.sections.map((s) => s.id + ' — ' + s.name)), String(seen.sections.length));
-    ok('every finding has its card, in its section, in the report\'s order',
-      same(seen.cards, allFindings().map((f) => f.id)) && same(seen.cardTitles, allFindings().map((f) => f.id + ' ' + f.title)), String(seen.cards.length));
-    const wantItems = report.sections.reduce((a, s) => a + s.items.length, 0);
-    const wantKvs = report.sections.reduce((a, s) => a + s.items.reduce((b, i) => b + i.lines.filter((l) => l.kind === 'information').length, 0), 0);
+    ok('every chapter, in the report\'s order, headed as the PDF heads it: its number and its name', same(seen.sections, report.sections.map((s) => s.number + ' ' + s.name)), String(seen.sections.length));
+    ok('every finding has its card, in its chapter, in the report\'s order, under its printed number',
+      same(seen.cards, allFindings().map((f) => f.id)) && same(seen.cardTitles, allFindings().map((f) => f.number + ' ' + f.title)), String(seen.cards.length));
+    // An item is named when it has lines or photos of its own; a not-inspected item is named in its chapter's closing block.
+    const wantItems = report.sections.reduce((a, s) => a + s.items.filter((i) => i.lines2.length || i.photos.length).length + s.status.not_inspected.length, 0);
+    const wantKvs = report.sections.reduce((a, s) => a + s.items.reduce((b, i) => b + i.lines2.length, 0), 0);
     const wantPhotos = report.sections.reduce((a, s) => a + s.items.reduce((b, i) => b + i.photos.length + i.findings.reduce((d, f) => d + f.photos.length, 0), 0), 0);
-    ok('every item, every recorded answer and every photo is on the page', seen.items === wantItems && seen.kvs === wantKvs && seen.photos === wantPhotos && wantPhotos === n.photos,
+    ok('every item, every line of its own and every photo is on the page', seen.items === wantItems && seen.kvs === wantKvs && seen.photos === wantPhotos && wantPhotos === n.photos,
       [seen.items, wantItems, seen.kvs, wantKvs, seen.photos, wantPhotos].join(','));
-    ok('who to call: one line for each finding with a recommendation, most urgent first', same(seen.calls, report.who_to_call.map((w) => w.id)), String(seen.calls.length));
-    ok('the six categories are explained, in the PDF\'s words', same(seen.legend, report.legend.rows.map((r) => r.label)) && seen.standards === report.standards);
-    ok('the signature block and the footer', seen.sig.includes('Inspector signature: ' + report.signature.name) && seen.sig.includes('Date: ' + report.signature.date) && seen.foot.includes(report.report_id) && seen.foot.includes('Delivered by Inspyx'));
+    ok('who to call: each trade once, its findings most urgent first', same(seen.calls, report.who_to_call2.flatMap((g) => g.findings.map((x) => x.id))), String(seen.calls.length));
+    ok('the four categories a finding carries are explained, in the PDF\'s words', same(seen.legend, report.legend2.rows.map((r) => r.label)) && seen.standards === report.standards);
+    ok('the signature block and the footer (the report\'s short number)', seen.sig.includes('Inspector signature: ' + report.signature.name) && seen.sig.includes('Date: ' + report.signature.date) && seen.foot.includes(report.report_number) && seen.foot.includes('Delivered by Inspyx'));
+    ok('each chapter\'s closing blocks are on the page, in the PDF\'s words', report.sections.every((s) => [...s.status.partial, ...s.status.clean, ...s.status.not_present].every((line) => seen.statusText.includes(line.slice(line.indexOf(': ') + 2, line.indexOf(': ') + 22)))));
 
-    // a line under an item, as the PDF prints it
+    // a not-inspected item, in its chapter's closing block, as the PDF prints it
     const laundry = await page.evaluate(() => {
-      const item = Array.from(document.querySelectorAll('#s-C6 .item')).find((i) => i.querySelector('.item-t').textContent === 'Laundry');
-      return item ? item.innerText : '';
+      const block = document.querySelector('#s-C6 .status.cat-NI');
+      return block ? block.innerText : '';
     });
-    ok('a not-inspected item says so, with its reason and the inspector\'s note', laundry.includes('Not inspected') && laundry.includes('Obstructed by stored items or furnishings') && laundry.includes('Unable to inspect laundry plumbing'), laundry.slice(0, 80));
+    ok('a not-inspected item says so in its chapter, with its reason and the inspector\'s note', laundry.includes('NOT INSPECTED') && laundry.includes('Laundry') && laundry.includes('Obstructed by stored items or furnishings') && laundry.includes('Unable to inspect laundry plumbing'), laundry.slice(0, 80));
     await ctx.close();
   }
 
@@ -190,13 +195,13 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
       return { open: d.open, n: d.querySelector('.sheet-n').textContent, title: d.querySelector('.fhead-t').textContent, crumb: (d.querySelector('.crumb') || {}).textContent, text: d.querySelector('.sheet-in').innerText, photos: d.querySelectorAll('.ph').length, inside: d.contains(document.activeElement), locked: document.documentElement.classList.contains('is-locked'), modal: d.matches(':modal') };
     });
     ok('a tap on a row opens the finding over the page: its number, title, place, words and photos',
-      s1.open && s1.modal && s1.n === 'Finding 3 of ' + order.length && s1.title === third.id + ' ' + third.title && s1.crumb === third.crumb && s1.text.includes(third.observed) && s1.text.includes(third.recommendation) && s1.text.includes('Trade: ' + third.trade) && s1.photos === third.photos.length,
+      s1.open && s1.modal && s1.n === 'Finding 3 of ' + order.length && s1.title === third.number + ' ' + third.title && s1.crumb === report.glance2.groups.flatMap((g) => g.rows).find((r) => r.id === third.id).place && s1.text.includes(third.observed) && s1.text.includes(third.recommendation) && (third.trade ? s1.text.includes(third.trade) && s1.text.includes('WHO TO CALL') : !s1.text.includes('WHO TO CALL')) && s1.photos === third.photos.length,
       JSON.stringify([s1.n, s1.title, s1.photos]));
     ok('the sheet holds the keyboard, and the page behind stays put', s1.inside && s1.locked);
     await page.click('.sheet-finding .sheet-nav .ibtn:last-child');
     const s2 = await page.evaluate(() => document.querySelector('.sheet-finding .sheet-n').textContent + '|' + document.querySelector('.sheet-finding .fhead-t').textContent);
     const fourth = allFindings().find((f) => f.id === order[3]);
-    ok('Next steps to the next finding in the ranking', s2 === 'Finding 4 of ' + order.length + '|' + fourth.id + ' ' + fourth.title, s2);
+    ok('Next steps to the next finding in the ranking', s2 === 'Finding 4 of ' + order.length + '|' + fourth.number + ' ' + fourth.title, s2);
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('ArrowLeft');
     const s3 = await page.evaluate(() => document.querySelector('.sheet-finding .sheet-n').textContent);
@@ -271,7 +276,7 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
     const hero = await page.evaluate(() => ({ open: document.querySelector('.viewer').open, src: document.querySelector('.viewer-img').getAttribute('src'), arrows: document.querySelector('.viewer-next').hidden, cap: document.querySelector('.viewer-cap').textContent }));
     ok('the cover photo opens full screen, alone, with the address under it', hero.open && hero.src.endsWith(report.cover.photo + '.jpg') && hero.arrows && hero.cap === report.cover.address + ', ' + report.cover.locality, JSON.stringify(hero));
     const imgs = await page.evaluate(() => Array.from(document.querySelectorAll('img')).map((i) => ({ alt: i.hasAttribute('alt'), lazy: i.loading === 'lazy', sized: i.hasAttribute('width') && i.hasAttribute('height') })));
-    ok('every picture has its alt text set, and every lazy one its size (so the page doesn\'t jump)', imgs.every((i) => i.alt) && imgs.filter((i) => i.lazy && !i.sized).length <= report.glance.groups.reduce((a, g) => a + g.rows.length, 0), String(imgs.length));
+    ok('every picture has its alt text set, and every lazy one its size (so the page doesn\'t jump)', imgs.every((i) => i.alt) && imgs.filter((i) => i.lazy && !i.sized).length <= report.glance2.groups.reduce((a, g) => a + g.rows.length, 0), String(imgs.length));
     await ctx.close();
   }
 
@@ -281,7 +286,9 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
     await page.click('.bar-toc');
     await page.waitForTimeout(250);
     const toc = await page.evaluate(() => ({ open: document.querySelector('.sheet-toc').open, entries: Array.from(document.querySelectorAll('.sheet-toc .toc a')).map((a) => a.querySelector('.toc-l').textContent), counts: Array.from(document.querySelectorAll('.sheet-toc .toc-n')).map((n) => n.textContent) }));
-    const wantEntries = ['At a glance', 'Inspection details', 'Sections in full', ...report.sections.map((s) => s.name), 'Who to call', 'How findings are categorized', 'Standards of practice and limitations'];
+    const H = report.headings;
+    const hasDetails = report.details.rows.length > 0 || !!report.details.property;
+    const wantEntries = [H.glance, H.legend, ...(hasDetails ? [H.details] : []), ...report.sections.map((s) => s.number + '  ' + s.name), H.who_to_call, H.standards];
     const wantCounts = report.sections.map((s) => s.counts.SH + s.counts.MD + s.counts.MN + s.counts.NT).filter((x) => x > 0).map(String);
     ok('the contents list every part and section, each section with its number of findings', toc.open && same(toc.entries, wantEntries) && same(toc.counts, wantCounts), toc.entries.length + ' entries');
     await page.click('.sheet-toc .toc a[data-goto="s-C6"]');
@@ -351,7 +358,7 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
     await settle(page);
     await page.waitForTimeout(150);
     const at = await page.evaluate(() => ({ top: Math.round(document.getElementById('s-C9').getBoundingClientRect().top), current: Array.from(document.querySelectorAll('.side a[aria-current="true"] .toc-l')).map((e) => e.textContent) }));
-    ok('wide: a click in the contents brings that section up and marks it as the one being read', at.top >= 56 && at.top < 140 && at.current.length === 1 && /^Attic/.test(at.current[0]), JSON.stringify(at));
+    ok('wide: a click in the contents brings that section up and marks it as the one being read', at.top >= 56 && at.top < 140 && at.current.length === 1 && /^\d+  Attic/.test(at.current[0]), JSON.stringify(at));
     await ctx.close();
   }
 
@@ -373,8 +380,12 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
     const id = ranked()[5];
     const { ctx, page } = await open(browser, { path: '/r/sample#' + id });
     const s = await page.evaluate(() => { const d = document.querySelector('.sheet-finding'); return d && d.open ? d.querySelector('.fhead-t').textContent : ''; });
-    ok('a link ending in a finding\'s number opens that finding', s.startsWith(id + ' '), s);
+    ok('a link ending in a finding\'s id opens that finding', s.startsWith(numberOf(id) + ' '), s);
     await ctx.close();
+    const byNumber = await open(browser, { path: '/r/sample#' + numberOf(id) });
+    const s2 = await byNumber.page.evaluate(() => { const d = document.querySelector('.sheet-finding'); return d && d.open ? d.querySelector('.fhead-t').textContent : ''; });
+    ok('a link ending in a finding\'s printed number ("#4.2") opens it too', s2.startsWith(numberOf(id) + ' '), s2);
+    await byNumber.ctx.close();
   }
 
   // ---- a report's words are never run as code, and only Inspyx's own files are loaded
@@ -468,7 +479,10 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
     const calm = clone(sample);
     calm.report.glance.groups = [];
     calm.report.glance.none = 'No deficiencies were observed in the inspected systems';
+    calm.report.glance2.groups = [];
+    calm.report.glance2.none = 'No deficiencies were observed in the inspected systems';
     calm.report.who_to_call = [];
+    calm.report.who_to_call2 = [];
     calm.report.sections.forEach((s) => { s.counts = { SH: 0, MD: 0, MN: 0, NT: 0 }; s.items.forEach((i) => { i.findings = []; }); });
     calm.report.counts = Object.assign({}, calm.report.counts, { findings: 0, SH: 0, MD: 0, MN: 0 });
     calm.pdf = null;
