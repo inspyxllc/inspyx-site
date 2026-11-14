@@ -179,7 +179,9 @@ const ranked = () => report.glance.groups.flatMap((g) => g.rows.map((r) => r.id)
     const { ctx, page, errs } = await open(browser);
     const order = ranked();
     const third = allFindings().find((f) => f.id === order[2]);
-    await page.evaluate(() => document.querySelector('#glance').scrollIntoView());
+    // The row is put in plain view first (not under the sticky top bar), as a thumb would tap it: otherwise the test
+    // tool itself scrolls the row out from under the bar before its click, and the page is blamed for that move.
+    await page.evaluate((id) => document.querySelector(`#glance .row[data-finding="${id}"]`).scrollIntoView({ block: 'center' }), third.id);
     const y0 = await page.evaluate(() => window.scrollY);
     await page.click(`#glance .row[data-finding="${third.id}"]`);
     await page.waitForTimeout(250);
