@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Your inspections</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/inspections.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/inspections.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="insp" data-insp hidden>
+<aside class="insp-list">
+<h1>Your inspections</h1>
+<p class="insp-live" role="status">
+<span data-live="connecting">Connecting…</span>
+<span data-live="live" hidden>Live: a change shows here and on your phone within seconds.</span>
+<span data-live="offline" hidden>Can't reach Inspyx right now. Trying again.</span>
+</p>
+<p data-list="loading">Loading your inspections…</p>
+<p data-list="empty" hidden>No inspections here yet. They show up here once your phone has synced.</p>
+<p data-list="failed" hidden>Couldn't load your inspections. Check your connection and try again.</p>
+<ul data-list="items"></ul>
+</aside>
+
+<section class="insp-one" data-one>
+<p data-pick>Pick an inspection to see it here.</p>
+<div data-detail hidden>
+<div class="insp-cover">
+<label>Title <input type="text" data-field="title" autocomplete="off"></label>
+<label>Address <input type="text" data-field="address" autocomplete="off"></label>
+</div>
+<p class="insp-save" role="status">
+<span data-save="saved" hidden>Saved.</span>
+<span data-save="saving" hidden>Saving…</span>
+<span data-save="failed" hidden>Couldn't save. Trying again.</span>
+</p>
+<div data-stops></div>
+</div>
+</section>
+</main>
+
+<template data-t="row"><li><a href="#"><strong data-v="title"></strong><span data-v="address"></span></a></li></template>
+
+<template data-t="stop">
+<section class="insp-stop">
+<h2 data-v="name"></h2>
+<ol class="insp-items"></ol>
+</section>
+</template>
+
+<template data-t="item">
+<li class="insp-item">
+<div class="insp-item-head">
+<span class="insp-label" data-v="label"></span>
+<label class="insp-status">Status
+<select data-field="status">
+<option value="untouched">Not started</option>
+<option value="inspected_ok">Inspected</option>
+<option value="inspected_deficiency">Deficiency</option>
+<option value="not_inspected">Not inspected</option>
+<option value="not_present">Not present</option>
+</select>
+</label>
+</div>
+<label>Note <textarea rows="2" data-field="note"></textarea></label>
+<ol class="insp-findings"></ol>
+</li>
+</template>
+
+<template data-t="finding">
+<li class="insp-finding">
+<label>Finding <input type="text" data-field="finding_title" autocomplete="off"></label>
+<label>Severity
+<select data-field="severity">
+<option value="">None</option>
+<option value="SH">Safety Hazard</option>
+<option value="MD">Recommendation</option>
+<option value="MN">Maintenance</option>
+<option value="NT">Information</option>
+</select>
+</label>
+<label>What it means <textarea rows="2" data-field="finding_implication"></textarea></label>
+<label>What to do <textarea rows="2" data-field="finding_recommendation"></textarea></label>
+<p class="insp-photos" data-photos hidden><span data-v="photos"></span> photos on your phone</p>
+</li>
+</template>
+</body>
+</html>

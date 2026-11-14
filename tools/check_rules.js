@@ -20,6 +20,11 @@ const applies = (p) => ruled.some((r) => new RegExp(r.src).test(p));
 const yes = ['/signin', '/account', '/plan'], no = ['/', '/pricing', '/refunds', '/terms', '/privacy', '/signin/x', '/accounts', '/plans', '/plan/x', '/myplan', '/assets/auth.js', '/assets/plan.js'];
 ok('the rule catches the three signed-in addresses', yes.every(applies), yes.filter((p) => !applies(p)).join(' '));
 ok('the rule catches no other address', !no.some(applies), no.filter(applies).join(' '));
+// Your inspections, live (2026-11-14): its own rule, the signed-in pages' rule plus the live socket to Inspyx's server.
+const wss = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']));
+ok('the inspections page has its rule, with the live socket', applies('/inspections') && wss('/inspections'));
+ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/', '/inspections/x', '/inspection'].some(wss));
+ok('the inspections rule catches nothing else', !['/inspection', '/inspections/x', '/myinspections', '/assets/inspections.js'].some(applies));
 // The reader must be able to say no, or its yes means nothing: a pattern that is wrong on purpose.
 const bad = read({ headers: [{ source: '/(?!x)', headers: [{ key: 'A', value: 'b' }] }] });
 ok('a pattern that is wrong on purpose is refused by the same reader', !!bad.error, bad.error ? bad.error.code : 'it was accepted');
