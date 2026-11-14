@@ -21,8 +21,36 @@
   /* A page can be told to show a sample kept beside it (the preview does this). */
   var CFG = window.INSPYX_REPORT || {};
 
-  /* Where a report comes from: the report function, given the key. */
-  var API = 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/report/';
+  /* Where a report comes from: the report function, given the key in a request's body. */
+  var API = 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/report';
+
+  /* A link's key (2026-11-14). New links carry it after the "#" (inspyx.com/r#<key>), which a browser never
+     sends to any server; links sent before carry it in the path (inspyx.com/r/<key>). Either way it is read
+     once, kept for this tab only (so a reload still opens the report), and taken out of the address at once:
+     it is not left in the address bar, in this tab's history or in a screenshot of it. The report function
+     is asked with the key in the request's body, never in an address. */
+  var KEY_PATTERN = /^[A-Za-z0-9_-]{22}$/;
+  var KEPT_KEY = 'inspyx.report.key';
+  var linkKey = (function () {
+    if (CFG.sample) return null;
+    var mark = (location.hash || '').replace(/^#/, '');
+    var inPath = /^\/r\/([A-Za-z0-9_-]{22})\/?$/.exec(location.pathname);
+    var key = KEY_PATTERN.test(mark) ? mark : (inPath ? inPath[1] : null);
+    if (key) {
+      try { sessionStorage.setItem(KEPT_KEY, key); } catch (err) { /* storage off: a reload asks for the link again */ }
+      // What stays in the address: /r, and a finding's own mark (#3.1) when an old link carried one.
+      var keep = KEY_PATTERN.test(mark) ? '' : (location.hash || '');
+      try { history.replaceState(history.state, '', '/r' + keep); } catch (err) { /* an old browser keeps the address */ }
+      return key;
+    }
+    if (/^\/r\/?$/.test(location.pathname)) {
+      try {
+        var kept = sessionStorage.getItem(KEPT_KEY);
+        if (kept && KEY_PATTERN.test(kept)) return kept;
+      } catch (err) { /* storage off */ }
+    }
+    return null;
+  })();
   /* Where this page itself was loaded from. (Read from its address: a page shown inside a frame, as a
      preview is, may be given no origin of its own.) */
   var HERE = (function () { try { return new URL(location.href).origin; } catch (err) { return location.origin; } })();
@@ -186,13 +214,28 @@
   function lockScroll() { doc.documentElement.classList.toggle('is-locked', open.length > 0); }
 
   function openOverlay(dialog, onClose) {
-    var entry = { dialog: dialog, onClose: onClose, opener: doc.activeElement };
+    var entry = { dialog: dialog, onClose: onClose, opener: openerNow() };
     open.push(entry);
     if (historyWorks) {
       try { history.pushState({ overlays: open.length }, ''); } catch (err) { historyWorks = false; }
     }
     if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
     lockScroll();
+  }
+
+  /* What a sheet gives the focus back to when it closes: what was pressed to open it. Safari never focuses a
+     button that is tapped or clicked (the section around it holds the focus instead), so the last thing
+     pressed is kept, and taken when the focus is on it or around it. */
+  var lastPressed = null;
+  doc.addEventListener('click', function (e) {
+    lastPressed = e.target && e.target.closest ? e.target.closest('button, a[href], [tabindex]') : null;
+  }, true);
+  function openerNow() {
+    var focused = doc.activeElement;
+    if (lastPressed && doc.contains(lastPressed) && (!focused || focused === doc.body || (focused !== lastPressed && focused.contains(lastPressed)))) {
+      return lastPressed;
+    }
+    return focused;
   }
 
   function closeTop() {
@@ -309,13 +352,13 @@
   /* Asks for new addresses (once a minute at most). [then] runs when they are in. Answers whether new
      addresses are on their way. */
   function freshen(then) {
-    var url = source();
+    var src = source();
     if (freshening) { if (then) onceFresh.push(then); return true; }
-    if (!url || Date.now() - lastTry < 60 * 1000) return false;
+    if (!src || Date.now() - lastTry < 60 * 1000) return false;
     freshening = true;
     lastTry = Date.now();
     onceFresh = then ? [then] : [];
-    fetch(url, howToAsk(url))
+    fetch(src.url, howToAsk(src))
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (answer) {
         if (!answer || answer.state !== 'open' || !answer.files) return;
@@ -1012,7 +1055,7 @@
       Object.keys(links).forEach(function (k) { var el = doc.getElementById(k); if (el) seen.observe(el); });
     }
 
-    // A link straight to one finding: inspyx.com/r/<key>#C6.2 opens it.
+    // A link straight to one finding: inspyx.com/r/<key>#C6.2 opens it (the address then reads /r#C6.2).
     var wanted = (location.hash || '').replace(/^#/, '');
     try { wanted = decodeURIComponent(wanted); } catch (err) { wanted = ''; }
     /* …or its printed number: inspyx.com/r/<key>#3.1. */
@@ -1092,27 +1135,32 @@
 
   // ---------------------------------------------------------------------------------------- loading
 
+  /* What to ask, and where: the report function with a link's key, or a sample kept beside the page. */
   function source() {
-    if (CFG.sample) return CFG.sample + (CFG.name || 'report') + '.json';
-    var m = /^\/r\/([A-Za-z0-9_-]{22})\/?$/.exec(location.pathname);
-    if (m) return API + m[1];
+    if (CFG.sample) return { url: CFG.sample + (CFG.name || 'report') + '.json' };
+    if (linkKey) return { url: API, key: linkKey };
     var s = /^\/r\/sample(?:-([a-z]{1,20}))?\/?$/.exec(location.pathname);
-    if (s) return '/sample-report/' + (s[1] || 'report') + '.json';
+    if (s) return { url: '/sample-report/' + (s[1] || 'report') + '.json' };
     return null;
   }
 
-  /* The report function is asked with no cookies and no word of where the request came from. A sample is a
-     plain file kept beside the page, fetched the way the page's own files are. */
-  function howToAsk(url) {
-    return url.indexOf(API) === 0
-      ? { credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer', headers: { Accept: 'application/json' } }
+  /* The report function is asked by POST, the key in the body: with no cookies and no word of where the
+     request came from. A sample is a plain file kept beside the page, fetched the way the page's own files
+     are. */
+  function howToAsk(src) {
+    return src.key
+      ? {
+        method: 'POST', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: src.key }),
+      }
       : {};
   }
 
   function load() {
-    var url = source();
-    if (!url) return show(message('gone'));
-    fetch(url, howToAsk(url))
+    var src = source();
+    if (!src) return show(message('gone'));
+    fetch(src.url, howToAsk(src))
       .then(function (res) {
         if (res.status === 404 || res.status === 410) return { state: 'gone' };
         if (!res.ok) throw new Error('status ' + res.status);

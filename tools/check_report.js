@@ -9,7 +9,9 @@
 // The sample is not in this repo, which is public.
 const fs = require('fs');
 const path = require('path');
-const { chromium } = require('playwright');
+const playwright = require('playwright');
+// BROWSER=webkit runs every check in WebKit (Safari's engine); Chromium otherwise.
+const engine = process.env.BROWSER === 'webkit' ? playwright.webkit : playwright.chromium;
 
 const sampleDir = process.argv[2];
 if (!sampleDir) { console.error('usage: node tools/check_report.js <sample folder>'); process.exit(2); }
@@ -65,7 +67,8 @@ const ranked = () => report.glance2.groups.flatMap((g) => g.rows.map((r) => r.id
 const numberOf = (id) => allFindings().find((f) => f.id === id).number;
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await engine.launch();
+  console.log('engine: ' + engine.name());
 
   // ---- the page loads clean, under the headers the live page gets
   {
@@ -204,6 +207,81 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     await none.ctx.close();
   }
 
+  // ---- the link's key (2026-11-14): read from #<key> (or an old link's /r/<key>), sent only in a POST's body,
+  // taken out of the address at once, kept for this tab so a reload still opens it, never in any URL or log
+  {
+    const KEY = 'AbCdEfGhIjKlMnOpQrStUv';
+    const API = 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/report';
+    async function keyed(path, ctxIn) {
+      const ctx = ctxIn || await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+      const page = await ctx.newPage();
+      const asked = [], urls = [], said = [];
+      // An old link's own address (/r/<key>) is the one request that carries its key: the browser asks the site
+      // for it before the page runs. Every other request is checked.
+      page.on('request', (r) => { if (!(r.isNavigationRequest() && r.frame() === page.mainFrame() && r.url().startsWith(base + '/r/'))) urls.push(r.url()); });
+      page.on('console', (m) => said.push(m.text()));
+      page.on('pageerror', (e) => said.push(e.message));
+      await page.route(API + '**', (route) => {
+        const req = route.request();
+        asked.push({ method: req.method(), url: req.url(), body: req.postData() });
+        let body = null;
+        try { body = JSON.parse(req.postData() || 'null'); } catch (e) { body = null; }
+        const open = req.method() === 'POST' && body && body.key === KEY && Object.keys(body).length === 1;
+        return route.fulfill({ status: open ? 200 : 404, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(open ? sample : { state: 'gone' }) });
+      });
+      await page.goto(base + path, { waitUntil: 'load' });
+      await page.waitForFunction(() => !document.getElementById('app').hasAttribute('aria-busy'), null, { timeout: 8000 }).catch(() => {});
+      await page.waitForTimeout(300);
+      const seen = await page.evaluate(() => ({
+        href: location.href, path: location.pathname, hash: location.hash,
+        h1: (document.querySelector('h1') || {}).textContent || '', state: (document.querySelector('[data-state]') || {}).dataset ? document.querySelector('[data-state]').dataset.state : '',
+        kept: (() => { try { return sessionStorage.getItem('inspyx.report.key'); } catch (e) { return 'no storage'; } })(),
+        sheet: (document.querySelector('dialog[open] .fhead-t') || {}).textContent || '',
+      }));
+      return { ctx, page, asked, urls, said, seen };
+    }
+    const noKeyAnywhere = (r) => r.urls.every((u) => !u.includes(KEY)) && r.said.every((t) => !t.includes(KEY)) && !r.seen.href.includes(KEY);
+
+    const fresh = await keyed('/r#' + KEY);
+    ok('a new link (/r#<key>) opens the report, asked once by POST with only the key in the body',
+      fresh.seen.h1 === sample.report.cover.address && fresh.asked.length === 1 && fresh.asked[0].method === 'POST' &&
+      fresh.asked[0].url === API && same(JSON.parse(fresh.asked[0].body), { key: KEY }), JSON.stringify(fresh.asked).slice(0, 200));
+    ok('the key leaves the address at once: it reads /r, with nothing after it', fresh.seen.path === '/r' && fresh.seen.hash === '', fresh.seen.href);
+    ok('the key is in no address the page asked for, and in nothing it logged', noKeyAnywhere(fresh), fresh.urls.filter((u) => u.includes(KEY)).concat(fresh.said.filter((t) => t.includes(KEY))).join(' | ').slice(0, 200));
+    ok('the key is kept for this tab only', fresh.seen.kept === KEY, String(fresh.seen.kept));
+    // A reload, in the same tab: the address no longer holds the key, and the report still opens.
+    const askedBefore = fresh.asked.length;
+    await fresh.page.reload({ waitUntil: 'load' });
+    await fresh.page.waitForFunction(() => !document.getElementById('app').hasAttribute('aria-busy'), null, { timeout: 8000 }).catch(() => {});
+    const again = await fresh.page.evaluate(() => ({ h1: (document.querySelector('h1') || {}).textContent || '', href: location.href }));
+    ok('a reload in the same tab opens it again, asked the same way', again.h1 === sample.report.cover.address && fresh.asked.length === askedBefore + 1 &&
+      fresh.asked[fresh.asked.length - 1].method === 'POST' && !again.href.includes(KEY), JSON.stringify(again));
+    await fresh.ctx.close();
+
+    const old = await keyed('/r/' + KEY);
+    ok('an old link (/r/<key>) still opens, asked by POST the same way, and its address becomes /r',
+      old.seen.h1 === sample.report.cover.address && old.asked.length === 1 && old.asked[0].method === 'POST' && same(JSON.parse(old.asked[0].body), { key: KEY }) &&
+      old.seen.path === '/r' && noKeyAnywhere(old), JSON.stringify([old.seen.path, old.asked.length]));
+    await old.ctx.close();
+
+    const f = allFindings()[1];
+    const oldFinding = await keyed('/r/' + KEY + '#' + f.number);
+    ok('an old link to one finding (/r/<key>#' + f.number + ') opens that finding, and the address keeps only #' + f.number,
+      oldFinding.seen.sheet.trim() === f.number + ' ' + f.title && oldFinding.seen.path === '/r' && oldFinding.seen.hash === '#' + f.number && noKeyAnywhere(oldFinding),
+      JSON.stringify([oldFinding.seen.sheet, oldFinding.seen.hash]));
+    await oldFinding.ctx.close();
+
+    const bare = await keyed('/r');
+    ok('/r in a new tab, with no key: "This report link doesn\'t work.", and nothing is asked', bare.seen.state === 'gone' && bare.asked.length === 0, JSON.stringify([bare.seen.state, bare.asked.length]));
+    await bare.ctx.close();
+    const notKey = await keyed('/r#C6.2');
+    ok('a mark that is no key (/r#C6.2) asks for nothing', notKey.seen.state === 'gone' && notKey.asked.length === 0, JSON.stringify([notKey.seen.state, notKey.asked.length]));
+    await notKey.ctx.close();
+    const unknown = await keyed('/r#' + KEY.split('').reverse().join(''));
+    ok('a key no link has: the function says gone, and the page says so', unknown.seen.state === 'gone' && unknown.asked.length === 1, unknown.seen.state);
+    await unknown.ctx.close();
+  }
+
   // ---- the filter chips
   {
     const { ctx, page } = await open(browser);
@@ -305,13 +383,15 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     ok('an item\'s own photos open too, at the one tapped', v.n === 'Photo 2 of ' + withPhotos.photos.length && v.src.endsWith(withPhotos.photos[1].file + '.jpg') && !v.prev && v.next === (withPhotos.photos.length === 2), JSON.stringify(v));
     // a swipe steps back
     const box = await page.locator('.viewer-stage').boundingBox();
-    await page.evaluate(([x, y]) => {
+    const touches = await page.evaluate(() => { try { new Touch({ identifier: 1, target: document.body }); return true; } catch (e) { return false; } });
+    if (!touches) console.log('SKIP  a swipe to the right steps back a photo  [' + engine.name() + ' cannot make a touch in a test]');
+    if (touches) await page.evaluate(([x, y]) => {
       const stage = document.querySelector('.viewer-stage');
       const touch = (cx) => new Touch({ identifier: 1, target: stage, clientX: cx, clientY: y });
       stage.dispatchEvent(new TouchEvent('touchstart', { touches: [touch(x)], changedTouches: [touch(x)], bubbles: true }));
       stage.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touch(x + 140)], bubbles: true }));
     }, [box.x + 60, box.y + box.height / 2]);
-    ok('a swipe to the right steps back a photo', (await page.evaluate(() => document.querySelector('.viewer-n').textContent)) === 'Photo 1 of ' + withPhotos.photos.length);
+    if (touches) ok('a swipe to the right steps back a photo', (await page.evaluate(() => document.querySelector('.viewer-n').textContent)) === 'Photo 1 of ' + withPhotos.photos.length);
     await page.keyboard.press('Escape');
     await page.waitForTimeout(200);
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -409,7 +489,8 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
   // ---- the keyboard alone
   {
     const { ctx, page } = await open(browser, { w: 1280, h: 900, desktop: true });
-    await page.keyboard.press('Tab');
+    // Safari's Tab reaches links and buttons only with Option held (unless its setting says otherwise).
+    await page.keyboard.press(engine.name() === 'webkit' ? 'Alt+Tab' : 'Tab');
     const first = await page.evaluate(() => document.activeElement.className + '|' + document.activeElement.textContent);
     await page.focus('#glance .row');
     await page.keyboard.press('Enter');

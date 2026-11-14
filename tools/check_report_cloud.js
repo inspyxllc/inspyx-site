@@ -10,8 +10,12 @@
 //
 // It checks what only the two together can show: the page reads the function's answer across origins, the
 // pictures and the PDF come from the function's signed addresses, the PDF downloads under the report's
-// name, a key no link has says so, and nothing is asked of anyone else.
-const { chromium } = require('playwright');
+// name, a key no link has says so, and nothing is asked of anyone else. Since 2026-11-14 the page asks with
+// the key in a POST's body: both link forms (inspyx.com/r#<key>, and an old inspyx.com/r/<key>) are opened,
+// and no address the page asks for carries the key.
+const playwright = require('playwright');
+// BROWSER=webkit runs it in WebKit (Safari's engine); Chromium otherwise.
+const engine = process.env.BROWSER === 'webkit' ? playwright.webkit : playwright.chromium;
 
 const args = process.argv.slice(2);
 const key = args[0];
@@ -28,8 +32,8 @@ async function carry(page, seen) {
   if (!cloud) return;
   await page.route(INSPYX + '/**', async (route) => {
     const req = route.request();
-    seen.push(req.method() + ' ' + new URL(req.url()).pathname);
-    const res = await route.fetch({ url: cloud + req.url().slice(INSPYX.length) });
+    seen.push(req.method() + ' ' + new URL(req.url()).pathname + (req.method() === 'POST' ? ' ' + (req.postData() || '') : ''));
+    const res = await route.fetch({ url: cloud + req.url().slice(INSPYX.length), method: req.method(), headers: req.headers(), postData: req.postData() || undefined });
     const type = res.headers()['content-type'] || '';
     if (type.includes('application/json')) {
       // The local function signs addresses on itself; to the page they must be Inspyx's.
@@ -40,22 +44,23 @@ async function carry(page, seen) {
 }
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await engine.launch();
+  console.log('engine: ' + engine.name());
 
-  // ---- the report a key opens
-  {
+  // ---- the report a key opens: a new link (#<key>), then an old one (/r/<key>)
+  for (const form of ['/r#', '/r/']) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, acceptDownloads: true });
     const page = await ctx.newPage();
-    const errs = [], hosts = new Set(), seen = [];
+    const errs = [], hosts = new Set(), seen = [], asked = [];
     page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
     page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
-    page.on('request', (r) => hosts.add(new URL(r.url()).origin));
+    page.on('request', (r) => { hosts.add(new URL(r.url()).origin); if (!(r.isNavigationRequest() && form === '/r/')) asked.push(r.url()); });
     await carry(page, seen);
-    const answered = page.waitForResponse((r) => r.url().includes('/functions/v1/report/' + key), { timeout: 15000 }).catch(() => null);
-    await page.goto(SITE + '/r/' + key, { waitUntil: 'load' });
+    const answered = page.waitForResponse((r) => r.url() === INSPYX + '/functions/v1/report' && r.request().method() === 'POST', { timeout: 15000 }).catch(() => null);
+    await page.goto(SITE + form + key, { waitUntil: 'load' });
     const res = await answered;
     const answer = res ? await res.json().catch(() => null) : null;
-    ok('the function answers the page across origins with an open report', !!answer && res.status() === 200 && answer.state === 'open' && res.headers()['access-control-allow-origin'] === '*',
+    ok('[' + form + '<key>] the function answers the page across origins with an open report, asked by POST with the key in the body', !!answer && res.status() === 200 && answer.state === 'open' && res.headers()['access-control-allow-origin'] === '*',
       res ? res.status() + ' ' + (answer && answer.state) : 'no answer');
     if (answer && answer.state === 'open') {
       await page.waitForSelector('#glance .row', { timeout: 8000 }).catch(() => {});
@@ -90,6 +95,8 @@ async function carry(page, seen) {
         (download ? download.suggestedFilename() : 'no download') + ' | ' + r.pdf.slice(0, 80));
       const allowed = new Set([SITE, INSPYX]);
       ok('nothing was asked of anyone but this site and Inspyx', Array.from(hosts).every((h) => allowed.has(h)), Array.from(hosts).join(' '));
+      ok('no address the page asked for carries the key, and the address bar no longer does', asked.every((u) => !u.includes(key)) && !page.url().includes(key) && seen.some((x) => x.startsWith('POST /functions/v1/report {"key":"')),
+        asked.filter((u) => u.includes(key)).length + ' | ' + page.url().replace(key, '<key>'));
       ok('the page raised no error (its Content-Security-Policy let all of it through)', errs.length === 0, errs.join(' | ').slice(0, 300));
     }
     await ctx.close();
@@ -101,7 +108,7 @@ async function carry(page, seen) {
     const page = await ctx.newPage();
     await carry(page, []);
     const other = key.split('').reverse().join('');
-    await page.goto(SITE + '/r/' + (other === key ? 'A'.repeat(22) : other), { waitUntil: 'load' });
+    await page.goto(SITE + '/r#' + (other === key ? 'A'.repeat(22) : other), { waitUntil: 'load' });
     await page.waitForSelector('[data-state]', { timeout: 10000 }).catch(() => {});
     const state = await page.evaluate(() => { const m = document.querySelector('[data-state]'); return m ? m.dataset.state + '|' + m.textContent : ''; });
     ok('a key no link has: "This report link doesn\'t work."', state.startsWith('gone|') && state.includes('doesn’t work'), state.slice(0, 120));
