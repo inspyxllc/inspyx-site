@@ -32,7 +32,7 @@
   }
   // "December 9, 2026", on the inspector's own calendar, as the app says it.
   function longDate(d) { return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(d); }
-  // "$69", "$649", "$84.95", "$1,090".
+  // "$54.95", "$593", "$84.95", "$1,090".
   function money(cents) {
     var digits = cents % 100 === 0 ? 0 : 2;
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: digits, maximumFractionDigits: digits }).format(cents / 100);

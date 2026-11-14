@@ -144,7 +144,7 @@ async function open(browser, name, opts) {
         cardR: card ? Math.round(card.getBoundingClientRect().right) : 0, cardL: card ? Math.round(card.getBoundingClientRect().left) : -1 };
     });
     ok('pricing, phone: the price, the plan\'s tag and its button each stay on one line', r.price < r.priceFs * 1.25 && r.badge <= 36 && r.btn <= 60, JSON.stringify({ price: r.price, type: r.priceFs, tag: r.badge, button: r.btn }));
-    ok('pricing: the card repeats the plan, is hidden from screen readers, and says nothing the plan does not', r.hidden && r.said.length === 4 && r.said.includes('$69 a month') && r.stray.length === 0, 'hidden: ' + r.hidden + ' says: ' + JSON.stringify(r.said) + ' stray: ' + JSON.stringify(r.stray));
+    ok('pricing: the card repeats the plan, is hidden from screen readers, and says nothing the plan does not', r.hidden && r.said.length === 4 && r.said.includes('$54.95 a month') && r.stray.length === 0, 'hidden: ' + r.hidden + ' says: ' + JSON.stringify(r.said) + ' stray: ' + JSON.stringify(r.stray));
     ok('pricing, phone: the card is whole inside the window', r.cardR > 0 && r.cardR <= PHONE && r.cardL >= 0, r.cardL + ' to ' + r.cardR + ' in ' + PHONE);
     await ctx.close();
   });

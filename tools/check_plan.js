@@ -29,8 +29,8 @@ const kept = (n, endsInMs) => JSON.stringify({ access: 'test-access-' + n, renew
 // What the billing server says about a plan (statusView in the app's repo, backend/supabase/functions/billing/core.ts).
 const plan = (o) => Object.assign({ status: 'none', has_plan: false, trial_end: null, current_period_end: null, cancel_at_period_end: false, free_month: true, plan_amount: null, plan_interval: null }, o);
 const DEC9 = '2026-12-09T10:00:00+00:00';   // a free month ends at 10:00 UTC, so the date reads the same from UTC to UTC-10
-const FREE = plan({ status: 'trialing', has_plan: true, trial_end: DEC9, current_period_end: DEC9, free_month: false, plan_amount: 6900, plan_interval: 'month' });
-const ACTIVE = plan({ status: 'active', has_plan: true, current_period_end: '2026-12-09T15:52:27+00:00', free_month: false, plan_amount: 6900, plan_interval: 'month' });
+const FREE = plan({ status: 'trialing', has_plan: true, trial_end: DEC9, current_period_end: DEC9, free_month: false, plan_amount: 5495, plan_interval: 'month' });
+const ACTIVE = plan({ status: 'active', has_plan: true, current_period_end: '2026-12-09T15:52:27+00:00', free_month: false, plan_amount: 5495, plan_interval: 'month' });
 const bill = (json) => ({ status: 200, json });
 const isBilling = (call) => call.path === BILLING;
 const action = (call) => { try { return JSON.parse(call.body).action; } catch (e) { return ''; } };
@@ -38,11 +38,11 @@ const action = (call) => { try { return JSON.parse(call.body).action; } catch (e
 // The page's words. Every sentence about the plan is the app's own, word for word (lib/src/shell/plan_billing.dart
 // in the app's repo): Moises approved those on 2026-11-09. "You're all set." and "No charge was made." are the home
 // page's headings for an inspector back from Stripe. A change here needs his word.
-const OFFER_FREE = '30 days free, then $69 a month or $649 a year. Your card is saved when you start and first charged when the free month ends. Cancel before then and you pay nothing.';
-const OFFER = '$69 a month or $649 a year, first charged when you start.';
+const OFFER_FREE = '30 days free, then $54.95 a month or $593 a year. Your card is saved when you start and first charged when the free month ends. Cancel before then and you pay nothing.';
+const OFFER = '$54.95 a month or $593 a year, first charged when you start.';
 const PROBLEM = 'Your last payment didn\'t go through. Update your card to keep your plan.';
 const ATTENTION = 'Your plan needs attention. Open billing to fix it.';
-const ENDED = 'Your plan has ended. Start it again anytime: $69 a month or $649 a year.';
+const ENDED = 'Your plan has ended. Start it again anytime: $54.95 a month or $593 a year.';
 const NOT_SET_UP = 'Billing isn\'t set up yet.';
 const FAILED = 'Couldn\'t check your plan. Check your connection and try again.';
 const PAGE_FAILED = 'Couldn\'t open the page. Try again.';
@@ -123,7 +123,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       if (!planRule) planRule = csp;
       ok('plan page, ' + label + ': served with the rule that only the site\'s own scripts and styles run and only Inspyx\'s server may be called; browsers keep no copy', /script-src 'self'(;|$)/.test(csp) && /style-src 'self'(;|$)/.test(csp) && /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co(;|$)/.test(csp) && /default-src 'none'/.test(csp) && /frame-ancestors 'none'/.test(csp) && /form-action 'none'/.test(csp) && h['cache-control'] === 'no-store' && h['referrer-policy'] === 'no-referrer' && h['x-frame-options'] === 'DENY' && h['x-content-type-options'] === 'nosniff', csp.slice(0, 90));
       const v = await sees(page);
-      ok('plan page, ' + label + ': says where the plan stands in the app\'s own sentence, with one button', shows(v, 'Free until December 9, 2026, then $69 a month.', 'Manage billing') && v.back.length === 0, JSON.stringify(v));
+      ok('plan page, ' + label + ': says where the plan stands in the app\'s own sentence, with one button', shows(v, 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing') && v.back.length === 0, JSON.stringify(v));
       const r = await page.evaluate(() => {
         const box = (e) => { const b = e.getBoundingClientRect(); return { l: Math.round(b.left), t: Math.round(b.top), r: Math.round(b.right), b: Math.round(b.bottom), w: Math.round(b.width), h: Math.round(b.height) }; };
         const q = (s) => document.querySelector(s);
@@ -156,25 +156,25 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     const STANDS = [
       ['never started: the offer with the free month', plan({}), OFFER_FREE, 'Start your plan'],
       ['not running, the free month used: the offer without it', plan({ free_month: false }), OFFER, 'Start your plan'],
-      ['in the free month, paying monthly', FREE, 'Free until December 9, 2026, then $69 a month.', 'Manage billing'],
-      ['in the free month, paying yearly', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 64900, plan_interval: 'year' }), 'Free until December 9, 2026, then $649 a year.', 'Manage billing'],
+      ['in the free month, paying monthly', FREE, 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing'],
+      ['in the free month, paying yearly', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 59300, plan_interval: 'year' }), 'Free until December 9, 2026, then $593 a year.', 'Manage billing'],
       ['in the free month, at an older price', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 8495, plan_interval: 'month' }), 'Free until December 9, 2026, then $84.95 a month.', 'Manage billing'],
       ['in the free month, at a price in the thousands', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 109000, plan_interval: 'year' }), 'Free until December 9, 2026, then $1,090 a year.', 'Manage billing'],
       ['in the free month, the price not said', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false }), 'Free until December 9, 2026.', 'Manage billing'],
-      ['in the free month, the date not said', plan({ status: 'trialing', has_plan: true, free_month: false, plan_amount: 6900, plan_interval: 'month' }), 'In your free month. Then $69 a month.', 'Manage billing'],
+      ['in the free month, the date not said', plan({ status: 'trialing', has_plan: true, free_month: false, plan_amount: 5495, plan_interval: 'month' }), 'In your free month. Then $54.95 a month.', 'Manage billing'],
       ['in the free month, neither said', plan({ status: 'trialing', has_plan: true, free_month: false }), 'In your free month.', 'Manage billing'],
       ['a price that is not whole cents is left out, never guessed', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 69.5, plan_interval: 'month' }), 'Free until December 9, 2026.', 'Manage billing'],
-      ['a price charged every something else than a month or a year is left out', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 6900, plan_interval: 'week' }), 'Free until December 9, 2026.', 'Manage billing'],
-      ['a price below nothing is left out', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: -6900, plan_interval: 'month' }), 'Free until December 9, 2026.', 'Manage billing'],
-      ['a price that comes as words is left out', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: '6900', plan_interval: 'month' }), 'Free until December 9, 2026.', 'Manage billing'],
-      ['an amount with no "how often" is left out too', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 6900, plan_interval: null }), 'Free until December 9, 2026.', 'Manage billing'],
-      ['a date that is not a date is left out', plan({ status: 'trialing', has_plan: true, trial_end: 'soon', free_month: false, plan_amount: 6900, plan_interval: 'month' }), 'In your free month. Then $69 a month.', 'Manage billing'],
+      ['a price charged every something else than a month or a year is left out', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 5495, plan_interval: 'week' }), 'Free until December 9, 2026.', 'Manage billing'],
+      ['a price below nothing is left out', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: -5495, plan_interval: 'month' }), 'Free until December 9, 2026.', 'Manage billing'],
+      ['a price that comes as words is left out', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: '5495', plan_interval: 'month' }), 'Free until December 9, 2026.', 'Manage billing'],
+      ['an amount with no "how often" is left out too', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 5495, plan_interval: null }), 'Free until December 9, 2026.', 'Manage billing'],
+      ['a date that is not a date is left out', plan({ status: 'trialing', has_plan: true, trial_end: 'soon', free_month: false, plan_amount: 5495, plan_interval: 'month' }), 'In your free month. Then $54.95 a month.', 'Manage billing'],
       ['paid up', ACTIVE, 'Active. Next payment on December 9, 2026.', 'Manage billing'],
       ['paid up, the date not said', plan({ status: 'active', has_plan: true, free_month: false }), 'Active.', 'Manage billing'],
       ['canceled, running to the end of what is paid for', Object.assign({}, ACTIVE, { cancel_at_period_end: true }), 'Ends December 9, 2026. Nothing more will be charged.', 'Manage billing'],
-      ['canceled in the free month', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, cancel_at_period_end: true, free_month: false, plan_amount: 6900, plan_interval: 'month' }), 'Ends December 9, 2026. Nothing more will be charged.', 'Manage billing'],
+      ['canceled in the free month', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, cancel_at_period_end: true, free_month: false, plan_amount: 5495, plan_interval: 'month' }), 'Ends December 9, 2026. Nothing more will be charged.', 'Manage billing'],
       ['canceled, the date not said', plan({ status: 'active', has_plan: true, cancel_at_period_end: true, free_month: false }), 'Ending. Nothing more will be charged.', 'Manage billing'],
-      ['a payment that did not go through', plan({ status: 'past_due', has_plan: true, free_month: false, plan_amount: 6900, plan_interval: 'month' }), PROBLEM, 'Update card'],
+      ['a payment that did not go through', plan({ status: 'past_due', has_plan: true, free_month: false, plan_amount: 5495, plan_interval: 'month' }), PROBLEM, 'Update card'],
       ['a first payment not finished', plan({ status: 'incomplete', free_month: false }), ATTENTION, 'Manage billing'],
       ['unpaid', plan({ status: 'unpaid', free_month: false }), ATTENTION, 'Manage billing'],
       ['paused', plan({ status: 'paused', free_month: false }), ATTENTION, 'Manage billing'],
@@ -315,10 +315,10 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
   await group('back from Stripe', async () => {
     const d = await open(browser, 'plan?billing=done', {});
     const v = await sees(d.page);
-    ok('back from a checkout with the plan started: the page says "You\'re all set." and where the plan stands, and takes Stripe\'s word out of the address', same(v.back, ['You\'re all set.']) && shows(v, 'Free until December 9, 2026, then $69 a month.', 'Manage billing') && (await at(d.page)) === '/plan', JSON.stringify(v) + ' at ' + (await at(d.page)));
+    ok('back from a checkout with the plan started: the page says "You\'re all set." and where the plan stands, and takes Stripe\'s word out of the address', same(v.back, ['You\'re all set.']) && shows(v, 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing') && (await at(d.page)) === '/plan', JSON.stringify(v) + ' at ' + (await at(d.page)));
     await d.page.reload({ waitUntil: 'load' }); await d.page.waitForTimeout(400);
     const again = await sees(d.page);
-    ok('loading the page again does not say "You\'re all set." a second time', again.back.length === 0 && shows(again, 'Free until December 9, 2026, then $69 a month.', 'Manage billing'), JSON.stringify(again));
+    ok('loading the page again does not say "You\'re all set." a second time', again.back.length === 0 && shows(again, 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing'), JSON.stringify(again));
     await d.ctx.close();
 
     // Stripe tells the inspector before it tells Inspyx's server: the plan can be a few seconds behind.
@@ -329,7 +329,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     await late.page.clock.fastForward(2100); await late.page.waitForTimeout(300);
     const l3 = await sees(late.page), n3 = late.calls.length;
     ok('back from a checkout before Inspyx\'s server has heard of it: the page keeps checking, two seconds apart, and never shows "Start your plan" in between', shows(l1, CHECKING, '') && shows(l2, CHECKING, '') && l1.back.length === 0 && n1 === 1 && n2 === 2 && n3 === 3, JSON.stringify([l1, l2, n1, n2, n3]));
-    ok('once the server has heard, the page says "You\'re all set." and where the plan stands', same(l3.back, ['You\'re all set.']) && shows(l3, 'Free until December 9, 2026, then $69 a month.', 'Manage billing'), JSON.stringify(l3));
+    ok('once the server has heard, the page says "You\'re all set." and where the plan stands', same(l3.back, ['You\'re all set.']) && shows(l3, 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing'), JSON.stringify(l3));
     await late.ctx.close();
 
     const never = await open(browser, 'plan?billing=done', { clock: true, answers: () => bill(plan({})) });
@@ -350,7 +350,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     await c.ctx.close();
     const b = await open(browser, 'plan?billing=back', {});
     const bv = await sees(b.page);
-    ok('back from the billing page: the page says where the plan stands now, and nothing else', bv.back.length === 0 && shows(bv, 'Free until December 9, 2026, then $69 a month.', 'Manage billing') && (await at(b.page)) === '/plan' && b.calls.length === 1, JSON.stringify(bv));
+    ok('back from the billing page: the page says where the plan stands now, and nothing else', bv.back.length === 0 && shows(bv, 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing') && (await at(b.page)) === '/plan' && b.calls.length === 1, JSON.stringify(bv));
     await b.ctx.close();
     // Stripe's word is only said when the plan agrees with it (an address can be typed by hand, or kept from another day).
     const lie1 = await open(browser, 'plan?billing=canceled', {});
@@ -368,7 +368,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     standing = FREE;
     await k.page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))); await k.page.waitForTimeout(400);
     const fresh = await sees(k.page);
-    ok('a plan page brought back by the Back button looks at the plan again and has its button at rest, not stuck', same(stuck.buttons, ['Start your plan (off)']) && shows(fresh, 'Free until December 9, 2026, then $69 a month.', 'Manage billing') && fresh.back.length === 0, JSON.stringify([stuck.buttons, fresh]));
+    ok('a plan page brought back by the Back button looks at the plan again and has its button at rest, not stuck', same(stuck.buttons, ['Start your plan (off)']) && shows(fresh, 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing') && fresh.back.length === 0, JSON.stringify([stuck.buttons, fresh]));
     await k.ctx.close();
   });
 
@@ -460,7 +460,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     const a = await open(browser, 'account', { answers: () => bill(FREE) });
     const link = await a.page.evaluate(() => { const l = document.querySelector('.account a[href="/plan"]'); const b = l ? l.getBoundingClientRect() : { height: 0, width: 0 }; const o = document.querySelector('[data-signout]'); return l ? { text: l.textContent.trim(), h: Math.round(b.height), sw: document.documentElement.scrollWidth, out: o.getBoundingClientRect().height, solid: getComputedStyle(l).backgroundColor, quiet: getComputedStyle(o).backgroundColor, row: Math.abs(o.getBoundingClientRect().top - b.top) < 2 } : null; });
     await a.page.click('.account a[href="/plan"]'); await a.page.waitForURL('**/plan'); await a.page.waitForTimeout(400);
-    const there = shows(await sees(a.page), 'Free until December 9, 2026, then $69 a month.', 'Manage billing');
+    const there = shows(await sees(a.page), 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing');
     await a.page.click('.more a'); await a.page.waitForURL('**/account');
     ok('the account page has a link to the plan page, big enough to tap, and the plan page one back', !!link && link.text === 'Your plan' && link.h >= 44 && link.out >= 44 && link.sw <= PHONE && there && (await at(a.page)) === '/account', JSON.stringify(link));
     ok('on the account page the plan is the solid button and signing out the quiet one beside it', !!link && link.solid === 'rgb(0, 0, 0)' && link.quiet === 'rgb(255, 255, 255)' && link.row, JSON.stringify(link));
