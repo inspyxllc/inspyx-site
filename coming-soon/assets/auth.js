@@ -213,6 +213,7 @@
     if (!me || typeof onPing !== 'function' || typeof root.WebSocket !== 'function') return null;
     var topic = 'realtime:insp:' + me.id;
     var socket = null, beat = null, renewal = null, retry = null, stopped = false, failures = 0, ref = 0;
+    var tell = function (what) { try { onPing(what); } catch (e) { /* a page's mistake never stops the listening */ } };
     function close() {
       clearInterval(beat); clearTimeout(renewal); beat = renewal = null;
       var s = socket; socket = null;
@@ -229,7 +230,7 @@
       if (stopped) return;
       current().then(function (s) {
         if (stopped) return;
-        if (!s || s.id !== me.id) { stopped = true; return; }   // signed out, or someone else signed in
+        if (!s || s.id !== me.id) { stopped = true; tell({ signedOut: true }); return; }   // signed out, or someone else signed in
         var ws;
         try { ws = new root.WebSocket(REALTIME); } catch (e) { dropped(); return; }
         socket = ws;
@@ -248,10 +249,14 @@
           try { m = JSON.parse(ev.data); } catch (e) { return; }
           if (!m || m.topic !== topic) return;
           if (m.event === 'phx_reply' && m.ref === joinRef) {
-            if (m.payload && m.payload.status === 'ok') { failures = 0; onPing({ joined: true }); } else dropped();
+            if (m.payload && m.payload.status === 'ok') { failures = 0; tell({ joined: true }); return; }
+            // Refused for the sign-in (ended somewhere else, say): the sign-in server is asked, as ask does; a
+            // rejected sign-in signs this browser out, and the next try finds nobody and stops.
+            var why = String((m.payload && m.payload.response && (m.payload.response.reason || m.payload.response.message)) || '');
+            if (/auth|token|jwt|expired/i.test(why)) { close(); current(true).then(dropped, dropped); } else dropped();
             return;
           }
-          if (m.event === 'broadcast' && m.payload && m.payload.event === 'changed') { onPing(m.payload.payload || {}); return; }
+          if (m.event === 'broadcast' && m.payload && m.payload.event === 'changed') { tell(m.payload.payload || {}); return; }
           if (m.event === 'phx_error' || m.event === 'phx_close') dropped();
         };
         ws.onerror = dropped;

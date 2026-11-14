@@ -234,6 +234,7 @@
   if (!auth.who()) { window.location.replace('/signin'); return; }
   main.hidden = false;
   auth.listen(function (ping) {
+    if (ping && ping.signedOut) { window.location.replace('/signin'); return; }
     if (ping && ping.joined) { listening = true; showLive('live'); }
     sync();
   });

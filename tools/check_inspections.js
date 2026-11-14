@@ -71,12 +71,13 @@ async function open(browser, o) {
       const m = JSON.parse(String(data));
       if (m.event === 'phx_join') {
         me.joins.push(m);
-        ws.send(JSON.stringify({ topic: m.topic, event: 'phx_reply', ref: m.ref, payload: { status: o.refuseJoin ? 'error' : 'ok', response: {} } }));
+        ws.send(JSON.stringify({ topic: m.topic, event: 'phx_reply', ref: m.ref, payload: { status: o.refuseJoin ? 'error' : 'ok', response: o.refuseJoin === 'auth' ? { reason: 'Unauthorized: token has expired' } : {} } }));
       }
     });
   });
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url();
+    if (o.onAuth && u.startsWith(SERVER + '/auth/v1/token')) { const a = o.onAuth(); return route.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a.json) }); }
     if (!u.startsWith(SERVER + SYNC)) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
     calls.push({ headers: req.headers(), body });
@@ -198,6 +199,14 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     const s = server(); seed(s);
     const { page, ctx } = await open(browser, { server: s, hash: '#' + INSP, refuseJoin: true });
     ok('a join the server refuses never reads as live', !(await vis(page, '[data-live]')).join().startsWith('Live'), JSON.stringify(await vis(page, '[data-live]')));
+    await ctx.close();
+  });
+
+  await group('a join refused for the sign-in', async () => {
+    const s = server(); seed(s);
+    let renewals = 0;
+    const { page, ctx } = await open(browser, { server: s, hash: '#' + INSP, refuseJoin: 'auth', onAuth: () => { renewals++; return { status: 400, json: { error: 'invalid_grant' } }; } });
+    ok('asks the sign-in server, and a rejected sign-in sends the visitor to sign in', await until(async () => new URL(page.url()).pathname === '/signin', 6000) && renewals >= 1, 'renewals ' + renewals + ' at ' + page.url());
     await ctx.close();
   });
 
