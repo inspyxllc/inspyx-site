@@ -185,5 +185,5 @@ writeFileSync(join(out, 'web-report-sample.html'), html.replace('__COVER__', cov
 
 // Every script in the file must at least read as a script (a slip here would leave a page that does nothing).
 const written = readFileSync(join(out, 'web-report-sample.html'), 'utf8');
-for (const m of written.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(m[1]);
+for (const m of written.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)) new vm.Script(m[1]);
 console.log('wrote', join(out, 'web-report-sample.html'), written.length, 'bytes, with', readdirSync(join(out, 'sample-report/files')).length, 'photo files beside it');
