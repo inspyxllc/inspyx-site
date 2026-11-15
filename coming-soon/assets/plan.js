@@ -16,6 +16,10 @@
   var auth = window.InspyxAuth;
   if (!main || !auth) return;
   var DEADLINE = 20000;          // as in the app: an ask that takes longer counts as no answer
+  // "Get my money back" is OFF until it is turned on here (Inspyx 1, 2026-11-15), as the app's
+  // INSPYX_PLAN_MONEY_BACK is: whatever the server says, no button, sheet or line about it shows. The free days
+  // (items 1 to 3) follow the server either way.
+  var MONEY_BACK_ON = false;
   var SETTLE = 2000, MORE = 3;   // after a checkout Stripe's notice can take a moment: three more looks, two seconds apart
   var STRIPE = ['checkout.stripe.com', 'billing.stripe.com'];   // the only places this page ever sends anyone
 
@@ -69,7 +73,7 @@
       waits: json.free_waits_for_invite === true,
       freeUntil: when(json.free_until),
       freeDays: json.offer && whole(json.offer.trial_days) && json.offer.trial_days > 0 ? json.offer.trial_days : null,
-      moneyBack: moneyBackOf(json.money_back)
+      moneyBack: MONEY_BACK_ON ? moneyBackOf(json.money_back) : null
     };
   }
   function whole(n) { return typeof n === 'number' && n >= 0 && Math.floor(n) === n; }
@@ -235,7 +239,7 @@
     say(a.trouble === 'not-set-up' ? 'not-set-up' : 'refund');
   }
   function askMoneyBack() {
-    if (busy) return;
+    if (busy || !MONEY_BACK_ON) return;
     settle(false);
     say('');
     billing('money_back_quote').then(function (a) {
@@ -248,7 +252,7 @@
     });
   }
   function refundNow() {
-    if (busy || !quoted) return;
+    if (busy || !quoted || !MONEY_BACK_ON) return;
     settle(false);
     billing('money_back', { expect_cents: quoted.cents }).then(function (a) {
       if (a.gone) { signedOut(); return; }
