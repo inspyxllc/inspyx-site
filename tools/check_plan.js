@@ -21,7 +21,9 @@ const STORE = 'inspyx.signin';
 const CHECKOUT = 'https://checkout.stripe.com/c/pay/cs_test_1', PORTAL = 'https://billing.stripe.com/p/session/test_1';
 let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
-const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
+// ONLY=<pattern>: run just the groups it names (for planted-fault runs, where a broken page makes every check wait).
+const ONLY = process.env.ONLY ? new RegExp(process.env.ONLY) : null;
+const group = async (label, fn) => { if (ONLY && !ONLY.test(label)) return; try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const granted = (n, secs) => ({ access_token: 'test-access-' + n, refresh_token: 'test-renew-' + n, token_type: 'bearer', expires_in: secs || 3600, user: { id: '11111111-1111-4111-8111-111111111111', email: WHO } });
 const kept = (n, endsInMs) => JSON.stringify({ access: 'test-access-' + n, renew: 'test-renew-' + n, ends: Date.now() + endsInMs, id: '11111111-1111-4111-8111-111111111111', email: WHO });
@@ -38,7 +40,17 @@ const action = (call) => { try { return JSON.parse(call.body).action; } catch (e
 // The page's words. Every sentence about the plan is the app's own, word for word (lib/src/shell/plan_billing.dart
 // in the app's repo): Moises approved those on 2026-11-09. "You're all set." and "No charge was made." are the home
 // page's headings for an inspector back from Stripe. A change here needs his word.
-const OFFER_FREE = '30 days free, then $54.95 a month or $593 a year. Your card is saved when you start and first charged when the free month ends. Cancel before then and you pay nothing.';
+// Free days and "Get my money back" (Moises, 2026-11-15, "Yes, all"; item 2 with its new ending, "when your free days
+// end"). The refund that can't finish is a DRAFT for his next list (Inspyx 1, 2026-11-15).
+const freeDays = (n) => n + ' days free, then $54.95 a month or $593 a year. Your card is saved when you start and first charged when your free days end. Cancel before then and you pay nothing.';
+const OFFER_FREE = freeDays(30);
+const WAITS = 'Your 30 free days start when your app invite is sent. You\'ll set up your plan then.';
+const MONEY_BACK = 'Get my money back';
+const asked = (amount, last4) => 'Refund ' + amount + ' to your card' + (last4 ? ' ending ' + last4 : '') + '? Your plan ends today, and you can do this once.';
+const refundedWords = (amount) => 'Refunded ' + amount + '. It reaches your card in 5 to 10 days.';
+const MONEY_OVER = 'Money back is for 30 days after a payment, once.';
+const MONEY_USED = 'You\'ve already had your money back once.';
+const REFUND_FAILED = 'Couldn\'t finish your refund. Try again in a minute.';   // DRAFT
 const OFFER = '$54.95 a month or $593 a year, first charged when you start.';
 // The next 100 after the founders and everyone after them (Moises, 2026-11-14: "Yes, use them").
 const OFFER_EARLY = '$64.95 a month or $701 a year, first charged when you start.';
@@ -53,12 +65,15 @@ const FAILED = 'Couldn\'t check your plan. Check your connection and try again.'
 const PAGE_FAILED = 'Couldn\'t open the page. Try again.';
 const CHECKING = 'Checking your plan…';
 const NAMES = ['span: Founding inspector', 'span: Early inspector', 'span: Inspyx plan'];
-const PLAN_WORDS = ['h1: Your plan', ...NAMES, 'p: You\'re all set.', 'p: No charge was made.',
-  'p: ' + CHECKING, 'p: ' + OFFER_FREE, 'p: ' + OFFER, 'p: ' + OFFER_EARLY, 'p: ' + OFFER_REGULAR,
+const PLAN_WORDS = ['h1: Your plan', ...NAMES, 'p: You\'re all set.', 'p: No charge was made.', 'p: ' + refundedWords('{amount}'),
+  'p: ' + CHECKING, 'p: ' + WAITS, 'p: ' + freeDays('{days}'), 'p: ' + OFFER, 'p: ' + OFFER_EARLY, 'p: ' + OFFER_REGULAR,
   'p: Free until {date}, then {amount} a {every}.', 'p: Free until {date}.', 'p: In your free month. Then {amount} a {every}.', 'p: In your free month.',
   'p: Active. Next payment on {date}.', 'p: Active.', 'p: Ends {date}. Nothing more will be charged.', 'p: Ending. Nothing more will be charged.',
-  'p: ' + PROBLEM, 'p: ' + ATTENTION, 'p: ' + ENDED, 'p: ' + NOT_SET_UP, 'p: ' + FAILED, 'p: ' + PAGE_FAILED, 'p: ' + NOT_SET_UP,
-  'button: Start your plan', 'button: Manage billing', 'button: Update card', 'button: Try again',
+  'p: ' + PROBLEM, 'p: ' + ATTENTION, 'p: ' + ENDED, 'p: ' + NOT_SET_UP, 'p: ' + FAILED,
+  'p: Free until {date}.', 'p: ' + MONEY_OVER, 'p: ' + MONEY_USED,
+  'p: ' + PAGE_FAILED, 'p: ' + NOT_SET_UP, 'p: ' + REFUND_FAILED,
+  'button: Start your plan', 'button: Manage billing', 'button: Update card', 'button: Try again', 'button: ' + MONEY_BACK,
+  'p: ' + asked('{amount}', '{last4}'), 'p: ' + asked('{amount}', null), 'button: Refund me', 'button: Keep my plan',
   'p: Signed in as', 'p: Account', ...NAMES];
 const read = () => {
   const flat = (t) => t.replace(/\s+/g, ' ').trim();
@@ -110,7 +125,11 @@ const sees = (page) => page.evaluate(() => {
   const vis = (e) => !e.hidden && e.getClientRects().length > 0;
   const flat = (e) => e.textContent.replace(/\s+/g, ' ').trim();
   const of = (sel) => [...m.querySelectorAll(sel)].filter(vis).map(flat);
-  return { stands: of('[data-stands]'), say: of('[data-say]'), back: of('[data-back]'), buttons: [...m.querySelectorAll('[data-do]')].filter(vis).map((b) => flat(b) + (b.disabled ? ' (off)' : '')) };
+  const sheet = m.querySelector('[data-sheet]');
+  const money = m.querySelector('[data-money]');
+  return { stands: of('[data-stands]'), say: of('[data-say]'), back: of('[data-back]'), buttons: [...m.querySelectorAll('[data-do]')].filter(vis).map((b) => flat(b) + (b.disabled ? ' (off)' : '')),
+    under: of('[data-under]'), money: money && vis(money) ? flat(money) + (money.disabled ? ' (off)' : '') : '',
+    sheet: sheet && sheet.open ? of('[data-sheet] [data-ask]').concat([...sheet.querySelectorAll('[data-sheet-do]')].map((b) => flat(b) + (b.disabled ? ' (off)' : ''))) : null };
 });
 const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.buttons, button ? [button] : []) && v.say.length === 0;
 
@@ -215,6 +234,172 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     const a = (await sees(ny.page)).stands[0], b = (await sees(uk.page)).stands[0];
     ok('a date is the day on the inspector\'s own calendar', a === 'Free until December 8, 2026.' && b === 'Free until December 9, 2026.', a + ' / ' + b);
     await ny.ctx.close(); await uk.ctx.close();
+  });
+
+  // ---- a founder's free days start with their own app invite (Moises, 2026-11-15)
+  await group('free days', async () => {
+    const OFFER30 = { monthly_cents: 5495, yearly_cents: 59300, trial_days: 30 };
+    const CASES = [
+      ['a founder whose app invite is not sent yet: no plan can start, and nothing to tap', plan({ tier: 'founder', free_waits_for_invite: true, offer: OFFER30 }), WAITS, '', []],
+      ['a founder invited: the days really left, and when they end, under it', plan({ tier: 'founder', free_until: DEC9, offer: Object.assign({}, OFFER30, { trial_days: 24 }) }), freeDays(24), 'Start your plan', ['Free until December 9, 2026.']],
+      ['a founder invited, one day left', plan({ tier: 'founder', free_until: DEC9, offer: Object.assign({}, OFFER30, { trial_days: 1 }) }), freeDays(1), 'Start your plan', ['Free until December 9, 2026.']],
+      ['an older server that says no days: the 30', plan({}), OFFER_FREE, 'Start your plan', []],
+      ['days that are not a whole number are left out: the 30', plan({ tier: 'founder', offer: Object.assign({}, OFFER30, { trial_days: 2.5 }) }), OFFER_FREE, 'Start your plan', []],
+      ['an end that is not a date is left out', plan({ tier: 'founder', free_until: 'soon', offer: OFFER30 }), OFFER_FREE, 'Start your plan', []],
+      ['the free days used (an earlier plan): never "wait for your invite"', plan({ tier: 'founder', free_month: false, free_waits_for_invite: true }), OFFER, 'Start your plan', []],
+      ['the next 100 are never told of free days or an invite', plan({ tier: 'early', free_month: false, free_waits_for_invite: true, free_until: DEC9 }), OFFER_EARLY, 'Start your plan', []],
+      ['a founder in their free days (a plan running): the plan\'s own end, nothing under it', Object.assign({}, FREE, { tier: 'founder' }), 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing', []],
+    ];
+    for (const [label, json, sentence, button, under] of CASES) {
+      const { ctx, page, errs, away } = await open(browser, 'plan', { answers: () => bill(json), settle: 300 });
+      const v = await sees(page);
+      ok('free days: ' + label, shows(v, sentence, button) && same(v.under, under) && v.money === '' && errs.length === 0 && away.length === 0, JSON.stringify(v) + errs.join(' | '));
+      await ctx.close();
+    }
+  });
+
+  // ---- "Get my money back" (Moises, 2026-11-15): offered within 30 days of a payment, once; asked again in a sheet
+  await group('money back', async () => {
+    const PAID = Object.assign({}, ACTIVE, { tier: 'founder', money_back: { eligible: true, amount_cents: 5495, until: '2026-12-01T15:52:27+00:00' } });
+    const ENDED_USED = plan({ status: 'canceled', free_month: false, tier: 'founder', money_back: { eligible: false, why: 'used' } });
+    const LINES = [
+      ['offered: the button, under the plan\'s own button', PAID, 'Get my money back', []],
+      ['used already: no button, and why', Object.assign({}, ACTIVE, { money_back: { eligible: false, why: 'used' } }), '', [MONEY_USED]],
+      ['the 30 days are over: no button, and why', Object.assign({}, ACTIVE, { money_back: { eligible: false, why: 'too_late' } }), '', [MONEY_OVER]],
+      ['nothing paid yet (the free days): nothing said about it', Object.assign({}, FREE, { money_back: { eligible: false, why: 'nothing_paid' } }), '', []],
+      ['an older server that says nothing: nothing said', ACTIVE, '', []],
+      ['an offer with no amount is no offer', Object.assign({}, ACTIVE, { money_back: { eligible: true, amount_cents: '5495' } }), '', []],
+      ['a reason this page does not know says nothing', Object.assign({}, ACTIVE, { money_back: { eligible: false, why: 'gold' } }), '', []],
+    ];
+    for (const [label, json, button, under] of LINES) {
+      const { ctx, page, errs } = await open(browser, 'plan', { answers: () => bill(json), settle: 300 });
+      const v = await sees(page);
+      ok('money back: ' + label, shows(v, 'Active. Next payment on December 9, 2026.', 'Manage billing') || shows(v, 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing') ? v.money === button && same(v.under, under) && errs.length === 0 : false, JSON.stringify(v));
+      await ctx.close();
+    }
+
+    // The whole way: the button, the sheet with what Stripe took and the card, "Keep my plan", again, "Refund me".
+    {
+      let refundedYet = false;
+      const answers = (call) => {
+        const a = action(call);
+        if (a === 'status') return bill(refundedYet ? ENDED_USED : PAID);
+        if (a === 'money_back_quote') return bill({ amount_cents: 5495, card_last4: '4242' });
+        if (a === 'money_back') { refundedYet = true; return bill({ refunded: true, amount_cents: 5495, card_last4: '4242', plan_ended: true }); }
+        return { status: 400, json: { error: 'action' } };
+      };
+      const { ctx, page, errs, away, calls } = await open(browser, 'plan', { answers, settle: 300 });
+      await page.click('[data-money]');
+      await page.waitForTimeout(300);
+      let v = await sees(page);
+      const focused = await page.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-sheet-do'));
+      ok('money back: the button asks what would come back, and the sheet says it in his words, "Refund me" first', same(v.sheet, [asked('$54.95', '4242'), 'Refund me', 'Keep my plan']) && focused === 'refund' && same(calls.filter(isBilling).map((c) => c.body), ['{"action":"status"}', '{"action":"money_back_quote"}']), JSON.stringify(v.sheet) + ' ' + focused + ' ' + calls.map((c) => c.body).join(','));
+      await page.click('[data-sheet-do="keep"]');
+      await page.waitForTimeout(200);
+      v = await sees(page);
+      const afterKeep = calls.filter(isBilling).map(action);
+      ok('money back: "Keep my plan" closes the sheet and nothing is refunded; the button is there again', v.sheet === null && v.money === MONEY_BACK && !afterKeep.includes('money_back') && shows(v, 'Active. Next payment on December 9, 2026.', 'Manage billing'), JSON.stringify(v) + afterKeep.join(','));
+      await page.click('[data-money]');
+      await page.waitForTimeout(300);
+      await page.click('[data-sheet-do="refund"]');
+      await page.waitForTimeout(500);
+      v = await sees(page);
+      const press = calls.filter((c) => isBilling(c) && action(c) === 'money_back');
+      const focus = await page.evaluate(() => document.activeElement && document.activeElement.className);
+      ok('money back: "Refund me" sends the amount he saw, once; the page says it\'s refunded, the plan has ended, and it was used', press.length === 1 && press[0].body === '{"action":"money_back","expect_cents":5495}' && v.sheet === null && same(v.back, [refundedWords('$54.95')]) && same(v.stands, [ENDED]) && same(v.under, [MONEY_USED]) && v.money === '' && focus === 'back' && errs.length === 0 && away.length === 0, JSON.stringify(v) + ' ' + press.map((c) => c.body) + ' focus ' + focus + errs.join(' | '));
+      const words = await page.evaluate(read);
+      ok('money back: every word on the page is still an approved one', same(words, PLAN_WORDS), JSON.stringify(words.filter((x, i) => x !== PLAN_WORDS[i]).slice(0, 2)));
+      await ctx.close();
+    }
+
+    // The quote's and the press's other answers.
+    const flow = async (quote, press) => {
+      const r = await open(browser, 'plan', { answers: (call) => {
+        const a = action(call);
+        if (a === 'status') return bill(PAID);
+        if (a === 'money_back_quote') return typeof quote === 'function' ? quote() : quote;
+        return typeof press === 'function' ? press(call) : press;
+      }, settle: 300 });
+      await r.page.click('[data-money]');
+      await r.page.waitForTimeout(300);
+      return r;
+    };
+    const QUOTES = [
+      ['no card digits from Stripe: "to your card"', bill({ amount_cents: 5495, card_last4: null }), (v) => same(v.sheet, [asked('$54.95', null), 'Refund me', 'Keep my plan'])],
+      ['card digits that are not four digits are never shown', bill({ amount_cents: 5495, card_last4: '42<b>' }), (v) => same(v.sheet, [asked('$54.95', null), 'Refund me', 'Keep my plan'])],
+      ['a yearly payment, in full', bill({ amount_cents: 59300, card_last4: '0005' }), (v) => same(v.sheet, [asked('$593', '0005'), 'Refund me', 'Keep my plan'])],
+      ['used already (another account, the same card): no sheet, and why', { status: 409, json: { error: 'already' } }, (v) => v.sheet === null && v.money === '' && same(v.under, [MONEY_USED]) && v.say.length === 0],
+      ['the 30 days just ended: no sheet, and why', { status: 409, json: { error: 'too_late' } }, (v) => v.sheet === null && v.money === '' && same(v.under, [MONEY_OVER])],
+      ['no answer: no sheet, the draft line, and the button to try again', 'offline', (v) => v.sheet === null && same(v.say, [REFUND_FAILED]) && v.money === MONEY_BACK],
+      ['Stripe down: the same', { status: 502, json: { error: 'stripe' } }, (v) => v.sheet === null && same(v.say, [REFUND_FAILED]) && v.money === MONEY_BACK],
+      ['an answer with no amount: the same, never a sheet that says nothing', bill({ amount_cents: 0, card_last4: '4242' }), (v) => v.sheet === null && same(v.say, [REFUND_FAILED])],
+      ['billing not set up: says so', { status: 503, json: { error: 'not_configured' } }, (v) => v.sheet === null && same(v.say, [NOT_SET_UP])],
+    ];
+    for (const [label, quote, good] of QUOTES) {
+      const r = await flow(quote, { status: 500, json: {} });
+      const v = await sees(r.page);
+      ok('money back quote: ' + label, good(v) && !r.calls.some((c) => isBilling(c) && action(c) === 'money_back') && r.errs.length === 0, JSON.stringify(v));
+      await r.ctx.close();
+    }
+    const PRESSES = [
+      ['Stripe down at the refund: the sheet closes and the draft line says try again', { status: 502, json: { error: 'stripe' } }, (v) => v.sheet === null && same(v.say, [REFUND_FAILED]) && v.money === MONEY_BACK && v.back.length === 0],
+      ['no answer at all: the same', 'offline', (v) => v.sheet === null && same(v.say, [REFUND_FAILED]) && v.back.length === 0],
+      ['used already, found at the press: why, and no button', { status: 409, json: { error: 'already' } }, (v) => v.sheet === null && same(v.under, [MONEY_USED]) && v.money === '' && v.say.length === 0],
+      ['a refusal this page does not know: the draft line', { status: 409, json: { error: 'gold' } }, (v) => v.sheet === null && same(v.say, [REFUND_FAILED])],
+      ['an answer that says nothing was refunded is not taken as a refund', bill({ refunded: false }), (v) => v.sheet === null && same(v.say, [REFUND_FAILED]) && v.back.length === 0],
+    ];
+    for (const [label, press, good] of PRESSES) {
+      const r = await flow(bill({ amount_cents: 5495, card_last4: '4242' }), press);
+      await r.page.click('[data-sheet-do="refund"]');
+      await r.page.waitForTimeout(400);
+      const v = await sees(r.page);
+      ok('money back press: ' + label, good(v) && r.errs.length === 0, JSON.stringify(v));
+      await r.ctx.close();
+    }
+    // A newer payment between the quote and the press: the sheet says the new amount and asks again; the next press sends it.
+    {
+      let presses = 0;
+      const r = await flow(bill({ amount_cents: 5495, card_last4: '4242' }), (call) => (++presses === 1
+        ? { status: 409, json: { error: 'changed', amount_cents: 59300, card_last4: '4242' } }
+        : bill({ refunded: true, amount_cents: 59300, card_last4: '4242', plan_ended: true })));
+      await r.page.click('[data-sheet-do="refund"]');
+      await r.page.waitForTimeout(400);
+      const v1 = await sees(r.page);
+      await r.page.click('[data-sheet-do="refund"]');
+      await r.page.waitForTimeout(400);
+      const v2 = await sees(r.page);
+      const sent = r.calls.filter((c) => isBilling(c) && action(c) === 'money_back').map((c) => c.body);
+      ok('money back: an amount that changed is shown first, never refunded unseen; the next press sends the new one', same(v1.sheet, [asked('$593', '4242'), 'Refund me', 'Keep my plan']) && same(sent, ['{"action":"money_back","expect_cents":5495}', '{"action":"money_back","expect_cents":59300}']) && v2.sheet === null && same(v2.back, [refundedWords('$593')]), JSON.stringify([v1.sheet, v2.back, sent]));
+      await r.ctx.close();
+    }
+    // Escape is "Keep my plan"; two taps ask once; while the refund is asked for, the sheet's buttons are off and Escape does nothing.
+    {
+      const r = await flow(bill({ amount_cents: 5495, card_last4: '4242' }), { wait: 1200, status: 502, json: { error: 'stripe' } });
+      await r.page.click('[data-sheet-do="refund"]');
+      await r.page.waitForTimeout(150);
+      const during = await sees(r.page);
+      await r.page.keyboard.press('Escape');
+      await r.page.waitForTimeout(150);
+      const stillOpen = (await sees(r.page)).sheet !== null;
+      await r.page.waitForTimeout(1400);
+      const presses = r.calls.filter((c) => isBilling(c) && action(c) === 'money_back').length;
+      ok('money back: while the refund is asked for, its buttons are off and Escape can\'t close the sheet', same(during.sheet, [asked('$54.95', '4242'), 'Refund me (off)', 'Keep my plan (off)']) && stillOpen && presses === 1, JSON.stringify(during.sheet) + ' open:' + stillOpen + ' presses:' + presses);
+      await r.ctx.close();
+      const e = await flow(bill({ amount_cents: 5495, card_last4: '4242' }), { status: 500, json: {} });
+      await e.page.keyboard.press('Escape');
+      await e.page.waitForTimeout(200);
+      const ve = await sees(e.page);
+      const focus = await e.page.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-money'));
+      ok('money back: Escape closes the sheet as "Keep my plan" does, and the keyboard is back on the button', ve.sheet === null && ve.money === MONEY_BACK && focus && !e.calls.some((c) => isBilling(c) && action(c) === 'money_back'), JSON.stringify(ve) + ' focus ' + focus);
+      await e.ctx.close();
+      const t = await open(browser, 'plan', { answers: (call) => (action(call) === 'status' ? bill(PAID) : { wait: 600, status: 200, json: { amount_cents: 5495, card_last4: '4242' } }), settle: 300 });
+      await t.page.click('[data-money]');
+      await t.page.click('[data-money]', { force: true }).catch(() => null);
+      await t.page.waitForTimeout(900);
+      const quotes = t.calls.filter((c) => isBilling(c) && action(c) === 'money_back_quote').length;
+      ok('money back: two taps on the button ask once', quotes === 1, quotes + ' quotes');
+      await t.ctx.close();
+    }
   });
 
   // ---- no answer, or one that is not about a plan
@@ -478,12 +663,13 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
   // ---- getting there and back, and the keys
   await group('getting around', async () => {
     const a = await open(browser, 'account', { answers: () => bill(FREE) });
-    const link = await a.page.evaluate(() => { const l = document.querySelector('.account a[href="/plan"]'); const b = l ? l.getBoundingClientRect() : { height: 0, width: 0 }; const o = document.querySelector('[data-signout]'); return l ? { text: l.textContent.trim(), h: Math.round(b.height), sw: document.documentElement.scrollWidth, out: o.getBoundingClientRect().height, solid: getComputedStyle(l).backgroundColor, quiet: getComputedStyle(o).backgroundColor, row: Math.abs(o.getBoundingClientRect().top - b.top) < 2 } : null; });
+    const link = await a.page.evaluate(() => { const l = document.querySelector('.account a[href="/plan"]'); const b = l ? l.getBoundingClientRect() : { height: 0, width: 0 }; const o = document.querySelector('[data-signout]'); return l ? { text: l.textContent.trim(), h: Math.round(b.height), sw: document.documentElement.scrollWidth, out: o.getBoundingClientRect().height, solid: getComputedStyle(l).backgroundColor, quiet: getComputedStyle(o).backgroundColor, next: o.previousElementSibling === l } : null; });
     await a.page.click('.account a[href="/plan"]'); await a.page.waitForURL('**/plan'); await a.page.waitForTimeout(400);
     const there = shows(await sees(a.page), 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing');
     await a.page.click('.more a'); await a.page.waitForURL('**/account');
     ok('the account page has a link to the plan page, big enough to tap, and the plan page one back', !!link && link.text === 'Your plan' && link.h >= 44 && link.out >= 44 && link.sw <= PHONE && there && (await at(a.page)) === '/account', JSON.stringify(link));
-    ok('on the account page the plan is the solid button and signing out the quiet one beside it', !!link && link.solid === 'rgb(0, 0, 0)' && link.quiet === 'rgb(255, 255, 255)' && link.row, JSON.stringify(link));
+    // Beside it in the row of buttons: since the dashboard's pages joined that row (2026-11-14), the two may wrap apart on a phone.
+    ok('on the account page the plan is the solid button and signing out the quiet one right after it', !!link && link.solid === 'rgb(0, 0, 0)' && link.quiet === 'rgb(255, 255, 255)' && link.next, JSON.stringify(link));
     await a.ctx.close();
 
     const k = await open(browser, 'plan', { w: WIDE, h: 900, desktop: true, stripe: true, answers: (c) => (action(c) === 'status' ? bill(plan({})) : { status: 200, json: { url: CHECKOUT } }) });
@@ -526,7 +712,8 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     ok('the sign-in script asks only Inspyx\'s own server, and a function\'s name can be nothing but plain letters', /var SERVER = 'https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co';/.test(text('assets/auth.js')) && (text('assets/auth.js').match(/https?:\/\//g) || []).length === 1 && /\^\[a-z\]\[a-z-\]\*\$/.test(text('assets/auth.js')));
     const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => ['/signin', '/account', '/plan', '/reset', '/signup'].every((p) => new RegExp('^' + r.source + '$').test(p)));
     const says = (k) => (rule.length === 1 ? (rule[0].headers.find((x) => x.key === k) || {}).value : undefined);
-    ok('one server rule covers the signed-in pages, the reset page and the sign-up page, and it is the one the plan page was served with', rule.length === 1 && rule[0].source === '/(signin|account|plan|reset|signup)' && !!planRule && says('Content-Security-Policy') === planRule && says('Cache-Control') === 'no-store', 'rules that cover all five: ' + rule.length);
+    // The dashboard's pages (/today, /numbers, /reports, 2026-11-14) share the same rule.
+    ok('one server rule covers the signed-in pages, the reset page and the sign-up page, and it is the one the plan page was served with', rule.length === 1 && /^\/\((?:[a-z]+\|)*[a-z]+\)$/.test(rule[0].source) && !!planRule && says('Content-Security-Policy') === planRule && says('Cache-Control') === 'no-store', 'rules that cover all five: ' + rule.length);
     const pages = fs.readdirSync(root).filter((f) => f.endsWith('.html') && f !== 'plan.html');
     const linked = pages.filter((f) => /href="\/plan["?#]/.test(text(f)));
     ok('only the account page links to the plan page, and the list of pages for search engines leaves it out', same(linked, ['account.html']) && !/plan/.test(text('sitemap.xml')), linked.join(','));
