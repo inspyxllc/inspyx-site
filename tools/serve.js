@@ -4,7 +4,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const root = path.join(__dirname, '..', 'coming-soon');
+const root = path.resolve(__dirname, '..', 'coming-soon');
 const port = parseInt(process.argv[2] || '4173', 10);
 const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -34,10 +34,14 @@ http.createServer((req, res) => {
   const asked = decodeURIComponent(req.url.split('?')[0]);
   let p = rewritten(asked);
   if (p.endsWith('/')) p += 'index.html';
-  let file = path.join(root, p);
-  if (!file.startsWith(root)) { res.writeHead(403); res.end(); return; }
-  if (!fs.existsSync(file) && fs.existsSync(file + '.html')) file += '.html';
-  if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+  // Only a file inside the folder, after every ".." is resolved: anything else is refused (code scanning's
+  // path-injection rule, on main since this server was written).
+  const inside = (f) => f.startsWith(root + path.sep);
+  const asFile = path.resolve(root, '.' + p);
+  const asPage = path.resolve(root, '.' + p + '.html');
+  if (!inside(asFile) || !inside(asPage)) { res.writeHead(403); res.end(); return; }
+  const file = !fs.existsSync(asFile) && fs.existsSync(asPage) ? asPage : asFile;
+  if (!inside(file) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     const missing = path.join(root, '404.html');
     res.writeHead(404, { 'Content-Type': types['.html'] });
     res.end(fs.existsSync(missing) ? fs.readFileSync(missing) : 'Not found');
