@@ -17,13 +17,13 @@ const out = read(cfg);
 ok('Vercel\'s reader accepts vercel.json', !out.error, out.error ? out.error.message : out.routes.length + ' routes');
 const ruled = (out.routes || []).filter((r) => r.headers && r.headers['Content-Security-Policy']);
 const applies = (p) => ruled.some((r) => new RegExp(r.src).test(p));
-const yes = ['/signin', '/account', '/plan', '/today', '/numbers'], no = ['/', '/pricing', '/refunds', '/terms', '/privacy', '/signin/x', '/accounts', '/plans', '/plan/x', '/myplan', '/assets/auth.js', '/assets/plan.js', '/today/x', '/todays', '/assets/today.js', '/numbers/x', '/number', '/assets/numbers.js'];
+const yes = ['/signin', '/account', '/plan', '/today', '/numbers', '/reports'], no = ['/', '/pricing', '/refunds', '/terms', '/privacy', '/signin/x', '/accounts', '/plans', '/plan/x', '/myplan', '/assets/auth.js', '/assets/plan.js', '/today/x', '/todays', '/assets/today.js', '/numbers/x', '/number', '/assets/numbers.js', '/reports/x', '/report-sent', '/assets/reports.js'];
 ok('the rule catches the signed-in addresses', yes.every(applies), yes.filter((p) => !applies(p)).join(' '));
 ok('the rule catches no other address', !no.some(applies), no.filter(applies).join(' '));
 // Your inspections, live (2026-11-14): its own rule, the signed-in pages' rule plus the live socket to Inspyx's server.
 const wss = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']));
 ok('the inspections page has its rule, with the live socket', applies('/inspections') && wss('/inspections'));
-ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/', '/inspections/x', '/inspection'].some(wss));
+ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/', '/inspections/x', '/inspection'].some(wss));
 ok('the inspections rule catches nothing else', !['/inspection', '/inspections/x', '/myinspections', '/assets/inspections.js'].some(applies));
 // The client's report page (2026-11-14): a new link is /r#<key> (the browser asks for /r alone), an old one
 // /r/<key>. Both must open the report page, under the report page's own rules.
@@ -37,7 +37,7 @@ const movies = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /media-src 
 ok('the report page may play movies from Inspyx\'s file store, under both of its addresses', ['/r', '/r/' + key, '/report'].every(movies), ['/r', '/r/' + key, '/report'].filter((p) => !movies(p)).join(' '));
 ok('the movies\' rule names the file store alone', ruled.filter((r) => /media-src/.test(r.headers['Content-Security-Policy'])).every((r) => /media-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy'])));
 ok('no other page may play movies', !['/', '/signin', '/account', '/plan', '/inspections', '/pricing'].some(movies));
-ok('the report page\'s route takes no other address', !['/', '/refunds', '/rr', '/report-x', '/r/a/b'].some(opensReport), ['/', '/refunds', '/rr', '/report-x', '/r/a/b'].filter(opensReport).join(' '));
+ok('the report page\'s route takes no other address', !['/', '/refunds', '/rr', '/report-x', '/r/a/b', '/reports'].some(opensReport), ['/', '/refunds', '/rr', '/report-x', '/r/a/b', '/reports'].filter(opensReport).join(' '));
 // The reader must be able to say no, or its yes means nothing: a pattern that is wrong on purpose.
 const bad = read({ headers: [{ source: '/(?!x)', headers: [{ key: 'A', value: 'b' }] }] });
 ok('a pattern that is wrong on purpose is refused by the same reader', !!bad.error, bad.error ? bad.error.code : 'it was accepted');
