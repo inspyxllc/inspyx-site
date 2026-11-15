@@ -9,9 +9,9 @@ const HOME = new URL(url).origin;
 const SERVER = 'https://btxlrfvqifnrnxffohsz.supabase.co';
 const WHO = 'pat@example.com', ID = '11111111-1111-4111-8111-111111111111';
 const TOKEN = 'test-signup-access-0123456789abcdef', RENEW = 'test-signup-renew';
-// His words for the two ticks (approved 2026-11-13, "Yes, use them"): a change here needs his word too.
-const TERMS = 'I agree to the Inspyx Terms of Service and Privacy Policy.';
-const METRICS = 'Inspyx may see my app numbers: how many inspections I do, how long I’m on site, and how long each report takes. Never my clients’ names, addresses or reports. The first 10 inspectors who tick this become founders.';
+// His words for the two ticks (approved 2026-11-13; NEW words 2026-11-15 ~03:31Z, his picks on the sign-in mock-up: W7 "Yes, use them", W8 "Founding + first month"): a change here needs his word too.
+const TERMS = 'I agree to the Terms and the Privacy Policy.';
+const METRICS = 'Be a founding inspector. Share my app numbers with Inspyx for my first month: inspections done, time on site, time to finish the report. No client names, no report contents.';
 let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
 const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
