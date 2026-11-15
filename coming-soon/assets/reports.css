@@ -1,0 +1,36 @@
+/* Reports sent (2026-11-15): every published report, with its people's links and its emails. Calm and plain like
+   "What needs you"; the shared main is a flex column with a gap between all its parts, so this page spaces its own. */
+.sent{display:block; max-width:860px; margin:0 auto; padding:28px var(--gr) 64px var(--gl)}
+.sent h1{font-size:40px; margin-bottom:14px}
+.sent-state p{font-size:18px; line-height:1.45; color:var(--ink-soft)}
+.sent [data-again]{margin-top:14px; border:0; font:600 16px var(--font); cursor:pointer}
+.sent-list{list-style:none; padding:0; margin:18px 0 0; display:grid; gap:14px}
+.report{padding:18px 20px; border-radius:18px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.report h2{font-size:19px; font-weight:600; color:var(--ink); overflow-wrap:anywhere}
+.report-sub{display:flex; flex-wrap:wrap; margin-top:2px; font-size:14.5px; color:var(--ink-soft)}
+.report-sub .bit{min-width:0; overflow-wrap:anywhere}
+.report-sub .bit[hidden]{display:none}
+.report-sub .bit:not([hidden]) ~ .bit:not([hidden])::before{content:"·"; margin:0 7px; color:var(--ink-faint)}
+.report-part{margin-top:14px; font-size:13px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint)}
+.report-rows{list-style:none; padding:0; margin:6px 0 0; display:grid; gap:2px}
+.report-none{margin-top:6px; font-size:14.5px; color:var(--ink-faint)}
+.row{display:flex; flex-wrap:wrap; gap:2px 16px; justify-content:space-between; padding:8px 0; border-top:1px solid var(--line); font-size:15px}
+.row:first-child{border-top:0}
+.row .who{min-width:0; overflow-wrap:anywhere; color:var(--ink)}
+.row .addr{color:var(--ink-soft)}
+.row .tag{display:inline-block; margin-left:4px; padding:1px 8px; border-radius:999px; background:var(--ground); color:var(--ink-soft); font-size:12.5px; font-weight:600}
+.row .tag[hidden]{display:none}
+.row .what{color:var(--ink-soft); text-align:right}
+.row .what[hidden]{display:none}
+.row .what.off{color:var(--ink-faint)}
+.row .what.bad{color:#8C1D18}
+.sent-who{margin-top:32px; font-size:14.5px; color:var(--ink-faint)}
+.sent-who strong{overflow-wrap:anywhere}
+.sent-links{display:flex; flex-wrap:wrap; gap:4px 22px; font-size:14.5px}
+.sent-links a{display:inline-flex; align-items:center; min-height:44px}
+@media (max-width: 760px){
+  .sent{padding-top:20px; padding-bottom:48px}
+  .sent h1{font-size:30px}
+  .report{padding:16px}
+  .row .what{text-align:left}
+}

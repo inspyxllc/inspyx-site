@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Reports sent</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/reports.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/reports.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="sent" data-sent hidden>
+<h1>Reports sent</h1>
+<div class="sent-state" role="status">
+<p data-state="loading">Loading your reports…</p>
+<p data-state="empty" hidden>No reports published yet. Reports you publish from your phone show here, with who opened them.</p>
+<p data-state="failed" hidden>Couldn't load your reports. Check your connection and try again.</p>
+</div>
+<button class="btn quiet" type="button" data-again hidden>Try again</button>
+<ol class="sent-list" data-items></ol>
+<p class="sent-who">Signed in as <strong data-email></strong></p>
+<p class="sent-links"><a href="/today">What needs you</a><a href="/numbers">Your numbers</a><a href="/account">Account</a></p>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<template data-t="report">
+<li class="report">
+<div class="report-head">
+<h2><span data-v="address"></span><span data-noaddress hidden>A report with no address</span></h2>
+<p class="report-sub"><span class="bit" data-v="locality"></span><span class="bit">Published <span data-v="published"></span></span><span class="bit" data-locked hidden>Locked until paid</span></p>
+</div>
+<h3 class="report-part" data-part="links">People's links</h3>
+<ul class="report-rows" data-links></ul>
+<p class="report-none" data-no="links" hidden>No one has a link to this report yet.</p>
+<h3 class="report-part" data-part="emails">Emails</h3>
+<ul class="report-rows" data-emails></ul>
+<p class="report-none" data-no="emails" hidden>This report wasn't emailed from Inspyx.</p>
+</li>
+</template>
+
+<template data-t="link">
+<li class="row">
+<span class="who"><span data-v="label"></span> <span class="tag" data-audience="client" hidden>Client</span><span class="tag" data-audience="agent" hidden>Agent</span><span class="tag" data-audience="other" hidden>Other</span></span>
+<span class="what" data-state="opened" hidden>Opened <span data-v="first"></span><span data-more hidden>, <span data-v="opens"></span> times, last <span data-v="last"></span></span></span>
+<span class="what" data-state="unopened" hidden>Not opened yet</span>
+<span class="what off" data-state="off" hidden>Turned off</span>
+</li>
+</template>
+
+<template data-t="email">
+<li class="row">
+<span class="who"><span data-v="to_name"></span> <span class="addr" data-v="to_address"></span></span>
+<span class="what" data-state="delivered" hidden>Delivered <span data-v="when"></span></span>
+<span class="what bad" data-state="bounced" hidden>Bounced <span data-v="when"></span></span>
+<span class="what bad" data-state="complained" hidden>Marked as spam <span data-v="when"></span></span>
+<span class="what" data-state="sent" hidden>Sent <span data-v="when"></span></span>
+<span class="what bad" data-state="unsent" hidden>Not sent</span>
+</li>
+</template>
+
+<footer>
+INSPYX LLC · Miami Gardens, FL<br>
+<a href="mailto:support@inspyx.com">support@inspyx.com</a> · <a href="tel:+18887722919">(888) 772-2919</a>
+<nav><a href="/about">About</a><a href="/support">Support</a><a href="/pricing">Pricing</a><a href="/refunds">Cancellation and refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
+</footer>
+</body>
+</html>
