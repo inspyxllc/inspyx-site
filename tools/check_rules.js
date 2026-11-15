@@ -38,6 +38,14 @@ ok('the report page may play movies from Inspyx\'s file store, under both of its
 ok('the movies\' rule names the file store alone', ruled.filter((r) => /media-src/.test(r.headers['Content-Security-Policy'])).every((r) => /media-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy'])));
 ok('no other page may play movies', !['/', '/signin', '/account', '/plan', '/inspections', '/pricing'].some(movies));
 ok('the report page\'s route takes no other address', !['/', '/refunds', '/rr', '/report-x', '/r/a/b', '/reports'].some(opensReport), ['/', '/refunds', '/rr', '/report-x', '/r/a/b', '/reports'].filter(opensReport).join(' '));
+// An agent's private page (2026-11-15): /a (its key after the "#", so the browser asks for /a alone) opens the
+// agent page, under the report page's own strict rules (it draws reports, movies too), and takes no other address.
+const opensAgent = (p) => (out.routes || []).some((r) => r.dest && /^\/agent(\?|$)/.test(r.dest) && new RegExp(r.src).test(p));
+const signedInRule = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /img-src 'self'; connect-src https:/.test(r.headers['Content-Security-Policy']));
+ok('/a opens the agent page, under the report page\'s own rules (noindex, the file store, movies), as does /agent', opensAgent('/a') && ['/a', '/agent'].every((p) => reportRules(p) && movies(p)));
+ok('the agent page\'s route takes no other address', !['/', '/about', '/account', '/a/x', '/ab', '/r', '/r/' + key, '/agents', '/reports'].some(opensAgent), ['/', '/about', '/account', '/a/x', '/ab', '/r', '/r/' + key, '/agents', '/reports'].filter(opensAgent).join(' '));
+ok('/a never opens the client report route, and no signed-in rule reaches it', !opensReport('/a') && !signedInRule('/a') && !signedInRule('/agent'));
+ok('the agent rule reaches no other page (/about, /account, /assets/agent.js)', !['/about', '/account', '/assets/agent.js', '/ab'].some((p) => ruled.some((r) => new RegExp(r.src).test(p) && r.src.includes('agent'))));
 // The reader must be able to say no, or its yes means nothing: a pattern that is wrong on purpose.
 const bad = read({ headers: [{ source: '/(?!x)', headers: [{ key: 'A', value: 'b' }] }] });
 ok('a pattern that is wrong on purpose is refused by the same reader', !!bad.error, bad.error ? bad.error.code : 'it was accepted');

@@ -18,7 +18,9 @@
   var app = doc.getElementById('app');
   if (!app) return;
 
-  /* A page can be told to show a sample kept beside it (the preview does this). */
+  /* A page can be told to show a sample kept beside it (the preview does this), or where to ask for its report
+     (the agent page, 2026-11-15: CFG.ask = {url, body}, its own function asked with the page's key and the
+     report's link id; the client's key is never on that page). */
   var CFG = window.INSPYX_REPORT || {};
 
   /* Where a report comes from: the report function, given the key in a request's body. */
@@ -32,7 +34,7 @@
   var KEY_PATTERN = /^[A-Za-z0-9_-]{22}$/;
   var KEPT_KEY = 'inspyx.report.key';
   var linkKey = (function () {
-    if (CFG.sample) return null;
+    if (CFG.sample || CFG.ask) return null;
     var mark = (location.hash || '').replace(/^#/, '');
     var inPath = /^\/r\/([A-Za-z0-9_-]{22})\/?$/.exec(location.pathname);
     var key = KEY_PATTERN.test(mark) ? mark : (inPath ? inPath[1] : null);
@@ -1234,6 +1236,7 @@
   /* What to ask, and where: the report function with a link's key, or a sample kept beside the page. */
   function source() {
     if (CFG.sample) return { url: CFG.sample + (CFG.name || 'report') + '.json' };
+    if (CFG.ask && typeof CFG.ask.url === 'string' && CFG.ask.body) return { url: CFG.ask.url, body: CFG.ask.body };
     if (linkKey) return { url: API, key: linkKey };
     var s = /^\/r\/sample(?:-([a-z]{1,20}))?\/?$/.exec(location.pathname);
     if (s) return { url: '/sample-report/' + (s[1] || 'report') + '.json' };
@@ -1244,11 +1247,12 @@
      request came from. A sample is a plain file kept beside the page, fetched the way the page's own files
      are. */
   function howToAsk(src) {
-    return src.key
+    var body = src.body || (src.key ? { key: src.key } : null);
+    return body
       ? {
         method: 'POST', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: src.key }),
+        body: JSON.stringify(body),
       }
       : {};
   }

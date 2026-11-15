@@ -22,9 +22,17 @@ const extra = (p) => {
   return out;
 };
 
+// vercel.json's plain rewrites (a source with no ":" in it), as Vercel serves them: /a is the agent page.
+const rewritten = (p) => {
+  let list = [];
+  try { list = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8')).rewrites || []; } catch (e) { list = []; }
+  const hit = list.find((r) => !r.source.includes(':') && r.source === p);
+  return hit ? hit.destination : p;
+};
+
 http.createServer((req, res) => {
-  let p = decodeURIComponent(req.url.split('?')[0]);
-  const asked = p;
+  const asked = decodeURIComponent(req.url.split('?')[0]);
+  let p = rewritten(asked);
   if (p.endsWith('/')) p += 'index.html';
   let file = path.join(root, p);
   if (!file.startsWith(root)) { res.writeHead(403); res.end(); return; }
