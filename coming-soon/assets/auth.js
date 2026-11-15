@@ -374,13 +374,13 @@
   root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
-     sign-in page (data-gate="out") sends a browser that has one to the account page. It asks three times:
+     sign-in page (data-gate="out") sends a browser that has one to the dashboard (/today, since 2026-11-15). It asks three times:
      as the page loads, before anything is drawn; when the sign-in changes in another tab; and when the Back
      button brings the page back, because a page brought back is shown as it was left, not loaded again. */
   function gate() {
     var want = root.document && root.document.documentElement.getAttribute('data-gate');
     if (want === 'in' && !stored()) root.location.replace('/signin');
-    if (want === 'out' && stored()) root.location.replace('/account');
+    if (want === 'out' && stored()) root.location.replace('/today');
   }
   gate();
   root.addEventListener('storage', function (e) { if (e.key === STORE || e.key === null) gate(); });

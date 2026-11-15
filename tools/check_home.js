@@ -3,7 +3,9 @@
 // caught here and answered by the test.
 // usage: node tools/serve.js &   then   node tools/check_home.js
 //        (the page served somewhere else: URL=http://localhost:4174/ node tools/check_home.js)
-const { chromium } = require('playwright');
+//        (in Safari's engine instead of Chrome's: BROWSER=webkit node tools/check_home.js)
+const playwright = require('playwright');
+const engine = process.env.BROWSER === 'webkit' ? playwright.webkit : playwright.chromium;
 
 const url = process.env.URL || 'http://localhost:4173/';
 let failed = 0;
@@ -31,7 +33,8 @@ async function open(browser, opts) {
 }
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await engine.launch();
+  console.log('browser: ' + engine.name() + ' ' + browser.version());
 
   // ---- the page loads clean, and its head carries what search and link previews need
   {
@@ -96,11 +99,28 @@ async function open(browser, opts) {
     await ctx.close();
   }
 
-  // ---- the header's Pricing link: wide screens only
+  // ---- the header: Pricing on wide screens only; Sign in on every screen, phones too (inspectors sign in from their
+  //      phones: 2026-11-15, Moises, "Unhide the web dash"). No Sign up: the waitlist stays until the app is out.
   {
-    const shown = async (o) => { const { ctx, page } = await open(browser, o); const r = await page.evaluate(() => { const a = document.querySelector('.bar-link'); return { vis: !!a && a.getClientRects().length > 0, href: a ? a.getAttribute('href') : null }; }); await ctx.close(); return r; };
+    const shown = async (o) => { const { ctx, page } = await open(browser, o); const r = await page.evaluate(() => [...document.querySelectorAll('.bar a')].filter((a) => a.getClientRects().length > 0).map((a) => (a.getAttribute('aria-label') || a.textContent.trim()) + ' > ' + a.getAttribute('href'))); await ctx.close(); return r; };
     const phone = await shown({}), wide = await shown({ w: 1280, h: 800, desktop: true });
-    ok('the header links Pricing on a wide screen, and keeps to the logo and the button on a phone', !phone.vis && wide.vis && wide.href === '/pricing', JSON.stringify([phone, wide]));
+    ok('the header: the logo, Sign in and the waitlist button on a phone; Pricing too on a wide screen', JSON.stringify(phone) === JSON.stringify(['Inspyx, home > /', 'Sign in > /signin', 'Join the waitlist > #waitlist']) && JSON.stringify(wide) === JSON.stringify(['Inspyx, home > /', 'Pricing > /pricing', 'Sign in > /signin', 'Join the waitlist > #waitlist']), JSON.stringify([phone, wide]));
+  }
+  // ---- the header on a phone, from the smallest (320 px) up: the logo, Sign in and the button side by side, each
+  //      whole on one line, inside the bar, at least 44 px, and none over another. The logo's name shows from 390 px
+  //      (iPhones since the 12); below that its house mark alone leaves the room.
+  for (const w of [320, 360, 375, 390, 393, 430]) {
+    const { ctx, page, errs } = await open(browser, { w, h: 700 });
+    const r = await page.evaluate(() => {
+      const bar = document.querySelector('.bar').getBoundingClientRect();
+      const logo = document.querySelector('.bar .logo'), name = logo.querySelector('span');
+      const parts = [logo, ...document.querySelectorAll('.bar-r a')].filter((a) => a.getClientRects().length > 0).map((a) => { const b = a.getBoundingClientRect(); return { t: a.getAttribute('aria-label') || a.textContent.trim(), l: b.left, r: b.right, h: b.height, w: b.width, lines: a.getClientRects().length, sw: a.scrollWidth, cw: a.clientWidth }; });
+      return { bar: { l: bar.left, r: bar.right }, name: name.getClientRects().length > 0, parts, sw: document.documentElement.scrollWidth };
+    });
+    const p = r.parts, inside = p.every((x) => x.l >= r.bar.l && x.r <= r.bar.r), apart = p.every((x, i) => i === 0 || x.l >= p[i - 1].r + 2);
+    const whole = p.every((x) => x.h >= 44 && x.w >= 44 && x.lines === 1 && x.sw <= x.cw + 1);
+    ok(w + ' px: the header holds the logo, Sign in and the waitlist button, whole, side by side, inside the bar, each at least 44 px', p.map((x) => x.t).join(' | ') === 'Inspyx, home | Sign in | Join the waitlist' && inside && apart && whole && r.sw <= w && r.name === (w >= 390) && errs.length === 0, JSON.stringify(r));
+    await ctx.close();
   }
 
   // ---- the colour a phone's browser gives its own top bar: every part of the page it may read names the sky's blue
@@ -244,7 +264,7 @@ async function open(browser, opts) {
       const msgs = Array.from(document.querySelectorAll('.rv-msg')).filter(vis);
       return { site: vis(document.querySelector('.site')), n: msgs.length, h: msgs[0] ? msgs[0].querySelector('h1').textContent : '', p: msgs[0] ? msgs[0].querySelector('p').textContent : '', film: !!window.__inspyxFilm, links: Array.from(document.querySelectorAll('.rv-foot nav a')).map((a) => a.getAttribute('href')).join(',') };
     });
-    ok('?billing=' + q + ' shows only its message, word for word', !s.site && s.n === 1 && s.h === h && s.p === p && !s.film && s.links === '/about,/support,/pricing,/refunds,/terms,/privacy' && errs.length === 0, JSON.stringify(s));
+    ok('?billing=' + q + ' shows only its message, word for word', !s.site && s.n === 1 && s.h === h && s.p === p && !s.film && s.links === '/about,/support,/pricing,/refunds,/terms,/privacy,/signin' && errs.length === 0, JSON.stringify(s));
     await ctx.close();
   }
   {
@@ -277,15 +297,18 @@ async function open(browser, opts) {
     const { ctx, page } = await open(browser, { w: 1280, h: 800, desktop: true });
     const seen = [];
     let ring = true;
+    // Safari's Tab key stops at the boxes only, and Option+Tab stops at everything (its own long-standing way), as in
+    // check_signin.js: the full round is walked with the key that makes it.
+    const tab = engine.name() === 'webkit' ? 'Alt+Tab' : 'Tab';
     for (let i = 0; i < 40; i++) {
-      await page.keyboard.press('Tab');
+      await page.keyboard.press(tab);
       const a = await page.evaluate(() => { const e = document.activeElement; if (!e || e === document.body) return null; const cs = getComputedStyle(e); return { t: (e.getAttribute('aria-label') || e.textContent || e.name || e.id || '').trim().slice(0, 30), o: cs.outlineStyle + ' ' + cs.outlineWidth }; });
       if (!a) break;
       if (seen.length && a.t === seen[0]) break;
       seen.push(a.t);
       if (!/^solid 3px/.test(a.o)) ring = false;
     }
-    const want = ['Skip to content', 'Inspyx, home', 'Pricing', 'Join the waitlist', 'Join the waitlist', 'Fewer inspections a week', 'More inspections a week', 'Fewer hours per report', 'More hours per report', 'Fewer calls to voicemail', 'More calls to voicemail', 'Lower average fee', 'Higher average fee', 'Join the waitlist', 'email', 'Solo inspector', 'Team owner', 'Agent', 'Investor', 'Spectora', 'Another app', 'Nothing yet', 'Join the waitlist', 'Pricing', 'About', 'Support', 'Terms', 'Privacy', 'Cancellation and refunds', 'support@inspyx.com', '(888) 772-2919'];
+    const want = ['Skip to content', 'Inspyx, home', 'Pricing', 'Sign in', 'Join the waitlist', 'Join the waitlist', 'Fewer inspections a week', 'More inspections a week', 'Fewer hours per report', 'More hours per report', 'Fewer calls to voicemail', 'More calls to voicemail', 'Lower average fee', 'Higher average fee', 'Join the waitlist', 'email', 'Solo inspector', 'Team owner', 'Agent', 'Investor', 'Spectora', 'Another app', 'Nothing yet', 'Join the waitlist', 'Pricing', 'About', 'Support', 'Sign in', 'Terms', 'Privacy', 'Cancellation and refunds', 'support@inspyx.com', '(888) 772-2919'];
     const norm = seen.map((t) => (t === '' ? 'email' : t));
     ok('Tab reaches every control in page order (' + seen.length + ' stops)', JSON.stringify(norm) === JSON.stringify(want), norm.join(' > '));
     ok('each stop shows a focus ring', ring);
