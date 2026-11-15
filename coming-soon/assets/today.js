@@ -108,7 +108,8 @@
 
   function tick(need, li) {
     say(null);
-    var buttons = all('button, a', li);
+    // Only the buttons wait for the answer: a link has no disabled state, and calling a client meanwhile is harmless.
+    var buttons = all('button', li);
     buttons.forEach(function (b) { b.disabled = true; });
     auth.ask('needs', { action: 'done', kind: need.kind, ref: need.ref }, DEADLINE).then(function (r) {
       if (r === null) { signedOut(); return; }
