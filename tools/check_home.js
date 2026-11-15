@@ -297,8 +297,11 @@ async function open(browser, opts) {
     const { ctx, page } = await open(browser, { w: 1280, h: 800, desktop: true });
     const seen = [];
     let ring = true;
+    // Safari's Tab key stops at the boxes only, and Option+Tab stops at everything (its own long-standing way), as in
+    // check_signin.js: the full round is walked with the key that makes it.
+    const tab = engine.name() === 'webkit' ? 'Alt+Tab' : 'Tab';
     for (let i = 0; i < 40; i++) {
-      await page.keyboard.press('Tab');
+      await page.keyboard.press(tab);
       const a = await page.evaluate(() => { const e = document.activeElement; if (!e || e === document.body) return null; const cs = getComputedStyle(e); return { t: (e.getAttribute('aria-label') || e.textContent || e.name || e.id || '').trim().slice(0, 30), o: cs.outlineStyle + ' ' + cs.outlineWidth }; });
       if (!a) break;
       if (seen.length && a.t === seen[0]) break;
