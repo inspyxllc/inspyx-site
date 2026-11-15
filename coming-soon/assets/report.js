@@ -116,6 +116,8 @@
   var PDF = {
     preparedFor: 'Prepared for',
     inspectionDate: 'Inspection date:',
+    // A report made again after it was sent (content /14, 2026-11-14): report_pages.dart, coverUpdatedLabel.
+    updated: 'Updated',
     inspector: 'Inspector of record',
     license: 'License number',
     associations: 'Associations',
@@ -766,6 +768,7 @@
         h('h1', { class: 'addr' }, c.address || report.title),
         sub ? h('p', { class: 'cover-sub' }, sub) : null,
         c.inspected ? h('p', { class: 'cover-sub' }, PDF.inspectionDate + ' ' + c.inspected) : null,
+        c.updated ? h('p', { class: 'cover-sub cover-updated' }, PDF.updated + ' ' + c.updated) : null,
         h('div', { class: 'people' },
           h('div', { class: 'pcard pcard-main' },
             face ? shows(h('img', { class: 'face', alt: '', src: face.small }), insp.photo, 'small') : h('span', { class: 'face face-i', 'aria-hidden': 'true' }, initials(insp.name)),
