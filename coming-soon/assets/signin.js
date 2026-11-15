@@ -40,7 +40,8 @@
     working(true);
     window.InspyxAuth.signIn(email.value.trim(), password.value).then(function () {
       password.value = '';
-      window.location.assign('/account');
+      // A sign-in lands on the dashboard (2026-11-15); the account page is one tap from it.
+      window.location.assign('/today');
     }, function (why) {
       working(false);
       var kind = why && why.kind;
@@ -68,7 +69,7 @@
     // While the code is being exchanged, neither button takes a tap.
     if (returning) working(true);
     back.then(function (s) {
-      if (s) window.location.replace('/account');
+      if (s) window.location.replace('/today');
       else if (returning) working(false);
     }, function (why) {
       var kind = failed(why);

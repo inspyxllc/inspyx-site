@@ -33,7 +33,7 @@ const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PA
     });
     ok(w + ' wide: opens (200), no errors, asks no other site for anything', res.status() === 200 && errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
     ok(w + ' wide: its words are his approved ones, word for word', JSON.stringify(r.words) === JSON.stringify(WORDS), JSON.stringify(r.words.filter((x, i) => x !== WORDS[i]).slice(0, 2)));
-    ok(w + ' wide: kept out of search until sign-up opens, one heading, the six footer pages, nothing scrolls sideways', r.robots === 'noindex' && r.h1 === 1 && r.foot === '/about,/support,/pricing,/refunds,/terms,/privacy' && r.sw <= w, JSON.stringify([r.robots, r.foot, r.sw]));
+    ok(w + ' wide: kept out of search until sign-up opens, one heading, the seven footer links, nothing scrolls sideways', r.robots === 'noindex' && r.h1 === 1 && r.foot === '/about,/support,/pricing,/refunds,/terms,/privacy,/signin' && r.sw <= w, JSON.stringify([r.robots, r.foot, r.sw]));
     await ctx.close();
   }
   await browser.close();
