@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Your numbers</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/numbers.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/numbers.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="numbers" data-numbers hidden>
+<h1>Your numbers</h1>
+<div class="numbers-state" role="status">
+<p data-state="loading">Counting your numbers…</p>
+<p data-state="empty" hidden>No numbers yet. They show here once you send pay links or reports, or Mia answers your calls.</p>
+<p data-state="failed" hidden>Couldn't count your numbers. Check your connection and try again.</p>
+</div>
+<button class="btn quiet" type="button" data-again hidden>Try again</button>
+
+<div class="numbers-grid">
+<section class="tile" data-group="money_in" hidden>
+<h2>Paid by card</h2>
+<p class="big"><span data-v="this_month_cents"></span> <span class="unit">this month</span></p>
+<p class="bits"><span class="bit"><span data-v="last_month_cents"></span> last month</span><span class="bit"><span data-v="this_year_cents"></span> this year</span><span class="bit" data-count="payments_this_month"><span data-v="payments_this_month"></span> <span data-one>payment</span><span data-many>payments</span> this month</span></p>
+</section>
+
+<section class="tile" data-group="owed" hidden>
+<h2>Still owed</h2>
+<p class="big"><span data-v="cents"></span></p>
+<p class="bits"><span class="bit" data-count="links"><span data-v="links"></span> <span data-one>pay link</span><span data-many>pay links</span></span><span class="bit"><a href="/today">See them</a></span></p>
+</section>
+
+<section class="tile" data-group="reports" hidden>
+<h2>Reports</h2>
+<p class="big"><span data-v="published"></span> <span class="unit">published</span></p>
+<p class="bits"><span class="bit"><span data-v="published_this_month"></span> this month</span><span class="bit" data-when="client_links"><span data-v="client_links_opened"></span> of <span data-v="client_links"></span> client links opened</span></p>
+</section>
+
+<section class="tile" data-group="emails" hidden>
+<h2>Report emails</h2>
+<p class="big"><span data-v="sent"></span> <span class="unit">sent</span></p>
+<p class="bits"><span class="bit"><span data-v="delivered"></span> delivered</span><span class="bit" data-when="bounced"><span data-v="bounced"></span> bounced</span><span class="bit" data-when="complained"><span data-v="complained"></span> marked as spam</span><span class="bit"><span data-v="sent_this_month"></span> this month</span></p>
+</section>
+
+<section class="tile" data-group="mia" hidden>
+<h2>Mia</h2>
+<p class="big" data-count="calls_this_month"><span data-v="calls_this_month"></span> <span class="unit"><span data-one>call</span><span data-many>calls</span> this month</span></p>
+<p class="bits"><span class="bit"><span data-v="calls_last_month"></span> last month</span><span class="bit"><span data-v="callbacks_this_month"></span> asked for a call back</span><span class="bit"><span data-v="minutes_this_month"></span> minutes this month</span></p>
+</section>
+</div>
+
+<p class="numbers-who">Signed in as <strong data-email></strong></p>
+<p class="numbers-links"><a href="/today">What needs you</a><a href="/account">Account</a></p>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<footer>
+INSPYX LLC · Miami Gardens, FL<br>
+<a href="mailto:support@inspyx.com">support@inspyx.com</a> · <a href="tel:+18887722919">(888) 772-2919</a>
+<nav><a href="/about">About</a><a href="/support">Support</a><a href="/pricing">Pricing</a><a href="/refunds">Cancellation and refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
+</footer>
+</body>
+</html>

@@ -112,7 +112,7 @@ const shown = async (page, sel) => (await vis(page, sel)).join(' | ');
       ok(label + ': opens with no errors, asks only the needs function, as the signed-in inspector, for the list', errs.length === 0 && away.length === 0 && c.headers.authorization === 'Bearer test-access-1' && JSON.stringify(c.body) === '{"action":"list"}', errs.concat(away).join(' | '));
       const csp = res.headers()['content-security-policy'] || '';
       ok(label + ': served with the signed-in pages\' rule, and never kept by a cache', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
-      ok(label + ': the title, and who is signed in', (await shown(page, 'h1')) === 'What needs you' && (await shown(page, '.today-who')) === 'Signed in as pat@example.com' && (await shown(page, '.today-links a')) === 'Your inspections | Account');
+      ok(label + ': the title, and who is signed in', (await shown(page, 'h1')) === 'What needs you' && (await shown(page, '.today-who')) === 'Signed in as pat@example.com' && (await shown(page, '.today-links a')) === 'Your numbers | Your inspections | Account');
       const r = await rows(page);
       ok(label + ': four jobs, newest first', r.length === 4, JSON.stringify(r));
       ok(label + ': a Mia caller to call back, with what they wanted, the property, the day, and a button that dials them',
