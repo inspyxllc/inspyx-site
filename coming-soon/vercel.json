@@ -100,7 +100,7 @@
       ]
     },
     {
-      "source": "/(signin|account|plan|reset|signup)",
+      "source": "/(signin|account|plan|reset|signup|today)",
       "headers": [
         {
           "key": "Content-Security-Policy",

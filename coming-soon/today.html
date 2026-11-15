@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — What needs you</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/today.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/today.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="today" data-today hidden>
+<h1>What needs you</h1>
+<div class="today-state" role="status">
+<p data-state="loading">Checking what needs you…</p>
+<p data-state="empty" hidden>Nothing needs you right now.</p>
+<p data-state="failed" hidden>Couldn't check what needs you. Check your connection and try again.</p>
+</div>
+<button class="btn quiet" type="button" data-again hidden>Try again</button>
+<ul class="today-list" data-items></ul>
+<div class="today-undo" role="status" data-undo-bar hidden>
+<span>Marked done.</span>
+<button class="link" type="button" data-undo>Undo</button>
+</div>
+<div class="say" role="alert">
+<p data-say="done" hidden>Couldn't mark it done. Try again.</p>
+<p data-say="undo" hidden>Couldn't put it back. Try again.</p>
+<p data-say="full" hidden>Too many jobs are marked done. Write to support@inspyx.com and we'll clear them.</p>
+<p data-say="copy" hidden>Couldn't copy the pay link. Try again.</p>
+</div>
+<p class="today-who">Signed in as <strong data-email></strong></p>
+<p class="today-links"><a href="/inspections">Your inspections</a><a href="/account">Account</a></p>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<template data-t="money">
+<li class="need" data-kind="money">
+<div class="need-text">
+<p class="need-head"><strong><span data-v="owed"></span> still owed</strong></p>
+<p class="need-bits"><span class="bit" data-v="title"></span><span class="bit" data-v="client_email"></span><span class="bit">Pay link from <span data-v="date"></span></span></p>
+</div>
+<div class="need-acts">
+<button class="btn small" type="button" data-copy>Copy pay link</button>
+<span class="need-copied" data-copied hidden>Copied</span>
+<button class="btn small quiet" type="button" data-done>Done</button>
+</div>
+</li>
+</template>
+
+<template data-t="not_opened">
+<li class="need" data-kind="not_opened">
+<div class="need-text">
+<p class="need-head"><strong>Report not opened</strong> <span data-v="to_name"></span></p>
+<p class="need-bits"><span class="bit" data-v="place"></span><span class="bit" data-v="to_address"></span><span class="bit">Sent <span data-v="date"></span></span></p>
+</div>
+<div class="need-acts">
+<button class="btn small quiet" type="button" data-done>Done</button>
+</div>
+</li>
+</template>
+
+<template data-t="bounced">
+<li class="need" data-kind="bounced">
+<div class="need-text">
+<p class="need-head"><strong>Report email didn't arrive</strong> <span data-v="to_name"></span></p>
+<p class="need-bits"><span class="bit" data-v="to_address"></span><span class="bit" data-v="place"></span><span class="bit">On <span data-v="date"></span></span></p>
+<p class="need-why" data-why="bounced" hidden>The address bounced it back. Check the address and send it again from your phone.</p>
+<p class="need-why" data-why="complained" hidden>They marked it as spam. Reach them another way.</p>
+</div>
+<div class="need-acts">
+<button class="btn small quiet" type="button" data-done>Done</button>
+</div>
+</li>
+</template>
+
+<template data-t="callback">
+<li class="need" data-kind="callback">
+<div class="need-text">
+<p class="need-head"><strong>Call back</strong> <span data-v="caller_name"></span></p>
+<p class="need-bits"><span class="bit" data-v="reason"></span><span class="bit" data-v="property_address"></span><span class="bit">Called <span data-v="date"></span></span></p>
+</div>
+<div class="need-acts">
+<a class="btn small" data-call hidden><span>Call <span data-v="phone"></span></span></a>
+<button class="btn small quiet" type="button" data-done>Done</button>
+</div>
+</li>
+</template>
+
+<footer>
+INSPYX LLC · Miami Gardens, FL<br>
+<a href="mailto:support@inspyx.com">support@inspyx.com</a> · <a href="tel:+18887722919">(888) 772-2919</a>
+<nav><a href="/about">About</a><a href="/support">Support</a><a href="/pricing">Pricing</a><a href="/refunds">Cancellation and refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
+</footer>
+</body>
+</html>

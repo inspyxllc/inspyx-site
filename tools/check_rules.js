@@ -17,13 +17,13 @@ const out = read(cfg);
 ok('Vercel\'s reader accepts vercel.json', !out.error, out.error ? out.error.message : out.routes.length + ' routes');
 const ruled = (out.routes || []).filter((r) => r.headers && r.headers['Content-Security-Policy']);
 const applies = (p) => ruled.some((r) => new RegExp(r.src).test(p));
-const yes = ['/signin', '/account', '/plan'], no = ['/', '/pricing', '/refunds', '/terms', '/privacy', '/signin/x', '/accounts', '/plans', '/plan/x', '/myplan', '/assets/auth.js', '/assets/plan.js'];
-ok('the rule catches the three signed-in addresses', yes.every(applies), yes.filter((p) => !applies(p)).join(' '));
+const yes = ['/signin', '/account', '/plan', '/today'], no = ['/', '/pricing', '/refunds', '/terms', '/privacy', '/signin/x', '/accounts', '/plans', '/plan/x', '/myplan', '/assets/auth.js', '/assets/plan.js', '/today/x', '/todays', '/assets/today.js'];
+ok('the rule catches the signed-in addresses', yes.every(applies), yes.filter((p) => !applies(p)).join(' '));
 ok('the rule catches no other address', !no.some(applies), no.filter(applies).join(' '));
 // Your inspections, live (2026-11-14): its own rule, the signed-in pages' rule plus the live socket to Inspyx's server.
 const wss = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']));
 ok('the inspections page has its rule, with the live socket', applies('/inspections') && wss('/inspections'));
-ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/', '/inspections/x', '/inspection'].some(wss));
+ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/', '/inspections/x', '/inspection'].some(wss));
 ok('the inspections rule catches nothing else', !['/inspection', '/inspections/x', '/myinspections', '/assets/inspections.js'].some(applies));
 // The client's report page (2026-11-14): a new link is /r#<key> (the browser asks for /r alone), an old one
 // /r/<key>. Both must open the report page, under the report page's own rules.
