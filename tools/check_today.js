@@ -8,6 +8,7 @@ const playwright = require('playwright');
 const engine = process.env.BROWSER === 'webkit' ? playwright.webkit : playwright.chromium;
 
 const url = process.env.URL || 'http://localhost:4173/';
+const TIMEOUT = /localhost/.test(url) ? 8000 : 20000;   // the live site over the internet takes longer to load
 const HOME = new URL(url).origin;
 const SERVER = 'https://btxlrfvqifnrnxffohsz.supabase.co';
 const NEEDS = SERVER + '/functions/v1/needs';
@@ -54,7 +55,7 @@ async function open(browser, o) {
   const store = o.store === undefined ? kept(HOUR) : o.store;
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); if (v === null) localStorage.removeItem('inspyx.signin'); else localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, store);
   const page = await ctx.newPage();
-  page.setDefaultTimeout(8000);
+  page.setDefaultTimeout(TIMEOUT);
   const s = o.server, errs = [], away = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
@@ -74,7 +75,7 @@ async function open(browser, o) {
 }
 
 const vis = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.closest('[hidden]') && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel);
-const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;) { if (await fn()) return true; if (Date.now() > end) return false; await new Promise((r) => setTimeout(r, 50)); } };
+const until = async (fn, ms) => { const end = Date.now() + (ms || TIMEOUT / 2); for (;;) { if (await fn()) return true; if (Date.now() > end) return false; await new Promise((r) => setTimeout(r, 50)); } };
 /* Each job as read: its first line, its visible parts with the dot the page draws between them, what to do, and its
    buttons. (The dot is drawn by CSS, so it is not in the text: dots() checks it is drawn.) */
 const rows = (page) => page.evaluate(() => {
