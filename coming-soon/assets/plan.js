@@ -16,10 +16,10 @@
   var auth = window.InspyxAuth;
   if (!main || !auth) return;
   var DEADLINE = 20000;          // as in the app: an ask that takes longer counts as no answer
-  // "Get my money back" is OFF until it is turned on here (Inspyx 1, 2026-11-15), as the app's
-  // INSPYX_PLAN_MONEY_BACK is: whatever the server says, no button, sheet or line about it shows. The free days
-  // (items 1 to 3) follow the server either way.
-  var MONEY_BACK_ON = false;
+  // "Get my money back": ON since Moises approved its last sentence ("Couldn't finish your refund. Try again in a
+  // minute.", 2026-11-16); it was off from 2026-11-15 until then. Off, whatever the server says, no button, sheet or
+  // line about it shows, as with the app's INSPYX_PLAN_MONEY_BACK. The free days (items 1 to 3) follow the server either way.
+  var MONEY_BACK_ON = true;
   var SETTLE = 2000, MORE = 3;   // after a checkout Stripe's notice can take a moment: three more looks, two seconds apart
   var STRIPE = ['checkout.stripe.com', 'billing.stripe.com'];   // the only places this page ever sends anyone
 
