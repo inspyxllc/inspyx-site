@@ -427,6 +427,10 @@ python3 -I tools/undo_checks.py . --part=0/2          # half the list; the scrip
 python3 -I tools/undo_checks.py . --first=14          # only the first 14 breaks (the newest part of the page stands first in the list)
 ```
 `tools/make-images.js` writes `assets/share.png`; save it as `assets/share.jpg` (JPEG, quality 88).
+The logo is the ribbon S (Moises's pick, 2026-11-16): the house without its door, a ribbon S inside.
+At tab size and in the top bar it is drawn simply (one solid S stroke, no glow). On 2026-11-16 only
+the mark's patch of `share.jpg` was replaced: Moises's Mac sets the headline in SF Pro, which wraps it
+"…staff in / your pocket." instead of the original "…staff / in your pocket.".
 The tools need Playwright 1.59 (`npm i playwright@1.59.1` in a folder of its own, then
 `NODE_PATH=<that folder>/node_modules`).
 
