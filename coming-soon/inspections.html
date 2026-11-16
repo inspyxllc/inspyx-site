@@ -35,6 +35,8 @@
 <p data-list="loading">Loading your inspections…</p>
 <p data-list="empty" hidden>No inspections here yet. They show up here once your phone has synced.</p>
 <p data-list="failed" hidden>Couldn't load your inspections. Check your connection and try again.</p>
+<label class="insp-find" data-findbox hidden>Find <input type="search" data-find autocomplete="off" spellcheck="false" placeholder="Title or address"></label>
+<p data-list="nomatch" hidden>No inspection matches that.</p>
 <ul data-list="items"></ul>
 </aside>
 
@@ -42,8 +44,15 @@
 <p data-pick>Pick an inspection to see it here.</p>
 <div data-detail hidden>
 <div class="insp-cover">
-<label>Title <input type="text" data-field="title" autocomplete="off"></label>
-<label>Address <input type="text" data-field="address" autocomplete="off"></label>
+<label>Title <input type="text" data-field="title" data-required autocomplete="off"></label>
+<label>Address <input type="text" data-field="address" data-required autocomplete="off"></label>
+<label>City <input type="text" data-field="city" autocomplete="off"></label>
+<div class="insp-pair">
+<label>State <input type="text" data-field="state" autocomplete="off"></label>
+<label>ZIP <input type="text" data-field="zip_code" autocomplete="off" inputmode="numeric"></label>
+</div>
+<label>Booked for <input type="datetime-local" data-field="scheduled_at" data-kind="time"></label>
+<p class="insp-started" data-started hidden>Started <time data-v="started"></time>. Your phone sets when an inspection starts.</p>
 </div>
 <p class="insp-save" role="status">
 <span data-save="saved" hidden>Saved.</span>
@@ -55,11 +64,11 @@
 </section>
 </main>
 
-<template data-t="row"><li><a href="#"><strong data-v="title"></strong><span data-v="address"></span></a></li></template>
+<template data-t="row"><li><a href="#"><strong data-v="title"></strong><span data-v="address"></span><time data-v="day"></time></a></li></template>
 
 <template data-t="stop">
 <section class="insp-stop">
-<h2 data-v="name"></h2>
+<h2><input class="insp-name" type="text" data-field="name" data-required aria-label="Stop name" autocomplete="off"></h2>
 <ol class="insp-items"></ol>
 </section>
 </template>
@@ -67,7 +76,7 @@
 <template data-t="item">
 <li class="insp-item">
 <div class="insp-item-head">
-<span class="insp-label" data-v="label"></span>
+<input class="insp-label" type="text" data-field="label" data-required aria-label="Item name" autocomplete="off">
 <label class="insp-status">Status
 <select data-field="status">
 <option value="untouched">Not started</option>
@@ -79,6 +88,7 @@
 </label>
 </div>
 <label>Note <textarea rows="2" data-field="note"></textarea></label>
+<label data-ni hidden>Why it wasn't inspected <textarea rows="2" data-field="ni_note"></textarea></label>
 <ol class="insp-findings"></ol>
 </li>
 </template>
@@ -95,8 +105,10 @@
 <option value="NT">Information</option>
 </select>
 </label>
+<label>Location <input type="text" data-field="location" autocomplete="off"></label>
 <label>What it means <textarea rows="2" data-field="finding_implication"></textarea></label>
 <label>What to do <textarea rows="2" data-field="finding_recommendation"></textarea></label>
+<label>Who should fix it <input type="text" data-field="finding_recommended_trade" autocomplete="off"></label>
 <p class="insp-photos" data-photos hidden><span data-v="photos"></span> photos on your phone</p>
 </li>
 </template>

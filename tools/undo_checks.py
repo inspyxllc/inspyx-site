@@ -7,7 +7,7 @@ makes the change, runs tools/check_home.js, counts the change as caught if a che
 usage: python3 -I tools/undo_checks.py <site repo> [--pages | --signin | --plan] [--part=i/n] [--first=N] [words]
   The page must be served at $URL, or at http://localhost:4173/ (node tools/serve.js).
   --pages tries the changes to the pricing and policy pages instead, against tools/check_pages.js.
-  --signin tries the changes to signing in (/signin and /account) instead, against tools/check_signin.js.
+  --signin tries the changes to signing in (/signin, /account, and landing on /today) instead, against tools/check_signin.js.
   --plan tries the changes to "Your plan" (/plan) instead, against tools/check_plan.js.
   With words given, only the changes whose name holds them are tried.
   --first=N tries only the first N changes of the list (the newest part of the page stands first).
@@ -34,6 +34,22 @@ PRICING = 'coming-soon/pricing.html'
 TERMS = 'coming-soon/terms.html'
 
 MUTATIONS = [
+    # ---- Sign in in the header, phones too, and in the footer (2026-11-15, Moises: "Unhide the web dash")
+    ('Sign in is hidden on phones', HTML, '.bar-link.bar-in{display:flex}\n', ''),
+    ('the logo keeps its name on the smallest phones, and the header runs over', HTML,
+     '  .bar .logo span{display:none}\n}', '}'),
+    ("the logo's link is too small to tap once its name goes", HTML,
+     '  .bar a.logo{min-width:44px; justify-content:center}\n', ''),
+    ("the header's spaces stay wide on a phone", HTML,
+     '  .bar{gap:8px}\n  .bar-r{gap:2px}\n  .bar-in{padding:0 10px}\n  .bar .btn-sm{padding:0 14px}\n', ''),
+    ("the header's Sign in is too small to tap", HTML,
+     '  .bar-in{padding:0 10px}\n', '  .bar-in{padding:0 10px; height:36px}\n'),
+    ('the header offers Sign up instead of Sign in', HTML,
+     '<a class="bar-link bar-in" href="/signin">Sign in</a>', '<a class="bar-link bar-in" href="/signup">Sign up</a>'),
+    ('the footer has no Sign in', HTML,
+     '<a href="/support">Support</a><a href="/signin">Sign in</a></nav>', '<a href="/support">Support</a></nav>'),
+    ("the footer of Stripe's return messages has no Sign in", HTML,
+     '<a href="/privacy">Privacy</a><a href="/signin">Sign in</a></nav>', '<a href="/privacy">Privacy</a></nav>'),
     # ---- opened at its waitlist, from the pricing page's button (2026-11-12)
     ('arriving at the waitlist runs the whole film past first', HTML,
      'html[data-arrive]{scroll-behavior:auto}\n',
@@ -243,7 +259,15 @@ PJS = 'coming-soon/assets/page.js'
 REFUNDS = 'coming-soon/refunds.html'
 PRIVACY = 'coming-soon/privacy.html'
 LOST = 'coming-soon/404.html'
+ABOUT = 'coming-soon/about.html'
 PAGE_MUTATIONS = [
+    # -- Sign in in the footer (2026-11-15)
+    ("the about page's footer has no Sign in", ABOUT,
+     '<a href="/privacy">Privacy</a><a href="/signin">Sign in</a></nav>', '<a href="/privacy">Privacy</a></nav>'),
+    ('the page a wrong address gets offers Sign up in its footer', LOST,
+     '<a href="/signin">Sign in</a></nav>', '<a href="/signup">Sign up</a></nav>'),
+    ("the pricing page's Sign in goes to a page that is not there", PRICING,
+     '<a href="/signin">Sign in</a></nav>', '<a href="/sign-in">Sign in</a></nav>'),
     ('the pricing button no longer goes to the waitlist', PRICING,
      '<a class="btn" href="/#waitlist">Join the waitlist</a>',
      '<a class="btn" href="/">Join the waitlist</a>'),
@@ -336,7 +360,17 @@ SIGNIN = 'coming-soon/signin.html'
 ACCOUNT = 'coming-soon/account.html'
 RULES = 'coming-soon/vercel.json'
 SITEMAP = 'coming-soon/sitemap.xml'
+TODAY = 'coming-soon/today.html'
 SIGNIN_MUTATIONS = [
+    # -- a sign-in lands on the dashboard, /today, one tap from the account page (2026-11-15)
+    ('a sign-in by the form lands on the account page again', SJS,
+     "window.location.assign('/today');", "window.location.assign('/account');"),
+    ("Google's return lands on the account page again", SJS,
+     "if (s) window.location.replace('/today');", "if (s) window.location.replace('/account');"),
+    ('the sign-in page sends somebody signed in to the account page again', AUTH,
+     "if (want === 'out' && stored()) root.location.replace('/today');", "if (want === 'out' && stored()) root.location.replace('/account');"),
+    ('the dashboard loses its link to the account page', TODAY,
+     '<a href="/account">Account</a></p>', '</p>'),
     # -- signing out
     ('signing out on the website signs the phone out too', AUTH,
      "return send('POST', BASE + '/logout?scope=local', s.access)",
@@ -405,7 +439,7 @@ SIGNIN_MUTATIONS = [
      "    if (want === 'in' && !stored()) root.location.replace('/signin');\n",
      ""),
     ('the gate keeps a signed-in browser on the sign-in page', AUTH,
-     "    if (want === 'out' && stored()) root.location.replace('/account');\n",
+     "    if (want === 'out' && stored()) root.location.replace('/today');\n",
      ""),
     ('another tab does not hear of a sign-out or a sign-in', AUTH,
      "  root.addEventListener('storage', function (e) { if (e.key === STORE || e.key === null) gate(); });\n",
@@ -433,7 +467,7 @@ SIGNIN_MUTATIONS = [
      "say(kind === 'rejected' || kind === 'network' || kind === 'malformed' || kind === 'server' ? kind : 'other');",
      "say(kind);"),
     ('after signing in the browser goes somewhere else', SJS,
-     "window.location.assign('/account');",
+     "window.location.assign('/today');",
      "window.location.assign('/');"),
     ('the form is sent without the browser checking it', SJS,
      "  form.addEventListener('submit', function (e) {\n    e.preventDefault();\n    if (busy) return;\n    if (form.reportValidity && !form.reportValidity()) return;",
@@ -564,9 +598,11 @@ SIGNIN_MUTATIONS = [
      '"value": "no-store"',
      '"value": "public, max-age=3600"'),
     # -- the rest of the site
-    ('the home page links to the sign-in page', HTML,
-     '<nav><a href="/pricing">Pricing</a>',
-     '<nav><a href="/signin">Sign in</a><a href="/pricing">Pricing</a>'),
+    ('the home page links to signing up', HTML,
+     '<nav class="foot-main" aria-label="Inspyx"><a href="/pricing">Pricing</a>',
+     '<nav class="foot-main" aria-label="Inspyx"><a href="/signup">Sign up</a><a href="/pricing">Pricing</a>'),
+    ("the support page has no Sign in", 'coming-soon/support.html',
+     '<a href="/privacy">Privacy</a><a href="/signin">Sign in</a></nav>', '<a href="/privacy">Privacy</a></nav>'),
     ('search engines are told of the sign-in page', SITEMAP,
      '</urlset>',
      '  <url><loc>https://inspyx.com/signin</loc></url>\n</urlset>'),

@@ -6,6 +6,14 @@
    it sends each edit as one field with the time it was made; and it pulls again whenever the server pings "something
    changed" (InspyxAuth.listen), when the tab comes back into view, and once a minute as a fallback.
    An edit typed here is never overwritten while its box is being typed in: the newest value lands when the box is left.
+   Desk finishing (2026-11-16): the cover's city, state, ZIP and booked time (a reschedule), each finding's location and
+   who should fix it, and why an item wasn't inspected: every field the phone applies from elsewhere
+   (inspection_sync_apply.dart). A booked time travels as the phone keeps it, UTC milliseconds; the box shows it in this
+   browser's time zone, to the minute. The start is the phone's alone (write-once there): shown, never sent.
+   Renames and Find (2026-11-16): a stop's and an item's names are boxes (the phone applies both from elsewhere); a
+   box marked data-required (title, address, a name) is never sent empty. The list is in the phone's day order (its
+   start, else its booked time, else when it was made; newest first), each with its day, and Find keeps the ones whose
+   title, address or city has what is typed.
    This file says no words. The page holds every sentence. */
 (function () {
   'use strict';
@@ -115,27 +123,48 @@
     return function (a, b) { return (val(entity, a, 'position') || 0) - (val(entity, b, 'position') || 0) || (a < b ? -1 : 1); };
   };
   var text = function (v) { return typeof v === 'string' ? v : ''; };
+  var two = function (n) { return (n < 10 ? '0' : '') + n; };
+  /* A time box's value ("YYYY-MM-DDTHH:MM", this browser's time) from UTC milliseconds, and back (NaN if malformed). */
+  function toBox(ms) { var d = new Date(ms); return d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + 'T' + two(d.getHours()) + ':' + two(d.getMinutes()); }
+  function fromBox(v) { var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v); return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : NaN; }
+  // The date and the time apart: engines join the two differently (Safari writes " at "), so the page joins them itself.
+  var DAY = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  var CLOCK = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
 
   function chosen() { var h = window.location.hash.slice(1); return /^[A-Za-z0-9_.:-]{1,64}$/.test(h) ? h : null; }
+
+  /* An inspection's day, by the phone's own rule (HomeInspection.day); timed: false when only its making is known. */
+  function dayOf(id) {
+    var n = function (f) { var v = val('inspection', id, f); return typeof v === 'number' && isFinite(v) ? v : null; };
+    var started = n('inspection_at'), booked = n('scheduled_at'), made = n('created_at');
+    var at = started !== null ? started : booked !== null ? booked : made;
+    return at === null ? null : { at: at, timed: started !== null || booked !== null };
+  }
 
   function renderList() {
     var list = $('[data-list="items"]');
     var ids = parts('inspection').filter(function (id) { return typeof val('inspection', id, 'title') === 'string'; });
-    ids.sort(function (a, b) {
-      var ta = val('inspection', a, 'scheduled_at') || val('inspection', a, 'created_at') || 0;
-      var tb = val('inspection', b, 'scheduled_at') || val('inspection', b, 'created_at') || 0;
-      return tb - ta;
+    ids.sort(function (a, b) { var da = dayOf(a), db = dayOf(b); return (db ? db.at : 0) - (da ? da.at : 0) || (a < b ? -1 : 1); });
+    var q = $('[data-find]').value.toLowerCase().replace(/\s+/g, ' ').trim();
+    var them = !q ? ids : ids.filter(function (id) {
+      return ['title', 'address', 'city'].some(function (f) { return text(val('inspection', id, f)).toLowerCase().replace(/\s+/g, ' ').indexOf(q) >= 0; });
     });
-    show('data-list', ids.length ? 'items' : 'empty');
-    list.hidden = ids.length === 0;
+    show('data-list', ids.length === 0 ? 'empty' : them.length === 0 ? 'nomatch' : 'items');
+    $('[data-findbox]').hidden = ids.length === 0;
+    list.hidden = them.length === 0;
     list.textContent = '';
-    ids.forEach(function (id) {
+    them.forEach(function (id) {
       var row = tpl('row');
-      var a = row.querySelector('a');
+      var a = row.querySelector('a'), day = row.querySelector('[data-v="day"]'), d = dayOf(id);
       a.href = '#' + id;
       if (id === chosen()) a.setAttribute('aria-current', 'page');
       row.querySelector('[data-v="title"]').textContent = text(val('inspection', id, 'title'));
       row.querySelector('[data-v="address"]').textContent = text(val('inspection', id, 'address'));
+      day.hidden = !d;
+      if (d) {
+        day.textContent = DAY.format(new Date(d.at)) + (d.timed ? ', ' + CLOCK.format(new Date(d.at)) : '');
+        day.setAttribute('datetime', new Date(d.at).toISOString());
+      }
       list.appendChild(row);
     });
   }
@@ -153,8 +182,10 @@
     var stops = parts('section', function (s) { return owner['section/' + s] === id; }).sort(byPosition('section'));
     var itemsOf = function (s) { return parts('item', function (i) { return val('item', i, 'section_id') === s && !val('item', i, 'parent_item_id'); }).sort(byPosition('item')); };
     var findingsOf = function (i) { return parts('item', function (f) { return val('item', f, 'parent_item_id') === i; }).sort(byPosition('item')); };
+    // Structure only (ids, order, nesting): a name is a box like any other, filled below, so a rename never
+    // rebuilds the page under someone typing.
     var next = JSON.stringify([id, stops.map(function (s) {
-      return [s, text(val('section', s, 'name')), itemsOf(s).map(function (i) { return [i, text(val('item', i, 'label')), findingsOf(i)]; })];
+      return [s, itemsOf(s).map(function (i) { return [i, findingsOf(i)]; })];
     })]);
     if (next !== shape) {
       var focus = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-key');
@@ -163,11 +194,10 @@
       box.textContent = '';
       stops.forEach(function (s) {
         var stop = tpl('stop');
-        stop.querySelector('[data-v="name"]').textContent = text(val('section', s, 'name'));
+        bind(stop.querySelector('h2'), 'section', s, id);   // its name box only: the items below are bound as items
         var ol = stop.querySelector('.insp-items');
         itemsOf(s).forEach(function (i) {
           var item = tpl('item');
-          item.querySelector('[data-v="label"]').textContent = text(val('item', i, 'label'));
           bind(item, 'item', i, id);
           var fol = item.querySelector('.insp-findings');
           findingsOf(i).forEach(function (f) {
@@ -190,8 +220,18 @@
       var k = el.getAttribute('data-key');
       if (dirty[k]) return;
       var f = fields[k], v = f ? f.value : null;
-      var want = v === null || v === undefined ? '' : String(v);
+      var want = el.getAttribute('data-kind') === 'time' ? (typeof v === 'number' && isFinite(v) ? toBox(v) : '') : v === null || v === undefined ? '' : String(v);
       if (el.value !== want) el.value = want;
+    });
+    var started = val('inspection', id, 'inspection_at'), line = $('[data-started]');
+    line.hidden = !(typeof started === 'number' && isFinite(started));
+    if (!line.hidden) { var t = line.querySelector('[data-v="started"]'); t.textContent = DAY.format(new Date(started)) + ', ' + CLOCK.format(new Date(started)); t.setAttribute('datetime', new Date(started).toISOString()); }
+    // Why an item wasn't inspected: shown for an item marked so, or one that already has its words.
+    all('[data-ni]').forEach(function (label) {
+      var box = label.querySelector('[data-key]');
+      if (!box) return;
+      var k = box.getAttribute('data-key'), status = fields[k.replace(/\.ni_note$/, '.status')];
+      label.hidden = !((status && status.value === 'not_inspected') || text(fields[k] && fields[k].value) !== '' || dirty[k]);
     });
   }
 
@@ -207,10 +247,16 @@
         clearTimeout(timers[k]);
         var v = box.value;
         var value = box.tagName === 'SELECT' && v === '' ? null : v;
-        if (box.tagName !== 'SELECT' && v === '' && field !== 'title' && field !== 'address') value = null;
+        if (box.tagName !== 'SELECT' && v === '' && !box.hasAttribute('data-required')) value = null;
         var held = fields[k] ? fields[k].value : null;
+        if (box.getAttribute('data-kind') === 'time') {
+          value = v === '' ? null : fromBox(v);
+          if (value !== null && !isFinite(value)) return;   // half typed: wait for a whole time
+          // The box shows minutes; a held time may carry seconds. The same minute is no change.
+          if (value !== null && typeof held === 'number' && Math.floor(value / 60000) === Math.floor(held / 60000)) return;
+        }
         if ((held === undefined ? null : held) === value) return;
-        if ((field === 'title' || field === 'address') && !value) return;   // the phone's inspection always has both
+        if (box.hasAttribute('data-required') && !value) return;   // a title, address or name: the phone's always has one
         edit(inspection, entity, id, field, value);
       };
       if (box.tagName === 'SELECT') {
@@ -228,6 +274,8 @@
   function showLive(which) { show('data-live', which); }
 
   window.addEventListener('hashchange', function () { shape = null; render(); });
+  var finding = null;
+  $('[data-find]').addEventListener('input', function () { clearTimeout(finding); finding = setTimeout(renderList, 120); });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') sync(); });
   setInterval(function () { if (document.visibilityState === 'visible') sync(); }, FALLBACK);
 

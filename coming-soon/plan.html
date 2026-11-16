@@ -33,10 +33,12 @@
 <div class="back" role="status">
 <p data-back="done" hidden>You're all set.</p>
 <p data-back="canceled" hidden>No charge was made.</p>
+<p data-back="refunded" hidden>Refunded <span data-fill="amount"></span>. It reaches your card in 5 to 10 days.</p>
 </div>
 <div class="stands" role="status" tabindex="-1">
 <p data-stands="checking">Checking your plan…</p>
-<p data-stands="offer-free" data-level="founder" hidden>30 days free, then $54.95 a month or $593 a year. Your card is saved when you start and first charged when the free month ends. Cancel before then and you pay nothing.</p>
+<p data-stands="waits" data-level="founder" hidden>Your 30 free days start when your app invite is sent. You'll set up your plan then.</p>
+<p data-stands="offer-free" data-level="founder" hidden><span data-fill="days"></span> days free, then $54.95 a month or $593 a year. Your card is saved when you start and first charged when your free days end. Cancel before then and you pay nothing.</p>
 <p data-stands="offer" data-level="founder" hidden>$54.95 a month or $593 a year, first charged when you start.</p>
 <p data-stands="offer" data-level="early" hidden>$64.95 a month or $701 a year, first charged when you start.</p>
 <p data-stands="offer" data-level="regular" hidden>$79.95 a month or $863 a year, first charged when you start.</p>
@@ -54,17 +56,34 @@
 <p data-stands="not-set-up" hidden>Billing isn't set up yet.</p>
 <p data-stands="failed" hidden>Couldn't check your plan. Check your connection and try again.</p>
 </div>
+<div class="under">
+<p data-under="free-until" hidden>Free until <span data-fill="date"></span>.</p>
+<p data-under="money-over" hidden>Money back is for 30 days after a payment, once.</p>
+<p data-under="money-used" hidden>You've already had your money back once.</p>
+</div>
 <div class="say" role="alert">
 <p data-say="page" hidden>Couldn't open the page. Try again.</p>
 <p data-say="not-set-up" hidden>Billing isn't set up yet.</p>
+<p data-say="refund" hidden>Couldn't finish your refund. Try again in a minute.</p>
 </div>
 <div class="acts">
 <button class="btn" type="button" data-do="start" hidden>Start your plan</button>
 <button class="btn" type="button" data-do="manage" hidden>Manage billing</button>
 <button class="btn" type="button" data-do="card" hidden>Update card</button>
 <button class="btn" type="button" data-do="again" hidden>Try again</button>
+<button class="btn quiet" type="button" data-money hidden>Get my money back</button>
 </div>
 </section>
+<dialog class="sheet" data-sheet aria-labelledby="money-ask">
+<div id="money-ask">
+<p data-ask="card" hidden>Refund <span data-fill="amount"></span> to your card ending <span data-fill="last4"></span>? Your plan ends today, and you can do this once.</p>
+<p data-ask="card-unknown" hidden>Refund <span data-fill="amount"></span> to your card? Your plan ends today, and you can do this once.</p>
+</div>
+<div class="sheet-acts">
+<button class="btn" type="button" data-sheet-do="refund">Refund me</button>
+<button class="btn quiet" type="button" data-sheet-do="keep">Keep my plan</button>
+</div>
+</dialog>
 <p class="who">Signed in as <strong data-email></strong></p>
 <p class="more"><a href="/account">Account</a></p>
 </div>

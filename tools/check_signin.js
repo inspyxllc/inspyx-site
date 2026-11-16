@@ -1,4 +1,5 @@
-// Self-checks for signing in on the website: /signin and /account.
+// Self-checks for signing in on the website: /signin, and /account. A sign-in lands on the dashboard, /today
+// (2026-11-15, Moises: "Unhide the web dash"); the account page is one tap from it.
 // NO REAL SIGN-IN IS EVER MADE HERE. Every call the pages make to the account server is caught and answered by
 // this test, with a made-up address and a made-up password that exist nowhere; any other request that tries to
 // leave the site is stopped and counted as a failure.
@@ -62,6 +63,8 @@ async function open(browser, where, opts) {
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request();
+    // The dashboard a sign-in lands on asks Inspyx's server one thing, what needs you: nothing, here.
+    if (req.url() === SERVER + '/functions/v1/needs') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ needs: [], as_of: new Date().toISOString() }) });
     if (!req.url().startsWith(SERVER + '/auth/v1/')) { away.push(req.url()); return route.abort(); }
     const call = { method: req.method(), path: req.url().slice(SERVER.length), headers: req.headers(), body: req.postData() };
     calls.push(call);
@@ -81,6 +84,8 @@ async function open(browser, where, opts) {
   return { ctx, page, errs, away, calls, res };
 }
 const at = (page) => page.evaluate(() => location.pathname);
+// Who the dashboard says is signed in.
+const whoOnToday = (page) => page.evaluate(() => { const e = document.querySelector('.today-who'); return e && e.getClientRects().length ? e.textContent.replace(/\s+/g, ' ').trim() : null; });
 const stored = (page) => page.evaluate((k) => localStorage.getItem(k), STORE);
 const shown = (page) => page.evaluate(() => [...document.querySelectorAll('[data-say]')].filter((p) => !p.hidden && p.getClientRects().length).map((p) => p.getAttribute('data-say')));
 async function fill(page, pass) { await page.fill('#signin-email', WHO); await page.fill('#signin-password', pass === undefined ? PASS : pass); }
@@ -155,7 +160,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     } });
     pageRef = page;
     await page.evaluate(() => document.querySelector('[data-google]').click());
-    await page.waitForURL('**/account');
+    await page.waitForURL('**/today');
     await page.waitForTimeout(300);
     const hand = calls.find((c) => c.path.startsWith('/auth/v1/authorize')) || { path: '' };
     const q = new URL(SERVER + hand.path).searchParams;
@@ -167,7 +172,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     ok('Google, a good sign-in: the secret this tab made stays in this tab, is long and random, and is what the challenge was made from', typeof secretAtHandOff === 'string' && secretAtHandOff.length >= 43 && sha(secretAtHandOff) === challenge && !hand.path.includes(secretAtHandOff), String(secretAtHandOff).length + ' long');
     ok('Google, a good sign-in: by the time it is exchanged the code is gone from the address, and neither button takes a tap', !!midExchange && midExchange.search === '' && midExchange.hash === '' && midExchange.path === '/signin' && midExchange.g && midExchange.b && midExchange.sign === 'Signing in…', JSON.stringify(midExchange));
     const s = JSON.parse(await stored(page) || '{}');
-    ok('Google, a good sign-in: it ends on the account page, signed in, with the secret forgotten and nothing asked of any other site', (await at(page)) === '/account' && s.access === 'test-access-7' && s.email === WHO && (await secretOf(page)) === null && away.length === 0 && errs.length === 0, away.concat(errs).join(' | '));
+    ok('Google, a good sign-in: it ends on the dashboard, signed in, with the secret forgotten and nothing asked of any other site', (await at(page)) === '/today' && (await whoOnToday(page)) === 'Signed in as ' + WHO && s.access === 'test-access-7' && s.email === WHO && (await secretOf(page)) === null && away.length === 0 && errs.length === 0, away.concat(errs).join(' | '));
     await page.goBack().catch(() => {});
     await page.waitForTimeout(400);
     const back = await page.evaluate(() => location.pathname + location.search);
@@ -251,15 +256,20 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     await page.waitForTimeout(250);
     const mid = await page.evaluate(() => { const b = document.querySelector('[data-signin] button'); return { text: b.textContent, off: b.disabled, busy: document.querySelector('[data-signin]').getAttribute('aria-busy') }; });
     await page.evaluate(() => document.querySelector('[data-signin]').requestSubmit());   // a second sending, forced past the dead button
-    await page.waitForURL('**/account');
+    await page.waitForURL('**/today');
     await page.waitForTimeout(300);
     const c = calls[0] || { headers: {} };
     const body = (() => { try { return JSON.parse(c.body); } catch (e) { return {}; } })();
     ok('a good sign-in: while it is on its way the button says "Signing in…", cannot be pressed, and the form cannot be sent twice', mid.text === 'Signing in…' && mid.off && mid.busy === 'true' && calls.filter((x) => x.path.startsWith('/auth/v1/token')).length === 1, JSON.stringify(mid) + ' calls: ' + calls.length);
     ok('a good sign-in: one call, the way the app makes it; the address and password go in its body, never in an address', c.method === 'POST' && c.path === '/auth/v1/token?grant_type=password' && !!c.headers.apikey && !c.headers.authorization && body.email === WHO && body.password === PASS && Object.keys(body).length === 2, JSON.stringify({ method: c.method, path: c.path, key: !!c.headers.apikey }));
-    const s = await stored(page), who = await page.evaluate(() => { const m = document.querySelector('[data-account]'); return { hidden: m.hidden, text: m.querySelector('.who').textContent.replace(/\s+/g, ' ').trim() }; });
-    ok('a good sign-in: lands on the account page, which names who is signed in', (await at(page)) === '/account' && !who.hidden && who.text === 'Signed in as ' + WHO && errs.length === 0 && away.length === 0, JSON.stringify(who) + ' ' + errs.join(' | '));
+    const s = await stored(page), who = await whoOnToday(page);
+    ok('a good sign-in: lands on the dashboard, which names who is signed in', (await at(page)) === '/today' && who === 'Signed in as ' + WHO && errs.length === 0 && away.length === 0, JSON.stringify(who) + ' ' + errs.join(' | '));
     ok('a good sign-in: the browser keeps the sign-in and never the password', !!s && JSON.parse(s).access === 'test-access-1' && JSON.parse(s).email === WHO && !s.includes(PASS) && !(await page.evaluate((p) => JSON.stringify(Object.assign({}, localStorage, sessionStorage)) + document.cookie + location.href, PASS)).includes(PASS), 'kept: ' + (s ? s.length + ' characters' : 'nothing'));
+    // The account page, one tap from the dashboard.
+    await page.click('.today-links a[href="/account"]');
+    await page.waitForURL('**/account');
+    const acct = await page.evaluate(() => { const m = document.querySelector('[data-account]'); return { hidden: m.hidden, text: m.querySelector('.who').textContent.replace(/\s+/g, ' ').trim() }; });
+    ok('a good sign-in: the account page is one tap from the dashboard, and names who is signed in', (await at(page)) === '/account' && !acct.hidden && acct.text === 'Signed in as ' + WHO && errs.length === 0 && away.length === 0, JSON.stringify(acct) + ' ' + errs.join(' | '));
     const words = await page.evaluate(read);
     ok('the account page: its words are the drafted ones', JSON.stringify(words) === JSON.stringify(ACCOUNT_WORDS), JSON.stringify(words));
     const a = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, robots: (document.querySelector('meta[name=robots]') || {}).content, btn: Math.round(document.querySelector('[data-signout]').getBoundingClientRect().height), inline: document.querySelectorAll('[style], style, script:not([src])').length, title: document.title }));
@@ -317,8 +327,8 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     await page.fill('#signin-password', PASS); await page.click('[data-signin] button'); await page.waitForTimeout(500);
     const second = await shown(page);
     ok('a second refusal, of another kind, takes the place of the first message: one message at a time', JSON.stringify(first) === '["rejected"]' && JSON.stringify(second) === '["network"]', JSON.stringify([first, second]));
-    await page.focus('#signin-password'); await page.keyboard.press('Enter'); await page.waitForURL('**/account');
-    ok('trying again after a refusal works, by the Enter key', (await at(page)) === '/account' && JSON.parse(await stored(page)).access === 'test-access-2' && n === 3, 'calls: ' + n);
+    await page.focus('#signin-password'); await page.keyboard.press('Enter'); await page.waitForURL('**/today');
+    ok('trying again after a refusal works, by the Enter key', (await at(page)) === '/today' && JSON.parse(await stored(page)).access === 'test-access-2' && n === 3, 'calls: ' + n);
     await ctx.close();
   });
   await group('an empty form', async () => {
@@ -335,7 +345,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     ok('the account page with nobody signed in sends the browser to the sign-in page, and calls nobody', (await at(a.page)) === '/signin' && a.calls.length === 0, await at(a.page));
     await a.ctx.close();
     const b = await open(browser, 'signin', { store: kept(3, 3600000) });
-    ok('the sign-in page with somebody signed in sends the browser to the account page', (await at(b.page)) === '/account' && b.calls.length === 0 && (await b.page.evaluate(() => document.querySelector('.who').textContent.replace(/\s+/g, ' ').trim())) === 'Signed in as ' + WHO, await at(b.page));
+    ok('the sign-in page with somebody signed in sends the browser to the dashboard', (await at(b.page)) === '/today' && b.calls.length === 0 && (await whoOnToday(b.page)) === 'Signed in as ' + WHO, await at(b.page));
     await b.ctx.close();
     const c = await open(browser, 'account', { store: '{"access":"x"}' });
     ok('something in the browser that is not a whole sign-in counts as nobody signed in', (await at(c.page)) === '/signin', await at(c.page));
@@ -366,8 +376,8 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     await one.ctx.close();
     const x = await open(browser, 'signin', { store: null });
     const y = await open(browser, 'signin', { ctx: x.ctx });
-    await fill(y.page); await y.page.click('[data-signin] button'); await y.page.waitForURL('**/account'); await x.page.waitForURL('**/account', { timeout: 5000 });
-    ok('signed in in one tab, the sign-in page in the other tab follows', (await at(x.page)) === '/account' && (await at(y.page)) === '/account');
+    await fill(y.page); await y.page.click('[data-signin] button'); await y.page.waitForURL('**/today'); await x.page.waitForURL('**/today', { timeout: 5000 });
+    ok('signed in in one tab, the sign-in page in the other tab follows, to the dashboard', (await at(x.page)) === '/today' && (await at(y.page)) === '/today');
     await x.ctx.close();
     const p = await open(browser, 'account', { store: kept(15, 3600000) });
     const q = await open(browser, 'account', { ctx: p.ctx });
@@ -425,7 +435,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const mid = await button();
     await b.page.evaluate(back);
     const rest = await button();
-    await b.page.waitForURL('**/account');
+    await b.page.waitForURL('**/today');
     ok('a sign-in page brought back by the Back button has its button at rest again, not stuck on "Signing in…"', mid === 'Signing in… (off)' && rest === 'Sign in', JSON.stringify([mid, rest]));
     await b.ctx.close();
   });
@@ -472,9 +482,13 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => ['/signin', '/account'].every((p) => new RegExp('^' + r.source + '$').test(p)));
     const says = (k) => (rule.length === 1 ? (rule[0].headers.find((x) => x.key === k) || {}).value : undefined);
     ok('one server rule covers both pages; it also tells browsers to keep neither page and to guess no file types', rule.length === 1 && says('Cache-Control') === 'no-store' && says('X-Content-Type-Options') === 'nosniff' && says('Content-Security-Policy') === signinRule && !!signinRule, 'rules that cover both: ' + rule.length);
-    const pages = ['index.html', 'pricing.html', 'refunds.html', 'terms.html', 'privacy.html', 'about.html', 'support.html', '404.html'];
-    const linked = pages.filter((f) => /href="\/(signin|account)"/.test(text(f)));
-    ok('nothing on the site links to the sign-in page yet, and the list of pages for search engines leaves it out', linked.length === 0 && !/signin|account/.test(text('sitemap.xml')), linked.join(','));
+    // Since 2026-11-15 (Moises: "Unhide the web dash") every public page links to the sign-in page. Signing up is
+    // still not linked from any of them (his rule: the waitlist stays until the app can be downloaded), nor is any
+    // page for the signed-in, and none of these pages is in the list for search engines.
+    const pages = ['index.html', 'pricing.html', 'refunds.html', 'terms.html', 'privacy.html', 'about.html', 'support.html', 'founders.html', '404.html'];
+    const unlinked = pages.filter((f) => !/<a href="\/signin">Sign in<\/a>/.test(text(f)));
+    const wrong = pages.filter((f) => /href="\/(signup|account|today|plan|numbers|reports|inspections|calendar|people)"/.test(text(f)));
+    ok('every public page links to the sign-in page ("Sign in"), none to signing up or to a page for the signed-in, and the list of pages for search engines leaves them all out', unlinked.length === 0 && wrong.length === 0 && !/signin|signup|account|today/.test(text('sitemap.xml')), JSON.stringify({ unlinked, wrong }));
     ok('the three scripts say no words: every sentence is in the pages', !/[A-Z][a-z]+ [a-z]+ [a-z]+[.!?]['"`]/.test(['auth', 'signin', 'account'].map((f) => text('assets/' + f + '.js').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')).join('\n')));
   }
 

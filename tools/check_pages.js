@@ -7,7 +7,9 @@
 //        (the pages served somewhere else: URL=http://localhost:4174/ node tools/check_pages.js)
 //        node tools/check_pages.js --keep    writes tools/page_words.json from the served pages. Only after Moises has
 //                                            approved a change of words: name his approval, with its date, in the commit.
-const { chromium } = require('playwright');
+//        (in Safari's engine instead of Chrome's: BROWSER=webkit node tools/check_pages.js)
+const playwright = require('playwright');
+const engine = process.env.BROWSER === 'webkit' ? playwright.webkit : playwright.chromium;
 const fs = require('fs');
 const path = require('path');
 
@@ -18,8 +20,9 @@ const PAGES = ['pricing', 'refunds', 'terms', 'privacy', 'about', 'support', 'no
 const POLICIES = ['refunds', 'terms', 'privacy'];
 // The pages laid out as a policy is: a list of headings beside the text.
 const DOCS = [...POLICIES, 'about', 'support'];
-// The footer's links, on every page: who we are and how to reach us first, then the four pages of the top bar.
-const FOOT = [['/about', 'About'], ['/support', 'Support'], ['/pricing', 'Pricing'], ['/refunds', 'Cancellation and refunds'], ['/terms', 'Terms'], ['/privacy', 'Privacy']];
+// The footer's links, on every page: who we are and how to reach us first, then the four pages of the top bar, then
+// Sign in (2026-11-15, Moises: "Unhide the web dash"; the way in to the dashboard for inspectors who have an account).
+const FOOT = [['/about', 'About'], ['/support', 'Support'], ['/pricing', 'Pricing'], ['/refunds', 'Cancellation and refunds'], ['/terms', 'Terms'], ['/privacy', 'Privacy'], ['/signin', 'Sign in']];
 const NAV = [['/pricing', 'Pricing'], ['/refunds', 'Cancellation and refunds'], ['/terms', 'Terms'], ['/privacy', 'Privacy']];
 // The two windows the pages are looked at in. Widths are compared with these numbers, never with the window's own
 // report of itself: a phone's browser zooms out to fit a page that is too wide, and then says the window is that wide.
@@ -71,7 +74,8 @@ async function open(browser, name, opts) {
 }
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await engine.launch();
+  console.log('browser: ' + engine.name() + ' ' + browser.version());
 
   if (keep) {
     const out = { note: 'The approved words, links and head of the pricing and policy pages. Written by: node tools/check_pages.js --keep. Change it only with a change of words Moises approved.' };
@@ -110,7 +114,7 @@ async function open(browser, name, opts) {
         };
       });
       ok(name + ': nothing scrolls sideways on a phone', r.sw <= PHONE, r.sw + ' wide in a ' + PHONE + ' window');
-      ok(name + ', phone: the top keeps to the logo, and the footer has its six pages', !!r.logo && r.logo.name === 'Inspyx, home' && r.logo.mark && r.nav.length === 4 && r.nav.every((h) => h === 0) && same(r.footNav, FOOT), JSON.stringify([r.logo, r.nav, r.footNav]));
+      ok(name + ', phone: the top keeps to the logo, and the footer has its seven links', !!r.logo && r.logo.name === 'Inspyx, home' && r.logo.mark && r.nav.length === 4 && r.nav.every((h) => h === 0) && same(r.footNav, FOOT), JSON.stringify([r.logo, r.nav, r.footNav]));
       ok(name + ', phone: the logo, the buttons and the footer links are big enough to tap', r.logo && r.logo.h >= 44 && r.foot.length >= 8 && r.foot.every((h) => h >= 44) && r.btn.every((h) => h >= 44), JSON.stringify({ logo: r.logo && r.logo.h, foot: r.foot, btn: r.btn }));
       ok(name + ': the type is the home page\'s own (nothing is fetched for it), and there is one main heading', /^-apple-system/.test(r.font) && r.h1 === 1, r.font + ' / h1: ' + r.h1);
       await ctx.close();

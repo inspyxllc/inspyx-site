@@ -140,9 +140,24 @@ a.logo{min-height:44px}
 .bar-wrap{position:fixed; top:0; left:0; right:0; z-index:6; display:flex; justify-content:center; pointer-events:none; padding:0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px))}
 .bar{pointer-events:auto; width:100%; max-width:calc(var(--col) - 32px); height:56px; margin-top:calc(12px + env(safe-area-inset-top, 0px)); padding:6px 6px 6px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:rgba(255,255,255,.74); -webkit-backdrop-filter:blur(20px) saturate(1.5); backdrop-filter:blur(20px) saturate(1.5); border:1px solid rgba(255,255,255,.65); border-radius:999px; box-shadow:0 12px 28px -12px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.05)}
 .bar-r{display:flex; align-items:center; gap:4px}
-/* the header's Pricing link: wide screens only, where there is room for it */
-.bar-link{display:none; align-items:center; height:44px; padding:0 16px; border-radius:999px; color:var(--ink); font:600 15px/1 var(--font); text-decoration:none; transition:background-color .15s ease}
+/* the header's Pricing link: wide screens only, where there is room for it. Sign in shows on every screen:
+   inspectors sign in from their phones (2026-11-15). On a phone the bar's spaces close up so the two fit beside
+   the logo; under 390 px (measured: an iPhone SE is 375) the logo keeps its house mark and lets its name go, and
+   its link stays 44 px wide, the mark in its middle. */
+.bar-link{display:none; align-items:center; height:44px; padding:0 16px; border-radius:999px; color:var(--ink); font:600 15px/1 var(--font); text-decoration:none; white-space:nowrap; transition:background-color .15s ease}
 .bar-link:hover{background:rgba(0,0,0,.06)}
+.bar-link.bar-in{display:flex}
+@media (max-width:859px){
+  .bar{gap:8px}
+  .bar-r{gap:2px}
+  .bar-in{padding:0 10px}
+  .bar .btn-sm{padding:0 14px}
+}
+@media (max-width:389px){
+  .bar{padding-left:10px}
+  .bar a.logo{min-width:44px; justify-content:center}
+  .bar .logo span{display:none}
+}
 
 /* The film: fixed behind the page on phones */
 .film{position:fixed; top:0; left:max(0px, calc(50% - var(--col) / 2)); width:min(100%, var(--col)); height:100vh; height:100lvh; z-index:0; background:var(--sky) linear-gradient(180deg, var(--sky) 0%, #D9E4EA 55%, #F8DDBE 100%)}
@@ -423,6 +438,7 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 </a>
 <div class="bar-r">
 <a class="bar-link" href="/pricing">Pricing</a>
+<a class="bar-link bar-in" href="/signin">Sign in</a>
 <a class="btn btn-sm" href="#waitlist">Join the waitlist</a>
 </div>
 </header>
@@ -677,7 +693,7 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 <svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
 <span>INSPYX</span>
 </div>
-<nav class="foot-main" aria-label="Inspyx"><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/support">Support</a></nav>
+<nav class="foot-main" aria-label="Inspyx"><a href="/pricing">Pricing</a><a href="/about">About</a><a href="/support">Support</a><a href="/signin">Sign in</a></nav>
 <nav class="foot-small" aria-label="Policies"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/refunds">Cancellation and refunds</a></nav>
 <nav class="foot-small" aria-label="Contact"><a href="mailto:support@inspyx.com">support@inspyx.com</a><a href="tel:+18887722919">(888) 772-2919</a></nav>
 <p class="foot-legal">INSPYX LLC · Miami Gardens, FL</p>
@@ -706,7 +722,7 @@ html[data-billing="canceled"] .rv-canceled{display:block}
 <div class="rv-foot">
 INSPYX LLC · Miami Gardens, FL<br>
 <a href="mailto:support@inspyx.com">support@inspyx.com</a> · <a href="tel:+18887722919">(888) 772-2919</a>
-<nav><a href="/about">About</a><a href="/support">Support</a><a href="/pricing">Pricing</a><a href="/refunds">Cancellation and refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
+<nav><a href="/about">About</a><a href="/support">Support</a><a href="/pricing">Pricing</a><a href="/refunds">Cancellation and refunds</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/signin">Sign in</a></nav>
 </div>
 </div>
 

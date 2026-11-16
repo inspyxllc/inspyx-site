@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — People</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/people.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/insp-read.js" defer></script>
+<script src="/assets/people.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="ppl" data-ppl hidden>
+<h1>People</h1>
+<p class="ppl-lede">Everyone on your inspections: your clients and the agents you work with, each with their inspections.</p>
+<p class="ppl-live" role="status">
+<span data-live="connecting">Connecting…</span>
+<span data-live="live" hidden>Live: a change on your phone shows here within seconds.</span>
+<span data-live="offline" hidden>Can't reach Inspyx right now. Trying again.</span>
+</p>
+<label class="ppl-find">Find someone <input type="search" data-find autocomplete="off" spellcheck="false" placeholder="Name, email or phone"></label>
+<div class="ppl-state" role="status">
+<p data-state="loading">Loading your inspections…</p>
+<p data-state="empty" hidden>No one here yet. The people on your inspections show up here once your phone has synced.</p>
+<p data-state="failed" hidden>Couldn't load your inspections. Check your connection; this page keeps trying.</p>
+<p data-state="nomatch" hidden>No one matches that.</p>
+</div>
+<section class="ppl-group" data-role="client" hidden><h2>Clients <span class="ppl-count" data-count></span></h2><ul class="ppl-list"></ul></section>
+<section class="ppl-group" data-role="buyer_agent" hidden><h2>Buyer's agents <span class="ppl-count" data-count></span></h2><ul class="ppl-list"></ul></section>
+<section class="ppl-group" data-role="listing_agent" hidden><h2>Listing agents <span class="ppl-count" data-count></span></h2><ul class="ppl-list"></ul></section>
+<p class="ppl-links"><a href="/today">What needs you</a><a href="/inspections">Your inspections</a><a href="/calendar">Calendar</a><a href="/account">Account</a></p>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<template data-t="person"><li class="ppl-one"><h3 data-v="name"></h3><p class="ppl-reach"><a data-v="email" hidden></a><a data-v="phone" hidden></a></p><ul class="ppl-jobs"></ul></li></template>
+<template data-t="job"><li><a href="#"><strong data-v="title"></strong><span data-v="day"></span></a></li></template>
+</body>
+</html>

@@ -56,7 +56,7 @@ function seed(s) {
 }
 
 async function open(browser, o) {
-  const ctx = await browser.newContext({ viewport: { width: o.w || WIDE, height: 900 }, locale: 'en-US' });
+  const ctx = await browser.newContext(Object.assign({ viewport: { width: o.w || WIDE, height: 900 }, locale: 'en-US' }, o.zone ? { timezoneId: o.zone } : {}));
   const store = o.store === undefined ? kept(HOUR) : o.store;
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); if (v === null) localStorage.removeItem('inspyx.signin'); else localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, store);
   const page = await ctx.newPage();
@@ -119,10 +119,10 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const csp = res.headers()['content-security-policy'] || '';
       ok(label + ': served with the signed-in pages\' rule, plus the live socket to Inspyx\'s server and nothing else', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
       const list = await vis(page, '[data-list="items"] li');
-      ok(label + ': lists both inspections, the newest first, with their addresses', list.length === 2 && /^9 Elm Ave/.test(list[0]) && /^12 Oak St.*Miami$/.test(list[1]), JSON.stringify(list));
+      ok(label + ': lists both inspections, the newest first, with their addresses', list.length === 2 && /^9 Elm Ave/.test(list[0]) && /^12 Oak St.*Miami/.test(list[1]), JSON.stringify(list));
       ok(label + ': shows the inspection\'s title and address in their boxes', await boxValue(page, 'inspection', INSP, 'title') === '12 Oak St' && await boxValue(page, 'inspection', INSP, 'address') === '12 Oak St, Miami');
       ok(label + ': shows the stop, the item and its note, status and finding as the phone has them',
-        (await vis(page, '.insp-stop h2')).join() === 'Roof' && (await vis(page, '.insp-label')).join() === 'Gutters' &&
+        await boxValue(page, 'section', SEC, 'name') === 'Roof' && await boxValue(page, 'item', ITEM, 'label') === 'Gutters' &&
         await boxValue(page, 'item', ITEM, 'note') === 'Loose at the corner' && await boxValue(page, 'item', ITEM, 'status') === 'inspected_deficiency' &&
         await boxValue(page, 'item', FIND, 'finding_title') === 'Gutter pulling away' && await boxValue(page, 'item', FIND, 'severity') === 'MD');
       ok(label + ': counts the finding\'s photos on the phone', (await vis(page, '[data-photos]')).join() === '1 photos on your phone');
@@ -152,6 +152,96 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await page.waitForTimeout(1200);
     ok('an emptied title is never sent (the phone\'s inspection always has one)', s.value('inspection', INSP, 'title') === '12 Oak St');
     await ctx.close();
+  });
+
+  // Desk finishing (2026-11-16): the cover's city, state, ZIP and booked time; a finding's location and who should
+  // fix it; why an item wasn't inspected. The browser is in New York; times travel as UTC milliseconds.
+  await group('desk finishing', async () => {
+    const ny = (x) => new Date(x + '-05:00').getTime();
+    const s = server(); seed(s);
+    s.phone('inspection', INSP, 'scheduled_at', ny('2026-11-18T09:00:30'));   // seconds the box can't show
+    s.phone('inspection', INSP, 'city', 'Miami'); s.phone('inspection', INSP, 'state', 'FL'); s.phone('inspection', INSP, 'zip_code', '33101');
+    s.phone('item', FIND, 'location', 'NE corner'); s.phone('item', FIND, 'finding_recommended_trade', 'Gutter contractor');
+    const { page, ctx, calls, ping } = await open(browser, { server: s, hash: '#' + INSP, zone: 'America/New_York' });
+    const pushed = (field) => calls.flatMap((c) => c.body.push || []).filter((x) => x.field === field);
+    // On screen, whatever its attribute says (a label's own display could override [hidden]).
+    const onScreen = (sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => e.getClientRects().length > 0).length, sel);
+    ok('desk: the cover shows the city, state, ZIP and booked time (in this browser\'s time, to the minute)',
+      await boxValue(page, 'inspection', INSP, 'city') === 'Miami' && await boxValue(page, 'inspection', INSP, 'state') === 'FL' && await boxValue(page, 'inspection', INSP, 'zip_code') === '33101' &&
+      await boxValue(page, 'inspection', INSP, 'scheduled_at') === '2026-11-18T09:00', await boxValue(page, 'inspection', INSP, 'scheduled_at'));
+    ok('desk: the finding shows its location and who should fix it', await boxValue(page, 'item', FIND, 'location') === 'NE corner' && await boxValue(page, 'item', FIND, 'finding_recommended_trade') === 'Gutter contractor');
+    ok('desk: no start line before it starts, and no "why not inspected" box on an inspected item', (await onScreen('[data-started]')) === 0 && (await onScreen('[data-ni]')) === 0);
+    const booked = page.locator('[data-key="inspection/' + INSP + '.scheduled_at"]');
+    await booked.focus(); await booked.blur(); await page.waitForTimeout(1200);
+    ok('desk: opening and leaving the booked time changes nothing (its seconds are kept)', pushed('scheduled_at').length === 0 && s.value('inspection', INSP, 'scheduled_at') === ny('2026-11-18T09:00:30'));
+    await page.fill('[data-key="inspection/' + INSP + '.scheduled_at"]', '2026-11-19T14:30'); await booked.blur();
+    ok('desk: a new booked time reaches the server as UTC milliseconds (a reschedule)', await until(() => s.value('inspection', INSP, 'scheduled_at') === ny('2026-11-19T14:30:00')) && pushed('scheduled_at').every((w) => typeof w.value === 'number'), JSON.stringify(pushed('scheduled_at')));
+    await page.fill('[data-key="inspection/' + INSP + '.scheduled_at"]', ''); await booked.blur();
+    ok('desk: clearing the booked time clears it', await until(() => s.value('inspection', INSP, 'scheduled_at') === null));
+    await page.fill('[data-key="inspection/' + INSP + '.zip_code"]', '33130'); await page.locator('[data-key="inspection/' + INSP + '.zip_code"]').blur();
+    await page.fill('[data-key="inspection/' + INSP + '.city"]', ''); await page.locator('[data-key="inspection/' + INSP + '.city"]').blur();
+    ok('desk: a ZIP is sent as typed, and an emptied city is cleared', await until(() => s.value('inspection', INSP, 'zip_code') === '33130' && s.value('inspection', INSP, 'city') === null));
+    await page.fill('[data-key="item/' + FIND + '.location"]', 'Downspout, east side'); await page.locator('[data-key="item/' + FIND + '.location"]').blur();
+    await page.fill('[data-key="item/' + FIND + '.finding_recommended_trade"]', 'Licensed roofer'); await page.locator('[data-key="item/' + FIND + '.finding_recommended_trade"]').blur();
+    ok('desk: a finding\'s location and who should fix it reach the server', await until(() => s.value('item', FIND, 'location') === 'Downspout, east side' && s.value('item', FIND, 'finding_recommended_trade') === 'Licensed roofer'));
+    await page.selectOption('[data-key="item/' + ITEM + '.status"]', 'not_inspected');
+    ok('desk: marking an item Not inspected opens "Why it wasn\'t inspected"', await until(async () => (await onScreen('[data-ni]')) === 1));
+    await page.fill('[data-key="item/' + ITEM + '.ni_note"]', 'Ladder too short for the second story'); await page.locator('[data-key="item/' + ITEM + '.ni_note"]').blur();
+    ok('desk: and its words reach the server', await until(() => s.value('item', ITEM, 'ni_note') === 'Ladder too short for the second story'));
+    s.phone('inspection', INSP, 'inspection_at', ny('2026-11-19T14:42:10'));
+    s.phone('inspection', INSP, 'scheduled_at', ny('2026-11-19T15:00:00'));
+    ping();
+    ok('desk: a start on the phone shows as a line, never a box', await until(async () => (await vis(page, '[data-started]')).join() === 'Started Thu, Nov 19, 2026, 2:42 PM. Your phone sets when an inspection starts.') && !(await page.$('[data-field="inspection_at"]')), JSON.stringify(await vis(page, '[data-started]')));
+    ok('desk: a booked time changed on the phone shows here', await until(async () => await boxValue(page, 'inspection', INSP, 'scheduled_at') === '2026-11-19T15:00'));
+    ok('desk: nothing this page sends is a start', pushed('inspection_at').length === 0);
+    await ctx.close();
+  });
+
+  // Renames and Find (2026-11-16): a stop's and an item's names are boxes; a name is never sent empty; the list is in
+  // the phone's day order with each inspection's day, and Find keeps the matching ones.
+  await group('renames and find', async () => {
+    const s = server(); seed(s);
+    const { page, ctx, ping } = await open(browser, { server: s, hash: '#' + INSP, zone: 'America/New_York' });
+    const nameKey = '[data-key="section/' + SEC + '.name"]', labelKey = '[data-key="item/' + ITEM + '.label"]';
+    await page.fill(nameKey, 'Roof and gutters'); await page.locator(nameKey).blur();
+    ok('rename: a new stop name reaches the server', await until(() => s.value('section', SEC, 'name') === 'Roof and gutters'));
+    await page.fill(labelKey, 'Gutters and downspouts'); await page.locator(labelKey).blur();
+    ok('rename: a new item name reaches the server', await until(() => s.value('item', ITEM, 'label') === 'Gutters and downspouts'));
+    await page.fill(nameKey, ''); await page.locator(nameKey).blur();
+    await page.fill(labelKey, ''); await page.locator(labelKey).blur(); await page.waitForTimeout(1200);
+    ok('rename: an emptied stop or item name is never sent, and each box shows its name again',
+      s.value('section', SEC, 'name') === 'Roof and gutters' && await boxValue(page, 'section', SEC, 'name') === 'Roof and gutters' &&
+      s.value('item', ITEM, 'label') === 'Gutters and downspouts' && await boxValue(page, 'item', ITEM, 'label') === 'Gutters and downspouts');
+    const box = page.locator(labelKey);
+    // Mark the very box being typed in: a page rebuilt under it would hand over a new box (the text can even
+    // survive that, since a removed box is "left", but the caret jumps and keystrokes in between are lost).
+    await page.evaluate((k) => { document.querySelector(k).dataset.mark = 'same'; }, labelKey);
+    await box.click(); await box.press('End'); await box.pressSequentially(' (front)', { delay: 10 });
+    await page.waitForTimeout(1500);   // past the pause: the name is sent while the box still has the caret
+    ok('rename: a name being typed survives its own save: the same box, still with the caret (the page is not rebuilt under it)',
+      (await box.inputValue()) === 'Gutters and downspouts (front)' && await page.evaluate((k) => document.querySelector(k).dataset.mark === 'same' && document.activeElement === document.querySelector(k), labelKey) &&
+      await until(() => s.value('item', ITEM, 'label') === 'Gutters and downspouts (front)'), await box.inputValue());
+    await box.blur();
+    s.phone('section', SEC, 'name', 'Roof, seen from the ladder'); ping();
+    ok('rename: a stop renamed on the phone shows here', await until(async () => await boxValue(page, 'section', SEC, 'name') === 'Roof, seen from the ladder'));
+    ok('list: each inspection shows its day (with the time when it is booked or started), newest first',
+      same(await vis(page, '[data-list="items"] time'), ['Sat, Nov 14, 2026, 6:46 PM', 'Fri, Nov 13, 2026']), JSON.stringify(await vis(page, '[data-list="items"] time')));
+    const find = async (q) => { await page.fill('[data-find]', q); await page.waitForTimeout(400); };
+    await find('ELM');
+    ok('find: by title, whatever the capitals', same(await vis(page, '[data-list="items"] strong'), ['9 Elm Ave']));
+    await find('miami');
+    ok('find: by address', same(await vis(page, '[data-list="items"] strong'), ['12 Oak St']));
+    await find('zzz');
+    ok('find: no match says so, and shows no list', (await vis(page, '[data-list]')).join() === 'No inspection matches that.');
+    await find('');
+    ok('find: emptied, every inspection is back', (await vis(page, '[data-list="items"] li')).length === 2);
+    // Started after the other was booked: by the phone's rule its start puts it first, with that time.
+    s.phone('inspection', INSP, 'inspection_at', new Date('2026-11-15T08:30:00-05:00').getTime()); ping();
+    ok('list: an inspection started on the phone moves to its start day, first', await until(async () => same(await vis(page, '[data-list="items"] strong'), ['12 Oak St', '9 Elm Ave']) && (await vis(page, '[data-list="items"] time'))[0] === 'Sun, Nov 15, 2026, 8:30 AM'), JSON.stringify(await vis(page, '[data-list="items"] time')));
+    await ctx.close();
+    const empty = await open(browser, { server: server() });
+    ok('find: no Find box while there are no inspections', (await empty.page.evaluate(() => [...document.querySelectorAll('[data-findbox]')].filter((e) => e.getClientRects().length > 0).length)) === 0 && (await vis(empty.page, '[data-list]')).join().startsWith('No inspections here yet'));
+    await empty.ctx.close();
   });
 
   await group('live from the phone', async () => {

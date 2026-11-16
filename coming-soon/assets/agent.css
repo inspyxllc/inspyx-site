@@ -1,0 +1,30 @@
+/* An agent's private page (2026-11-15): their reports from one inspector, in the report page's own look
+   (report.css's colours and type), and each report drawn by report.js below the way back. */
+.agent{display:block; max-width:760px; margin:0 auto; padding:28px var(--gr) 56px var(--gl)}
+.agent[hidden]{display:none}
+.agent h1{font:600 30px/1.2 var(--serif); margin:0 0 6px}
+.agent-from{margin:0 0 18px; color:var(--muted); font-size:16px; overflow-wrap:anywhere}
+.agent-from[hidden], .agent-state [hidden], .agent-note[hidden]{display:none}
+.agent-state p{font-size:17px; line-height:1.45; color:var(--muted); margin:0 0 10px}
+.agent-list{list-style:none; margin:8px 0 0; padding:0; display:grid; gap:10px}
+.agent-open{display:grid; gap:2px; padding:16px 18px; border-radius:14px; background:var(--wash); color:var(--ink);
+  text-decoration:none; box-shadow:inset 0 0 0 1px var(--line)}
+.agent-open:hover{box-shadow:inset 0 0 0 1px var(--blue)}
+.agent-addr{font-weight:600; font-size:17px; overflow-wrap:anywhere}
+.agent-addr[hidden]{display:none}
+.agent-sub{display:flex; flex-wrap:wrap; color:var(--muted); font-size:14.5px}
+.agent-sub .bit{min-width:0; overflow-wrap:anywhere}
+.agent-sub .bit[hidden]{display:none}
+.agent-sub .bit:not([hidden]) ~ .bit:not([hidden])::before{content:"·"; margin:0 7px}
+.agent-lock{justify-self:start; margin-top:6px; padding:2px 10px; border-radius:999px; background:var(--bg);
+  box-shadow:inset 0 0 0 1px var(--line); color:var(--muted); font-size:13px; font-weight:600}
+.agent-lock[hidden]{display:none}
+.agent-noaddr{color:var(--muted); font-weight:500}
+.agent-note{margin-top:22px; font-size:14px; color:var(--muted)}
+.agent-back{max-width:960px; margin:0 auto; padding:12px var(--gr) 0 var(--gl)}
+.agent-back[hidden]{display:none}
+.agent-back a{display:inline-flex; align-items:center; min-height:44px; font-weight:600}
+@media (max-width: 760px){
+  .agent{padding-top:20px}
+  .agent h1{font-size:25px}
+}

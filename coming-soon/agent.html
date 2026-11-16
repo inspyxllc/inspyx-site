@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Your inspection reports</title>
+<!-- An agent's private page (2026-11-15, board item 32): every report one inspector emailed them, opened from the
+     link in their report emails (inspyx.com/a and a key). Search engines are asked to leave it alone, and the
+     address is never passed on to another site. Draft words (Moises's standing rule); "Locked until paid" is his. -->
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="stylesheet" href="/assets/report.css">
+<link rel="stylesheet" href="/assets/agent.css">
+</head>
+<body>
+<a class="skip" href="#agent">Skip to the reports</a>
+<main class="agent" id="agent" data-agent tabindex="-1">
+  <h1>Your inspection reports</h1>
+  <p class="agent-from" data-from hidden>From <strong data-v="inspector"></strong><span data-company hidden>, <span data-v="company"></span></span></p>
+  <div class="agent-state">
+    <p data-state="loading" role="status">Opening your reports…</p>
+    <p data-state="empty" hidden>No reports to show right now. Each report your inspector emails you shows here too.</p>
+    <p data-state="gone" hidden>This link doesn’t work. The link in your newest report email from your inspector does.</p>
+    <p data-state="slow" hidden>Too many tries just now. Please wait a few minutes, then try again.</p>
+    <p data-state="failed" hidden>Your reports couldn’t be opened. Check your connection and try again.</p>
+    <p><button class="btn" type="button" data-again hidden>Try again</button></p>
+  </div>
+  <ul class="agent-list" data-items></ul>
+  <p class="agent-note" data-note hidden>Only the reports this inspector emailed to you are here.</p>
+</main>
+<nav class="agent-back" data-back hidden><a href="/a">All your reports</a></nav>
+<div id="app" hidden></div>
+<template data-t="item">
+  <li class="agent-item">
+    <a class="agent-open" href="#">
+      <span class="agent-addr" data-v="address"></span>
+      <span class="agent-addr agent-noaddr" data-noaddress hidden>A report with no address</span>
+      <span class="agent-sub"><span class="bit" data-v="locality"></span><span class="bit">Published <span data-v="published"></span></span></span>
+      <span class="agent-lock" data-locked hidden>Locked until paid</span>
+    </a>
+  </li>
+</template>
+<noscript>
+  <p class="state">This page needs JavaScript to show your reports.</p>
+</noscript>
+<script src="/assets/agent.js" defer></script>
+</body>
+</html>

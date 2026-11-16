@@ -22,9 +22,11 @@ ok('the rule catches the signed-in addresses', yes.every(applies), yes.filter((p
 ok('the rule catches no other address', !no.some(applies), no.filter(applies).join(' '));
 // Your inspections, live (2026-11-14): its own rule, the signed-in pages' rule plus the live socket to Inspyx's server.
 const wss = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']));
-ok('the inspections page has its rule, with the live socket', applies('/inspections') && wss('/inspections'));
-ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/', '/inspections/x', '/inspection'].some(wss));
-ok('the inspections rule catches nothing else', !['/inspection', '/inspections/x', '/myinspections', '/assets/inspections.js'].some(applies));
+// The calendar and people pages (2026-11-16) read the same live inspections, so they share that rule.
+const live = ['/inspections', '/calendar', '/people'];
+ok('the inspections, calendar and people pages have the rule, with the live socket', live.every((p) => applies(p) && wss(p)), live.filter((p) => !applies(p) || !wss(p)).join(' '));
+ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/', '/inspections/x', '/inspection', '/calendar/x', '/people/x', '/calendars', '/peoples'].some(wss));
+ok('the live pages\' rule catches nothing else', !['/inspection', '/inspections/x', '/myinspections', '/assets/inspections.js', '/calendar/x', '/mycalendar', '/assets/calendar.js', '/people/x', '/person', '/assets/people.js', '/assets/insp-read.js'].some(applies));
 // The client's report page (2026-11-14): a new link is /r#<key> (the browser asks for /r alone), an old one
 // /r/<key>. Both must open the report page, under the report page's own rules.
 const opensReport = (p) => (out.routes || []).some((r) => r.dest && /^\/report(\?|$)/.test(r.dest) && new RegExp(r.src).test(p));
@@ -38,6 +40,14 @@ ok('the report page may play movies from Inspyx\'s file store, under both of its
 ok('the movies\' rule names the file store alone', ruled.filter((r) => /media-src/.test(r.headers['Content-Security-Policy'])).every((r) => /media-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy'])));
 ok('no other page may play movies', !['/', '/signin', '/account', '/plan', '/inspections', '/pricing'].some(movies));
 ok('the report page\'s route takes no other address', !['/', '/refunds', '/rr', '/report-x', '/r/a/b', '/reports'].some(opensReport), ['/', '/refunds', '/rr', '/report-x', '/r/a/b', '/reports'].filter(opensReport).join(' '));
+// An agent's private page (2026-11-15): /a (its key after the "#", so the browser asks for /a alone) opens the
+// agent page, under the report page's own strict rules (it draws reports, movies too), and takes no other address.
+const opensAgent = (p) => (out.routes || []).some((r) => r.dest && /^\/agent(\?|$)/.test(r.dest) && new RegExp(r.src).test(p));
+const signedInRule = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /img-src 'self'; connect-src https:/.test(r.headers['Content-Security-Policy']));
+ok('/a opens the agent page, under the report page\'s own rules (noindex, the file store, movies), as does /agent', opensAgent('/a') && ['/a', '/agent'].every((p) => reportRules(p) && movies(p)));
+ok('the agent page\'s route takes no other address', !['/', '/about', '/account', '/a/x', '/ab', '/r', '/r/' + key, '/agents', '/reports'].some(opensAgent), ['/', '/about', '/account', '/a/x', '/ab', '/r', '/r/' + key, '/agents', '/reports'].filter(opensAgent).join(' '));
+ok('/a never opens the client report route, and no signed-in rule reaches it', !opensReport('/a') && !signedInRule('/a') && !signedInRule('/agent'));
+ok('the agent rule reaches no other page (/about, /account, /assets/agent.js)', !['/about', '/account', '/assets/agent.js', '/ab'].some((p) => ruled.some((r) => new RegExp(r.src).test(p) && r.src.includes('agent'))));
 // The reader must be able to say no, or its yes means nothing: a pattern that is wrong on purpose.
 const bad = read({ headers: [{ source: '/(?!x)', headers: [{ key: 'A', value: 'b' }] }] });
 ok('a pattern that is wrong on purpose is refused by the same reader', !!bad.error, bad.error ? bad.error.code : 'it was accepted');
