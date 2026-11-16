@@ -11,6 +11,8 @@
 .insp-one input, .insp-one textarea, .insp-one select{width:100%; padding:10px 12px; border:1px solid #C9C9D0; border-radius:12px; background:#FFFFFF; color:var(--ink); font:400 16px var(--font)}
 .insp-one textarea{resize:vertical}
 .insp-cover{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.insp-pair{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.insp-started{grid-column:1 / -1; font-size:14px; color:var(--ink-faint)}
 .insp-save{min-height:22px; margin:10px 0 6px; font-size:14px; color:var(--ink-faint)}
 .insp-stop{margin-top:26px}
 .insp-stop h2{font-size:20px; margin-bottom:10px}

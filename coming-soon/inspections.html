@@ -44,6 +44,13 @@
 <div class="insp-cover">
 <label>Title <input type="text" data-field="title" autocomplete="off"></label>
 <label>Address <input type="text" data-field="address" autocomplete="off"></label>
+<label>City <input type="text" data-field="city" autocomplete="off"></label>
+<div class="insp-pair">
+<label>State <input type="text" data-field="state" autocomplete="off"></label>
+<label>ZIP <input type="text" data-field="zip_code" autocomplete="off" inputmode="numeric"></label>
+</div>
+<label>Booked for <input type="datetime-local" data-field="scheduled_at" data-kind="time"></label>
+<p class="insp-started" data-started hidden>Started <time data-v="started"></time>. Your phone sets when an inspection starts.</p>
 </div>
 <p class="insp-save" role="status">
 <span data-save="saved" hidden>Saved.</span>
@@ -79,6 +86,7 @@
 </label>
 </div>
 <label>Note <textarea rows="2" data-field="note"></textarea></label>
+<label data-ni hidden>Why it wasn't inspected <textarea rows="2" data-field="ni_note"></textarea></label>
 <ol class="insp-findings"></ol>
 </li>
 </template>
@@ -95,8 +103,10 @@
 <option value="NT">Information</option>
 </select>
 </label>
+<label>Location <input type="text" data-field="location" autocomplete="off"></label>
 <label>What it means <textarea rows="2" data-field="finding_implication"></textarea></label>
 <label>What to do <textarea rows="2" data-field="finding_recommendation"></textarea></label>
+<label>Who should fix it <input type="text" data-field="finding_recommended_trade" autocomplete="off"></label>
 <p class="insp-photos" data-photos hidden><span data-v="photos"></span> photos on your phone</p>
 </li>
 </template>
