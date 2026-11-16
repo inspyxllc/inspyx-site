@@ -213,10 +213,13 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       s.value('section', SEC, 'name') === 'Roof and gutters' && await boxValue(page, 'section', SEC, 'name') === 'Roof and gutters' &&
       s.value('item', ITEM, 'label') === 'Gutters and downspouts' && await boxValue(page, 'item', ITEM, 'label') === 'Gutters and downspouts');
     const box = page.locator(labelKey);
+    // Mark the very box being typed in: a page rebuilt under it would hand over a new box (the text can even
+    // survive that, since a removed box is "left", but the caret jumps and keystrokes in between are lost).
+    await page.evaluate((k) => { document.querySelector(k).dataset.mark = 'same'; }, labelKey);
     await box.click(); await box.press('End'); await box.pressSequentially(' (front)', { delay: 10 });
     await page.waitForTimeout(1500);   // past the pause: the name is sent while the box still has the caret
-    ok('rename: a name being typed survives its own save (the page is not rebuilt under it)',
-      (await box.inputValue()) === 'Gutters and downspouts (front)' && await page.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-key')) === 'item/' + ITEM + '.label' &&
+    ok('rename: a name being typed survives its own save: the same box, still with the caret (the page is not rebuilt under it)',
+      (await box.inputValue()) === 'Gutters and downspouts (front)' && await page.evaluate((k) => document.querySelector(k).dataset.mark === 'same' && document.activeElement === document.querySelector(k), labelKey) &&
       await until(() => s.value('item', ITEM, 'label') === 'Gutters and downspouts (front)'), await box.inputValue());
     await box.blur();
     s.phone('section', SEC, 'name', 'Roof, seen from the ladder'); ping();
