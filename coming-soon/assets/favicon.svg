@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 0 252 252">
-  <!-- The Inspyx house mark. Dark on light tabs, light on dark ones. -->
-  <style>path{stroke:#000}@media (prefers-color-scheme:dark){path{stroke:#fff}}</style>
-  <path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z" fill="none" stroke-width="17" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- The Inspyx mark, the house with the ribbon S, drawn simply for tab size (at 16 px the full ribbon's glow and twist smear). Dark on light tabs, light on dark ones. -->
+  <style>.h{stroke:#000}.s{stroke:#0284C7}@media (prefers-color-scheme:dark){.h{stroke:#fff}.s{stroke:#38BDF8}}</style>
+  <path class="h" d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z" fill="none" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/>
+  <path class="s" d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" fill="none" stroke-width="28" stroke-linecap="round"/>
 </svg>

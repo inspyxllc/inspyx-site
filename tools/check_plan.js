@@ -98,12 +98,12 @@ async function open(browser, where, opts) {
   page.setDefaultTimeout(8000);
   if (o.clock) await page.clock.install();
   if (o.without) await page.route('**/' + o.without, (route) => route.abort());
-  // moneyOn: the page's money-back switch turned on, as a build that turns it on would (the file served with its one
-  // switch flipped; nothing else in it changes).
-  if (o.moneyOn) await page.route('**/assets/plan.js', async (route) => {
-    const r = await route.fetch(), js = await r.text(), on = js.replace('var MONEY_BACK_ON = false;', 'var MONEY_BACK_ON = true;');
-    if (on === js) throw new Error('the money-back switch is not where this check looks for it');
-    return route.fulfill({ response: r, body: on });
+  // money: the page's money-back switch set on (true) or off (false) whatever the file ships with, as a build that
+  // sets it would (the file served with its one switch set; nothing else in it changes).
+  if (o.money !== undefined) await page.route('**/assets/plan.js', async (route) => {
+    const r = await route.fetch(), js = await r.text(), at = /var MONEY_BACK_ON = (true|false);/;
+    if (!at.test(js)) throw new Error('the money-back switch is not where this check looks for it');
+    return route.fulfill({ response: r, body: js.replace(at, 'var MONEY_BACK_ON = ' + (o.money ? 'true' : 'false') + ';') });
   });
   const errs = [], away = [], calls = [], arrived = [];
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR_FAILED|net::ERR_ABORTED/.test(m.text())) errs.push(m.text()); });
@@ -268,25 +268,27 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
   // ---- "Get my money back" (Moises, 2026-11-15): offered within 30 days of a payment, once; asked again in a sheet
   await group('money back', async () => {
     const PAID = Object.assign({}, ACTIVE, { tier: 'founder', money_back: { eligible: true, amount_cents: 5495, until: '2026-12-01T15:52:27+00:00' } });
-    // The switch as it ships: OFF (Inspyx 1, 2026-11-15). Whatever the server says, no button, sheet or line about
-    // money back, and nothing asked about it; the free days still follow the server.
+    // The switch turned off (it shipped off from 2026-11-15 until Moises approved its last sentence on 2026-11-16).
+    // Whatever the server says, no button, sheet or line about money back, and nothing asked about it; the free days
+    // still follow the server.
     for (const [label, json] of [['offered', PAID], ['used', Object.assign({}, ACTIVE, { money_back: { eligible: false, why: 'used' } })], ['too late', Object.assign({}, ACTIVE, { money_back: { eligible: false, why: 'too_late' } })]]) {
-      const { ctx, page, errs, calls } = await open(browser, 'plan', { answers: () => bill(json), settle: 300 });
+      const { ctx, page, errs, calls } = await open(browser, 'plan', { money: false, answers: () => bill(json), settle: 300 });
       const v = await sees(page);
       const shown = await page.evaluate(() => [...document.querySelectorAll('[data-money], [data-sheet] [data-ask], [data-under^="money"], [data-back="refunded"], [data-say="refund"]')].filter((e) => !e.hidden || (e.closest('dialog') && e.closest('dialog').open)).length);
       ok('money back switched off, the server saying ' + label + ': nothing about it shows, and only the plan is asked', shows(v, 'Active. Next payment on December 9, 2026.', 'Manage billing') && v.money === '' && v.under.length === 0 && v.sheet === null && shown === 0 && calls.filter(isBilling).every((c) => action(c) === 'status') && errs.length === 0, JSON.stringify(v) + ' shown ' + shown);
       await ctx.close();
     }
     {
-      const { ctx, page, errs } = await open(browser, 'plan', { answers: () => bill(plan({ tier: 'founder', free_until: DEC9, offer: { monthly_cents: 5495, yearly_cents: 59300, trial_days: 24 } })), settle: 300 });
+      const { ctx, page, errs } = await open(browser, 'plan', { money: false, answers: () => bill(plan({ tier: 'founder', free_until: DEC9, offer: { monthly_cents: 5495, yearly_cents: 59300, trial_days: 24 } })), settle: 300 });
       const v = await sees(page);
       ok('money back switched off: the free days still follow the server', shows(v, freeDays(24), 'Start your plan') && same(v.under, ['Free until December 9, 2026.']) && errs.length === 0, JSON.stringify(v));
       await ctx.close();
     }
     {
-      // The page as served says the switch is off; a check of the file itself, so a build can't turn it on unnoticed.
+      // The page as served says the switch is on (Moises approved its last sentence, "Couldn't finish your refund. Try
+      // again in a minute.", on 2026-11-16); a check of the file itself, so no change turns it off unnoticed.
       const js = fs.readFileSync(path.join(__dirname, '..', 'coming-soon', 'assets', 'plan.js'), 'utf8');
-      ok('money back ships switched off: the page\'s one switch says false', (js.match(/var MONEY_BACK_ON = (true|false);/g) || []).join() === 'var MONEY_BACK_ON = false;');
+      ok('money back ships switched on: the page\'s one switch says true', (js.match(/var MONEY_BACK_ON = (true|false);/g) || []).join() === 'var MONEY_BACK_ON = true;');
     }
 
     const ENDED_USED = plan({ status: 'canceled', free_month: false, tier: 'founder', money_back: { eligible: false, why: 'used' } });
@@ -300,7 +302,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       ['a reason this page does not know says nothing', Object.assign({}, ACTIVE, { money_back: { eligible: false, why: 'gold' } }), '', []],
     ];
     for (const [label, json, button, under] of LINES) {
-      const { ctx, page, errs } = await open(browser, 'plan', { moneyOn: true, answers: () => bill(json), settle: 300 });
+      const { ctx, page, errs } = await open(browser, 'plan', { money: true, answers: () => bill(json), settle: 300 });
       const v = await sees(page);
       ok('money back: ' + label, shows(v, 'Active. Next payment on December 9, 2026.', 'Manage billing') || shows(v, 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing') ? v.money === button && same(v.under, under) && errs.length === 0 : false, JSON.stringify(v));
       await ctx.close();
@@ -316,7 +318,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
         if (a === 'money_back') { refundedYet = true; return bill({ refunded: true, amount_cents: 5495, card_last4: '4242', plan_ended: true }); }
         return { status: 400, json: { error: 'action' } };
       };
-      const { ctx, page, errs, away, calls } = await open(browser, 'plan', { moneyOn: true, answers, settle: 300 });
+      const { ctx, page, errs, away, calls } = await open(browser, 'plan', { money: true, answers, settle: 300 });
       await page.click('[data-money]');
       await page.waitForTimeout(300);
       let v = await sees(page);
@@ -342,7 +344,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
 
     // The quote's and the press's other answers.
     const flow = async (quote, press) => {
-      const r = await open(browser, 'plan', { moneyOn: true, answers: (call) => {
+      const r = await open(browser, 'plan', { money: true, answers: (call) => {
         const a = action(call);
         if (a === 'status') return bill(PAID);
         if (a === 'money_back_quote') return typeof quote === 'function' ? quote() : quote;
@@ -420,7 +422,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       const focus = await e.page.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-money'));
       ok('money back: Escape closes the sheet as "Keep my plan" does, and the keyboard is back on the button', ve.sheet === null && ve.money === MONEY_BACK && focus && !e.calls.some((c) => isBilling(c) && action(c) === 'money_back'), JSON.stringify(ve) + ' focus ' + focus);
       await e.ctx.close();
-      const t = await open(browser, 'plan', { moneyOn: true, answers: (call) => (action(call) === 'status' ? bill(PAID) : { wait: 600, status: 200, json: { amount_cents: 5495, card_last4: '4242' } }), settle: 300 });
+      const t = await open(browser, 'plan', { money: true, answers: (call) => (action(call) === 'status' ? bill(PAID) : { wait: 600, status: 200, json: { amount_cents: 5495, card_last4: '4242' } }), settle: 300 });
       await t.page.click('[data-money]');
       await t.page.click('[data-money]', { force: true }).catch(() => null);
       await t.page.waitForTimeout(900);
