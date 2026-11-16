@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Prices</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/prices.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/prices.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="prc" data-prc hidden>
+<h1>Prices</h1>
+<p class="prc-lede">The services you sell, with their fees, add-ons and price changes, and your discount codes: the same list as on your phone. Spex quotes from it.</p>
+<p class="prc-live" role="status">
+<span data-live="connecting">Connecting…</span>
+<span data-live="live" hidden>In step with your phone: a change on either shows on the other within a few minutes.</span>
+<span data-live="offline" hidden>Can't reach Inspyx right now. Trying again.</span>
+</p>
+<div class="prc-state" role="status">
+<p data-state="loading">Loading your prices…</p>
+<p data-state="failed" hidden>The prices couldn’t be read. Check your connection; this page keeps trying.</p>
+</div>
+<div class="say" role="alert">
+<p data-say="saved" hidden>Saved.</p>
+<p data-say="deleted" hidden>Deleted.</p>
+<p data-say="failed" hidden>That couldn’t be saved. Check your connection and try again.</p>
+<p data-say="taken" hidden>Inspyx kept that code out: another of your discount codes already uses it.</p>
+<p data-say="refused" hidden>Inspyx couldn’t keep that change. Check it and try again.</p>
+</div>
+
+<section class="prc-group" data-group="services" hidden>
+<div class="prc-head"><h2>Services</h2><button class="btn small" type="button" data-add="service">Add a service</button></div>
+<p class="prc-empty" data-empty="services" hidden>No prices yet. Add the services you sell, each with its fee, add-ons and price changes. Spex quotes from this list.</p>
+<ol class="prc-list" data-list="services"></ol>
+</section>
+
+<section class="prc-group" data-group="discounts" hidden>
+<div class="prc-head"><h2>Discount codes</h2><button class="btn small" type="button" data-add="discount">Add a discount code</button></div>
+<p class="prc-empty" data-empty="discounts" hidden>No discount codes. A code takes a percent or an amount off.</p>
+<ol class="prc-list" data-list="discounts"></ol>
+</section>
+
+<p class="prc-links"><a href="/today">What needs you</a><a href="/inspections">Your inspections</a><a href="/calendar">Calendar</a><a href="/people">People</a><a href="/account">Account</a></p>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<dialog class="prc-dialog" data-dialog="service" aria-labelledby="svc-title">
+<form method="dialog" data-form="service" novalidate>
+<h2 id="svc-title"><span data-title="new-service">New service</span><span data-title="edit-service" hidden>Service</span><span data-title="new-addon" hidden>New add-on</span><span data-title="edit-addon" hidden>Add-on</span></h2>
+<label>Name <input type="text" name="name" autocomplete="off" maxlength="200"></label>
+<label>What the client reads (optional) <textarea name="description" rows="2" maxlength="2000"></textarea></label>
+<div class="prc-pair">
+<label>Base fee <input type="text" name="fee" inputmode="decimal" autocomplete="off" placeholder="450"></label>
+<label><span data-time="service">Time</span><span data-time="addon" hidden>Extra time</span> <input type="text" name="hours" inputmode="decimal" autocomplete="off" placeholder="hours"></label>
+</div>
+<label data-only="service">Minimum fee (optional) <input type="text" name="minimum" inputmode="decimal" autocomplete="off"><small>Spex never quotes below it</small></label>
+<div class="prc-problems" role="alert">
+<p data-problem="name" hidden>It needs a name.</p>
+<p data-problem="fee" hidden>Write the fee as dollars, like 450 or 450.50.</p>
+<p data-problem="fee_large" hidden>That fee is too large.</p>
+<p data-problem="hours" hidden>Write the time in hours, like 2 or 2.5.</p>
+<p data-problem="minimum" hidden>Write the minimum fee as dollars, or leave it empty.</p>
+</div>
+<div class="prc-actions">
+<button class="btn small" type="submit" value="save">Save</button>
+<button class="btn small quiet" type="button" data-close>Cancel</button>
+<button class="btn small quiet danger" type="button" data-delete hidden><span data-arm="0">Delete</span><span data-arm="1" hidden>Yes, delete</span></button>
+</div>
+<p class="prc-note" data-only="delete-service" hidden>Deleting a service deletes its add-ons and price changes with it.</p>
+</form>
+</dialog>
+
+<dialog class="prc-dialog" data-dialog="discount" aria-labelledby="disc-title">
+<form method="dialog" data-form="discount" novalidate>
+<h2 id="disc-title"><span data-title="new-discount">New discount code</span><span data-title="edit-discount" hidden>Discount code</span></h2>
+<label>Code <input type="text" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40"></label>
+<fieldset class="prc-kind"><legend>Takes off</legend>
+<label class="tick"><input type="radio" name="kind" value="percent" checked> Percent off</label>
+<label class="tick"><input type="radio" name="kind" value="amount"> Amount off</label>
+</fieldset>
+<label><span data-value="percent">Percent</span><span data-value="amount" hidden>Amount</span> <input type="text" name="value" inputmode="decimal" autocomplete="off"></label>
+<fieldset class="prc-applies"><legend>Takes off from</legend>
+<label class="tick"><input type="checkbox" name="all" checked> All services</label>
+<div data-applies></div>
+</fieldset>
+<div class="prc-pair">
+<label>Uses (optional) <input type="text" name="uses" inputmode="numeric" autocomplete="off"></label>
+<label>Ends <input type="date" name="ends"><small>Empty: no end date</small></label>
+</div>
+<label class="tick"><input type="checkbox" name="active" checked> Clients can use it</label>
+<div class="prc-problems" role="alert">
+<p data-problem="code" hidden>It needs a code.</p>
+<p data-problem="code_long" hidden>A code can be at most 30 letters and numbers.</p>
+<p data-problem="code_letters" hidden>A code is letters and numbers only, with no spaces.</p>
+<p data-problem="code_taken" hidden>You already have that code.</p>
+<p data-problem="value" hidden>Write the percent (like 10) or the amount (like 25).</p>
+<p data-problem="percent" hidden>The percent must be from 0.01 to 100.</p>
+<p data-problem="amount" hidden>The amount must be more than zero.</p>
+<p data-problem="uses" hidden>Write the uses as a whole number.</p>
+<p data-problem="uses_one" hidden>The uses must be at least 1.</p>
+</div>
+<div class="prc-actions">
+<button class="btn small" type="submit" value="save">Save</button>
+<button class="btn small quiet" type="button" data-close>Cancel</button>
+<button class="btn small quiet danger" type="button" data-delete hidden><span data-arm="0">Delete</span><span data-arm="1" hidden>Yes, delete</span></button>
+</div>
+</form>
+</dialog>
+
+<template data-t="service"><li class="prc-card">
+<div class="prc-row"><div class="prc-what"><strong data-v="name"></strong><span data-v="summary"></span><span class="prc-desc" data-v="description"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></div>
+<div class="prc-sub"><h3>Add-ons</h3><ol class="prc-addons" data-list="addons"></ol><button class="link" type="button" data-add="addon">Add an add-on</button></div>
+<div class="prc-sub" data-changes><h3>Price changes</h3><ol class="prc-changes" data-list="changes"></ol><p class="prc-note">Price changes are made on your phone for now: Prices, then the service.</p></div>
+</li></template>
+<template data-t="addon"><li class="prc-addon"><span class="prc-what"><span data-v="name"></span><span data-v="summary"></span></span><button class="link" type="button" data-edit>Edit</button></li></template>
+<template data-t="change"><li data-v="text"></li></template>
+<template data-t="discount"><li class="prc-card prc-code"><div class="prc-row"><div class="prc-what"><strong data-v="code"></strong><span data-v="summary"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></div></li></template>
+<template data-t="applies"><label class="tick"><input type="checkbox" name="applies"> <span data-v="name"></span></label></template>
+
+<template data-t="words">
+<span data-w="off_percent">off</span>
+<span data-w="all_services">all services</span>
+<span data-w="until">until</span>
+<span data-w="use">use</span>
+<span data-w="uses">uses</span>
+<span data-w="up_to">up to</span>
+<span data-w="is_off">Off</span>
+<span data-w="at_least">at least</span>
+<span data-w="addon">add-on</span>
+<span data-w="addons">add-ons</span>
+<span data-w="change">price change</span>
+<span data-w="changes">price changes</span>
+<span data-w="for_each">for each</span>
+<span data-w="past">past</span>
+<span data-w="up_to_range">up to</span>
+<span data-w="and_up">and up</span>
+<span data-w="to">to</span>
+<span data-w="any">any</span>
+<span data-w="square_feet">Square feet</span>
+<span data-w="year_built">Year built</span>
+<span data-w="age">Age of the house</span>
+<span data-w="zip">Zip code</span>
+<span data-w="distance">Distance (miles)</span>
+<span data-w="foundation">Foundation</span>
+<span data-w="h">h</span>
+<span data-w="min">min</span>
+</template>
+</body>
+</html>
