@@ -13,7 +13,6 @@
 .insp-cover{display:grid; grid-template-columns:1fr 1fr; gap:14px}
 .insp-pair{display:grid; grid-template-columns:1fr 1fr; gap:14px}
 .insp-started{grid-column:1 / -1; font-size:14px; color:var(--ink-faint)}
-.insp-started[hidden], [data-ni][hidden]{display:none}
 .insp-save{min-height:22px; margin:10px 0 6px; font-size:14px; color:var(--ink-faint)}
 .insp-stop{margin-top:26px}
 .insp-stop h2{font-size:20px; margin-bottom:10px}
