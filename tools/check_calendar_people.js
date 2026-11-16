@@ -23,7 +23,7 @@ const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PA
 const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
 
 const id = (n) => '6f1c2a3b-0000-4000-8000-0000000000' + n;
-const A = id('a1'), B = id('a2'), C = id('a3'), D = id('a4'), E = id('a5'), F = id('a6');
+const A = id('a1'), B = id('a2'), C = id('a3'), D = id('a4'), E = id('a5'), F = id('a6'), G = id('a7');
 
 /* The server, with schema.sql's rules. */
 function server() {
@@ -60,9 +60,10 @@ function seed(s) {
   // Only made, never booked: on the day it was made, with no time.
   s.insp(C, '3 Pine Ct', '3 Pine Ct, Doral', { created_at: ny('2026-11-05T16:45:00') });
   s.insp(D, '7 Bay Rd', '7 Bay Rd, Hialeah', { created_at: ny('2026-11-03T10:00:00'), scheduled_at: ny('2026-12-02T08:00:00') });
-  // Deleted: on no page.
+  // Deleted: on no page (deleted below, after a person was put on it, as a phone does).
   s.insp(E, '1 Gone Ln', '1 Gone Ln', { created_at: ny('2026-11-04T10:00:00'), scheduled_at: ny('2026-11-18T11:00:00') });
-  s.phone(E, 'inspection', E, '_del', true);
+  // A second one on the 18th, made first but later that day: a day lists its inspections in time order.
+  s.insp(G, '2 Palm Dr', '2 Palm Dr, Miami', { created_at: ny('2026-10-30T10:00:00'), scheduled_at: ny('2026-11-18T15:00:00') });
   // 11:30 at night in New York is already the 1st of December in UTC: it belongs on the 30th here.
   s.insp(F, '44 Late Way', '44 Late Way', { created_at: ny('2026-11-06T10:00:00'), scheduled_at: ny('2026-11-30T23:30:00') });
 
@@ -72,7 +73,9 @@ function seed(s) {
   s.person(C, id('b4'), 'buyer_agent', 'Sam Ortiz', { phone: '305-555-0101', position: 0 });        // same phone: one person
   s.person(B, id('b5'), 'listing_agent', 'Lee Park', { position: 1 });
   s.person(D, id('b6'), 'listing_agent', 'lee  park', { position: 0 });                              // same name: one person
-  s.person(E, id('b7'), 'client', 'Ghost Person', { email: 'ghost@example.com' });                    // on a deleted inspection
+  s.person(E, id('b7'), 'client', 'Ghost Person', { email: 'ghost@example.com' });                    // on an inspection deleted next
+  s.phone(E, 'inspection', E, '_del', true);
+  s.person(A, id('bd'), 'buyer_agent', 'Sam Ortiz', { phone: '305 555 0101', position: 2 });         // listed twice on one inspection: it counts once
   s.person(A, id('b8'), 'buyer_agent', 'Gone Agent', { email: 'gone@example.com' });
   s.phone(A, 'person', id('b8'), '_del', true);                                                        // deleted
   s.person(C, id('b9'), 'client', 'Bad Mail', { email: 'x@y.com?subject=hi' });                        // not a plain address: no link
@@ -150,7 +153,7 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     ok('calendar: the week starts on Sunday, and the 1st (a Sunday) needs no blank before it',
       same(await vis(page, '.cal-wd'), ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) && (await page.locator('.cal-pad').count()) === 0 && (await page.locator('.cal-day').count()) === 30);
     ok('calendar: today (Monday the 16th) is marked', await page.getAttribute('[aria-current="date"]', 'data-date') === '2026-11-16');
-    ok('calendar: a booked inspection sits on its day, with its time', same(await day(page, '2026-11-18'), ['9:00 AM 12 Oak St']), JSON.stringify(await day(page, '2026-11-18')));
+    ok('calendar: a booked inspection sits on its day, with its time; a day\'s inspections in time order', same(await day(page, '2026-11-18'), ['9:00 AM 12 Oak St', '3:00 PM 2 Palm Dr']), JSON.stringify(await day(page, '2026-11-18')));
     ok('calendar: a started one sits on the day it started, not the day it was booked for (the phone\'s rule)', same(await day(page, '2026-11-20'), ['10:15 AM 9 Elm Ave']), JSON.stringify(await day(page, '2026-11-20')));
     ok('calendar: one never booked sits on the day it was made, with no time', same(await day(page, '2026-11-05'), ['3 Pine Ct']), JSON.stringify(await day(page, '2026-11-05')));
     ok('calendar: 11:30 at night sits on that night\'s day in this browser\'s time zone (already the 1st in UTC)', same(await day(page, '2026-11-30'), ['11:30 PM 44 Late Way']), JSON.stringify(await day(page, '2026-11-30')));
@@ -175,7 +178,7 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     s.phone(A, 'inspection', A, '_del', true);
     ping();
     ok('calendar: a change on the phone moves an inspection to its new day, with its time, on the ping', await until(async () => same(await day(page, '2026-11-25'), ['2:00 PM 3 Pine Ct'])) && same(await day(page, '2026-11-05'), []));
-    ok('calendar: an inspection deleted on the phone leaves the calendar', same(await day(page, '2026-11-18'), []));
+    ok('calendar: an inspection deleted on the phone leaves the calendar', same(await day(page, '2026-11-18'), ['3:00 PM 2 Palm Dr']), JSON.stringify(await day(page, '2026-11-18')));
     ok('calendar: every call still sends nothing', sendsNothing(calls));
     ok('calendar: nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await ctx.close();
@@ -187,7 +190,7 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     const days = await page.evaluate(() => [...document.querySelectorAll('.cal-day')].filter((e) => e.getClientRects().length > 0).map((e) => e.querySelector('.cal-date').textContent.replace(/\s+/g, ' ').trim()));
     ok('calendar, phone: lists only the days that have inspections, each with its weekday', same(days, ['Thu 5', 'Wed 18', 'Fri 20', 'Mon 30']), JSON.stringify(days));
     ok('calendar, phone: no day names row and no blanks', (await vis(page, '.cal-wd, .cal-pad')).length === 0);
-    ok('calendar, phone: each inspection shows its address too', (await vis(page, '.cal-day[data-date="2026-11-18"] .cal-jobs span')).join() === '12 Oak St, Miami');
+    ok('calendar, phone: each inspection shows its address too', same(await vis(page, '.cal-day[data-date="2026-11-18"] .cal-jobs span'), ['12 Oak St, Miami', '2 Palm Dr, Miami']), JSON.stringify(await vis(page, '.cal-day[data-date="2026-11-18"] .cal-jobs span')));
     ok('calendar, phone: no errors, and nothing runs off the side of the screen', errs.length === 0 && await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await ctx.close();
   });
@@ -205,7 +208,7 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     r = await open(browser, { server: s, path: 'calendar', down: () => down });
     ok('calendar: when Inspyx can\'t be reached, it says so and keeps trying', (await vis(r.page, '[data-state]')).join() === 'Couldn\'t load your inspections. Check your connection; this page keeps trying.' && (await vis(r.page, '[data-live]')).join() === 'Can\'t reach Inspyx right now. Trying again.');
     down = false;
-    ok('calendar: and fills in once Inspyx answers again', await until(async () => same(await day(r.page, '2026-11-18'), ['9:00 AM 12 Oak St']), 9000));
+    ok('calendar: and fills in once Inspyx answers again', await until(async () => same(await day(r.page, '2026-11-18'), ['9:00 AM 12 Oak St', '3:00 PM 2 Palm Dr']), 9000));
     await r.ctx.close();
   });
 
@@ -224,21 +227,22 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
       ok('people, ' + label + ': their inspections, newest first, each opening that inspection', same(await dana.locator('.ppl-jobs li').allTextContents(), ['9 Elm AveNov 20, 2026', '12 Oak StNov 18, 2026']) && await dana.locator('.ppl-jobs a').first().getAttribute('href') === '/inspections#' + B);
       ok('people, ' + label + ': the email to write to, from the newest inspection', await dana.locator('[data-v="email"]').getAttribute('href') === 'mailto:DANA@example.com');
       const sam = page.locator('[data-role="buyer_agent"] .ppl-one');
-      ok('people, ' + label + ': one agent across two inspections (same phone number) shows once, with both, and a number to call',
+      ok('people, ' + label + ': one agent across two inspections (same phone number) shows once, with both (listed twice on one counts once), and a number to call',
         (await sam.count()) === 1 && (await sam.locator('.ppl-jobs li').count()) === 2 && await sam.locator('[data-v="phone"]').getAttribute('href') === 'tel:3055550101' && (await sam.locator('[data-v="phone"]').textContent()) === '(305) 555-0101' && !(await sam.locator('[data-v="email"]').isVisible()));
       ok('people, ' + label + ': one agent with neither email nor phone, on two inspections, matched by name', (await page.locator('[data-role="listing_agent"] .ppl-one .ppl-jobs li').count()) === 2);
       ok('people, ' + label + ': an address that is not a plain email gets no link', !(await page.locator('[data-role="client"] .ppl-one', { hasText: 'Bad Mail' }).locator('[data-v="email"]').isVisible()));
       ok('people, ' + label + ': no one from a deleted inspection, no deleted person, no role the phone doesn\'t have', !(await vis(page, '.ppl')).join(' ').match(/Ghost|Gone Agent|Not A Role/));
 
-      await page.fill('[data-find]', 'sam');
+      const find = async (q) => { await page.fill('[data-find]', q); await page.waitForTimeout(400); };
+      await find('sam');
       ok('people, ' + label + ': Find by name keeps only who matches, and their group', await until(async () => same(await vis(page, '.ppl-group h2'), ['Buyer\'s agents 1'])));
-      await page.fill('[data-find]', '555-01');
-      ok('people, ' + label + ': Find by phone digits, however they are written', await until(async () => same(await vis(page, '.ppl-one h3'), ['Sam Ortiz'])));
-      await page.fill('[data-find]', 'DANA@EX');
+      await find('555-01');
+      ok('people, ' + label + ': Find by phone digits, however they are written', await until(async () => same(await vis(page, '.ppl-one h3'), ['Sam Ortiz'])), JSON.stringify(await vis(page, '.ppl-one h3')));
+      await find('DANA@EX');
       ok('people, ' + label + ': Find by email', await until(async () => same(await vis(page, '.ppl-one h3'), ['Dana Reyes-Lopez'])));
-      await page.fill('[data-find]', 'zzz');
+      await find('zzz');
       ok('people, ' + label + ': no match says so', await until(async () => (await vis(page, '[data-state]')).join() === 'No one matches that.' && (await vis(page, '.ppl-group')).length === 0));
-      await page.fill('[data-find]', '');
+      await find('');
 
       s.person(D, id('bc'), 'client', 'New Client', { email: 'new@example.com' });
       ping();
