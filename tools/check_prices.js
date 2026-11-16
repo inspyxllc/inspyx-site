@@ -325,8 +325,13 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
 
   await group('the page says no words', async () => {
     const fs = require('fs'), pathm = require('path');
-    const code = fs.readFileSync(pathm.join(__dirname, '..', 'coming-soon', 'assets', 'prices.js'), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
-    ok('the script says no words: every sentence is in the page', !/[A-Z][a-z]+ [a-z]+ [a-z]+[.!?]['"`]/.test(code));
+    const code = fs.readFileSync(pathm.join(__dirname, '..', 'coming-soon', 'assets', 'prices.js'), 'utf8');
+    // Each string literal on its own (never two read as one); one holding three or more plain words is a sentence.
+    // (Until 2026-11-16 this was one pattern that saw only a sentence of exactly three words.)
+    const bare = code.replace(/\/\*[\s\S]*?\*\/|(^|[^:'"])\/\/.*$/gm, '$1');
+    const literals = bare.match(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g) || [];
+    const sentences = literals.map((l) => l.slice(1, -1)).filter((t) => /^[A-Za-z]/.test(t) && t.split(' ').filter((w) => /^[A-Za-z’']+[.,!?:;]?$/.test(w)).length >= 3);
+    ok('the script says no words: every sentence is in the page', sentences.length === 0, sentences.slice(0, 3).join(' | '));
   });
 
   await browser.close();
