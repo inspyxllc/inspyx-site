@@ -158,7 +158,7 @@
       ]
     },
     {
-      "source": "/(inspections)",
+      "source": "/(inspections|calendar|people)",
       "headers": [
         {
           "key": "Content-Security-Policy",

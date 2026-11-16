@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Your calendar</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/calendar.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/insp-read.js" defer></script>
+<script src="/assets/calendar.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="cal" data-cal hidden>
+<div class="cal-head">
+<h1 data-month>Your calendar</h1>
+<p class="cal-nav">
+<button class="btn quiet small" type="button" data-go="-1" aria-label="Previous month">‹</button>
+<button class="btn quiet small" type="button" data-go="0">This month</button>
+<button class="btn quiet small" type="button" data-go="1" aria-label="Next month">›</button>
+</p>
+</div>
+<p class="cal-live" role="status">
+<span data-live="connecting">Connecting…</span>
+<span data-live="live" hidden>Live: a change on your phone shows here within seconds.</span>
+<span data-live="offline" hidden>Can't reach Inspyx right now. Trying again.</span>
+</p>
+<div class="cal-state" role="status">
+<p data-state="loading">Loading your inspections…</p>
+<p data-state="empty" hidden>No inspections here yet. They show up here once your phone has synced.</p>
+<p data-state="failed" hidden>Couldn't load your inspections. Check your connection; this page keeps trying.</p>
+<p data-state="none" hidden>Nothing on your calendar this month.</p>
+</div>
+<ol class="cal-days" data-days aria-label="Days of the month"></ol>
+<p class="cal-note">Each inspection sits on the day it started, or else the day it's booked for, as on your phone. Open one to work on it.</p>
+<p class="cal-links"><a href="/today">What needs you</a><a href="/inspections">Your inspections</a><a href="/people">People</a><a href="/account">Account</a></p>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<template data-t="weekday"><li class="cal-wd" aria-hidden="true"></li></template>
+<template data-t="pad"><li class="cal-pad" aria-hidden="true"></li></template>
+<template data-t="day"><li class="cal-day"><h2 class="cal-date"><span class="cal-dname" data-v="dname"></span> <span class="cal-num" data-v="num"></span></h2><ul class="cal-jobs"></ul></li></template>
+<template data-t="job"><li><a href="#"><time data-v="time"></time><strong data-v="title"></strong><span data-v="address"></span></a></li></template>
+</body>
+</html>

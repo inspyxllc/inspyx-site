@@ -22,9 +22,11 @@ ok('the rule catches the signed-in addresses', yes.every(applies), yes.filter((p
 ok('the rule catches no other address', !no.some(applies), no.filter(applies).join(' '));
 // Your inspections, live (2026-11-14): its own rule, the signed-in pages' rule plus the live socket to Inspyx's server.
 const wss = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']));
-ok('the inspections page has its rule, with the live socket', applies('/inspections') && wss('/inspections'));
-ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/', '/inspections/x', '/inspection'].some(wss));
-ok('the inspections rule catches nothing else', !['/inspection', '/inspections/x', '/myinspections', '/assets/inspections.js'].some(applies));
+// The calendar and people pages (2026-11-16) read the same live inspections, so they share that rule.
+const live = ['/inspections', '/calendar', '/people'];
+ok('the inspections, calendar and people pages have the rule, with the live socket', live.every((p) => applies(p) && wss(p)), live.filter((p) => !applies(p) || !wss(p)).join(' '));
+ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/', '/inspections/x', '/inspection', '/calendar/x', '/people/x', '/calendars', '/peoples'].some(wss));
+ok('the live pages\' rule catches nothing else', !['/inspection', '/inspections/x', '/myinspections', '/assets/inspections.js', '/calendar/x', '/mycalendar', '/assets/calendar.js', '/people/x', '/person', '/assets/people.js', '/assets/insp-read.js'].some(applies));
 // The client's report page (2026-11-14): a new link is /r#<key> (the browser asks for /r alone), an old one
 // /r/<key>. Both must open the report page, under the report page's own rules.
 const opensReport = (p) => (out.routes || []).some((r) => r.dest && /^\/report(\?|$)/.test(r.dest) && new RegExp(r.src).test(p));
