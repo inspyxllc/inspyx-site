@@ -1,0 +1,39 @@
+/* Your calendar (2026-11-16): calm and plain like the inspections page. A grid of weeks on a wide screen; on a phone,
+   the list of the days that have inspections. */
+.cal{display:block; max-width:1180px; margin:0 auto; padding:28px var(--gr) 64px var(--gl)}
+.cal-head{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between}
+.cal h1{font-size:34px}
+.cal-nav{display:flex; gap:8px}
+.cal-nav .btn.small{min-height:44px; min-width:44px; padding:0 16px; border:0; font:600 15px var(--font); cursor:pointer}
+.cal-live{margin:8px 0 14px; font-size:14px; color:var(--ink-faint)}
+.cal-state p{font-size:18px; line-height:1.45; color:var(--ink-soft); margin-bottom:12px}
+.cal-days{list-style:none; padding:0; margin:0; display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:6px}
+.cal-days[hidden]{display:none}
+.cal-wd{padding:4px 8px; font-size:13px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em}
+.cal-day{min-height:118px; min-width:0; padding:8px; border-radius:14px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.cal-day[aria-current="date"]{box-shadow:inset 0 0 0 2px var(--navy)}
+.cal-date{font-size:14px; font-weight:600; color:var(--ink-soft); margin-bottom:6px}
+.cal-day[aria-current="date"] .cal-num{display:inline-grid; place-items:center; min-width:24px; height:24px; padding:0 6px; border-radius:12px; background:var(--navy); color:#FFFFFF}
+/* On the grid the day's name is in the header row: kept for screen readers only. */
+.cal-dname{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+.cal-jobs{list-style:none; padding:0; margin:0; display:grid; gap:4px}
+.cal-jobs a{display:grid; gap:1px; padding:6px 8px; border-radius:10px; background:#EEF3F9; color:var(--ink); text-decoration:none; font-size:13.5px; line-height:1.3}
+.cal-jobs a:hover, .cal-jobs a:focus-visible{background:#DDE8F4}
+.cal-jobs time{font-size:12.5px; font-weight:600; color:var(--navy)}
+.cal-jobs strong{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.cal-jobs span{display:none}
+.cal-note{margin-top:18px; font-size:14.5px; color:var(--ink-faint)}
+.cal-links{display:flex; flex-wrap:wrap; gap:4px 22px; margin-top:20px; font-size:14.5px}
+.cal-links a{display:inline-flex; align-items:center; min-height:44px}
+@media (max-width: 760px){
+  .cal{padding-top:20px; padding-bottom:48px}
+  .cal h1{font-size:28px}
+  .cal-days{grid-template-columns:1fr; gap:10px}
+  .cal-wd, .cal-pad, .cal-day.cal-empty{display:none}
+  .cal-day{min-height:0; padding:12px 14px}
+  .cal-dname{position:static; width:auto; height:auto; overflow:visible; clip:auto}
+  .cal-date{font-size:16px; color:var(--ink)}
+  .cal-jobs a{padding:10px 12px; font-size:15px}
+  .cal-jobs strong{white-space:normal}
+  .cal-jobs span{display:block; font-size:14px; color:var(--ink-soft); overflow-wrap:anywhere}
+}
