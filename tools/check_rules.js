@@ -48,6 +48,21 @@ ok('/a opens the agent page, under the report page\'s own rules (noindex, the fi
 ok('the agent page\'s route takes no other address', !['/', '/about', '/account', '/a/x', '/ab', '/r', '/r/' + key, '/agents', '/reports'].some(opensAgent), ['/', '/about', '/account', '/a/x', '/ab', '/r', '/r/' + key, '/agents', '/reports'].filter(opensAgent).join(' '));
 ok('/a never opens the client report route, and no signed-in rule reaches it', !opensReport('/a') && !signedInRule('/a') && !signedInRule('/agent'));
 ok('the agent rule reaches no other page (/about, /account, /assets/agent.js)', !['/about', '/account', '/assets/agent.js', '/ab'].some((p) => ruled.some((r) => new RegExp(r.src).test(p) && r.src.includes('agent'))));
+// A client's pay page with the inspector's card fee (2026-11-17): /pay (the link after the "#") alone may load
+// Stripe's card form, under a rule of its own: noindex, never cached, never framed, and asking only Inspyx's server
+// and Stripe's.
+const payCsp = (p) => ruled.filter((r) => new RegExp(r.src).test(p)).map((r) => r.headers['Content-Security-Policy']).join(' || ');
+const stripeRule = (p) => /stripe\.com/.test(payCsp(p));
+const payHeaders = (out.routes || []).filter((r) => r.headers && new RegExp(r.src).test('/pay')).reduce((h, r) => Object.assign(h, r.headers), {});
+const PAY_CSP = "default-src 'none'; script-src 'self' https://js.stripe.com https://*.js.stripe.com; style-src 'self'; img-src 'self'; " +
+  "frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com; connect-src https://btxlrfvqifnrnxffohsz.supabase.co https://api.stripe.com; " +
+  "base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+ok('/pay has its own rule: Stripe\'s card form and Inspyx\'s server only, noindex, never cached, never framed',
+  payCsp('/pay') === PAY_CSP && /noindex/.test(payHeaders['X-Robots-Tag'] || '') && payHeaders['Cache-Control'] === 'no-store' &&
+  payHeaders['X-Frame-Options'] === 'DENY' && payHeaders['Referrer-Policy'] === 'no-referrer', payCsp('/pay'));
+const notPay = ['/', '/pricing', '/plan', '/signin', '/account', '/today', '/a', '/agent', '/r', '/report', '/r/' + key, '/inspections', '/pay/x', '/payment', '/pays', '/mypay', '/assets/pay.js', '/assets/pay.css'];
+ok('no other address may load anything from Stripe', !notPay.some(stripeRule), notPay.filter(stripeRule).join(' '));
+ok('one rule alone names Stripe, and it is /pay\'s', ruled.filter((r) => /stripe\.com/.test(r.headers['Content-Security-Policy'])).length === 1);
 // The reader must be able to say no, or its yes means nothing: a pattern that is wrong on purpose.
 const bad = read({ headers: [{ source: '/(?!x)', headers: [{ key: 'A', value: 'b' }] }] });
 ok('a pattern that is wrong on purpose is refused by the same reader', !!bad.error, bad.error ? bad.error.code : 'it was accepted');
