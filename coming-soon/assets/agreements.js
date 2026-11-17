@@ -70,10 +70,12 @@
   function send(push) {
     return exchange(push).then(function (answer) {
       if (answer === null) return 'failed';
-      var mine = (answer.skipped || []).filter(function (s) {
-        return push.some(function (p) { return p.kind === s.kind && p.id === s.id; });
-      });
-      var outcome = mine.length === 0 ? 'saved' : 'refused';
+      var sent = function (s) { return push.some(function (p) { return p.kind === s.kind && p.id === s.id; }); };
+      var mine = (answer.skipped || []).filter(sent);
+      // A pushed row the server didn't apply: it holds a newer copy (a phone change a moment earlier, or a clock
+      // ahead), which the pull shows. Not saved.
+      var stale = (answer.applied || []).filter(function (a) { return a.applied === false && sent(a); });
+      var outcome = mine.length === 0 && stale.length === 0 ? 'saved' : 'refused';
       return (answer.more ? pull() : Promise.resolve()).then(function () { render(); return outcome; });
     }, function () { return 'failed'; });
   }
@@ -146,6 +148,9 @@
 
   var dialog = $('[data-dialog]'), form = $('[data-form]');
   var editing = null;   // the agreement being changed, or null for a new one
+  // A new agreement's id and times, given when the dialog opens and kept for every Save in it: a Save that failed
+  // may still have landed, and a retry must change that same row, never make a second.
+  var draft = null;
 
   function armDelete(armed) {
     var b = $('[data-delete]', form);
@@ -155,6 +160,7 @@
 
   function open(d, signs) {
     editing = d;
+    draft = d ? null : { id: newId(), createdAt: null, updatedAt: 0 };
     showOne(form, 'data-title', d ? 'edit' : 'new');
     form.elements.name.value = d ? d.title : '';
     form.elements.words.value = d ? d.body : '';
@@ -183,14 +189,18 @@
     var f = fields();
     showOne(form, 'data-problem', f.problem || '');
     if (f.problem) return;
-    var was = editing, at = nextAt(was);
+    var was = editing, at = nextAt(was || draft);
+    if (!was) {
+      if (draft.createdAt === null) draft.createdAt = at;
+      draft.updatedAt = at;
+    }
     var data = {
-      id: was ? was.id : newId(),
+      id: was ? was.id : draft.id,
       ownerAccountId: me,
       kind: 'agreement',
       title: f.title,
       body: f.body,
-      createdAt: was ? was.createdAt : at,
+      createdAt: was ? was.createdAt : draft.createdAt,
       updatedAt: at,
       deletedAt: null,
     };

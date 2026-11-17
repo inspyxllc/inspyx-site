@@ -81,6 +81,8 @@ async function open(browser, o) {
     calls.push({ headers: req.headers(), body });
     if (o.down && o.down()) return route.abort('failed');
     const { skipped, applied } = s.push(body.push || []);
+    // The push landed, but its answer never reaches the page (the network drops after it).
+    if (o.lose && o.lose()) return route.abort('failed');
     const after = body.after ? body.after.at : '';
     const rows = [...s.held.values()].filter((r) => r.changed_at > after).sort((a, b) => (a.changed_at < b.changed_at ? -1 : 1));
     const page_ = rows.slice(0, body.limit || 200);
@@ -245,6 +247,48 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     await page.click(F + ' button[type="submit"]');
     ok('a change the server keeps out: the dialog stays, and says Inspyx couldn\'t keep it', await until(async () => (await vis(page, '[data-say]')).join() === 'Inspyx couldn’t keep that change. Check it and try again.') && await page.locator('[data-dialog]').isVisible());
     ok('and the list still shows what the server holds', (await names(page)).includes('Condo agreement') && !(await names(page)).includes('Condo agreement 2'));
+    await ctx.close();
+  });
+
+  await group('a Save that landed though the page heard nothing', async () => {
+    const s = server(); seed(s);
+    let lose = false;
+    const { page, ctx, calls } = await open(browser, { server: s, lose: () => lose });
+    const radon = () => [...s.held.values()].filter((r) => r.kind === 'legal_documents' && r.data.deletedAt === null && r.data.title.startsWith('Radon'));
+    await page.click('[data-add="agreement"]');
+    await page.fill(F + ' input[name="name"]', 'Radon agreement');
+    await page.fill(F + ' textarea[name="words"]', 'The client hires the inspector for radon.');
+    const before = calls.length;
+    lose = true;
+    await page.click(F + ' button[type="submit"]');
+    ok('the first Save lands, but its answer is lost: the page says it couldn\'t be saved, and the dialog stays', await until(async () => (await vis(page, '[data-say]')).join() === 'That couldn’t be saved. Check your connection and try again.') && await page.locator('[data-dialog]').isVisible() && radon().length === 1);
+    lose = false;
+    await page.fill(F + ' input[name="name"]', 'Radon agreement 2');
+    await page.click(F + ' button[type="submit"]');
+    ok('Save again: saved, and the dialog closes', await until(async () => (await vis(page, '[data-say]')).join() === 'Saved.') && !(await page.locator('[data-dialog]').isVisible()));
+    const sent = pushed(calls.slice(before)).filter((r) => r.kind === 'legal_documents');
+    const held = radon();
+    ok('still one agreement: the retry changed the row the first Save made (one id, made at the first try, changed later)', held.length === 1 && sent.length === 2 && sent[0].id === sent[1].id && held[0].id === sent[0].id && held[0].data.title === 'Radon agreement 2' && held[0].data.createdAt === sent[0].data.createdAt && held[0].data.updatedAt > held[0].data.createdAt, JSON.stringify(held.map((r) => [r.id, r.data.title, r.data.createdAt, r.data.updatedAt])));
+    ok('and the list shows it once', (await names(page)).filter((n) => n.startsWith('Radon')).join() === 'Radon agreement 2', JSON.stringify(await names(page)));
+    await page.click('[data-add="agreement"]');
+    await page.fill(F + ' input[name="name"]', 'Mold agreement');
+    await page.fill(F + ' textarea[name="words"]', 'The client hires the inspector for mold.');
+    await page.click(F + ' button[type="submit"]');
+    const mold = pushed(calls).filter((r) => r.kind === 'legal_documents' && r.data.title === 'Mold agreement');
+    ok('a new agreement opened after it gets an id of its own', await until(async () => (await names(page)).includes('Mold agreement')) && mold.length === 1 && mold[0].id !== sent[0].id);
+    await ctx.close();
+  });
+
+  await group('the server holds a newer copy', async () => {
+    const s = server(); seed(s);
+    const { page, ctx } = await open(browser, { server: s });
+    await card(page, 'Condo agreement').locator('[data-edit]').click();
+    // The phone changed it a moment ago, on a clock ahead of this computer's: the server's copy is newer.
+    s.agreement('agr-condo', 'Condo agreement (phone)', 'Words from the phone.', T + 1, { updatedAt: Date.now() + 3600000 });
+    await page.fill(F + ' input[name="name"]', 'Condo agreement 3');
+    await page.click(F + ' button[type="submit"]');
+    ok('a change the server didn\'t apply is not "Saved.": it says Inspyx couldn\'t keep it, and the dialog stays', await until(async () => (await vis(page, '[data-say]')).join() === 'Inspyx couldn’t keep that change. Check it and try again.') && await page.locator('[data-dialog]').isVisible());
+    ok('and the list shows the server\'s copy', await until(async () => (await names(page)).includes('Condo agreement (phone)')) && !(await names(page)).includes('Condo agreement 3'), JSON.stringify(await names(page)));
     await ctx.close();
   });
 
