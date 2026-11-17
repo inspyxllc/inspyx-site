@@ -189,7 +189,10 @@
     var f = fields();
     showOne(form, 'data-problem', f.problem || '');
     if (f.problem) return;
-    var was = editing, at = nextAt(was || draft);
+    // An edit is dated after the freshest copy held, not the one the dialog opened with: after a Save refused for a
+    // newer copy from elsewhere (its pull brought that copy), Save again keeps what is on screen. Last writer wins.
+    var was = editing, held = was ? rows['legal_documents/' + was.id] : null;
+    var at = nextAt(was ? (held ? held.data : was) : draft);
     if (!was) {
       if (draft.createdAt === null) draft.createdAt = at;
       draft.updatedAt = at;
@@ -213,8 +216,9 @@
   $('[data-delete]', form).addEventListener('click', function () {
     var b = $('[data-delete]', form);
     if (b.getAttribute('data-armed') !== '1') { armDelete(true); return; }
-    var copy = Object.assign({}, editing), when = Date.now();
-    copy.updatedAt = copy.updatedAt >= when ? copy.updatedAt + 1 : when;
+    var copy = Object.assign({}, editing), when = Date.now(), held = rows['legal_documents/' + editing.id];
+    var last = held ? held.data.updatedAt : copy.updatedAt;
+    copy.updatedAt = last >= when ? last + 1 : when;
     copy.deletedAt = when;
     finish([wire('legal_documents', copy)], 'deleted');
   });
