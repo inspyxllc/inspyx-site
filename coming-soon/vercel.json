@@ -133,7 +133,7 @@
       ]
     },
     {
-      "source": "/(signin|account|plan|reset|signup|today|numbers|reports|prices|agreements)",
+      "source": "/(signin|account|plan|reset|signup|today|numbers|reports|prices|agreements|profile)",
       "headers": [
         {
           "key": "Content-Security-Policy",

@@ -289,6 +289,17 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     await page.click(F + ' button[type="submit"]');
     ok('a change the server didn\'t apply is not "Saved.": it says Inspyx couldn\'t keep it, and the dialog stays', await until(async () => (await vis(page, '[data-say]')).join() === 'Inspyx couldn’t keep that change. Check it and try again.') && await page.locator('[data-dialog]').isVisible());
     ok('and the list shows the server\'s copy', await until(async () => (await names(page)).includes('Condo agreement (phone)')) && !(await names(page)).includes('Condo agreement 3'), JSON.stringify(await names(page)));
+    const phoneAt = s.value('legal_documents', 'agr-condo').updatedAt;
+    await page.click(F + ' button[type="submit"]');
+    ok('Save again in the same dialog: kept, dated after the newer copy (what is on screen wins)', await until(async () => (await vis(page, '[data-say]')).join() === 'Saved.') && s.value('legal_documents', 'agr-condo').title === 'Condo agreement 3' && s.value('legal_documents', 'agr-condo').updatedAt > phoneAt);
+    // Deleting likewise: a newer copy from the phone first refuses it; deleting again goes through.
+    s.agreement('agr-annual', 'annual check-up (phone)', 'Once a year, from the phone.', T + 2, { updatedAt: Date.now() + 7200000 });
+    await card(page, 'annual check-up').locator('[data-edit]').click();
+    await page.click(F + ' [data-delete]');
+    await page.click(F + ' [data-delete]');
+    ok('a delete the server didn\'t apply: it says Inspyx couldn\'t keep it', await until(async () => (await vis(page, '[data-say]')).join() === 'Inspyx couldn’t keep that change. Check it and try again.') && s.value('legal_documents', 'agr-annual').deletedAt === null);
+    await page.click(F + ' [data-delete]');
+    ok('delete again: deleted, after the newer copy', await until(async () => (await vis(page, '[data-say]')).join() === 'Deleted.') && s.value('legal_documents', 'agr-annual').deletedAt !== null);
     await ctx.close();
   });
 

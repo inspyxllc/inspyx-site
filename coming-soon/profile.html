@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Your company</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/profile.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/profile.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="prf" data-prf hidden>
+<h1>Your company</h1>
+<p class="prf-lede">Your name, license and company print on every report's cover: the same as on your phone.</p>
+<p class="prf-live" role="status">
+<span data-live="connecting">Connecting…</span>
+<span data-live="live" hidden>In step with your phone: a change on either shows on the other within a few minutes.</span>
+<span data-live="offline" hidden>Can't reach Inspyx right now. Trying again.</span>
+</p>
+<div class="prf-state" role="status">
+<p data-state="loading">Loading your company details…</p>
+<p data-state="failed" hidden>Your company details couldn’t be read. Check your connection; this page keeps trying.</p>
+</div>
+
+<form class="prf-form" data-form novalidate hidden>
+<p class="prf-need" data-need-line hidden><span data-need="both">Your reports need your name and your license number.</span><span data-need="name" hidden>Your reports need your name.</span><span data-need="license" hidden>Your reports need your license number.</span></p>
+<label>Your name (needed for reports) <input type="text" name="inspectorName" autocomplete="name" maxlength="200"></label>
+<label>License number (needed for reports) <input type="text" name="licenseNumber" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="200"></label>
+<label>Company <input type="text" name="companyName" autocomplete="organization" maxlength="200"></label>
+<label>Company phone <input type="tel" name="companyPhone" autocomplete="tel" maxlength="200"></label>
+<label>Company email <input type="email" name="companyEmail" autocomplete="email" spellcheck="false" maxlength="254"></label>
+<div class="prf-actions"><button class="btn small" type="submit">Save</button></div>
+<!-- Below the button: a line appearing or going as a box is left never moves Save under a click. -->
+<div class="prf-problems" role="alert">
+<p data-problem="email" hidden>The company email doesn't look complete (like name@company.com).</p>
+</div>
+<div class="say" role="alert">
+<p data-say="saved" hidden>Saved.</p>
+<p data-say="failed" hidden>That couldn’t be saved. Check your connection and try again.</p>
+<p data-say="refused" hidden>Inspyx couldn’t keep that change. Check it and try again.</p>
+<p data-say="elsewhere" hidden>These details were changed somewhere else since this page showed them, so nothing was saved. Save again to keep what you see here.</p>
+</div>
+</form>
+
+<p class="prf-links"><a href="/today">What needs you</a><a href="/inspections">Your inspections</a><a href="/calendar">Calendar</a><a href="/people">People</a><a href="/account">Account</a></p>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+</body>
+</html>
