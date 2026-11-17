@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Agreements</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/agreements.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/agreements.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="agr" data-agr hidden>
+<h1>Agreements</h1>
+<p class="agr-lede">The agreements your clients sign before an inspection: the same list as on your phone.</p>
+<p class="agr-live" role="status">
+<span data-live="connecting">Connecting…</span>
+<span data-live="live" hidden>In step with your phone: a change on either shows on the other within a few minutes.</span>
+<span data-live="offline" hidden>Can't reach Inspyx right now. Trying again.</span>
+</p>
+<div class="agr-state" role="status">
+<p data-state="loading">Loading your agreements…</p>
+<p data-state="failed" hidden>Your agreements couldn’t be read. Check your connection; this page keeps trying.</p>
+</div>
+<div class="say" role="alert">
+<p data-say="saved" hidden>Saved.</p>
+<p data-say="deleted" hidden>Deleted.</p>
+<p data-say="failed" hidden>That couldn’t be saved. Check your connection and try again.</p>
+<p data-say="refused" hidden>Inspyx couldn’t keep that change. Check it and try again.</p>
+</div>
+
+<section class="agr-group" data-group="agreements" hidden>
+<div class="agr-head"><h2>Your agreements</h2><button class="btn small" type="button" data-add="agreement">Add an agreement</button></div>
+<p class="agr-empty" data-empty hidden>No agreements yet. Add the one your clients sign before an inspection.</p>
+<ol class="agr-list" data-list></ol>
+</section>
+
+<p class="agr-links"><a href="/today">What needs you</a><a href="/inspections">Your inspections</a><a href="/calendar">Calendar</a><a href="/people">People</a><a href="/account">Account</a></p>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<dialog class="agr-dialog" data-dialog aria-labelledby="agr-title">
+<form method="dialog" data-form novalidate>
+<h2 id="agr-title"><span data-title="new">New agreement</span><span data-title="edit" hidden>Agreement</span></h2>
+<label>Name <input type="text" name="name" autocomplete="off"></label>
+<label>Words <textarea name="words" rows="16"></textarea></label>
+<p class="agr-help">Clients read and sign this exact text. Editing it later doesn't change an agreement already signed.</p>
+<p class="agr-help">Blanks your phone fills in: [Client name] [Property address] [Inspection date] [Fee] [Your name] [Your company] [License number] [Today's date]</p>
+<p class="agr-help">Inspyx can't promise an agreement meets your state's rules: have your attorney read it before clients sign it.</p>
+<label class="tick" data-only="choose"><input type="checkbox" name="signs"> Clients sign this one</label>
+<p class="agr-signs" data-only="signs" hidden>Clients sign this one.</p>
+<div class="agr-problems" role="alert">
+<p data-problem="name" hidden>It needs a name.</p>
+<p data-problem="name_long" hidden>A name can be at most 120 characters.</p>
+<p data-problem="words" hidden>It needs its words.</p>
+<p data-problem="words_long" hidden>This agreement is too long to save. An agreement can be up to about 15,000 words.</p>
+</div>
+<div class="agr-actions">
+<button class="btn small" type="submit" value="save">Save</button>
+<button class="btn small quiet" type="button" data-close>Cancel</button>
+<button class="btn small quiet danger" type="button" data-delete hidden><span data-arm="0">Delete</span><span data-arm="1" hidden>Yes, delete</span></button>
+</div>
+</form>
+</dialog>
+
+<template data-t="agreement"><li class="agr-card"><div class="agr-what"><strong data-v="name"></strong><span data-v="line"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></li></template>
+
+<template data-t="words">
+<span data-w="signs">Clients sign this one</span>
+<span data-w="edited">Edited</span>
+</template>
+</body>
+</html>
