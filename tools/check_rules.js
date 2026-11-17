@@ -93,10 +93,11 @@ ok('the rule for every address sends nosniff and DENY alone, and no rule sends t
 {
   const dir = path.join(__dirname, '..', 'coming-soon');
   const read2 = (n) => fs.readFileSync(path.join(dir, n + '.html'), 'utf8');
-  const inlineScript = (h) => (h.match(/<script\b[^>]*>/g) || []).filter((t) => !/\ssrc=/.test(t) && !/type="application\/ld\+json"/.test(t));
+  // Tags in any case (HTML doesn't care: <SCRIPT> runs too; CodeQL js/bad-tag-filter on #58).
+  const inlineScript = (h) => (h.match(/<script\b[^>]*>/gi) || []).filter((t) => !/\ssrc=/i.test(t) && !/type="application\/ld\+json"/i.test(t));
   const names = ['index'].concat(POLICY.map((p) => p.slice(1)), ['404']);
   ok('no public page has a script written into it, or an on...= handler', names.every((n) => inlineScript(read2(n)).length === 0 && !/\son[a-z]+=/i.test(read2(n))), names.filter((n) => inlineScript(read2(n)).length || /\son[a-z]+=/i.test(read2(n))).join(' '));
-  ok('no policy page (nor About, Founders, Support, the wrong-address page) has a style written into it', names.slice(1).every((n) => !/<style\b/.test(read2(n)) && !/\sstyle=/.test(read2(n))), names.slice(1).filter((n) => /<style\b/.test(read2(n)) || /\sstyle=/.test(read2(n))).join(' '));
+  ok('no policy page (nor About, Founders, Support, the wrong-address page) has a style written into it', names.slice(1).every((n) => !/<style\b/i.test(read2(n)) && !/\sstyle=/i.test(read2(n))), names.slice(1).filter((n) => /<style\b/i.test(read2(n)) || /\sstyle=/i.test(read2(n))).join(' '));
   ok('the home page runs its early script from this site, in its head, before its style', /<head>[\s\S]*<script src="\/assets\/home-early\.js"><\/script>[\s\S]*<style>[\s\S]*<\/head>/.test(read2('index')));
 }
 
