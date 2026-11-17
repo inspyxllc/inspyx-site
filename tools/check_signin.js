@@ -487,7 +487,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     // page for the signed-in, and none of these pages is in the list for search engines.
     const pages = ['index.html', 'pricing.html', 'refunds.html', 'terms.html', 'privacy.html', 'about.html', 'support.html', 'founders.html', '404.html'];
     const unlinked = pages.filter((f) => !/<a href="\/signin">Sign in<\/a>/.test(text(f)));
-    const wrong = pages.filter((f) => /href="\/(signup|account|today|plan|numbers|reports|inspections|calendar|people)"/.test(text(f)));
+    const wrong = pages.filter((f) => /href="\/(signup|account|today|plan|numbers|reports|inspections|calendar|people|prices|agreements|profile)"/.test(text(f)));
     ok('every public page links to the sign-in page ("Sign in"), none to signing up or to a page for the signed-in, and the list of pages for search engines leaves them all out', unlinked.length === 0 && wrong.length === 0 && !/signin|signup|account|today/.test(text('sitemap.xml')), JSON.stringify({ unlinked, wrong }));
     ok('the three scripts say no words: every sentence is in the pages', !/[A-Z][a-z]+ [a-z]+ [a-z]+[.!?]['"`]/.test(['auth', 'signin', 'account'].map((f) => text('assets/' + f + '.js').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')).join('\n')));
   }

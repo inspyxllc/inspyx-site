@@ -20,7 +20,7 @@ ok('Vercel\'s reader accepts vercel.json', !out.error, out.error ? out.error.mes
 // pages' rules (below) never do, so these checks look at the private ones alone.
 const ruled = (out.routes || []).filter((r) => r.headers && r.headers['Content-Security-Policy'] && r.headers['Cache-Control'] === 'no-store');
 const applies = (p) => ruled.some((r) => new RegExp(r.src).test(p));
-const yes = ['/signin', '/account', '/plan', '/today', '/numbers', '/reports'], no = ['/', '/pricing', '/refunds', '/terms', '/privacy', '/signin/x', '/accounts', '/plans', '/plan/x', '/myplan', '/assets/auth.js', '/assets/plan.js', '/today/x', '/todays', '/assets/today.js', '/numbers/x', '/number', '/assets/numbers.js', '/reports/x', '/report-sent', '/assets/reports.js'];
+const yes = ['/signin', '/account', '/plan', '/today', '/numbers', '/reports', '/prices', '/agreements', '/profile'], no = ['/', '/agreements/x', '/agreement', '/assets/agreements.js', '/profile/x', '/profiles', '/assets/profile.js', '/pricing', '/prices/x', '/price', '/assets/prices.js', '/refunds', '/terms', '/privacy', '/signin/x', '/accounts', '/plans', '/plan/x', '/myplan', '/assets/auth.js', '/assets/plan.js', '/today/x', '/todays', '/assets/today.js', '/numbers/x', '/number', '/assets/numbers.js', '/reports/x', '/report-sent', '/assets/reports.js'];
 ok('the rule catches the signed-in addresses', yes.every(applies), yes.filter((p) => !applies(p)).join(' '));
 ok('the rule catches no other address', !no.some(applies), no.filter(applies).join(' '));
 // Your inspections, live (2026-11-14): its own rule, the signed-in pages' rule plus the live socket to Inspyx's server.
@@ -28,8 +28,14 @@ const wss = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src h
 // The calendar and people pages (2026-11-16) read the same live inspections, so they share that rule.
 const live = ['/inspections', '/calendar', '/people'];
 ok('the inspections, calendar and people pages have the rule, with the live socket', live.every((p) => applies(p) && wss(p)), live.filter((p) => !applies(p) || !wss(p)).join(' '));
-ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/', '/inspections/x', '/inspection', '/calendar/x', '/people/x', '/calendars', '/peoples'].some(wss));
+ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/prices', '/agreements', '/profile', '/', '/inspections/x', '/inspection', '/calendar/x', '/people/x', '/calendars', '/peoples'].some(wss));
 ok('the live pages\' rule catches nothing else', !['/inspection', '/inspections/x', '/myinspections', '/assets/inspections.js', '/calendar/x', '/mycalendar', '/assets/calendar.js', '/people/x', '/person', '/assets/people.js', '/assets/insp-read.js'].some(applies));
+// Your company's pictures (2026-11-16, phase 2c): /profile shows the photo, logo and signature from copies held in
+// the page (blob:), so it has a rule of its own: the signed-in pages' rule, plus img-src blob:. No other page may.
+const blobs = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /img-src 'self' blob:; connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']));
+ok('/profile may show pictures held in the page (img-src blob:), under one rule only', blobs('/profile') && ruled.filter((r) => new RegExp(r.src).test('/profile')).length === 1);
+const others = ['/', '/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/prices', '/agreements', '/inspections', '/calendar', '/people', '/r', '/a', '/agent', '/report', '/profile/x', '/profiles', '/assets/profile.js'];
+ok('no other page may show blob: pictures', !ruled.some((r) => /blob:/.test(r.headers['Content-Security-Policy']) && others.some((p) => new RegExp(r.src).test(p))), others.filter((p) => ruled.some((r) => /blob:/.test(r.headers['Content-Security-Policy']) && new RegExp(r.src).test(p))).join(' '));
 // The client's report page (2026-11-14): a new link is /r#<key> (the browser asks for /r alone), an old one
 // /r/<key>. Both must open the report page, under the report page's own rules.
 const opensReport = (p) => (out.routes || []).some((r) => r.dest && /^\/report(\?|$)/.test(r.dest) && new RegExp(r.src).test(p));
