@@ -43,7 +43,9 @@ http.createServer((req, res) => {
   const file = !fs.existsSync(asFile) && fs.existsSync(asPage) ? asPage : asFile;
   if (!inside(file) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     const missing = path.join(root, '404.html');
-    res.writeHead(404, { 'Content-Type': types['.html'] });
+    // A wrong address gets the rules' headers too, as on Vercel: its header rules run before the file lookup
+    // (routing-utils puts them ahead of "handle: filesystem"), whatever the lookup then finds.
+    res.writeHead(404, Object.assign({ 'Content-Type': types['.html'] }, extra(asked)));
     res.end(fs.existsSync(missing) ? fs.readFileSync(missing) : 'Not found');
     return;
   }
