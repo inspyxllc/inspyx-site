@@ -479,7 +479,9 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const text = (f) => fs.readFileSync(path.join(root, f), 'utf8');
     const key = (s) => (s.match(/sb_publishable_[A-Za-z0-9_-]+/) || [''])[0], host = (s) => (s.match(/https:\/\/[a-z0-9]+\.supabase\.co/) || [''])[0];
     ok('the sign-in uses the same public key and the same server as the waitlist form, and no other key is in its files', !!key(text('assets/auth.js')) && key(text('assets/auth.js')) === key(text('assets/home.js')) && host(text('assets/auth.js')) === host(text('assets/home.js')) && host(text('assets/auth.js')) === SERVER && !/service_role|sb_secret_|eyJ[A-Za-z0-9_-]{20,}/.test(text('assets/auth.js') + text('assets/signin.js') + text('assets/account.js') + text('signin.html') + text('account.html')));
-    const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => ['/signin', '/account'].every((p) => new RegExp('^' + r.source + '$').test(p)));
+    // The rule for every address ("/(.*)": nosniff and DENY, the same values every rule sends; check_rules.js pins it) is
+    // passed over: the private pages' own rule is the one asked about.
+    const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => r.source !== '/(.*)' && ['/signin', '/account'].every((p) => new RegExp('^' + r.source + '$').test(p)));
     const says = (k) => (rule.length === 1 ? (rule[0].headers.find((x) => x.key === k) || {}).value : undefined);
     ok('one server rule covers both pages; it also tells browsers to keep neither page and to guess no file types', rule.length === 1 && says('Cache-Control') === 'no-store' && says('X-Content-Type-Options') === 'nosniff' && says('Content-Security-Policy') === signinRule && !!signinRule, 'rules that cover both: ' + rule.length);
     // Since 2026-11-15 (Moises: "Unhide the web dash") every public page links to the sign-in page. Signing up is
