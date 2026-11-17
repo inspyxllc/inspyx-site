@@ -25,21 +25,36 @@ const RIBBON = '<defs>'
 const SIMPLE = `<path d="${HOUSE}" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/>`
   + `<path d="${SPINE}" fill="none" stroke="#38BDF8" stroke-width="28" stroke-linecap="round"/>`;
 
-// a navy tile with the mark at 70/96 of its side (the app icon's tile); radius 0 for the iPhone icon (iOS rounds it itself)
-const icon = (size, radius, simple) => {
+// The app's icon since 2026-11-16 ~00:1xZ (Moises: "a white background, a black outline of the house, and that's
+// specs blue S in the middle. Maybe a bit smaller"; "Yes, use it"): white tile, near-black house, the ribbon's
+// light-background colours with a faint glow, the S at 82% centred in the house's body. As inspyx-mobile's
+// tool/app_icon draws it, so the iPhone home-screen bookmark matches the app.
+const WHITE = '<defs>'
+  + '<linearGradient id="t" gradientUnits="userSpaceOnUse" x1="84" y1="94" x2="150" y2="152"><stop offset="0" stop-color="#7DD3FC"/><stop offset="0.55" stop-color="#38BDF8"/><stop offset="1" stop-color="#0EA5E9"/></linearGradient>'
+  + '<linearGradient id="b" gradientUnits="userSpaceOnUse" x1="120" y1="148" x2="150" y2="206"><stop offset="0" stop-color="#2563EB"/><stop offset="0.6" stop-color="#1D4ED8"/><stop offset="1" stop-color="#1E3A8A"/></linearGradient>'
+  + '<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter></defs>'
+  + `<path d="${HOUSE}" fill="none" stroke="#0B0F19" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>`
+  + '<g transform="translate(120 158) scale(0.82) translate(-120 -150)">'
+  + `<path d="${SPINE}" fill="none" stroke="#38BDF8" stroke-width="30" stroke-linecap="round" opacity="0.12" filter="url(#g)"/>`
+  + `<path d="${TOP}" fill="url(#t)"/><path d="${BOT}" fill="url(#b)"/></g>`;
+
+// a tile with the mark at 70/96 of its side (the app icon's tile); radius 0 for the iPhone icon (iOS rounds it itself).
+// look: 'simple' = the navy tab icon's simple mark; 'white' = the app's white icon.
+const icon = (size, radius, look) => {
   const side = 252 * 96 / 70, o = (side - 252) / 2;
+  const white = look === 'white';
   return `<!doctype html><html><body style="margin:0;background:transparent">
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="${-6 - o} ${-o} ${side} ${side}" style="display:block">
-<rect x="${-6 - o}" y="${-o}" width="${side}" height="${side}" rx="${radius * side / size}" fill="#0D2745"/>${simple ? SIMPLE : RIBBON}
+<rect x="${-6 - o}" y="${-o}" width="${side}" height="${side}" rx="${radius * side / size}" fill="${white ? '#FFFFFF' : '#0D2745'}"/>${white ? WHITE : look === 'simple' ? SIMPLE : RIBBON}
 </svg></body></html>`;
 };
 
 (async () => {
   const browser = await chromium.launch();
-  for (const [name, size, radius, simple] of [['favicon-32.png', 32, 7, true], ['apple-touch-icon.png', 180, 0, false]]) {
+  for (const [name, size, radius, look] of [['favicon-32.png', 32, 7, 'simple'], ['apple-touch-icon.png', 180, 0, 'white']]) {
     const ctx = await browser.newContext({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
-    await page.setContent(icon(size, radius, simple));
+    await page.setContent(icon(size, radius, look));
     await page.screenshot({ path: path.join(assets, name), omitBackground: true });
     await ctx.close();
     console.log('wrote ' + name);
