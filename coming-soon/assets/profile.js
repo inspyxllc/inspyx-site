@@ -61,7 +61,11 @@
     return exchange(push).then(function (answer) {
       if (answer === null) return 'failed';
       var mine = (answer.skipped || []).filter(function (s) { return s.kind === KIND && s.id === ID; });
-      return mine.length === 0 ? 'saved' : 'refused';
+      if (mine.length > 0) return 'refused';
+      // Not applied: the server holds a newer profile, changed elsewhere since this page read it (the answer's pull
+      // just brought it). Nothing was saved; as the check before a save, the next save keeps what is on screen.
+      var stale = (answer.applied || []).some(function (a) { return a.kind === KIND && a.id === ID && a.applied === false; });
+      return stale ? 'elsewhere' : 'saved';
     }, function () { return 'failed'; });
   }
 
@@ -155,6 +159,7 @@
       busy = false;
       form.querySelector('button[type="submit"]').disabled = false;
       if (outcome === 'saved') { take({ kind: KIND, id: ID, updated_at: at, deleted_at: null, data: data }); fill(); }
+      if (outcome === 'elsewhere') shownAt = row ? row.updated_at : null;
       say(outcome);
     });
   });
