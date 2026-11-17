@@ -1,0 +1,57 @@
+/* Prices (2026-11-16): calm and plain like the inspections page. Cards for services and codes; one dialog to edit. */
+.prc{display:block; max-width:960px; margin:0 auto; padding:28px var(--gr) 64px var(--gl)}
+.prc h1{font-size:34px; margin-bottom:8px}
+.prc-lede{font-size:17px; line-height:1.45; color:var(--ink-soft)}
+.prc-live{margin:8px 0 16px; font-size:14px; color:var(--ink-faint)}
+.prc-state p{font-size:18px; line-height:1.45; color:var(--ink-soft)}
+.prc .say p{margin:10px 0; font-size:15px}
+.prc-group{margin-top:28px}
+.prc-group[hidden]{display:none}
+.prc-head{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between; margin-bottom:12px}
+.prc-head h2{font-size:22px}
+.prc .btn.small, .prc-dialog .btn.small{min-height:44px; padding:0 18px; border:0; font:600 15px var(--font); cursor:pointer}
+.prc .btn.small:disabled, .prc-dialog .btn.small:disabled{opacity:.5; cursor:default}
+.prc-empty{font-size:16px; line-height:1.45; color:var(--ink-soft)}
+.prc-list{list-style:none; padding:0; margin:0; display:grid; gap:12px}
+.prc-card{display:grid; gap:10px; padding:16px; border-radius:18px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.prc-row{display:flex; gap:12px; align-items:flex-start; justify-content:space-between}
+.prc-what{display:grid; gap:3px; min-width:0}
+.prc-what strong{font-size:17px; color:var(--ink); overflow-wrap:anywhere}
+.prc-what span{font-size:14.5px; color:var(--ink-soft); overflow-wrap:anywhere}
+.prc-desc:empty{display:none}
+.prc-sub{display:grid; gap:6px; padding-top:8px; border-top:1px solid var(--line)}
+.prc-sub[hidden]{display:none}
+.prc-sub h3{font-size:14px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em}
+.prc-addons, .prc-changes{list-style:none; padding:0; margin:0; display:grid; gap:4px}
+.prc-addon{display:flex; gap:12px; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:10px; background:#F5F5F7}
+.prc-addon .prc-what{display:flex; flex-wrap:wrap; gap:2px 10px}
+.prc-addon .prc-what span:first-child{color:var(--ink); font-weight:600}
+.prc-changes li{font-size:14.5px; color:var(--ink-soft); overflow-wrap:anywhere}
+.prc-note{font-size:13.5px; color:var(--ink-faint)}
+.prc .link, .prc-dialog .link{min-height:44px; padding:0; border:0; background:none; color:var(--navy); font:600 15px var(--font); cursor:pointer; justify-self:start}
+.prc-links{display:flex; flex-wrap:wrap; gap:4px 22px; margin-top:28px; font-size:14.5px}
+.prc-links a{display:inline-flex; align-items:center; min-height:44px}
+
+/* margin:auto puts back what page.css's reset (*{margin:0}) takes from a dialog: centred, like /plan's .sheet. */
+.prc-dialog{width:min(560px, calc(100vw - 32px)); max-height:calc(100vh - 32px); margin:auto; padding:0; border:0; border-radius:20px; background:var(--card); color:var(--ink); box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.prc-dialog::backdrop{background:rgba(29,29,31,.35)}
+.prc-dialog form{display:grid; gap:14px; padding:22px}
+.prc-dialog h2{font-size:21px}
+.prc-dialog label{display:grid; gap:6px; font-size:13.5px; color:var(--ink-soft)}
+.prc-dialog label[hidden]{display:none}
+.prc-dialog small{font-size:12.5px; color:var(--ink-faint)}
+.prc-dialog input[type="text"], .prc-dialog input[type="date"], .prc-dialog textarea{width:100%; min-height:44px; padding:10px 12px; border:1px solid #C9C9D0; border-radius:12px; background:#FFFFFF; color:var(--ink); font:400 16px var(--font)}
+.prc-dialog textarea{resize:vertical}
+.prc-dialog fieldset{display:grid; gap:4px; margin:0; padding:0; border:0}
+.prc-dialog legend{margin-bottom:4px; font-size:13.5px; color:var(--ink-soft)}
+.prc-dialog .tick{display:flex; gap:10px; align-items:center; min-height:40px; font-size:15.5px; color:var(--ink)}
+.prc-dialog .tick input{width:20px; height:20px; margin:0}
+.prc-pair{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.prc-problems p{font-size:14.5px; color:#8C1D18}
+.prc-actions{display:flex; flex-wrap:wrap; gap:10px}
+.prc-dialog .danger{color:#8C1D18}
+@media (max-width: 760px){
+  .prc{padding-top:20px; padding-bottom:48px}
+  .prc h1{font-size:28px}
+  .prc-pair{grid-template-columns:1fr}
+}
