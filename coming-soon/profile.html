@@ -57,8 +57,43 @@
 </div>
 </form>
 
+<!-- The photo, logo and signature (business setup phase 2c): the phone's own words and order. -->
+<section class="prf-pics" data-pics hidden>
+<h2>On your reports</h2>
+<div class="prf-pic" data-pic="headshot">
+<div class="prf-pic-view"><img data-img alt="Your photo" hidden></div>
+<div class="prf-pic-words"><p class="prf-pic-name">Your photo</p><p class="prf-pic-where">On the cover, beside your name</p></div>
+<div class="prf-pic-do"><button class="btn quiet small" type="button" data-change><span data-has="0">Add</span><span data-has="1" hidden>Change</span></button><button class="btn quiet small" type="button" data-remove hidden>Remove</button></div>
+</div>
+<div class="prf-pic" data-pic="logo">
+<div class="prf-pic-view"><img data-img alt="Company logo" hidden></div>
+<div class="prf-pic-words"><p class="prf-pic-name">Company logo</p><p class="prf-pic-where">At the top of the cover</p></div>
+<div class="prf-pic-do"><button class="btn quiet small" type="button" data-change><span data-has="0">Add</span><span data-has="1" hidden>Change</span></button><button class="btn quiet small" type="button" data-remove hidden>Remove</button></div>
+</div>
+<div class="prf-pic" data-pic="signature">
+<div class="prf-pic-view"><img data-img alt="Your signature" hidden></div>
+<div class="prf-pic-words"><p class="prf-pic-name">Your signature</p><p class="prf-pic-where">At the end of every report</p></div>
+<div class="prf-pic-do"><button class="btn quiet small" type="button" data-change><span data-has="0">Add</span><span data-has="1" hidden>Change</span></button><button class="btn quiet small" type="button" data-remove hidden>Remove</button></div>
+</div>
+<input class="prf-file" type="file" accept="image/jpeg,image/png" data-file tabindex="-1" aria-hidden="true">
+<div class="say" role="alert">
+<p data-psay="saved" hidden>Saved.</p>
+<p data-psay="removed" hidden>Removed.</p>
+<p data-psay="unreadable" hidden>That picture couldn't be read. Try another one.</p>
+<p data-psay="too-detailed" hidden>That logo is too detailed to print. Try a simpler version.</p>
+<p data-psay="failed" hidden>That couldn’t be saved. Check your connection and try again.</p>
+<p data-psay="refused" hidden>Inspyx couldn’t keep that change. Check it and try again.</p>
+<p data-psay="unread" hidden>Your photo, logo and signature couldn't be read.</p>
+</div>
+</section>
 <p class="prf-links"><a href="/today">What needs you</a><a href="/inspections">Your inspections</a><a href="/calendar">Calendar</a><a href="/people">People</a><a href="/account">Account</a></p>
 </main>
+<dialog class="prf-sign" data-sign aria-labelledby="prf-sign-title">
+<h2 id="prf-sign-title">Your signature</h2>
+<p>Sign once with your mouse or finger. Your signature goes at the end of every report.</p>
+<canvas class="prf-pad" data-pad></canvas>
+<div class="prf-sign-do"><button class="btn small" type="button" data-sign-save disabled>Save</button><button class="btn quiet small" type="button" data-sign-clear disabled>Clear</button><button class="btn quiet small" type="button" data-sign-cancel>Cancel</button></div>
+</dialog>
 <noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
 </body>
 </html>

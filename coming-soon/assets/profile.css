@@ -16,7 +16,33 @@
 .prf-actions{display:flex; gap:10px}
 .prf-links{display:flex; flex-wrap:wrap; gap:4px 22px; margin-top:28px; font-size:14.5px}
 .prf-links a{display:inline-flex; align-items:center; min-height:44px}
+/* The photo, logo and signature (phase 2c): a row each, the picture, its words, its buttons. */
+.prf-pics{margin-top:22px; padding:22px; border-radius:20px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.prf-pics[hidden], .prf-pics [hidden]{display:none}
+.prf-pics h2{font-size:19px; margin-bottom:6px}
+.prf-pic{display:grid; grid-template-columns:76px 1fr auto; gap:14px; align-items:center; padding:10px 0}
+.prf-pic + .prf-pic{border-top:1px solid rgba(0,0,0,.07)}
+.prf-pic-view{width:76px; height:76px; display:flex; align-items:center; justify-content:center; border-radius:14px; background:#F2F2F5; overflow:hidden}
+.prf-pic-view img{max-width:100%; max-height:100%; object-fit:contain}
+.prf-pic-name{font-size:16px; font-weight:600; color:var(--ink)}
+.prf-pic-where{font-size:14px; color:var(--ink-faint)}
+.prf-pic-do{display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end}
+.prf .btn.quiet.small{background:transparent; color:var(--ink); box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.prf-file{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none}
+/* The signature pad: a white box drawn on with a mouse or a finger. */
+.prf-sign{width:min(560px, calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; margin:auto; padding:22px; border:0; border-radius:20px; background:var(--card); color:var(--ink)}
+.prf-sign::backdrop{background:rgba(10,10,20,.45)}
+.prf-sign h2{font-size:21px; margin-bottom:6px}
+.prf-sign p{font-size:15px; line-height:1.45; color:var(--ink-soft)}
+.prf-pad{display:block; width:100%; height:180px; margin:14px 0; border:1px solid #C9C9D0; border-radius:12px; background:#FFFFFF; touch-action:none; cursor:crosshair}
+.prf-sign-do{display:flex; flex-wrap:wrap; gap:10px}
+.prf-sign .btn.small{min-height:44px; padding:0 18px; border:0; font:600 15px var(--font); cursor:pointer}
+.prf-sign .btn.small:disabled{opacity:.5; cursor:default}
+.prf-sign .btn.quiet.small{background:transparent; color:var(--ink); box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
 @media (max-width: 760px){
   .prf{padding-top:20px; padding-bottom:48px}
   .prf h1{font-size:28px}
+  .prf-pic{grid-template-columns:64px 1fr}
+  .prf-pic-view{width:64px; height:64px}
+  .prf-pic-do{grid-column:1 / -1; justify-content:flex-start}
 }

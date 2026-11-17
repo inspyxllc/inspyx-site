@@ -201,6 +201,62 @@
     });
   }
 
+  /* A picture's file (business setup phase 2c, 2026-11-16): the inspector's photo, logo or signature in the
+     private store business-media, added (never over another: a file is named by its content and never changes) or
+     read, as the signed-in inspector. Only that store, and only a name of its own shape in the signed-in
+     inspector's own folder: <their id>/<headshot|logo|signature>/<sha256>.<jpg|png> (the server's policies hold
+     the same). It answers { status, inner, blob } (blob when read and found; inner, the status Storage put inside its answer),
+     or null when nobody is signed in. The token
+     stays in this file, as in ask; a refused sign-in (401) is renewed once, as in ask. */
+  var PICTURES = SERVER + '/storage/v1/object/';
+  var PICTURE = /^[0-9a-f-]{36}\/(headshot|logo|signature)\/[0-9a-f]{64}\.(jpg|png)$/;
+  function sendPicture(method, url, token, blob, deadline) {
+    // The file's bytes go as bytes (an ArrayBuffer), with its type said in the header.
+    return (blob ? blob.arrayBuffer() : Promise.resolve(undefined)).then(function (bytes) {
+      return sendPictureBytes(method, url, token, bytes, blob ? blob.type : null, deadline);
+    }, function () { throw new Refusal('malformed'); });
+  }
+  function sendPictureBytes(method, url, token, bytes, type, deadline) {
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, deadline || DEADLINE);
+    var headers = { apikey: KEY, Authorization: 'Bearer ' + token };
+    if (bytes) { headers['Content-Type'] = type; headers['x-upsert'] = 'false'; }
+    var silent = function () { clearTimeout(timer); throw new Refusal('network'); };
+    return root.fetch(url, {
+      method: method, headers: headers, body: bytes,
+      signal: ctl ? ctl.signal : undefined, cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer'
+    }).then(function (res) {
+      // A found file comes back as itself; any other answer as its status, and the status Storage may put inside
+      // its JSON (a file there already can come as 400 holding "409").
+      if (res.status === 200 && method === 'GET') {
+        return res.blob().then(function (b) { clearTimeout(timer); return { status: 200, inner: null, blob: b }; }, silent);
+      }
+      return res.text().then(function (text) {
+        clearTimeout(timer);
+        var inner = null;
+        try { var j = JSON.parse(text); inner = j && j.statusCode != null ? String(j.statusCode) : null; } catch (e) { inner = null; }
+        return { status: res.status, inner: inner, blob: null };
+      }, silent);
+    }, silent);
+  }
+  function picture(action, name, blob, deadline) {
+    if (!PICTURE.test(String(name)) || (action !== 'add' && action !== 'read')) return Promise.reject(new Refusal('malformed'));
+    if (action === 'add' && (!blob || (blob.type !== 'image/jpeg' && blob.type !== 'image/png'))) return Promise.reject(new Refusal('malformed'));
+    var once = function (s) {
+      if (name.split('/')[0] !== s.id) return Promise.reject(new Refusal('malformed'));
+      return action === 'add'
+        ? sendPicture('POST', PICTURES + 'business-media/' + name, s.access, blob, deadline)
+        : sendPicture('GET', PICTURES + 'authenticated/business-media/' + name, s.access, null, deadline);
+    };
+    return current().then(function (s) {
+      if (!s) return null;
+      return once(s).then(function (r) {
+        if (r.status !== 401) return r;
+        return current(true).then(function (fresh) { return fresh ? once(fresh) : null; });
+      });
+    });
+  }
+
   /* Hearing "something changed" (inspection sync, 2026-11-14): the server's pings for the signed-in inspector's
      own inspections, on their private Realtime topic insp:<their id>. The sign-in goes to the server inside this
      file, as in ask: the page gives a function to call on each ping, and gets back a way to stop. Only the
@@ -371,7 +427,7 @@
     });
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword };
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the dashboard (/today, since 2026-11-15). It asks three times:
