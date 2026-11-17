@@ -69,10 +69,15 @@
   function send(push) {
     return exchange(push).then(function (answer) {
       if (answer === null) return 'failed';
-      var mine = (answer.skipped || []).filter(function (s) {
-        return push.some(function (p) { return p.kind === s.kind && p.id === s.id; });
-      });
-      return mine.length === 0 ? 'saved' : 'refused';
+      var sent = function (s) { return push.some(function (p) { return p.kind === s.kind && p.id === s.id; }); };
+      var mine = (answer.skipped || []).filter(sent);
+      if (mine.length > 0) return 'refused';
+      // Not applied: the server holds a newer copy, changed elsewhere since this page read it (the answer's pull just
+      // brought it). Nothing was saved. The details say so, and their next save keeps what is on screen, as the check
+      // before a save; a picture says Inspyx couldn't keep it, shows the newer one, and the next try comes after it.
+      var stale = (answer.applied || []).filter(function (a) { return a.applied === false && sent(a); });
+      if (stale.length === 0) return 'saved';
+      return stale.some(function (a) { return a.kind === KIND; }) ? 'elsewhere' : 'refused';
     }, function () { return 'failed'; });
   }
 
@@ -167,6 +172,7 @@
       busy = false;
       form.querySelector('button[type="submit"]').disabled = false;
       if (outcome === 'saved') { take({ kind: KIND, id: ID, updated_at: at, deleted_at: null, data: data }); fill(); }
+      if (outcome === 'elsewhere') shownAt = row ? row.updated_at : null;
       say(outcome);
     });
   });

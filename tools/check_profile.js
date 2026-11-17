@@ -150,6 +150,7 @@ async function open(browser, o) {
     calls.push({ headers: req.headers(), body });
     if ((body.push || []).some((r) => r.kind === 'inspector_media' && r.deleted_at === null)) order.push('row');
     if (o.down && o.down()) return route.abort('failed');
+    if (o.beforePush && (body.push || []).length > 0) o.beforePush();
     const { skipped, applied } = s.push(body.push || []);
     const after = body.after ? body.after.at : '';
     const rows = [...s.held.values()].filter((r) => r.changed_at > after).sort((a, b) => (a.changed_at < b.changed_at ? -1 : 1));
@@ -257,6 +258,19 @@ const pushed = (calls) => calls.flatMap((c) => c.body.push || []);
     await page.click(F + ' button[type="submit"]');
     ok('a save over a change made elsewhere is refused once, and says so', await until(async () => (await vis(page, '[data-say]')).join() === 'These details were changed somewhere else since this page showed them, so nothing was saved. Save again to keep what you see here.') && pushed(calls.slice(before)).length === 0);
     ok('saving again keeps what is on screen, after the newer change', await saveAndWait(page, 'Saved.') && s.value().companyName === 'Typed here' && s.value().updatedAt > T + 900);
+    await ctx.close();
+  });
+
+  await group('changed elsewhere while saving', async () => {
+    const s = server(); s.profile(T);
+    let phone = null;
+    const { page, ctx } = await open(browser, { server: s, beforePush: () => { if (phone) { phone(); phone = null; } } });
+    await page.fill(F + ' input[name="companyName"]', 'Typed here');
+    // The phone saves a moment before this page's save reaches the server, on a clock ahead of this computer's.
+    const ahead = Date.now() + 3600000;
+    phone = () => s.profile(ahead, { inspectorName: 'From the phone, ahead' });
+    ok('a save the server didn\'t apply (it held a newer copy) is not "Saved.": it says the details were changed elsewhere', await saveAndWait(page, 'These details were changed somewhere else since this page showed them, so nothing was saved. Save again to keep what you see here.') && s.value().companyName !== 'Typed here' && s.value().inspectorName === 'From the phone, ahead');
+    ok('saving again keeps what is on screen, after the newer change', await saveAndWait(page, 'Saved.') && s.value().companyName === 'Typed here' && s.value().updatedAt > ahead);
     await ctx.close();
   });
 
