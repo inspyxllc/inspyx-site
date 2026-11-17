@@ -468,6 +468,21 @@ const pushed = (calls) => calls.flatMap((c) => c.body.push || []);
     await ctx.close();
   });
 
+  await group('pictures: one changed on the phone while saving', async () => {
+    const s = server(); s.profile(T);
+    let phone = null;
+    const { page, ctx, storeCalls } = await open(browser, { server: s, beforePush: () => { if (phone) { phone(); phone = null; } } });
+    // The phone saves a logo a moment before this page's row reaches the server, on a clock ahead of this computer's.
+    const ahead = Date.now() + 3600000;
+    phone = () => s.picture('logo', SMALL, 'png', ahead);
+    await choose(page, 'logo', { name: 'logo.png', mimeType: 'image/png', buffer: LOGO });
+    ok('a picture the server didn\'t apply (it held a newer one) is not "Saved.": it says Inspyx couldn\'t keep it', await until(async () => (await picSay(page)).join() === 'Inspyx couldn’t keep that change. Check it and try again.', 8000) && s.pic('logo').sha256 === sha256(SMALL), (await picSay(page)).join());
+    await choose(page, 'logo', { name: 'logo.png', mimeType: 'image/png', buffer: LOGO });
+    const add = storeCalls.filter((c) => c.method === 'POST').pop();
+    ok('choosing it again saves it, after the newer one', await until(async () => (await picSay(page)).join() === 'Saved.', 8000) && !!add && s.pic('logo').sha256 === sha256(add.bytes) && s.pic('logo').updatedAt > ahead);
+    await ctx.close();
+  });
+
   await group('pictures: on a phone', async () => {
     const s = server(); s.profile(T); s.picture('logo', SMALL, 'png', T + 1);
     const { page, ctx } = await open(browser, { server: s, w: PHONE });
