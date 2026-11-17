@@ -97,6 +97,33 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
   const browser = await engine.launch();
   console.log('browser: ' + engine.name() + ' ' + browser.version());
 
+  // Price changes on the inspector's own questions (pricing pick 1, 2026-11-17): named by the question, in quotes, as
+  // the phone names them; a yes/no one's lines read as answers, a number one's as counts; one whose question is
+  // deleted or not here yet, by what it reads.
+  await group('price changes on your questions', async () => {
+    const s = server(); seed(s);
+    const base = { ownerAccountId: ME, createdAt: T, updatedAt: T, deletedAt: null };
+    s.put(s.row('price_questions', Object.assign({ id: 'q-pool', name: 'Pool', kind: 'yes_no', position: 0 }, base)));
+    s.put(s.row('price_questions', Object.assign({ id: 'q-sheds', name: 'Outbuildings', kind: 'number', position: 1 }, base)));
+    s.put(s.row('price_questions', Object.assign({ id: 'q-gone', name: 'Gone', kind: 'number', position: 2 }, base, { deletedAt: T })));
+    const mod = (id, basis, question, tiers, mode) => s.put(s.row('price_modifiers', Object.assign({ id, serviceId: 'svc-condo', basis, questionId: question,
+      mode: mode || 'ranges', position: 0, tiersJson: JSON.stringify(tiers) }, base)));
+    mod('qm-pool', 'yes_no_question', 'q-pool', { tiers: [{ values: ['yes'], fee_cents: 7500, minutes: 30 }, { values: ['no'], fee_cents: 0, minutes: 0 }] });
+    mod('qm-sheds', 'number_question', 'q-sheds', { over: 1, unit: 1, fee_cents: 5000, minutes: 15 }, 'per_unit_over');
+    mod('qm-gone', 'number_question', 'q-gone', { tiers: [{ from: null, to: null, fee_cents: 2500, minutes: 0 }] });
+    mod('qm-later', 'yes_no_question', 'q-not-here', { tiers: [{ values: ['yes'], fee_cents: 1000, minutes: 0 }] });
+    const { page, ctx, errs } = await open(browser, { server: s });
+    const lines = await card(page, 'Condo inspection').locator('.prc-changes li').allInnerTexts();
+    ok('opens with no errors', errs.length === 0, errs.join(' | '));
+    ok('named by the question in quotes; yes and no read as answers, a count per unit',
+      lines.includes('“Pool”: yes +$75 · no +$0') && lines.includes('“Outbuildings”: +$50 for each 1 past 1'), JSON.stringify(lines));
+    ok('a change on a deleted question, or on one not here yet, is named by what it reads',
+      lines.includes('Your question (a number): any +$25') && lines.includes('Your question (yes or no): yes +$10'), JSON.stringify(lines));
+    ok('the service counts its four price changes', (await card(page, 'Condo inspection').locator('[data-v="summary"]').first().innerText()).includes('4 price changes'));
+    ok('nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await ctx.close();
+  });
+
   await group('signed out', async () => {
     const s = server(); seed(s);
     const { page, ctx, calls } = await open(browser, { server: s, store: null });
