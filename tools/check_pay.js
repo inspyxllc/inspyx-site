@@ -95,7 +95,8 @@ async function open(browser, o) {
 }
 
 const until = async (fn, ms) => { const end = Date.now() + (ms || TIMEOUT / 2); for (;;) { if (await fn()) return true; if (Date.now() > end) return false; await new Promise((r) => setTimeout(r, 50)); } };
-const shown = async (page, sel) => (await page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.closest('[hidden]') && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel)).join(' | ');
+// What a person sees: innerText leaves out hidden parts (the C9 line's other variant, the debit line).
+const shown = async (page, sel) => (await page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.closest('[hidden]') && e.getClientRects().length > 0).map((e) => e.innerText.replace(/\s+/g, ' ').trim()), sel)).join(' | ');
 const fake = (page) => page.evaluate(() => window.__stripe || null);
 const csp = (page) => page.evaluate(() => window.__csp);
 
@@ -121,7 +122,7 @@ async function quoteWith(page, cardText) {
       ok(label + ': served under /pay\'s own rule: Stripe\'s form and Inspyx\'s server only, never cached, never framed, noindex',
         h['content-security-policy'] === PAY_CSP && h['cache-control'] === 'no-store' && h['x-frame-options'] === 'DENY' &&
         h['referrer-policy'] === 'no-referrer' && /noindex/.test(h['x-robots-tag'] || ''), h['content-security-policy']);
-      ok(label + ': what it is for, and what is due', (await shown(page, '[data-what]')) === 'Home inspection + Radon12 Palm Way, Miami Gardens' &&
+      ok(label + ': what it is for, and what is due', (await shown(page, '[data-what]')) === 'Home inspection + Radon 12 Palm Way, Miami Gardens' &&
         (await shown(page, '.pay-amount')) === 'Due: $400.00', (await shown(page, '[data-what]')) + ' / ' + (await shown(page, '.pay-amount')));
       ok(label + ': the card fee is said before the card (C9)', (await shown(page, '.pay-note')) ===
         'Sunshine Home Inspections adds a 3% fee when you pay by credit card. There’s no fee on a debit card.', await shown(page, '.pay-note'));

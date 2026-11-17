@@ -55,12 +55,6 @@
     <div class="pay-entry" data-entry>
       <label class="pay-label" for="pay-card-field" data-cardlabel>Card</label>
       <div class="pay-field" id="pay-card-field" data-card></div>
-      <div class="say" aria-live="polite">
-        <p data-error="card" hidden>The card couldn’t be read. Check the number and try again.</p>
-        <p data-error="declined" hidden>The card wasn’t accepted. Try another card.</p>
-        <p data-error="failed" hidden>That didn’t go through. Check your connection and try again.</p>
-        <p class="pay-why" data-why hidden></p>
-      </div>
       <button class="btn pay-go" type="button" data-continue>Continue</button>
     </div>
 
@@ -70,6 +64,14 @@
       <p class="pay-total">Total: <strong data-v="total"></strong></p>
       <button class="btn pay-go" type="button" data-paynow>Pay <span data-v="total"></span></button>
       <button class="pay-other" type="button" data-other>Use a different card</button>
+    </div>
+
+    <!-- Under both steps: a declined card is said while the total shows, too. -->
+    <div class="say" aria-live="polite">
+      <p data-error="card" hidden>The card couldn’t be read. Check the number and try again.</p>
+      <p data-error="declined" hidden>The card wasn’t accepted. Try another card.</p>
+      <p data-error="failed" hidden>That didn’t go through. Check your connection and try again.</p>
+      <p class="pay-why" data-why hidden></p>
     </div>
   </div>
 </section>
