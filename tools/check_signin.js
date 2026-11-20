@@ -243,7 +243,10 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const mid = await rest(page);
     await tap();
     await page.evaluate(() => document.querySelector('[data-signin]').requestSubmit());
-    await page.waitForTimeout(400);
+    // The hand-off waits on the page's own work (the secret's digest), which a cold WebKit can take longer than a
+    // fixed pause over: wait for the first, then give a second the same window to show if there were one.
+    for (let waited = 0; hands < 1 && waited < 5000; waited += 50) await page.waitForTimeout(50);
+    await page.waitForTimeout(600);
     ok('Google, tapped twice: one hand-off; while it is on its way the button says "Opening Google…" and neither button takes a tap', hands === 1 && mid.g && mid.b && mid.word === 'Opening Google…' && mid.sign === 'Sign in', JSON.stringify({ hands, mid }));
     await ctx.close();
   });
