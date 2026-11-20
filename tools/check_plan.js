@@ -537,6 +537,18 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       ok('a page that cannot be opened because ' + label + ': the page says so and stays as it was', same(v.say, [line]) && same(v.stands, [OFFER_FREE]) && same(v.buttons, ['Start your plan']) && (await at(r.page)) === '/plan' && r.arrived.length === 0, JSON.stringify(v));
       await r.ctx.close();
     }
+    // A start refused for a reason the inspector can act on (2026-11-19): never "Couldn't open the page".
+    const su = await open(browser, 'plan', { stripe: true, answers: (c) => (action(c) === 'status' ? bill(plan({})) : { status: 409, json: { error: 'needs_signup' } }), settle: 300 });
+    await su.page.click('[data-do="start"]');
+    await su.page.waitForURL((u) => u.pathname === '/signup', { timeout: 5000 }).catch(() => {});
+    ok('a start refused because sign-up was never finished goes to sign-up, not "Couldn\'t open the page"', (await at(su.page)) === '/signup' && su.arrived.length === 0 && su.errs.length === 0, await at(su.page));
+    await su.ctx.close();
+    let invited = false;
+    const ni = await open(browser, 'plan', { stripe: true, answers: (c) => (action(c) === 'status' ? bill(invited ? plan({ tier: 'founder', free_waits_for_invite: true, offer: { monthly_cents: 5495, yearly_cents: 59300, trial_days: 30 } }) : plan({})) : (invited = true, { status: 409, json: { error: 'not_invited' } })), settle: 300 });
+    await ni.page.click('[data-do="start"]'); await ni.page.waitForTimeout(600);
+    const nv = await sees(ni.page);
+    ok('a start refused because the app invite is not sent yet: the plan is checked again and says it waits for the invite, with nothing to tap', same(nv.stands, [WAITS]) && nv.say.length === 0 && nv.buttons.length === 0 && (await at(ni.page)) === '/plan' && ni.arrived.length === 0 && ni.errs.length === 0, JSON.stringify(nv));
+    await ni.ctx.close();
     const m = await open(browser, 'plan', { stripe: true, answers: (c, i) => (action(c) === 'status' ? bill(plan({})) : i === 2 ? { status: 502, json: {} } : { wait: 600, status: 200, json: { url: CHECKOUT } }) });
     await m.page.click('[data-do="start"]'); await m.page.waitForTimeout(300);
     const one = (await sees(m.page)).say;
@@ -738,11 +750,12 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     const js = code('assets/plan.js');
     ok('the plan page\'s script never holds the sign-in: it reads no storage, is never handed the sign-in, sends no request of its own and names no key', !/localStorage|sessionStorage|\.access|\.renew|\.stored\b|\.current\b|Bearer|Authorization|apikey|fetch\s*\(|XMLHttpRequest|sendBeacon|sb_publishable|supabase/.test(js) && (js.match(/auth\.who\(\)/g) || []).length === 2);
     ok('it says no words: every sentence is in the page', !/[A-Z][a-z]+ [a-z]+ [a-z]+[.!?]['"`]/.test(js) && !/['"`][A-Z][a-z]+ [a-z]+ /.test(js));
-    ok('it sends nobody anywhere but Stripe\'s two pages, the sign-in page, and where the server\'s checked address says', (js.match(/location\.(assign|replace)\(/g) || []).length === 2 && /location\.replace\('\/signin'\)/.test(js) && /location\.assign\(to\.href\)/.test(js) && !/location\.href\s*=|window\.open|\.innerHTML|document\.write|eval\(/.test(js));
+    ok('it sends nobody anywhere but Stripe\'s two pages, the sign-in page, the sign-up page, and where the server\'s checked address says', (js.match(/location\.(assign|replace)\(/g) || []).length === 3 && /location\.replace\('\/signin'\)/.test(js) && /location\.assign\('\/signup'\)/.test(js) && /location\.assign\(to\.href\)/.test(js) && !/location\.href\s*=|window\.open|\.innerHTML|document\.write|eval\(/.test(js));
     ok('the sign-in script asks only Inspyx\'s own server, and a function\'s name can be nothing but plain letters', /var SERVER = 'https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co';/.test(text('assets/auth.js')) && (text('assets/auth.js').match(/https?:\/\//g) || []).length === 1 && /\^\[a-z\]\[a-z-\]\*\$/.test(text('assets/auth.js')));
-    const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => ['/signin', '/account', '/plan', '/reset', '/signup'].every((p) => new RegExp('^' + r.source + '$').test(p)));
+    const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => r.source !== '/(.*)' && ['/signin', '/account', '/plan', '/reset', '/signup'].every((p) => new RegExp('^' + r.source + '$').test(p)));
     const says = (k) => (rule.length === 1 ? (rule[0].headers.find((x) => x.key === k) || {}).value : undefined);
-    // The dashboard's pages (/today, /numbers, /reports, 2026-11-14) share the same rule.
+    // The dashboard's pages (/today, /numbers, /reports, 2026-11-14) share the same rule. The every-page rule (/(.*),
+    // 2026-11-17: nosniff and no frames for the public pages) is not this one and is left out.
     ok('one server rule covers the signed-in pages, the reset page and the sign-up page, and it is the one the plan page was served with', rule.length === 1 && /^\/\((?:[a-z]+\|)*[a-z]+\)$/.test(rule[0].source) && !!planRule && says('Content-Security-Policy') === planRule && says('Cache-Control') === 'no-store', 'rules that cover all five: ' + rule.length);
     const pages = fs.readdirSync(root).filter((f) => f.endsWith('.html') && f !== 'plan.html');
     const linked = pages.filter((f) => /href="\/plan["?#]/.test(text(f)));

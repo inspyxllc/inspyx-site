@@ -202,6 +202,11 @@
       if (to && to.protocol === 'https:' && STRIPE.indexOf(to.host) >= 0 && !to.username && !to.password) { window.location.assign(to.href); return; }
       busy = false;
       buttons.forEach(function (b) { b.disabled = false; });
+      // A start the server refuses for a reason the inspector can act on (2026-11-19, the founder's own first try):
+      // an account that never finished sign-up goes to sign-up's finish step (the Terms tick gives it its level);
+      // a founder whose app invite isn't sent yet sees the plan as it stands ("waits"), never "Couldn't open".
+      if (action === 'start' && a.trouble === 'refused' && a.why === 'needs_signup') { window.location.assign('/signup'); return; }
+      if (action === 'start' && a.trouble === 'refused' && a.why === 'not_invited') { check(false); return; }
       say(a.trouble === 'not-set-up' ? 'not-set-up' : 'page');
     });
   }

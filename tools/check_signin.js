@@ -479,7 +479,9 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const text = (f) => fs.readFileSync(path.join(root, f), 'utf8');
     const key = (s) => (s.match(/sb_publishable_[A-Za-z0-9_-]+/) || [''])[0], host = (s) => (s.match(/https:\/\/[a-z0-9]+\.supabase\.co/) || [''])[0];
     ok('the sign-in uses the same public key and the same server as the waitlist form, and no other key is in its files', !!key(text('assets/auth.js')) && key(text('assets/auth.js')) === key(text('assets/home.js')) && host(text('assets/auth.js')) === host(text('assets/home.js')) && host(text('assets/auth.js')) === SERVER && !/service_role|sb_secret_|eyJ[A-Za-z0-9_-]{20,}/.test(text('assets/auth.js') + text('assets/signin.js') + text('assets/account.js') + text('signin.html') + text('account.html')));
-    const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => ['/signin', '/account'].every((p) => new RegExp('^' + r.source + '$').test(p)));
+    // The rule for every address ("/(.*)": nosniff and DENY, the same values every rule sends; check_rules.js pins it) is
+    // passed over: the private pages' own rule is the one asked about.
+    const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => r.source !== '/(.*)' && ['/signin', '/account'].every((p) => new RegExp('^' + r.source + '$').test(p)));
     const says = (k) => (rule.length === 1 ? (rule[0].headers.find((x) => x.key === k) || {}).value : undefined);
     ok('one server rule covers both pages; it also tells browsers to keep neither page and to guess no file types', rule.length === 1 && says('Cache-Control') === 'no-store' && says('X-Content-Type-Options') === 'nosniff' && says('Content-Security-Policy') === signinRule && !!signinRule, 'rules that cover both: ' + rule.length);
     // Since 2026-11-15 (Moises: "Unhide the web dash") every public page links to the sign-in page. Signing up is
@@ -487,7 +489,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     // page for the signed-in, and none of these pages is in the list for search engines.
     const pages = ['index.html', 'pricing.html', 'refunds.html', 'terms.html', 'privacy.html', 'about.html', 'support.html', 'founders.html', '404.html'];
     const unlinked = pages.filter((f) => !/<a href="\/signin">Sign in<\/a>/.test(text(f)));
-    const wrong = pages.filter((f) => /href="\/(signup|account|today|plan|numbers|reports|inspections|calendar|people|prices)"/.test(text(f)));
+    const wrong = pages.filter((f) => /href="\/(signup|account|today|plan|numbers|reports|inspections|calendar|people|prices|agreements|profile)"/.test(text(f)));
     ok('every public page links to the sign-in page ("Sign in"), none to signing up or to a page for the signed-in, and the list of pages for search engines leaves them all out', unlinked.length === 0 && wrong.length === 0 && !/signin|signup|account|today/.test(text('sitemap.xml')), JSON.stringify({ unlinked, wrong }));
     ok('the three scripts say no words: every sentence is in the pages', !/[A-Z][a-z]+ [a-z]+ [a-z]+[.!?]['"`]/.test(['auth', 'signin', 'account'].map((f) => text('assets/' + f + '.js').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')).join('\n')));
   }

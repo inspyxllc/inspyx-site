@@ -21,29 +21,7 @@
 <link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <noscript><style>.join{display:none}</style></noscript>
-<script>
-  // Stripe sends inspectors back here from Inspyx's plan pages (the billing
-  // function's success_url, return_url and cancel_url): ?billing=done, back
-  // or canceled. The page then shows that message instead of the home page.
-  (function () {
-    var billing = new URLSearchParams(location.search).get("billing");
-    if (billing === "done" || billing === "back" || billing === "canceled") {
-      document.documentElement.setAttribute("data-billing", billing);
-    }
-  })();
-  // Opened at a place on the page (/#waitlist, from the pricing page's button):
-  // stand there at once. Smooth scrolling would first run the whole film past in
-  // about a second. Once the page has loaded, its own buttons glide as before.
-  (function () {
-    if (location.hash.length > 1) {
-      var root = document.documentElement;
-      root.setAttribute("data-arrive", "");
-      window.addEventListener("load", function () {
-        setTimeout(function () { root.removeAttribute("data-arrive"); }, 400);
-      });
-    }
-  })();
-</script>
+<script src="/assets/home-early.js"></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",

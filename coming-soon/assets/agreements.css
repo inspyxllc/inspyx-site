@@ -1,0 +1,44 @@
+/* Agreements (2026-11-16): calm and plain like the prices page. One card per agreement; one dialog to edit. */
+.agr{display:block; max-width:960px; margin:0 auto; padding:28px var(--gr) 64px var(--gl)}
+.agr h1{font-size:34px; margin-bottom:8px}
+.agr-lede{font-size:17px; line-height:1.45; color:var(--ink-soft)}
+.agr-live{margin:8px 0 16px; font-size:14px; color:var(--ink-faint)}
+.agr-state p{font-size:18px; line-height:1.45; color:var(--ink-soft)}
+.agr .say p{margin:10px 0; font-size:15px}
+.agr-group{margin-top:28px}
+.agr-group[hidden]{display:none}
+.agr-head{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between; margin-bottom:12px}
+.agr-head h2{font-size:22px}
+.agr .btn.small, .agr-dialog .btn.small{min-height:44px; padding:0 18px; border:0; font:600 15px var(--font); cursor:pointer}
+.agr .btn.small:disabled, .agr-dialog .btn.small:disabled{opacity:.5; cursor:default}
+.agr-empty{font-size:16px; line-height:1.45; color:var(--ink-soft)}
+.agr-list{list-style:none; padding:0; margin:0; display:grid; gap:12px}
+.agr-card{display:flex; gap:12px; align-items:flex-start; justify-content:space-between; padding:16px; border-radius:18px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.agr-what{display:grid; gap:3px; min-width:0}
+.agr-what strong{font-size:17px; color:var(--ink); overflow-wrap:anywhere}
+.agr-what span{font-size:14.5px; color:var(--ink-soft); overflow-wrap:anywhere}
+.agr-links{display:flex; flex-wrap:wrap; gap:4px 22px; margin-top:28px; font-size:14.5px}
+.agr-links a{display:inline-flex; align-items:center; min-height:44px}
+
+/* margin:auto puts back what page.css's reset (*{margin:0}) takes from a dialog: centred, like /plan's .sheet. */
+.agr-dialog{width:min(720px, calc(100vw - 32px)); max-height:calc(100vh - 32px); overflow:auto; margin:auto; padding:0; border:0; border-radius:20px; background:var(--card); color:var(--ink); box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.agr-dialog::backdrop{background:rgba(29,29,31,.35)}
+.agr-dialog form{display:grid; gap:12px; padding:22px}
+.agr-dialog h2{font-size:21px}
+.agr-dialog label{display:grid; gap:6px; font-size:13.5px; color:var(--ink-soft)}
+.agr-dialog label[hidden], .agr-dialog p[hidden]{display:none}
+.agr-dialog input[type="text"], .agr-dialog textarea{width:100%; min-height:44px; padding:10px 12px; border:1px solid #C9C9D0; border-radius:12px; background:#FFFFFF; color:var(--ink); font:400 16px var(--font)}
+.agr-dialog textarea{resize:vertical; min-height:240px; line-height:1.45}
+.agr-help{font-size:13px; line-height:1.4; color:var(--ink-faint); overflow-wrap:anywhere}
+.agr-signs{font-size:15px; color:var(--ink)}
+.agr-dialog .tick{display:flex; gap:10px; align-items:center; min-height:40px; font-size:15.5px; color:var(--ink)}
+.agr-dialog .tick input{width:20px; height:20px; margin:0}
+.agr-problems p{font-size:14.5px; color:#8C1D18}
+.agr-actions{display:flex; flex-wrap:wrap; gap:10px}
+.agr-dialog .danger{color:#8C1D18}
+@media (max-width: 760px){
+  .agr{padding-top:20px; padding-bottom:48px}
+  .agr h1{font-size:28px}
+  /* On a phone the words box leaves room for the buttons; the dialog scrolls for the rest. */
+  .agr-dialog textarea{height:34vh; min-height:160px}
+}
