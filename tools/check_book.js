@@ -50,6 +50,8 @@ async function open(browser, path, o = {}) {
     if (body.action === 'quote') {
       o.quotes = (o.quotes || 0) + 1;
       if (o.failQuotesAfter !== undefined && o.quotes > o.failQuotesAfter) return route.abort('failed');
+      if (o.failQuotes && o.failQuotes.includes(o.quotes)) return route.abort('failed');
+      if (o.slowQuotesFrom && o.quotes >= o.slowQuotesFrom) await new Promise((r) => setTimeout(r, 1500));
       const lines = [{ kind: 'service', id: 'home', name: 'Full home inspection', cents: 45000 }];
       if (body.serviceIds.includes('radon')) lines.push({ kind: 'add_on', id: 'radon', name: 'Radon test', cents: 15000 });
       return reply(200, { state: 'open', quote: { lines, totalCents: lines.reduce((s, l) => s + l.cents, 0), minutes: 210 } });
@@ -173,6 +175,35 @@ const lastBook = (calls) => calls.filter((c) => c.action === 'book').pop();
     await page.click('[data-book]');
     await page.waitForSelector('[data-say="price"]:not([hidden])');
     ok('Book says the price is updating, and books nothing', !lastBook(calls));
+    await ctx.close();
+  });
+
+  await group('a price that failed is asked for again on the next try (Codex on site PR 64)', async () => {
+    const o = { failQuotes: [2, 3] };
+    const { ctx, page, calls } = await open(browser, '/book/rivera', o);
+    await page.waitForSelector('[data-state="open"]:not([hidden])');
+    await fill(page);
+    await page.click('[data-book]');
+    await page.waitForSelector('[data-say="price"]:not([hidden])');
+    ok('the first try, with no price to be had, books nothing', !lastBook(calls));
+    await page.click('[data-book]');
+    await page.waitForSelector('[data-state="booked"]:not([hidden])');
+    ok('the next try asks again, gets the price, and books', !!lastBook(calls) && o.quotes >= 4);
+    await ctx.close();
+  });
+
+  await group('the form as it is when the booking goes, not when Book was pressed (Codex on site PR 64)', async () => {
+    const o = { slowQuotesFrom: 3 };
+    const { ctx, page, calls } = await open(browser, '/book/rivera', o);
+    await page.waitForSelector('[data-state="open"]:not([hidden])');
+    await fill(page);
+    await page.check('#bk-sms');
+    await page.click('[data-book]');
+    // While the (slow) price is on its way, the client changes their mind about texts.
+    await page.uncheck('#bk-sms');
+    await page.waitForSelector('[data-state="booked"]:not([hidden])');
+    const b = lastBook(calls);
+    ok('the unticked box is what goes: no yes to texts, no consent version', b && b.details.client.smsOk === false && b.smsConsentVersion === undefined);
     await ctx.close();
   });
 

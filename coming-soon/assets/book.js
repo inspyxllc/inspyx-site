@@ -218,11 +218,15 @@
     var mine = ++asked;
     var f = facts(), key = choicesKey();
     pendingKey = key;
-    pending = call({ action: 'quote', slug: slug, serviceIds: ids, facts: f }).then(function (r) {
-      if (mine !== asked) return false;
-      if (r.status === 200 && r.body.quote) { drawQuote(r.body.quote); quotedFor = key; return true; }
-      return false;
+    // Waited for only while it's on its way: once it settles it's forgotten, so a failed price is asked for again
+    // on the next try (Codex on site PR 64).
+    var thisOne = call({ action: 'quote', slug: slug, serviceIds: ids, facts: f }).then(function (r) {
+      var priced = mine === asked && r.status === 200 && !!r.body.quote;
+      if (priced) { drawQuote(r.body.quote); quotedFor = key; }
+      if (pending === thisOne) { pending = null; pendingKey = null; }
+      return priced;
     });
+    pending = thisOne;
     var from = (page.days && page.days[0] && page.days[0].date) || null;
     if (!from) return;
     call({ action: 'times', slug: slug, serviceIds: ids, from: from, days: 14, facts: f }).then(function (r) {
@@ -280,12 +284,17 @@
       }
     });
   }
+  // What's wrong with the form as it stands now, or null: checked when Book is pressed and again just before sending.
+  function problem(d) {
+    if (pickedTime === null || !mainId) return 'pick';
+    if (!d.client.name || !d.client.email || !d.property.street || !d.property.city || !d.property.state || !d.property.zip) return 'missing';
+    if (d.client.smsOk && !d.client.phone) return 'phone';
+    return null;
+  }
   function book() {
     if (preview) return;
-    var d = details();
-    if (pickedTime === null || !mainId) { say('pick'); return; }
-    if (!d.client.name || !d.client.email || !d.property.street || !d.property.city || !d.property.state || !d.property.zip) { say('missing'); return; }
-    if (d.client.smsOk && !d.client.phone) { say('phone'); return; }
+    var first = problem(details());
+    if (first) { say(first); return; }
     // Never book against a price for other choices (or none). A price already on its way for these choices (the last
     // field's change, as Book is pressed) is waited for; otherwise it's asked for. If it can't be had, say so.
     var key = choicesKey();
@@ -294,6 +303,10 @@
     btn.disabled = true;
     ready.then(function (priced) {
       if (!priced || quotedFor !== choicesKey()) { btn.disabled = false; say('price'); return; }
+      // The form may have changed while the price was on its way (the text box unticked, a new phone): send what it
+      // says now, checked again (Codex on site PR 64).
+      var d = details(), now = problem(d);
+      if (now) { btn.disabled = false; say(now); return; }
       send(d, btn);
     });
   }
