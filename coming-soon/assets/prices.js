@@ -15,7 +15,7 @@
   var auth = window.InspyxAuth;
   if (!main || !auth) return;
   var DEADLINE = 20000, POLL = 30000, MAX_CENTS = 100000000;
-  var KINDS = ['price_services', 'price_modifiers', 'price_discounts'];
+  var KINDS = ['price_services', 'price_modifiers', 'price_discounts', 'price_questions'];
 
   var $ = function (sel, el) { return (el || document).querySelector(sel); };
   var all = function (sel, el) { return [].slice.call((el || document).querySelectorAll(sel)); };
@@ -156,13 +156,18 @@
     ].filter(Boolean).join(' · ');
   }
   function changeSummary(m) {
-    var label = words(m.basis) || m.basis, json = null;
+    // A change on one of the inspector's own questions (pricing pick 1) is named by its question, in quotes, as the
+    // phone names it; one whose question is deleted or not here yet, by what it reads (the phone's basis label).
+    var asks = m.basis === 'yes_no_question' || m.basis === 'number_question';
+    var q = asks && typeof m.questionId === 'string' ? held('price_questions', m.questionId) : null;
+    var named = q && q.deletedAt == null && typeof q.name === 'string' && q.name.trim() !== '';
+    var label = named ? '\u201c' + q.name.trim() + '\u201d' : (words(m.basis) || m.basis), json = null;
     try { json = JSON.parse(m.tiersJson); } catch (e) { return label; }
     if (m.mode === 'per_unit_over') {
       if (!json || typeof json.fee_cents !== 'number') return label;
       return label + ': ' + formatSignedCents(json.fee_cents) + ' ' + words('for_each') + ' ' + groupDigits(json.unit) + ' ' + words('past') + ' ' + groupDigits(json.over);
     }
-    var numeric = m.basis !== 'zip' && m.basis !== 'foundation';
+    var numeric = m.basis !== 'zip' && m.basis !== 'foundation' && m.basis !== 'yes_no_question';
     var parts = ((json && json.tiers) || []).map(function (t) {
       if (!numeric) return (t.values || []).join(', ') + ' ' + formatSignedCents(t.fee_cents);
       var from = t.from == null ? null : t.from, to = t.to == null ? null : t.to, range;
