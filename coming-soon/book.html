@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book an inspection</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/book.css">
+<script src="/assets/book.js" defer></script>
+</head>
+<body>
+<!-- An inspector's booking page (2026-11-21, Inspyx 4): inspyx.com/book/<name>. Times first, then the services and
+     their price, then the client's details, the optional "OK to text me" box (unticked), and Book. Every word is here;
+     book.js says none. The booking function (inspyx-mobile, backend/supabase/functions/booking) answers "gone" for
+     every page until the booking switch is on. /book/sms-consent (or ?preview=sms-consent) shows the whole form with
+     sample details and books nothing: the texting registration's proof of the consent step. -->
+<main class="bk" data-bk>
+<p class="bk-state" role="status" data-state="loading">Loading…</p>
+<section class="bk-state" data-state="gone" hidden>
+<h1>This booking page isn’t open</h1>
+<p>Please contact your inspector directly.</p>
+</section>
+<p class="bk-state" role="alert" data-state="slow" hidden>Too many tries in a short time. Please wait a few minutes and try again.</p>
+<p class="bk-state" role="alert" data-state="down" hidden>The booking page can’t be reached right now. Please try again in a minute.</p>
+
+<div data-state="open" hidden>
+<p class="bk-preview" data-preview hidden>Preview: sample details. Nothing here can be booked.</p>
+<h1>Book an inspection with <span data-v="company"></span></h1>
+<p class="bk-lede" data-v="inspector"></p>
+
+<section class="bk-step" aria-labelledby="bk-when">
+<h2 id="bk-when">1. Pick a time</h2>
+<p class="bk-note">Times are shown in <span data-v="zone"></span>.</p>
+<div class="bk-days" data-days></div>
+<p class="bk-none" data-none hidden>No open times in the next two weeks. Please contact <span data-v="company"></span> directly.</p>
+<p class="bk-say" role="alert" data-say="moved" hidden>That time doesn’t fit the services you picked. Here are the times that do.</p>
+<p class="bk-say" role="alert" data-say="taken" hidden>That time was just taken. Please pick another.</p>
+</section>
+
+<section class="bk-step" aria-labelledby="bk-what">
+<h2 id="bk-what">2. Pick your inspection</h2>
+<div class="bk-services" data-services></div>
+<div class="bk-asks" data-asks hidden>
+<p class="bk-note">A few things about the home set the price:</p>
+<label data-ask="squareFeet" hidden>Square feet <input type="number" inputmode="numeric" min="1" max="1000000" id="bk-sqft"></label>
+<label data-ask="yearBuilt" hidden>Year built <input type="number" inputmode="numeric" min="1600" max="2200" id="bk-year"></label>
+<label data-ask="foundation" hidden>Foundation <input type="text" maxlength="40" id="bk-found" list="bk-found-list" placeholder="Slab, crawlspace or basement"></label>
+<datalist id="bk-found-list"><option value="Slab"><option value="Crawlspace"><option value="Basement"></datalist>
+<div data-questions></div>
+</div>
+<div class="bk-quote" data-quote hidden>
+<ul data-lines></ul>
+<p class="bk-total"><span>Total</span> <strong data-v="total"></strong></p>
+</div>
+</section>
+
+<section class="bk-step" aria-labelledby="bk-who">
+<h2 id="bk-who">3. Your details</h2>
+<div class="bk-grid">
+<label>Your name <input type="text" autocomplete="name" maxlength="200" id="bk-name" required></label>
+<label>Email <input type="email" autocomplete="email" maxlength="254" id="bk-email" required></label>
+<label>Phone <input type="tel" autocomplete="tel" maxlength="40" id="bk-phone"></label>
+</div>
+<div class="bk-consent">
+<label class="bk-check"><input type="checkbox" id="bk-sms"> <span data-w-consent>OK to text me about this inspection. Inspyx sends these texts for my home inspector: appointment confirmations, reminders, and report and payment notices. About 5 to 8 texts per inspection. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help.</span></label>
+<p class="bk-fine">Optional. We never text you about anything else, and we never share your number. <a href="/terms#sms">Texting terms</a> · <a href="/privacy">Privacy</a></p>
+</div>
+<h3>The home</h3>
+<div class="bk-grid">
+<label class="bk-wide">Street address <input type="text" autocomplete="address-line1" maxlength="200" id="bk-street" required></label>
+<label>Apt or unit <input type="text" autocomplete="address-line2" maxlength="40" id="bk-unit"></label>
+<label>City <input type="text" autocomplete="address-level2" maxlength="100" id="bk-city" required></label>
+<label>State <input type="text" autocomplete="address-level1" maxlength="40" id="bk-state" required></label>
+<label>ZIP <input type="text" inputmode="numeric" autocomplete="postal-code" maxlength="10" id="bk-zip" required></label>
+</div>
+<h3>Your real estate agent <span class="bk-opt">(optional)</span></h3>
+<div class="bk-grid">
+<label>Name <input type="text" maxlength="200" id="bk-agent-name"></label>
+<label>Email <input type="email" maxlength="254" id="bk-agent-email"></label>
+<label>Phone <input type="tel" maxlength="40" id="bk-agent-phone"></label>
+</div>
+<label class="bk-wide">Anything we should know? <textarea maxlength="2000" rows="3" id="bk-notes"></textarea></label>
+</section>
+
+<p class="bk-say" role="alert" data-say="missing" hidden>Please fill in your name, email and the home’s address.</p>
+<p class="bk-say" role="alert" data-say="phone" hidden>To get texts, please add your phone number, or untick the box.</p>
+<p class="bk-say" role="alert" data-say="pick" hidden>Please pick a time and an inspection first.</p>
+<p class="bk-say" role="alert" data-say="price" hidden>The price is updating for your choices. Please try again in a moment.</p>
+<p class="bk-say" role="alert" data-say="failed" hidden>That didn’t go through. Please try again.</p>
+<button type="button" class="bk-book" data-book>Book this inspection</button>
+<p class="bk-fine" data-saved hidden>We saved what you entered. <span data-v="company"></span> may follow up.</p>
+</div>
+
+<section class="bk-state bk-done" data-state="booked" hidden>
+<h1>You’re booked</h1>
+<p><strong data-v="when"></strong></p>
+<p>A confirmation is on its way to <span data-v="email"></span>. <span data-v="company"></span> will see your booking right away.</p>
+</section>
+</main>
+
+<template data-t="words">
+<span data-w="free">Free</span>
+<span data-w="minutes">min</span>
+<span data-w="hours">h</span>
+<span data-w="yes">Yes</span>
+<span data-w="no">No</span>
+<span data-w="addons">Add to it:</span>
+<span data-w="at"> at </span>
+</template>
+</body>
+</html>
