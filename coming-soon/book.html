@@ -18,8 +18,8 @@
 <!-- An inspector's booking page (2026-11-21, Inspyx 4): inspyx.com/book/<name>. Times first, then the services and
      their price, then the client's details, the optional "OK to text me" box (unticked), and Book. Every word is here;
      book.js says none. The booking function (inspyx-mobile, backend/supabase/functions/booking) answers "gone" for
-     every page until the booking switch is on. ?preview=sms-consent shows the whole form with sample details and
-     books nothing (for the texting registration's screenshot). -->
+     every page until the booking switch is on. /book/sms-consent (or ?preview=sms-consent) shows the whole form with
+     sample details and books nothing: the texting registration's proof of the consent step. -->
 <main class="bk" data-bk>
 <p class="bk-state" role="status" data-state="loading">Loading…</p>
 <section class="bk-state" data-state="gone" hidden>
@@ -68,7 +68,7 @@
 <label>Phone <input type="tel" autocomplete="tel" maxlength="40" id="bk-phone"></label>
 </div>
 <div class="bk-consent">
-<label class="bk-check"><input type="checkbox" id="bk-sms"> <span data-w-consent>OK to text me about this inspection: the confirmation, reminders and when my report is ready. Usually 2 to 6 texts per inspection. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help.</span></label>
+<label class="bk-check"><input type="checkbox" id="bk-sms"> <span data-w-consent>OK to text me about this inspection. Inspyx sends these texts for my home inspector: appointment confirmations, reminders, and report and payment notices. About 5 to 8 texts per inspection. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help.</span></label>
 <p class="bk-fine">Optional. We never text you about anything else, and we never share your number. <a href="/terms#sms">Texting terms</a> · <a href="/privacy">Privacy</a></p>
 </div>
 <h3>The home</h3>

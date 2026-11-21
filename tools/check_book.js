@@ -11,8 +11,9 @@ const HOME = new URL(url).origin;
 const FN = 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/booking';
 // The words the server keeps for consent version v1 (inspyx-mobile, backend/supabase/functions/booking/core.ts,
 // SMS_CONSENT_WORDS.v1). The page must show exactly these: a consent is kept against the server's words.
-const CONSENT_V1 = 'OK to text me about this inspection: the confirmation, reminders and when my report is ready. ' +
-  'Usually 2 to 6 texts per inspection. Msg & data rates may apply. Reply STOP to opt out, HELP for help.';
+const CONSENT_V1 = 'OK to text me about this inspection. Inspyx sends these texts for my home inspector: appointment ' +
+  'confirmations, reminders, and report and payment notices. About 5 to 8 texts per inspection. ' +
+  'Msg & data rates may apply. Reply STOP to opt out, HELP for help.';
 let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
 const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
@@ -146,8 +147,8 @@ const lastBook = (calls) => calls.filter((c) => c.action === 'book').pop();
     await ctx.close();
   });
 
-  await group('the preview for the texting registration', async () => {
-    const { ctx, page, calls, away, errs } = await open(browser, '/book?preview=sms-consent', { w: 390 });
+  for (const path of ['/book/sms-consent', '/book?preview=sms-consent']) await group('the consent step\'s own page ' + path, async () => {
+    const { ctx, page, calls, away, errs } = await open(browser, path, { w: 390 });
     await page.waitForSelector('[data-state="open"]:not([hidden])');
     ok('the whole form shows, with sample details', (await page.inputValue('#bk-name')) === 'Jordan Lee' && !(await page.isHidden('[data-quote]')));
     ok('marked as a preview, and Book is off', !(await page.isHidden('[data-preview]')) && (await page.isDisabled('[data-book]')));

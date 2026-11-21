@@ -5,7 +5,8 @@
    picked services is said so and the fitting times shown. A draft is saved once the client has a time or an email
    (the inspector may follow up). The "OK to text me" box is unticked; a tick sends client.smsOk and the version of
    the words shown (SMS_CONSENT_VERSION, which must match the server's own copy: the server keeps the words).
-   ?preview=sms-consent: the whole form with sample details, never asking the server and never booking.
+   /book/sms-consent (and ?preview=sms-consent): the whole form with sample details, never asking the server and
+   never booking: the texting registration's proof of the consent step.
    This file says no words. The page holds every sentence. */
 (function () {
   'use strict';
@@ -25,7 +26,8 @@
   var state = function (which) { all('[data-state]', main).forEach(function (el) { el.hidden = el.getAttribute('data-state') !== which; }); };
   var say = function (which) { all('[data-say]', main).forEach(function (el) { el.hidden = el.getAttribute('data-say') !== which; }); };
 
-  var preview = /(?:^|[?&])preview=sms-consent(?:&|$)/.test(location.search);
+  // The texting consent step's own page (a reserved name: no inspector can have it), or the same as ?preview.
+  var preview = /^\/book\/sms-consent\/?$/.test(location.pathname) || /(?:^|[?&])preview=sms-consent(?:&|$)/.test(location.search);
   var slug = (location.pathname.match(/^\/book\/([a-z0-9-]{3,40})\/?$/) || [])[1] || '';
 
   var page = null;       // the page's answer: inspector, timeZone, services, questions, days
