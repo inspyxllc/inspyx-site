@@ -24,8 +24,10 @@ const PAGE = {
   services: [
     { id: 'home', name: 'Full home inspection', description: 'Top to bottom.', feeCents: 45000, minutes: 180, parentId: null, asks: ['squareFeet'] },
     { id: 'radon', name: 'Radon test', description: '', feeCents: 15000, minutes: 30, parentId: 'home', asks: [] },
+    // An add-on with its own price question (Codex on site PR 64): ticking it must show the question.
+    { id: 'pool', name: 'Pool inspection', description: '', feeCents: 12500, minutes: 45, parentId: 'home', asks: ['q-heater', 'yearBuilt'] },
   ],
-  questions: [], length: 180,
+  questions: [{ id: 'q-heater', name: 'Does the pool have a heater?', kind: 'yes_no' }], length: 180,
   days: [{ date: '2026-12-02', times: [T0, T0 + 3 * 3600000] }, { date: '2026-12-03', times: [T0 + 86400000] }],
 };
 
@@ -34,17 +36,20 @@ async function open(browser, path, o = {}) {
   const page = await ctx.newPage();
   page.setDefaultTimeout(8000);
   const errs = [], away = [], calls = [];
-  page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+  page.on('pageerror', (e) => { errs.push('pageerror: ' + e.message); if (process.env.DEBUG) console.log('PAGEERROR ' + e.message); });
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url();
     if (u !== FN) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
     calls.push(body);
+    if (process.env.DEBUG) console.log('CALL ' + body.action + ' ' + JSON.stringify(body.serviceIds || '') + ' ' + JSON.stringify(body.facts || ''));
     const reply = (status, b) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(b) });
     if (o.gone) return reply(404, { state: 'gone' });
     if (body.action === 'page') return reply(200, PAGE);
     if (body.action === 'times') return reply(200, { state: 'open', length: 210, days: PAGE.days });
     if (body.action === 'quote') {
+      o.quotes = (o.quotes || 0) + 1;
+      if (o.failQuotesAfter !== undefined && o.quotes > o.failQuotesAfter) return route.abort('failed');
       const lines = [{ kind: 'service', id: 'home', name: 'Full home inspection', cents: 45000 }];
       if (body.serviceIds.includes('radon')) lines.push({ kind: 'add_on', id: 'radon', name: 'Radon test', cents: 15000 });
       return reply(200, { state: 'open', quote: { lines, totalCents: lines.reduce((s, l) => s + l.cents, 0), minutes: 210 } });
@@ -61,9 +66,11 @@ async function open(browser, path, o = {}) {
 }
 
 async function fill(page, o = {}) {
-  await page.click('.bk-time >> nth=0');
-  await page.check('input[name="bk-main"][value="home"]');
-  await page.check('.bk-addons input[value="radon"]');
+  const step = (n) => { if (process.env.DEBUG) console.log('STEP ' + n); };
+  step('time'); await page.click('.bk-time >> nth=0');
+  step('home'); await page.check('input[name="bk-main"][value="home"]');
+  step('radon'); await page.check('.bk-addons input[value="radon"]');
+  step('details');
   await page.fill('#bk-name', 'Jordan Lee');
   await page.fill('#bk-email', 'jordan@example.com');
   if (o.phone !== false) await page.fill('#bk-phone', '(512) 555-0142');
@@ -137,6 +144,35 @@ const lastBook = (calls) => calls.filter((c) => c.action === 'book').pop();
     await page.click('[data-book]');
     await page.waitForSelector('[data-say="taken"]:not([hidden])');
     ok('says so, and no time stays picked', (await page.locator('.bk-time[aria-pressed="true"]').count()) === 0);
+    await ctx.close();
+  });
+
+  await group('an add-on\'s own price questions (Codex on site PR 64)', async () => {
+    const { ctx, page } = await open(browser, '/book/rivera');
+    await page.waitForSelector('[data-state="open"]:not([hidden])');
+    await page.check('input[name="bk-main"][value="home"]');
+    ok('not shown before the add-on is picked', (await page.locator('[data-q="q-heater"]').count()) === 0 && await page.isHidden('[data-ask="yearBuilt"]'));
+    await page.check('.bk-addons input[value="pool"]');
+    ok('ticking it shows its question and its fact', (await page.locator('[data-q="q-heater"]').count()) === 1 && !(await page.isHidden('[data-ask="yearBuilt"]')));
+    await page.uncheck('.bk-addons input[value="pool"]');
+    ok('unticking it takes them away again', (await page.locator('[data-q="q-heater"]').count()) === 0 && await page.isHidden('[data-ask="yearBuilt"]'));
+    await ctx.close();
+  });
+
+  await group('never booking against an old price (Codex on site PR 64)', async () => {
+    const o = { failQuotesAfter: 1 };
+    const { ctx, page, calls } = await open(browser, '/book/rivera', o);
+    await page.waitForSelector('[data-state="open"]:not([hidden])');
+    await page.click('.bk-time >> nth=0');
+    await page.check('input[name="bk-main"][value="home"]');
+    await page.waitForSelector('[data-quote]:not([hidden])');
+    // A change whose price can't be had: the old total goes at once, and Book waits.
+    await page.check('.bk-addons input[value="radon"]');
+    ok('the old total is marked as updating at once (not this price)', (await page.getAttribute('[data-quote]', 'aria-busy')) === 'true');
+    for (const [id, v] of [['#bk-name', 'Jordan Lee'], ['#bk-email', 'jordan@example.com'], ['#bk-street', '1 Main St'], ['#bk-city', 'Austin'], ['#bk-state', 'TX'], ['#bk-zip', '78704']]) await page.fill(id, v);
+    await page.click('[data-book]');
+    await page.waitForSelector('[data-say="price"]:not([hidden])');
+    ok('Book says the price is updating, and books nothing', !lastBook(calls));
     await ctx.close();
   });
 

@@ -124,7 +124,8 @@
         kids.forEach(function (a) {
           var l = document.createElement('label'); l.className = 'bk-check';
           var c = document.createElement('input'); c.type = 'checkbox'; c.value = a.id; c.checked = !!addOns[a.id];
-          c.addEventListener('change', function () { addOns[a.id] = c.checked; changed(); });
+          // An add-on can bring its own price questions: show (or drop) them before the price is asked again.
+          c.addEventListener('change', function () { addOns[a.id] = c.checked; drawAsks(); changed(); });
           l.appendChild(c);
           var n = document.createElement('span'); n.textContent = ' ' + a.name + ' · ' + money(a.feeCents); l.appendChild(n);
           add.appendChild(l);
@@ -197,16 +198,30 @@
     return f;
   }
 
-  var asked = 0;
+  // The price shown is for exactly these choices (services and facts), or there is none: a change hides the old
+  // total at once, and Book waits until a price for the current choices has come back.
+  // pending: the price being asked for pendingKey's choices; it settles true when that price came back.
+  var asked = 0, quotedFor = null, pending = null, pendingKey = null;
+  function choicesKey() { return JSON.stringify([pickedIds(), facts()]); }
   function changed() {
     say(null);
+    quotedFor = null;
+    // The old total stays where it is (nothing on the page jumps) but is marked as updating: it's not this price.
+    var box = $('[data-quote]', main);
+    box.classList.add('bk-pending'); box.setAttribute('aria-busy', 'true');
     var ids = pickedIds();
-    if (!ids.length || preview) { if (preview) drawQuote(sampleQuote()); return; }
+    if (!ids.length || preview) {
+      if (preview) { drawQuote(sampleQuote()); quotedFor = choicesKey(); }
+      pending = null; pendingKey = null;
+      return Promise.resolve(quotedFor !== null);
+    }
     var mine = ++asked;
-    var f = facts();
-    call({ action: 'quote', slug: slug, serviceIds: ids, facts: f }).then(function (r) {
-      if (mine !== asked) return;
-      if (r.status === 200 && r.body.quote) drawQuote(r.body.quote);
+    var f = facts(), key = choicesKey();
+    pendingKey = key;
+    pending = call({ action: 'quote', slug: slug, serviceIds: ids, facts: f }).then(function (r) {
+      if (mine !== asked) return false;
+      if (r.status === 200 && r.body.quote) { drawQuote(r.body.quote); quotedFor = key; return true; }
+      return false;
     });
     var from = (page.days && page.days[0] && page.days[0].date) || null;
     if (!from) return;
@@ -218,6 +233,7 @@
       drawDays();
     });
     saveSoon();
+    return pending;
   }
   function drawQuote(q) {
     var box = $('[data-quote]', main), list = $('[data-lines]', box);
@@ -230,6 +246,7 @@
     });
     setAll('total', money(q.totalCents || 0));
     box.hidden = false;
+    box.classList.remove('bk-pending'); box.removeAttribute('aria-busy');
   }
 
   // ---- step 3: the details, the draft, and booking ------------------------------------------------------------------------
@@ -269,8 +286,18 @@
     if (pickedTime === null || !mainId) { say('pick'); return; }
     if (!d.client.name || !d.client.email || !d.property.street || !d.property.city || !d.property.state || !d.property.zip) { say('missing'); return; }
     if (d.client.smsOk && !d.client.phone) { say('phone'); return; }
+    // Never book against a price for other choices (or none). A price already on its way for these choices (the last
+    // field's change, as Book is pressed) is waited for; otherwise it's asked for. If it can't be had, say so.
+    var key = choicesKey();
+    var ready = quotedFor === key ? Promise.resolve(true) : (pendingKey === key && pending ? pending : changed());
     var btn = $('[data-book]', main);
     btn.disabled = true;
+    ready.then(function (priced) {
+      if (!priced || quotedFor !== choicesKey()) { btn.disabled = false; say('price'); return; }
+      send(d, btn);
+    });
+  }
+  function send(d, btn) {
     var body = { action: 'book', slug: slug, serviceIds: pickedIds(), facts: facts(), details: d, startsAt: pickedTime };
     if (draftKey) body.draftKey = draftKey;
     if (d.client.smsOk) body.smsConsentVersion = SMS_CONSENT_VERSION;

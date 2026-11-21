@@ -32,6 +32,7 @@
 .bk-quote{margin-top:14px; padding-top:10px; border-top:1px solid rgba(0,0,0,.08)}
 .bk-quote ul{list-style:none; padding:0; margin:0; display:grid; gap:4px}
 .bk-quote li{display:flex; justify-content:space-between; font-size:15px}
+.bk-quote.bk-pending{opacity:.4}
 .bk-total{display:flex; justify-content:space-between; font-size:17px; margin:8px 0 0}
 .bk-say{margin:14px 0 0; font-size:15px; color:#9A3412}
 .bk-none{font-size:15px; color:var(--ink-soft)}
