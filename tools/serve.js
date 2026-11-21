@@ -22,11 +22,16 @@ const extra = (p) => {
   return out;
 };
 
-// vercel.json's plain rewrites (a source with no ":" in it), as Vercel serves them: /a is the agent page.
+// vercel.json's rewrites, as Vercel serves them: a plain source (/a is the agent page), or one whose last part is a
+// ":name" standing for one path segment (/book/:slug is the booking page, 2026-11-21).
 const rewritten = (p) => {
   let list = [];
   try { list = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8')).rewrites || []; } catch (e) { list = []; }
-  const hit = list.find((r) => !r.source.includes(':') && r.source === p);
+  const hit = list.find((r) => {
+    if (!r.source.includes(':')) return r.source === p;
+    const m = r.source.match(/^(\/[a-z0-9/-]*?)\/:[a-z]+$/);
+    return m !== null && p.startsWith(m[1] + '/') && /^[^/]+$/.test(p.slice(m[1].length + 1));
+  });
   return hit ? hit.destination : p;
 };
 
