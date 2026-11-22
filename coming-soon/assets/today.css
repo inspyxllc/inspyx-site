@@ -32,3 +32,28 @@
   .need{padding:14px}
   .need-acts{width:100%}
 }
+/* Set up your business (2026-11-22, his order: the dashboard sets up the whole business). The three pages that
+   already write the phone's own rows, as tiles: a lit icon, the name, one line on what it holds. */
+.setup{margin-top:44px}
+.setup h2{font-size:22px; letter-spacing:-.01em}
+.setup-lede{margin-top:4px; font-size:14.5px; color:var(--ink-faint)}
+.setup-grid{list-style:none; margin-top:16px; padding:0; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px}
+.setup-tile{position:relative; display:flex; flex-direction:column; gap:14px; height:100%; padding:20px 20px 22px; border-radius:22px; background:var(--card); color:var(--ink); text-decoration:none; box-shadow:0 1px 0 var(--line), 0 10px 30px -18px rgba(31,78,121,.35); transition:transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s}
+.setup-tile::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px; background:linear-gradient(135deg, rgba(2,132,199,.55), rgba(31,78,121,.08) 45%, rgba(2,132,199,.25)); -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none}
+.setup-tile:hover{transform:translateY(-3px); box-shadow:0 1px 0 var(--line), 0 18px 38px -18px rgba(2,132,199,.5)}
+.setup-tile:focus-visible{outline:3px solid #0284C7; outline-offset:3px}
+.setup-icon{flex:none; display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:14px; background:linear-gradient(140deg, #0284C7, var(--navy)); box-shadow:0 6px 16px -6px rgba(2,132,199,.7)}
+.setup-icon svg{width:22px; height:22px; fill:none; stroke:#fff; stroke-width:1.9; stroke-linejoin:round; stroke-linecap:round}
+.setup-words{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:4px}
+.setup-words strong{font-size:17px}
+.setup-words span{font-size:14.5px; line-height:1.45; color:var(--ink-soft)}
+.setup-go{position:absolute; top:22px; right:18px; color:#0284C7; transition:transform .25s}
+.setup-go svg{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
+.setup-tile:hover .setup-go{transform:translateX(3px)}
+@media (prefers-reduced-motion: reduce){.setup-tile, .setup-go{transition:none} .setup-tile:hover{transform:none}}
+@media (max-width: 760px){
+  .setup{margin-top:36px}
+  .setup-grid{grid-template-columns:minmax(0, 1fr); gap:10px}
+  .setup-tile{flex-direction:row; align-items:center; padding:14px 44px 14px 14px}
+  .setup-go{top:50%; margin-top:-10px}
+}
