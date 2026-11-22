@@ -85,7 +85,7 @@ const pngInfo = (b64) => {
   const browser = await engine.launch();
 
   await group('the states', async () => {
-    for (const [o, which] of [[{ gone: true }, 'gone'], [{ slow: true }, 'slow'], [{ down: true }, 'down'], [{ path: '/sign' }, 'gone'], [{ path: '/sign#nonsense' }, 'gone'], [{ path: '/sign#' + KEY.slice(0, -1) }, 'gone']]) {
+    for (const [o, which] of [[{ gone: true }, 'gone'], [{ slow: true }, 'slow'], [{ down: true }, 'down'], [{ path: '/sign' }, 'gone'], [{ path: '/sign#nonsense' }, 'gone'], [{ path: '/sign#' + KEY.slice(0, -1) }, 'gone'], [{ path: '/sign#%' }, 'gone'], [{ path: '/sign#%FF' }, 'gone'], [{ path: '/sign#' + encodeURIComponent(KEY + ' ') }, 'gone']]) {
       const t = await open(browser, o);
       await t.page.locator(`[data-state="${which}"]`).waitFor({ state: 'visible' });
       ok(`${JSON.stringify(o)}: shows ${which}, and nothing else`, (await shown(t.page, '[data-state="open"]')) === false && (await shown(t.page, '[data-state="loading"]')) === false);
@@ -217,6 +217,19 @@ const pngInfo = (b64) => {
       await t.ctx.close();
     });
   }
+
+  await group('another key in the same tab starts over (Codex on site PR 65)', async () => {
+    const t = await open(browser);
+    await t.page.locator('[data-state="open"]').waitFor({ state: 'visible' });
+    await draw(t.page, 'initials');
+    await t.page.locator('.sg-spot').first().click();
+    const other = '4f2504e0-4f89-41d3-9a0c-0305e82c3301.' + 'B'.repeat(22);
+    await Promise.all([t.page.waitForEvent('load'), t.page.evaluate((k) => { location.hash = k; }, other)]);
+    await t.page.locator('[data-state="gone"]').waitFor({ state: 'visible' });
+    const views = t.calls.filter((c) => c.body.action === 'view').map((c) => c.body.key);
+    ok('the new key is asked for, and nothing of the old is shown', views.length === 2 && views[1] === other && (await t.page.locator('[data-state="open"]').isVisible()) === false, JSON.stringify(views));
+    await t.ctx.close();
+  });
 
   await group('already signed', async () => {
     const t = await open(browser, { view: VIEW(TEXT, { state: 'signed', signerName: 'Sam Client', signedAt: Date.UTC(2026, 10, 22, 14, 14) }) });

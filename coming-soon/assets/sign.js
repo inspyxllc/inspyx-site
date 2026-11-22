@@ -30,7 +30,11 @@
   var state = function (which) { all('[data-state]', main).forEach(function (el) { el.hidden = el.getAttribute('data-state') !== which; }); };
   var say = function (which) { all('[data-say]', main).forEach(function (el) { el.hidden = el.getAttribute('data-say') !== which; }); };
 
-  var key = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+  // As written: a key needs no decoding (hex, dashes, a dot, base64url), so anything that would is not one
+  // (Codex on site PR 65: decoding "#%" threw and left the page loading).
+  var key = (location.hash || '').replace(/^#/, '');
+  // Another key in the same tab (only the part after "#" changed, so this script isn't run again): start over.
+  window.addEventListener('hashchange', function () { location.reload(); });
   var view = null;
   var spots = [];       // the "Initial here" buttons
   var needed = 1;       // how many initials the server takes (its view says)
