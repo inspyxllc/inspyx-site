@@ -427,7 +427,43 @@
     });
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword };
+  /* A choice the inspector made on the website, kept with their account so it follows them to every browser
+     (2026-11-22, Moises on the setup checklist: "Hide and allow option to never see again"). Kept in the account's
+     own details (user_metadata), each choice a top-level key of its own whose name starts "web_": the sign-in
+     server merges top-level keys, so one choice never wipes another. choices() answers the "web_" keys held, or
+     null when nobody is signed in; choose(key, value) answers true when kept. A refused sign-in (401) is renewed
+     once, as in ask; anything else the server says throws. */
+  var CHOICE = /^web_[a-z_]{1,40}$/;
+  function asUser(method, body) {
+    var once = function (s) { return send(method, BASE + '/user', s.access, body); };
+    return current().then(function (s) {
+      if (!s) return null;
+      return once(s).then(function (r) {
+        if (r.status !== 401) return r;
+        return current(true).then(function (fresh) { return fresh ? once(fresh) : null; });
+      });
+    });
+  }
+  function choices() {
+    return asUser('GET').then(function (r) {
+      if (r === null) return null;
+      if (r.status !== 200 || !r.json) throw new Refusal('server', r.status);
+      var meta = r.json.user_metadata, out = {};
+      if (meta && typeof meta === 'object') Object.keys(meta).forEach(function (k) { if (CHOICE.test(k)) out[k] = meta[k]; });
+      return out;
+    });
+  }
+  function choose(key, value) {
+    if (!CHOICE.test(key) || typeof value !== 'boolean') return Promise.reject(new Refusal('malformed'));
+    var data = {}; data[key] = value;
+    return asUser('PUT', { data: data }).then(function (r) {
+      if (r === null) return false;
+      if (r.status !== 200) throw new Refusal('server', r.status);
+      return true;
+    });
+  }
+
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword, choices: choices, choose: choose };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the dashboard (/today, since 2026-11-15). It asks three times:
