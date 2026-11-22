@@ -215,6 +215,42 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || TIMEOUT / 2); 
     await ctx.close();
   });
 
+  await group('a later read fails', async () => {
+    const s = server({ rows: everything() });
+    const { page, ctx } = await open(browser, { server: s });
+    const before = await visible(page, '[data-setup]');
+    s.syncFail = 500;
+    await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+    await until(() => s.syncCalls.length === 2);
+    await page.waitForTimeout(400);
+    ok('a later read that fails keeps the last whole one (Codex on #68): every step still done, the checklist still hidden',
+      before === false && !(await visible(page, '[data-setup]')) && (await smallLinks(page)) !== '' && s.syncCalls.length === 2);
+    await ctx.close();
+  });
+
+  await group('a later read fails part way', async () => {
+    const s = server({ pages: [[profile(), signature(), service(), agreement()], [service()]] });
+    const { page, ctx } = await open(browser, { server: s });
+    ok('part way: the first whole read hides the checklist', !(await visible(page, '[data-setup]')));
+    s.pages = [[service()], null];   // the second page breaks
+    s.syncFail = 0;
+    const real = s.pages;
+    await page.route(SYNC, async (route) => {
+      const body = JSON.parse(route.request().postData() || '{}');
+      s.syncCalls.push({ body });
+      const cors = { 'access-control-allow-origin': '*' };
+      if (body.after) return route.fulfill({ status: 500, contentType: 'application/json', headers: cors, body: '{}' });
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ rows: real[0], next: { at: 't', kind: 'k', id: '1' }, more: true }) });
+    });
+    const calls = s.syncCalls.length;
+    await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+    await until(() => s.syncCalls.length >= calls + 2);
+    await page.waitForTimeout(400);
+    ok('part way: a read whose second page fails changes nothing (only a service came, so it would have said three steps are missing)',
+      !(await visible(page, '[data-setup]')) && (await smallLinks(page)) !== '');
+    await ctx.close();
+  });
+
   await group('the account can\'t be read', async () => {
     const s = server({ rows: [], getFail: 500 });
     const { page, ctx } = await open(browser, { server: s });

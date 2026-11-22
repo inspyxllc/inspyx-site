@@ -9,7 +9,8 @@
      Prices         at least one service (not an add-on)
      Agreements     at least one agreement
    Read once as the page opens and again whenever it comes back into view (back from a setup page in another tab).
-   A pull that fails leaves the tiles as plain links: no step is ever called done or missing on a guess.
+   A pull that fails leaves the last whole read standing (plain links if there was none): no step is ever
+   called done or missing on a guess.
    This file says no words. The page holds every one. */
 (function () {
   'use strict';
@@ -32,12 +33,11 @@
 
   var me = (auth.stored() || {}).id || null;
   var rows = Object.create(null);
-  var point = null;
 
-  function take(r) {
+  function take(into, r) {
     if (!r || KINDS.indexOf(r.kind) < 0 || typeof r.id !== 'string' || !r.data || r.data.ownerAccountId !== me) return;
-    var k = r.kind + '/' + r.id, held = rows[k];
-    if (!held || r.updated_at >= held.updated_at) rows[k] = r;
+    var k = r.kind + '/' + r.id, held = into[k];
+    if (!held || r.updated_at >= held.updated_at) into[k] = r;
   }
   var standing = function (kind) {
     return Object.keys(rows).map(function (k) { return rows[k]; }).filter(function (r) {
@@ -100,17 +100,19 @@
   var pulling = null;
   function pull() {
     if (pulling) return pulling;
-    point = null; rows = Object.create(null);
+    // Read whole into a fresh set, kept only when every page came: a pull that
+    // fails part way leaves the last whole read as it was (Codex on #68).
+    var point = null, fresh = Object.create(null);
     var loop = function () {
       return auth.ask('sync', { push: [], after: point, limit: 500 }, DEADLINE).then(function (r) {
         if (r === null) { window.location.replace('/signin'); return null; }
         if (r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) throw new Error('sync');
-        r.json.rows.forEach(take);
+        r.json.rows.forEach(function (row) { take(fresh, row); });
         if (r.json.next) point = r.json.next;
         return r.json.more ? loop() : true;
       });
     };
-    pulling = loop().then(function (whole) { if (whole) known = true; }, function () { /* the tiles stay plain links */ })
+    pulling = loop().then(function (whole) { if (whole) { rows = fresh; known = true; } }, function () { /* the last whole read stands */ })
       .then(function () { pulling = null; render(); });
     return pulling;
   }
