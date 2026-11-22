@@ -35,6 +35,7 @@
 /* Set up your business (2026-11-22, his order: the dashboard sets up the whole business). The three pages that
    already write the phone's own rows, as tiles: a lit icon, the name, one line on what it holds. */
 .setup{margin-top:44px}
+.setup[hidden], .setup-small[hidden]{display:none}
 .setup h2{font-size:22px; letter-spacing:-.01em}
 .setup-lede{margin-top:4px; font-size:14.5px; color:var(--ink-faint)}
 .setup-grid{list-style:none; margin-top:16px; padding:0; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px}
@@ -57,3 +58,24 @@
   .setup-tile{flex-direction:row; align-items:center; padding:14px 44px 14px 14px}
   .setup-go{top:50%; margin-top:-10px}
 }
+/* The checklist (step 1): a ring that fills as steps are done; on each tile, Done or what is still to add. */
+.setup-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.setup-progress{display:inline-flex; align-items:center; gap:10px; font-size:14.5px; color:var(--ink-soft)}
+.setup-progress strong{color:var(--ink)}
+.setup-ring{width:36px; height:36px; transform:rotate(-90deg)}
+.setup-ring circle{fill:none; stroke-width:4}
+.setup-ring-track{stroke:var(--line)}
+.setup-ring-fill{stroke:#0284C7; stroke-linecap:round; stroke-dasharray:0 100; transition:stroke-dasharray .6s cubic-bezier(.2,.8,.2,1)}
+.setup-status{display:block; margin-top:6px}
+.setup-words .setup-done{display:inline-flex; align-items:center; gap:6px; padding:3px 10px 3px 8px; border-radius:999px; background:#E7F6EE; color:#13794A; font-size:13.5px; font-weight:600}
+.setup-words .setup-done::before{content:""; width:12px; height:7px; border:solid currentColor; border-width:0 0 2.2px 2.2px; transform:rotate(-45deg) translate(1px, -1px)}
+.setup-words .setup-left{display:inline-flex; align-items:baseline; gap:7px; color:#8A5300; font-size:13.5px; font-weight:600; line-height:1.4}
+.setup-words .setup-left::before{content:""; flex:none; width:8px; height:8px; border-radius:50%; background:#F59E0B; box-shadow:0 0 0 3px rgba(245,158,11,.18); transform:translateY(-1px)}
+.setup-words [hidden]{display:none}
+.setup-tile[data-done] .setup-icon{background:linear-gradient(140deg, #22A06B, #13794A); box-shadow:0 6px 16px -6px rgba(19,121,74,.6)}
+.setup-never{margin-top:14px; min-height:44px; padding:0; border:0; background:none; font:500 14.5px var(--font); color:var(--ink-faint); text-decoration:underline; text-underline-offset:3px; cursor:pointer}
+.setup-never:hover{color:var(--ink)}
+.setup-undo{margin-top:24px}
+.setup-small{margin-top:28px; display:flex; flex-wrap:wrap; align-items:center; gap:4px 22px; font-size:14.5px; color:var(--ink-faint)}
+.setup-small a{display:inline-flex; align-items:center; min-height:44px}
+@media (prefers-reduced-motion: reduce){.setup-ring-fill{transition:none}}

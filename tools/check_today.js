@@ -63,6 +63,9 @@ async function open(browser, o) {
     const req = route.request(), u = req.url();
     const cors = { 'access-control-allow-origin': '*' };
     if (u.startsWith(SERVER + '/auth/v1/token')) { const a = o.onAuth ? o.onAuth() : { status: 400, json: {} }; return route.fulfill({ status: a.status, contentType: 'application/json', headers: cors, body: JSON.stringify(a.json) }); }
+    // The setup checklist's own asks (tools/check_setup.js checks them): nothing set up, and no choice kept.
+    if (u === SERVER + '/functions/v1/sync') return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ rows: [], next: null, more: false }) });
+    if (u === SERVER + '/auth/v1/user' && req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ id: ME, email: 'pat@example.com', user_metadata: {} }) });
     if (u !== NEEDS) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
     s.calls.push({ headers: req.headers(), body });

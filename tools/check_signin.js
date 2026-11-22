@@ -65,6 +65,10 @@ async function open(browser, where, opts) {
     const req = route.request();
     // The dashboard a sign-in lands on asks Inspyx's server one thing, what needs you: nothing, here.
     if (req.url() === SERVER + '/functions/v1/needs') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ needs: [], as_of: new Date().toISOString() }) });
+    // Its setup checklist (tools/check_setup.js checks it) asks two more: the rows (none) and the account's choices
+    // (none). Neither is a sign-in call, so neither is counted.
+    if (req.url() === SERVER + '/functions/v1/sync') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows: [], next: null, more: false }) });
+    if (req.url() === SERVER + '/auth/v1/user' && req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ id: 'x', email: 'x@example.com', user_metadata: {} }) });
     if (!req.url().startsWith(SERVER + '/auth/v1/')) { away.push(req.url()); return route.abort(); }
     const call = { method: req.method(), path: req.url().slice(SERVER.length), headers: req.headers(), body: req.postData() };
     calls.push(call);

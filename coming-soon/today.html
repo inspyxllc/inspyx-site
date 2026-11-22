@@ -15,6 +15,7 @@
 <script src="/assets/auth.js"></script>
 <script src="/assets/page.js" defer></script>
 <script src="/assets/today.js" defer></script>
+<script src="/assets/setup.js" defer></script>
 </head>
 <body>
 <header class="bar">
@@ -43,27 +44,54 @@
 <p data-say="full" hidden>Too many jobs are marked done. Write to support@inspyx.com and we'll clear them.</p>
 <p data-say="copy" hidden>Couldn't copy the pay link. Try again.</p>
 </div>
-<section class="setup" aria-labelledby="setup-title">
+<section class="setup" aria-labelledby="setup-title" data-setup hidden>
+<div class="setup-head">
+<div>
 <h2 id="setup-title">Set up your business</h2>
 <p class="setup-lede">Everything you set here is on your phone too.</p>
+</div>
+<p class="setup-progress" data-progress hidden><svg class="setup-ring" viewBox="0 0 36 36" aria-hidden="true"><circle class="setup-ring-track" cx="18" cy="18" r="15.5"/><circle class="setup-ring-fill" cx="18" cy="18" r="15.5" pathLength="100" data-ring/></svg><span><strong data-v="done"></strong> of <span data-v="total"></span> done</span></p>
+</div>
 <ul class="setup-grid">
-<li><a class="setup-tile" href="/profile">
+<li><a class="setup-tile" href="/profile" data-step="company">
 <span class="setup-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11z"/><path d="M9 20v-6h6v6"/></svg></span>
-<span class="setup-words"><strong>Your company</strong><span>Your name, license, logo and signature, on every report.</span></span>
+<span class="setup-words"><strong>Your company</strong><span>Your name, license, logo and signature, on every report.</span>
+<span class="setup-status" data-status hidden><span class="setup-done" data-is="done" hidden>Done</span><span class="setup-left" data-is="left" hidden></span></span></span>
 <span class="setup-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
 </a></li>
-<li><a class="setup-tile" href="/prices">
+<li><a class="setup-tile" href="/prices" data-step="prices">
 <span class="setup-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12.5V4h8.5L21 13.5 13.5 21z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg></span>
-<span class="setup-words"><strong>Prices</strong><span>Your services, add-ons and discount codes.</span></span>
+<span class="setup-words"><strong>Prices</strong><span>Your services, add-ons and discount codes.</span>
+<span class="setup-status" data-status hidden><span class="setup-done" data-is="done" hidden>Done</span><span class="setup-left" data-is="left" hidden></span></span></span>
 <span class="setup-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
 </a></li>
-<li><a class="setup-tile" href="/agreements">
+<li><a class="setup-tile" href="/agreements" data-step="agreements">
 <span class="setup-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg></span>
-<span class="setup-words"><strong>Agreements</strong><span>What your clients sign before you inspect.</span></span>
+<span class="setup-words"><strong>Agreements</strong><span>What your clients sign before you inspect.</span>
+<span class="setup-status" data-status hidden><span class="setup-done" data-is="done" hidden>Done</span><span class="setup-left" data-is="left" hidden></span></span></span>
 <span class="setup-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
 </a></li>
 </ul>
+<button class="link setup-never" type="button" data-never>Don't show this again</button>
 </section>
+<div class="today-undo setup-undo" role="status" data-setup-undo hidden>
+<span>Set up your business won't show again.</span>
+<button class="link" type="button" data-setup-back>Undo</button>
+</div>
+<p class="setup-small" data-setup-small hidden>Your business: <a href="/profile">Your company</a><a href="/prices">Prices</a><a href="/agreements">Agreements</a></p>
+<div class="say" role="alert">
+<p data-say="setup-save" hidden>Couldn't save that. Try again.</p>
+</div>
+<template data-t="setup-words">
+<span data-w="lead">Add</span>
+<span data-w="and">and</span>
+<span data-w="company-inspectorName">your name</span>
+<span data-w="company-companyName">your company's name</span>
+<span data-w="company-licenseNumber">your license</span>
+<span data-w="company-signature">your signature</span>
+<span data-w="prices-service">your first service</span>
+<span data-w="agreements-agreement">the agreement clients sign</span>
+</template>
 <p class="today-who">Signed in as <strong data-email></strong></p>
 <p class="today-links"><a href="/numbers">Your numbers</a><a href="/reports">Reports sent</a><a href="/inspections">Your inspections</a><a href="/calendar">Calendar</a><a href="/people">People</a><a href="/account">Account</a></p>
 </main>
