@@ -114,6 +114,14 @@ const shown = async (page, sel) => (await vis(page, sel)).join(' | ');
       const csp = res.headers()['content-security-policy'] || '';
       ok(label + ': served with the signed-in pages\' rule, and never kept by a cache', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
       ok(label + ': the title, and who is signed in', (await shown(page, 'h1')) === 'What needs you' && (await shown(page, '.today-who')) === 'Signed in as pat@example.com' && (await shown(page, '.today-links a')) === 'Your numbers | Reports sent | Your inspections | Calendar | People | Account');
+      // Set up your business (2026-11-22): the three setup pages that write the phone's own rows, each a tile.
+      const tiles = await page.$$eval('.setup-tile', (as) => as.map((a) => [a.getAttribute('href'), a.querySelector('strong').textContent, a.getBoundingClientRect().height]));
+      ok(label + ': "Set up your business", with Your company, Prices and Agreements, each a link a finger can hit',
+        (await shown(page, '.setup h2')) === 'Set up your business' &&
+        JSON.stringify(tiles.map((t) => [t[0], t[1]])) === JSON.stringify([['/profile', 'Your company'], ['/prices', 'Prices'], ['/agreements', 'Agreements']]) &&
+        tiles.every((t) => t[2] >= 44), JSON.stringify(tiles));
+      const below = await page.evaluate(() => document.querySelector('.setup').getBoundingClientRect().top - document.querySelector('[data-items]').getBoundingClientRect().bottom);
+      ok(label + ': the setup sits under the jobs, never between them and the title', below > 0, String(Math.round(below)));
       const r = await rows(page);
       ok(label + ': four jobs, newest first', r.length === 4, JSON.stringify(r));
       ok(label + ': a Mia caller to call back, with what they wanted, the property, the day, and a button that dials them',
