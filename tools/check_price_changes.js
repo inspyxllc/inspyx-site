@@ -295,6 +295,32 @@ const fill = async (loc, v) => { await loc.fill(''); if (v !== '') await loc.fil
     await ctx.close();
   });
 
+  // Codex on #78: the question chosen stays when only how it prices changes; a yes/no tier holding both answers
+  // opens as one row for each, and saves.
+  await group('the question and the answers stay as they are', async () => {
+    const s = server(); seed(s); withQuestions(s);
+    const base = { ownerAccountId: ME, createdAt: T, updatedAt: T, deletedAt: null };
+    s.put(s.row('price_questions', Object.assign({ id: 'q-units', name: 'Units', kind: 'number', position: 2 }, base)));
+    s.put(s.row('price_modifiers', Object.assign({ id: 'qm-both', serviceId: 'svc-condo', basis: 'yes_no_question', questionId: 'q-pool', mode: 'ranges', position: 0,
+      tiersJson: JSON.stringify({ tiers: [{ values: ['yes', 'no'], fee_cents: 2000, minutes: 15 }] }) }, base)));
+    const { page, ctx, errs, calls } = await open(browser, { server: s });
+    await card(page, 'Condo inspection').locator('[data-add="change"]').click();
+    await page.selectOption('[name="basis"]', 'number_question');
+    await page.selectOption('[name="question"]', 'q-units');
+    await page.check('[name="mode"][value="per_unit_over"]');
+    ok('switching how it prices keeps the question chosen', await page.evaluate(() => document.querySelector('[name="question"]').value === 'q-units'));
+    await page.fill('[name="over"]', '1'); await page.fill('[name="unit"]', '1'); await page.fill('[name="perFee"]', '30');
+    await page.click('[data-form="change"] [type="submit"]');
+    ok('and saves on it', await until(() => pushed(calls).some((r) => r.kind === 'price_modifiers' && r.data.questionId === 'q-units' && r.data.mode === 'per_unit_over')));
+    await card(page, 'Condo inspection').locator('[data-edit-change="qm-both"]').click();
+    ok('a tier holding yes and no opens as a Yes row and a No row, each with its fee', await page.evaluate(() =>
+      [...document.querySelectorAll('[data-lines] .prc-tier')].map((li) => li.querySelector('[data-yn]').getAttribute('data-yn') + ':' + li.querySelector('[data-k="fee"]').value).join('|') === 'yes:20|no:20'));
+    await page.click('[data-form="change"] [type="submit"]');
+    ok('saved unchanged, it is kept (one row per answer)', await until(() => pushed(calls).some((r) => r.id === 'qm-both' && JSON.stringify(JSON.parse(r.data.tiersJson).tiers.map((t) => t.values)) === '[["yes"],["no"]]')), (await vis(page, '[data-c-problem]')).join());
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
   await group('editing and deleting', async () => {
     const s = server(); seed(s); withQuestions(s);
     const base = { ownerAccountId: ME, createdAt: T, updatedAt: T, deletedAt: null };

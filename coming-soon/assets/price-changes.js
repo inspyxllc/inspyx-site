@@ -215,7 +215,11 @@
     var tiers = c && c.tiers ? c.tiers : [];
     if (numeric) { (tiers.length ? tiers : [null]).forEach(addTier); }
     else if (basis === 'yes_no_question') {
-      ['yes', 'no'].forEach(function (v) { addLine(basis, tiers.filter(function (t) { return t.values.indexOf(v) >= 0; })[0] || { values: [v], fee_cents: 0, minutes: 0 }); });
+      // One row per answer, each with what its tier adds: a tier may hold both (Codex on #78).
+      ['yes', 'no'].forEach(function (v) {
+        var t = tiers.filter(function (x) { return x.values.indexOf(v) >= 0; })[0];
+        addLine(basis, { values: [v], fee_cents: t ? t.fee_cents : 0, minutes: t ? t.minutes : 0 });
+      });
     } else { (tiers.length ? tiers : [null]).forEach(function (t) { addLine(basis, t); }); }
     var p = c && c.perUnit;
     cForm.elements.over.value = p ? String(p.over) : '';
@@ -247,7 +251,14 @@
     cDialog.showModal();
   }
   cForm.elements.basis.addEventListener('change', function () { shape(null); });
-  all('input[name="mode"]', cForm).forEach(function (r) { r.addEventListener('change', function () { shape(null); }); });
+  // Changing only how it prices keeps the question chosen (Codex on #78: it fell back to the first).
+  all('input[name="mode"]', cForm).forEach(function (r) {
+    r.addEventListener('change', function () {
+      var q = cForm.elements.question.value;
+      shape(null);
+      if (q && [].some.call(cForm.elements.question.options, function (o) { return o.value === q; })) cForm.elements.question.value = q;
+    });
+  });
   $('[data-add-tier]', cForm).addEventListener('click', function () {
     var rows = all('[data-tiers] .prc-tier', cForm), last = rows[rows.length - 1];
     addTier({ from: last ? whole($('[data-k="to"]', last).value) : null, to: null, values: [], fee_cents: 0, minutes: 0 });
