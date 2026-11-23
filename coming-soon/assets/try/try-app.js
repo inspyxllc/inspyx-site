@@ -34,7 +34,7 @@
     done_title: 'That\u2019s Spex.', done_text: 'Imagine this on every inspection: you talk, the report writes itself.', done_cta: 'Join the waitlist', done_again: 'Look around more',
     today: 'Today', inspection: 'Inspection', report: 'Report', walk: 'Walk', done: 'Done', walk_label: 'Walk the house',
     condition: 'Condition', photos: 'Photos', findings: 'Findings', camera_close: 'Close',
-    rate: ['Satisfactory', 'Needs attention', 'Not inspected', 'Not present'],
+    rate: ['Inspected', 'Not inspected', 'Not present'],
     report_title: 'Home Inspection Report', prepared: 'Prepared by {c}',
     kinds: { safety: 'Safety', repair: 'Repair', maintenance: 'Maintenance', note: 'Note' },
     done_of: '{d} of {n} done', one_finding: '1 finding', findings_n: '{n} findings'
@@ -52,7 +52,8 @@
     { id: 'attic', title: 'Attic', room: 'Attic', photo: 'attic.jpg', n: 5, d: 0 }
   ];
   var KINDS = ['safety', 'repair', 'maintenance', 'note'];
-  var CONDITIONS = ['satisfactory', 'needs attention', 'not inspected', 'not present'];
+  // The app's item marks (walk_marks.dart ItemStatusButtons): Inspected, Not inspected, Not present.
+  var CONDITIONS = ['inspected', 'not inspected', 'not present'];
   var place = function (id) { return PLACES.filter(function (p) { return p.id === id; })[0] || null; };
   var fill = function (s, o) { Object.keys(o).forEach(function (k) { s = s.split('{' + k + '}').join(o[k]); }); return s; };
   var clip = function (v, n) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n); };

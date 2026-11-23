@@ -135,8 +135,8 @@ const turnDone = { serverContent: { turnComplete: true } };
     // Tap around.
     await page.click('[data-ty-place="water heater"]');
     ok('tapping a place opens it', (await page.locator('[data-ty-scr="item"] .ty-bar b').innerText()) === 'Water heater');
-    await page.click('[data-ty-rate="needs attention"]');
-    ok('tapping a condition sets it', await page.locator('[data-ty-rate="needs attention"].ty-on').count() === 1);
+    await page.click('[data-ty-rate="inspected"]');
+    ok('tapping a condition sets it', await page.locator('[data-ty-rate="inspected"].ty-on').count() === 1);
     await page.click('.ty-photos .ty-add');
     ok('the camera opens on the place', await page.locator('[data-ty-scr="camera"]').isVisible());
     await page.click('.ty-cam .ty-shut button'); await page.waitForTimeout(700);
@@ -155,6 +155,31 @@ const turnDone = { serverContent: { turnComplete: true } };
     await page.click('.ty-try-x');
     ok('the X closes it', (await page.locator('.ty-try-veil').count()) === 0);
     ok('nothing left the site and no error showed', page.outside.length === 0 && page.errors.length === 0, page.outside.concat(page.errors).join(' | '));
+    await ctx.close();
+  });
+
+  await group('the demo matches the app (the drift check)', async () => {
+    // inspyx-mobile test/fixtures/try_spex_contract.json, built from the app by its try_spex_contract_test.dart.
+    const contract = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'try_spex_contract.json'), 'utf8'));
+    const css = fs.readFileSync(path.join(SITE, 'assets/try/try.css'), 'utf8');
+    const token = (name) => ((css.match(new RegExp('--a-' + name + ':(#[0-9A-Fa-f]{6})')) || [])[1] || '').toUpperCase();
+    const map = { page: 'page', card: 'card', ink: 'ink', inkSoft: 'soft', inkFaint: 'faint', hairline: 'hair', fill: 'fill', blue: 'blue', blueTint: 'blueT',
+      done: 'done', doneTint: 'doneT', needsYou: 'needs', needsYouTint: 'needsT', wrong: 'wrong', wrongTint: 'wrongT' };
+    const off = Object.keys(map).filter((k) => token(map[k]) !== contract.colors[k]);
+    ok('Look A\'s colours are the app\'s', off.length === 0, off.map((k) => k + ' ' + token(map[k]) + ' vs ' + contract.colors[k]).join(', '));
+    const js = fs.readFileSync(path.join(SITE, 'assets/try/try-app.js'), 'utf8');
+    ok('the room ring\'s colours are the app\'s (done, blue)', js.includes("fill: '" + contract.colors.done + "'") && js.includes("stroke: '" + contract.colors.blue + "'"));
+    const r = relay(); const { ctx, page } = await open(browser, r);
+    await page.evaluate(() => document.querySelector('[data-try]').click());
+    await page.waitForSelector('.ty-try-veil');
+    const kitchen = await page.locator('[data-ty-place="kitchen"] small').innerText();
+    await page.evaluate(() => { TrySpex._run('open_place', { place: 'kitchen' }); TrySpex._run('add_finding', { title: 'a', report_text: 'b', kind: 'note' }); TrySpex._run('open_place', { place: 'water heater' }); TrySpex._run('add_finding', { title: 'a', report_text: 'b', kind: 'note' }); TrySpex._run('add_finding', { title: 'c', report_text: 'd', kind: 'note' }); });
+    const marks = await page.locator('[data-ty-rate]').allInnerTexts();
+    await page.click('[data-ty-scr="item"] .ty-bar .ty-back');
+    const kitchen1 = await page.locator('[data-ty-place="kitchen"] small').innerText();
+    const heater2 = await page.locator('[data-ty-place="water heater"] small').innerText();
+    ok('the item\'s marks are the app\'s', JSON.stringify(marks) === JSON.stringify(contract.item_marks), marks.join(' / '));
+    ok('the walk row\'s words are the app\'s', [kitchen, kitchen1, heater2].join('|') === contract.room_progress.join('|'), [kitchen, kitchen1, heater2].join(' | '));
     await ctx.close();
   });
 
