@@ -45,6 +45,7 @@ async function open(browser, o) {
   await page.route('**/functions/v1/sync', async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
     (body.push || []).forEach((p) => pushes.push(p));
+    if (o.slow && (body.push || []).length) await new Promise((d) => setTimeout(d, o.slow));
     const skipped = o.refuse ? (body.push || []).map((p) => ({ kind: p.kind, id: p.id, reason: o.refuse })) : [];
     route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows: o.rows, next: null, more: false, skipped }) });
   });
@@ -106,6 +107,17 @@ async function open(browser, o) {
     // No services yet: the page says where to add one.
     o = await open(browser, { rows: [profile] });
     ok('no services yet: the page says to add one on Prices', await o.page.isVisible('[data-warn="no-services"]'));
+    await o.ctx.close();
+
+    // An edit made while a save is on its way stays (Codex on #77): not called saved, not replaced by a pull.
+    o = await open(browser, { rows: [profile, service], slow: 700 });
+    await o.page.click('[data-save]');
+    await o.page.waitForTimeout(150);
+    await o.page.fill('[data-f="maxPerDay"]', '5');
+    await o.page.waitForTimeout(900);
+    await o.page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+    await o.page.waitForTimeout(600);
+    ok('an edit made while saving: kept on the form after the save lands and a pull, and not called saved', (await o.page.inputValue('[data-f="maxPerDay"]')) === '5' && !(await o.page.isVisible('[data-say="saved"]')), await o.page.inputValue('[data-f="maxPerDay"]'));
     await o.ctx.close();
 
     // A saved row shows as saved, with its link.

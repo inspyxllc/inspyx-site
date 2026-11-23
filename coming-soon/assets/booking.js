@@ -204,7 +204,8 @@
     if (ok) { var url = 'https://inspyx.com/book/' + s.slug; $('[data-link-a]', box).href = url; $('[data-link-a]', box).textContent = 'inspyx.com/book/' + s.slug; }
   }
   function say(which) { showOne(form, 'data-say', which || ''); }
-  function changed() { editing = true; say(''); $('[data-problems]', main).hidden = true; }
+  var edits = 0;   // counts every change, so a save that lands knows whether more came after it (Codex on #77)
+  function changed() { editing = true; edits++; say(''); $('[data-problems]', main).hidden = true; }
 
   // The address: its form at once, whether it is free a moment after typing stops.
   var slugTimer = null, slugAsked = 0;
@@ -243,12 +244,18 @@
     var data = { id: ID, ownerAccountId: me, on: s.on, slug: s.slug, timeZone: s.timeZone, week: s.week,
       maxPerDay: s.maxPerDay, minNoticeHours: s.minNoticeHours, daysAhead: s.daysAhead, gapMinutes: s.gapMinutes,
       updatedAt: at, deletedAt: null };
-    var save = $('[data-save]', form);
+    var save = $('[data-save]', form), sentAt = edits;
     save.disabled = true;
     exchange([{ kind: 'booking_settings', id: ID, updated_at: at, deleted_at: null, data: data }]).then(function (answer) {
       if (answer === null) return;
       var skip = (answer.skipped || []).filter(function (x) { return x.kind === 'booking_settings'; })[0];
-      if (!skip) { take({ kind: 'booking_settings', id: ID, updated_at: at, deleted_at: null, data: data }); editing = false; say('saved'); linkShown(s); return; }
+      if (!skip) {
+        take({ kind: 'booking_settings', id: ID, updated_at: at, deleted_at: null, data: data });
+        // Changes made while it was saving stay on the form, unsaved: a pull never replaces them.
+        if (edits === sentAt) { editing = false; say('saved'); }
+        linkShown(s);
+        return;
+      }
       say(/slug|taken/.test(String(skip.reason || '')) ? 'taken' : 'refused');
     }, function () { say('failed'); }).then(function () { save.disabled = false; });
   });

@@ -27,7 +27,7 @@ async function open(browser, o) {
   const errs = [], pushes = [], previews = [];
   page.on('pageerror', (e) => errs.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
-  await page.route('**/functions/v1/sync', (r) => { const b = JSON.parse(r.request().postData() || '{}'); (b.push || []).forEach((x) => pushes.push(x)); r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows: o.rows || [], next: null, more: false }) }); });
+  await page.route('**/functions/v1/sync', async (r) => { const b = JSON.parse(r.request().postData() || '{}'); (b.push || []).forEach((x) => pushes.push(x)); if (o.slow && (b.push || []).length) await new Promise((d) => setTimeout(d, o.slow)); r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows: o.rows || [], next: null, more: false }) }); });
   await page.route('**/functions/v1/automation-preview', (r) => { previews.push(JSON.parse(r.request().postData() || '{}')); r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ subject: 'Subject <b>x</b>', html: '<p>x</p>', text: 'Line one\n\nLine two' }) }); });
   await page.goto(base + '/emails');
   await page.waitForSelector('[data-list]:not([hidden])', { timeout: 8000 });
@@ -61,6 +61,15 @@ async function open(browser, o) {
     const pv = await o.page.evaluate(() => ({ s: document.querySelector('[data-msg="booking_confirmed"] [data-mail-subject]').textContent, html: document.querySelector('[data-msg="booking_confirmed"] [data-mail-subject]').innerHTML }));
     ok('the preview asks for the client\'s email and shows its words as text, never as markup', o.previews.some((p) => p.messageId === 'booking_confirmed' && p.role === 'client') && pv.s === 'Subject <b>x</b>' && pv.html.includes('&lt;b&gt;'), JSON.stringify(pv));
     ok('no errors in the console', o.errs.length === 0, o.errs.join(' | '));
+    await o.ctx.close();
+    // Two quick changes while the first save is still on its way (Codex on #77): both kept, in order.
+    o = await open(browser, { slow: 600 });
+    await o.page.locator('[data-msg="day_before"] [data-on]').uncheck({ force: true });
+    await o.page.locator('[data-msg="sign_and_pay"] [data-when]').selectOption('1d');
+    await o.page.waitForTimeout(1800);
+    const both = o.pushes[o.pushes.length - 1];
+    ok('two quick changes on a slow server: sent one after the other, the second holding the first', o.pushes.length === 2 && both.data.messages.day_before.on === false && both.data.messages.sign_and_pay.when === '1d' && both.updated_at > o.pushes[0].updated_at, JSON.stringify(o.pushes.map((p) => [p.data.messages.day_before.on, p.data.messages.sign_and_pay.when])));
+    ok('…and the page shows both', await o.page.evaluate(() => !document.querySelector('[data-msg="day_before"] [data-on]').checked && document.querySelector('[data-msg="sign_and_pay"] [data-when]').value === '1d'));
     await o.ctx.close();
     // Wording written on the phone is kept as it is.
     const row = { kind: 'automation_settings', id: 'automation', updated_at: 5, deleted_at: null, data: { id: 'automation', ownerAccountId: ME, design: 'bold_1', brandColor: '#0F766E', googleReviewUrl: null, messages: { sign_and_pay: { on: true, when: '1d', to: ['client'], subject: 'My subject', body: 'My words' } }, updatedAt: 5, deletedAt: null } };

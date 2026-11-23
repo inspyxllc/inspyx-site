@@ -37,7 +37,7 @@
     return function (key) { var w = box.querySelector('[data-w="' + key + '"]'); return w ? w.textContent : ''; };
   })();
 
-  var me = null, row = null, point = null, loaded = false, failing = false, pulling = null, saving = false;
+  var me = null, row = null, point = null, loaded = false, failing = false, pulling = null, saving = 0;   // saves sent or waiting their turn
   function take(r) {
     if (!r || r.kind !== KIND || r.id !== ID || !r.data || r.data.ownerAccountId !== me) return;
     if (!row || r.updated_at >= row.updated_at) row = r;
@@ -75,8 +75,15 @@
     return !(under('google.com') || under('g.page') || host === 'g.co' || host === 'maps.app.goo.gl');
   }
 
-  /* Writes the row whole with [change] applied: (data) => void. */
+  /* Writes the row whole with [change] applied: (data) => void. One at a time (Codex on #77): each builds on the row
+     the one before it left, so two quick changes never undo each other. */
+  var queue = Promise.resolve();
   function save(change) {
+    saving++;
+    queue = queue.then(function () { return saveNow(change); }).then(function () { saving--; shown(); });
+    return queue;
+  }
+  function saveNow(change) {
     var before = held();
     var data = before ? JSON.parse(JSON.stringify(before)) : { id: ID, ownerAccountId: me, design: 'bold_1', brandColor: null, googleReviewUrl: null, messages: {} };
     data.messages = data.messages || {};
@@ -84,14 +91,14 @@
     change(data);
     var at = Date.now(); if (before && before.updatedAt >= at) at = before.updatedAt + 1;
     data.updatedAt = at; data.deletedAt = null; data.ownerAccountId = me; data.id = ID;
-    saving = true; say('');
+    say('');
     return exchange([{ kind: KIND, id: ID, updated_at: at, deleted_at: null, data: data }]).then(function (answer) {
       if (answer === null) return;
       var skip = (answer.skipped || []).some(function (x) { return x.kind === KIND; });
       // Kept, it is the row now: a second change made before the server's echo builds on it, never on the old one.
       if (!skip) take({ kind: KIND, id: ID, updated_at: at, deleted_at: null, data: data });
       say(skip ? 'refused' : 'saved');
-    }, function () { say('failed'); }).then(function () { saving = false; shown(); });
+    }, function () { say('failed'); });
   }
   function say(which) { showOne(main, 'data-say', which || ''); }
 
@@ -171,7 +178,7 @@
     if (!loaded) return;
     $('[data-ready]', main).hidden = false;
     list.hidden = false;
-    if (!saving) draw();
+    if (saving === 0) draw();
   }
 
   var who = auth.who();
