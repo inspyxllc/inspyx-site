@@ -386,32 +386,55 @@
     }
     return { ok: false, say: FULL_APP };
   }
-  /* The one mark the visitor's words name, or null: the app's spexMarkSaid (spex_online.dart), the same rules. */
+  /* The app's voice mark rules (spex_online.dart _markRules, spexMarkSaid, spexHeardMark), the same table
+     (tools/fixtures/spex_mark_cases.json, a copy of the app's): every mark word by priority, never one word read twice;
+     the last mark said; for a named item, the last mark in its own run. */
+  var MARK_RULES = [
+    ['not_inspected', /\bnot inspected\b/g],
+    ['not_present', /\bnot present\b/g],
+    ['inspected', /(?<!\bnot )\binspected\b/g],
+    ['not_inspected', /\b(couldn'?t|could not|can'?t|cannot|didn'?t|did not|unable|blocked|inaccessible|no access|locked|skip(ped)?)\b/g],
+    ['inspected', /\b(satisfactory|fine|good|ok|okay|checked|all set|no (issues?|problems?)|nothing wrong|pass(es|ed)?|acceptable|serviceable)\b/g],
+    ['not_present', /\b(no (?!wait\b|sorry\b|actually\b|i\b|no\b|yes\b|issues?\b|problems?\b|access\b)[a-z]+|there'?s no|there is no|doesn'?t have|does not have|isn'?t (one|any|there)|none|missing)\b/g]
+  ];
   function markSaid(heard) {
-    var t = String(heard || '').toLowerCase(), found = null, at = -1;
-    [['not_inspected', /\bnot inspected\b/g], ['not_present', /\bnot present\b/g], ['inspected', /(?<!\bnot )\binspected\b/g]].forEach(function (r) {
+    var t = String(heard || '').toLowerCase(), taken = [], at = -1, found = null;
+    MARK_RULES.forEach(function (r) {
       var m; r[1].lastIndex = 0;
-      while ((m = r[1].exec(t))) { if (m.index > at) { at = m.index; found = r[0]; } }
+      while ((m = r[1].exec(t))) {
+        var s0 = m.index, e0 = m.index + m[0].length;
+        if (!taken.some(function (x) { return s0 < x[1] && x[0] < e0; })) {
+          taken.push([s0, e0]);
+          if (s0 > at) { at = s0; found = r[0]; }
+        }
+        if (m[0].length === 0) r[1].lastIndex++;
+      }
     });
-    if (found) return found;
-    var rules = [
-      ['not_inspected', /\b(couldn'?t|could not|can'?t|cannot|didn'?t|did not|unable|blocked|inaccessible|no access|locked|skip(ped)?)\b/],
-      ['inspected', /\b(satisfactory|fine|good|ok|okay|checked|all set|no issues?|nothing wrong|passes|passed|acceptable|serviceable)\b/],
-      ['not_present', /\b(no [a-z]+|there'?s no|there is no|doesn'?t have|does not have|isn'?t (one|any|there)|none|missing)\b/]
-    ];
-    for (var i = 0; i < rules.length; i++) if (rules[i][1].test(t)) return rules[i][0];
-    return null;
+    return found;
   }
-  /* The app's spexHeardMark: with no item, the last mark said wins (a mark taken back stays taken back); with an
-     item, the mark that follows the visitor's last mention of it ("the attic inspected and the roof not present"). */
+  var NOT_A_THING = ['same', 'one', 'item', 'thing', 'mark', 'way'];
   function heardMark(status, heard, item) {
-    var name = String(item || '').trim().toLowerCase();
-    if (!name) return markSaid(heard) === status;
-    var parts = String(heard || '').toLowerCase().split(/[.;,!?]|\band\b|\bthen\b/), first = name.split(/\s+/)[0], last = -1;
-    parts.forEach(function (p, i) { if (p.indexOf(name) >= 0 || (first.length > 3 && p.indexOf(first) >= 0)) last = i; });
-    if (last < 0) return markSaid(heard) === status;
-    for (var i = last; i < parts.length; i++) { var m = markSaid(parts[i]); if (m) return m === status; }
-    return false;
+    var name = String(item || '').trim().toLowerCase(), t = String(heard || '').toLowerCase();
+    if (!name) return markSaid(t) === status;
+    var words = name.split(/\s+/), first = words[0].replace(/s$/, '');
+    var parts = t.split(/[.;,!?:]|\band\b|\bthen\b|\bbut\b|\bso\b/);
+    var full = [], loose = [];
+    parts.forEach(function (p, i) { if (p.indexOf(name) >= 0) full.push(i); if (first.length > 3 && p.indexOf(first) >= 0) loose.push(i); });
+    var hits = full.length ? full : loose;
+    var things = function (p) { var out = [], m, re = /\bthe ([a-z]+)/g; while ((m = re.exec(p))) out.push(m[1]); return out; };
+    if (!hits.length) {
+      var other = things(t).some(function (w) { return NOT_A_THING.indexOf(w) < 0; });
+      return !other && markSaid(t) === status;
+    }
+    var run = [parts[hits[hits.length - 1]]];
+    for (var i = hits[hits.length - 1] + 1; i < parts.length; i++) {
+      var p = parts[i];
+      var otherThing = things(p).some(function (w) { return words.indexOf(w) < 0 && w !== first && NOT_A_THING.indexOf(w) < 0 && w.replace(/s$/, '') !== first; });
+      if (otherThing) break;
+      if (full.length && words.length > 1 && p.indexOf(first) >= 0 && p.indexOf(name) < 0) break;
+      run.push(p);
+    }
+    return markSaid(run.join(' , ')) === status;
   }
   function listAll() {
     var out = [];
