@@ -65,9 +65,9 @@
       freeMonth: json.free_month !== false,
       cents: typeof cents === 'number' && cents >= 0 && Math.floor(cents) === cents ? cents : null,
       every: every === 'month' || every === 'year' ? every : null,
-      // The inspector's level (2026-11-14): founder, early (the next 100) or regular; founder when the server
-      // doesn't say, as before.
-      level: json.tier === 'early' || json.tier === 'regular' ? json.tier : 'founder',
+      // The inspector's level (2026-11-14): founder, early (the next 100) or regular. Anything else (no sign-up
+      // record yet, or a level this page doesn't know) is no level, and no price is named (2026-11-23).
+      level: json.tier === 'founder' || json.tier === 'early' || json.tier === 'regular' ? json.tier : null,
       // A founder's free days start with their own app invite (2026-11-15): before it, no plan can start; after
       // it, the days left and when they end.
       waits: json.free_waits_for_invite === true,
@@ -76,6 +76,8 @@
       moneyBack: MONEY_BACK_ON ? moneyBackOf(json.money_back) : null
     };
   }
+  /* Sign-up's finish step: its Terms and metrics ticks give an account its level. */
+  function toSignup() { window.location.assign('/signup'); }
   function whole(n) { return typeof n === 'number' && n >= 0 && Math.floor(n) === n; }
   // What the server says about money back: offered (for how much), or why not; null when it says nothing.
   function moneyBackOf(m) {
@@ -101,6 +103,8 @@
     if (s === 'incomplete' || s === 'unpaid' || s === 'paused') return { line: 'attention', button: 'manage' };
     // A plan whose time ran out gave its place back: starting again is the regular price, for every level
     // (Moises, 2026-11-14: "Yes, keep it"). One that never began keeps its own offer.
+    // No level (sign-up never finished: its Terms and metrics ticks give the level): no price, and the way to finish.
+    if (plan.level === null && !plan.hasPlan) return { line: 'finish', button: 'finish' };
     if (s === 'canceled') return { line: 'ended', button: 'start' };
     if (s === 'incomplete_expired') return { line: 'offer', button: 'start' };
     // Free days are a founder's only. Theirs start with their own app invite: until it is sent, no plan starts.
@@ -113,8 +117,8 @@
 
   function fill(p, hole, text) { [].forEach.call(p.querySelectorAll('[data-fill="' + hole + '"]'), function (e) { e.textContent = text; }); }
   function show(what, plan) {
-    // Each level is told its own name and price (Codex on #398); the founding ones until the server says.
-    var level = plan && plan.level ? plan.level : 'founder';
+    // Each level is told its own name and price (Codex on #398); none at all until the server says one (2026-11-23).
+    var level = plan && plan.level ? plan.level : null;
     levels.forEach(function (e) { e.hidden = e.getAttribute('data-level') !== level; });
     var need = [what.date ? 'date' : '', what.price ? 'price' : ''].filter(Boolean).join(' ');
     lines.forEach(function (p) {
@@ -205,7 +209,7 @@
       // A start the server refuses for a reason the inspector can act on (2026-11-19, the founder's own first try):
       // an account that never finished sign-up goes to sign-up's finish step (the Terms tick gives it its level);
       // a founder whose app invite isn't sent yet sees the plan as it stands ("waits"), never "Couldn't open".
-      if (action === 'start' && a.trouble === 'refused' && a.why === 'needs_signup') { window.location.assign('/signup'); return; }
+      if (action === 'start' && a.trouble === 'refused' && a.why === 'needs_signup') { toSignup(); return; }
       if (action === 'start' && a.trouble === 'refused' && a.why === 'not_invited') { check(false); return; }
       say(a.trouble === 'not-set-up' ? 'not-set-up' : 'page');
     });
@@ -296,6 +300,7 @@
   buttons.forEach(function (b) {
     b.addEventListener('click', function () {
       var what = b.getAttribute('data-do');
+      if (what === 'finish') { toSignup(); return; }
       if (what !== 'again') { open(what === 'start' ? 'start' : 'portal'); return; }
       // The button that was pressed goes away while the plan is looked at, and the keyboard's place with it:
       // the next Tab would start from the top of the page. When the look is over, whoever has not moved on is

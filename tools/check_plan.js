@@ -29,7 +29,7 @@ const granted = (n, secs) => ({ access_token: 'test-access-' + n, refresh_token:
 const kept = (n, endsInMs) => JSON.stringify({ access: 'test-access-' + n, renew: 'test-renew-' + n, ends: Date.now() + endsInMs, id: '11111111-1111-4111-8111-111111111111', email: WHO });
 
 // What the billing server says about a plan (statusView in the app's repo, backend/supabase/functions/billing/core.ts).
-const plan = (o) => Object.assign({ status: 'none', has_plan: false, trial_end: null, current_period_end: null, cancel_at_period_end: false, free_month: true, plan_amount: null, plan_interval: null }, o);
+const plan = (o) => Object.assign({ tier: 'founder', status: 'none', has_plan: false, trial_end: null, current_period_end: null, cancel_at_period_end: false, free_month: true, plan_amount: null, plan_interval: null }, o);
 const DEC9 = '2026-12-09T10:00:00+00:00';   // a free month ends at 10:00 UTC, so the date reads the same from UTC to UTC-10
 const FREE = plan({ status: 'trialing', has_plan: true, trial_end: DEC9, current_period_end: DEC9, free_month: false, plan_amount: 5495, plan_interval: 'month' });
 const ACTIVE = plan({ status: 'active', has_plan: true, current_period_end: '2026-12-09T15:52:27+00:00', free_month: false, plan_amount: 5495, plan_interval: 'month' });
@@ -61,6 +61,9 @@ const ATTENTION = 'Your plan needs attention. Open billing to fix it.';
 // 2026-11-14: "Yes, keep it").
 const ENDED = 'Your plan has ended. Start it again anytime: $79.95 a month.';
 const NOT_SET_UP = 'Billing isn\'t set up yet.';
+// No level (sign-up never finished, or a level this page doesn't know): no price, and the way to finish (2026-11-23;
+// draft words, the lead's OK).
+const FINISH = 'Finish signing up to see your plan and its price.';
 const FAILED = 'Couldn\'t check your plan. Check your connection and try again.';
 const PAGE_FAILED = 'Couldn\'t open the page. Try again.';
 const CHECKING = 'Checking your plan…';
@@ -69,10 +72,10 @@ const PLAN_WORDS = ['h1: Your plan', ...NAMES, 'p: You\'re all set.', 'p: No cha
   'p: ' + CHECKING, 'p: ' + WAITS, 'p: ' + freeDays('{days}'), 'p: ' + OFFER, 'p: ' + OFFER_EARLY, 'p: ' + OFFER_REGULAR,
   'p: Free until {date}, then {amount} a {every}.', 'p: Free until {date}.', 'p: In your free days. Then {amount} a {every}.', 'p: In your free days.',
   'p: Active. Next payment on {date}.', 'p: Active.', 'p: Ends {date}. Nothing more will be charged.', 'p: Ending. Nothing more will be charged.',
-  'p: ' + PROBLEM, 'p: ' + ATTENTION, 'p: ' + ENDED, 'p: ' + NOT_SET_UP, 'p: ' + FAILED,
+  'p: ' + PROBLEM, 'p: ' + ATTENTION, 'p: ' + ENDED, 'p: ' + FINISH, 'p: ' + NOT_SET_UP, 'p: ' + FAILED,
   'p: Free until {date}.', 'p: ' + MONEY_OVER, 'p: ' + MONEY_USED,
   'p: ' + PAGE_FAILED, 'p: ' + NOT_SET_UP, 'p: ' + REFUND_FAILED,
-  'button: Start your plan', 'button: Manage billing', 'button: Update card', 'button: Try again', 'button: ' + MONEY_BACK,
+  'button: Start your plan', 'button: Finish sign-up', 'button: Manage billing', 'button: Update card', 'button: Try again', 'button: ' + MONEY_BACK,
   'p: ' + asked('{amount}', '{last4}'), 'p: ' + asked('{amount}', null), 'button: Refund me', 'button: Keep my plan',
   'p: Signed in as', 'p: Account', ...NAMES];
 const read = () => {
@@ -218,7 +221,10 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       ['everyone after, never started', plan({ tier: 'regular', free_month: false }), OFFER_REGULAR, 'Start your plan'],
       ['the next 100, ended: the regular price', plan({ tier: 'early', status: 'canceled', free_month: false }), ENDED, 'Start your plan'],
       ['the next 100, a first payment never finished', plan({ tier: 'early', status: 'incomplete_expired', free_month: false }), OFFER_EARLY, 'Start your plan'],
-      ['a level this page does not know: the founding offer', plan({ tier: 'gold', free_month: false }), OFFER, 'Start your plan'],
+      // An unknown level never names a price (2026-11-23: no sign-up record showed one account two prices).
+      ['a level this page does not know: no price, and Finish sign-up', plan({ tier: 'gold', free_month: false }), FINISH, 'Finish sign-up'],
+      ['no level (no sign-up record): no price, and Finish sign-up', plan({ tier: null }), FINISH, 'Finish sign-up'],
+      ['no level said at all: no price, and Finish sign-up', plan({ tier: undefined }), FINISH, 'Finish sign-up'],
       ['a word for it this page does not know: the offer, as in the app', plan({ status: 'some_new_word', free_month: false }), OFFER, 'Start your plan'],
     ];
     for (const [label, json, sentence, button] of STANDS) {
@@ -228,10 +234,12 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       await ctx.close();
     }
     // The plan's name, on the page and on the card, follows the level.
-    for (const [tier, name] of [[undefined, 'Founding inspector'], ['founder', 'Founding inspector'], ['early', 'Early inspector'], ['regular', 'Inspyx plan']]) {
-      const { ctx, page, errs } = await open(browser, 'plan', { answers: () => bill(plan(tier ? { tier } : {})), settle: 300 });
+    for (const [tier, name] of [[null, null], ['gold', null], ['founder', 'Founding inspector'], ['early', 'Early inspector'], ['regular', 'Inspyx plan']]) {
+      const { ctx, page, errs } = await open(browser, 'plan', { answers: () => bill(plan({ tier })), settle: 300 });
       const names = await page.evaluate(() => [...document.querySelectorAll('.badge[data-level], .name[data-level]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()));
-      ok('the plan\'s name for ' + (tier || 'a server that says no level') + ' is "' + name + '", on the page and on the card', same(names, [name, name]) && errs.length === 0, JSON.stringify(names));
+      const text = await page.evaluate(() => document.querySelector('main').innerText);
+      ok('the plan\'s name for ' + (tier || 'no level') + (name ? ' is "' + name + '"' : ': none, and no price anywhere') + ', on the page and on the card',
+        (name ? same(names, [name, name]) : names.length === 0 && !/\$\d/.test(text)) && errs.length === 0, JSON.stringify(names));
       await ctx.close();
     }
     // The date is the day on the inspector's own calendar, as in the app. 03:00 in London on the 9th is still the 8th in New York.
