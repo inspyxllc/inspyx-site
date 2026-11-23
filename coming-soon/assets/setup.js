@@ -8,6 +8,9 @@
      Your company   the profile's name, company name and license, and a signature picture (each prints on the report)
      Prices         at least one service (not an add-on)
      Agreements     at least one agreement
+     Booking page   on, with hours (booking_settings; 2026-11-23, the lead: done means a client can really book)
+     Emails         on by default; the review request also needs the Google review link (automation_settings)
+     Card payments  the payments function's status is "ready" (asked once, read only; unknown is never done)
    Read once as the page opens and again whenever it comes back into view (back from a setup page in another tab).
    A pull that fails leaves the last whole read standing (plain links if there was none): no step is ever
    called done or missing on a guess.
@@ -20,7 +23,7 @@
 
   var HIDE = 'web_setup_hidden';
   var DEADLINE = 30000;
-  var KINDS = ['inspector_profile', 'inspector_media', 'price_services', 'legal_documents'];
+  var KINDS = ['inspector_profile', 'inspector_media', 'price_services', 'legal_documents', 'booking_settings', 'automation_settings'];
   var $ = function (sel, el) { return (el || document).querySelector(sel); };
   var all = function (sel, el) { return [].slice.call((el || document).querySelectorAll(sel)); };
   var words = (function () {
@@ -55,14 +58,34 @@
       return left;
     },
     prices: function () { return standing('price_services').some(function (s) { return s.parentId == null; }) ? [] : ['service']; },
-    agreements: function () { return standing('legal_documents').some(function (d) { return d.kind === 'agreement'; }) ? [] : ['agreement']; }
+    agreements: function () { return standing('legal_documents').some(function (d) { return d.kind === 'agreement'; }) ? [] : ['agreement']; },
+    booking: function () {
+      var b = standing('booking_settings').filter(function (d) { return d.id === 'booking'; })[0];
+      if (!b || b.on !== true) return ['page'];
+      return Array.isArray(b.week) && b.week.length > 0 ? [] : ['hours'];
+    },
+    emails: function () {
+      var a = standing('automation_settings').filter(function (d) { return d.id === 'automation'; })[0];
+      var review = a && a.messages && a.messages.review_request;
+      var reviewOn = !review || review.on !== false;
+      return reviewOn && !(a && filled(a.googleReviewUrl)) ? ['review'] : [];
+    },
+    // Asked of the payments function, not the rows: null until it answers (never done on a guess).
+    payments: function () { return cards === null ? null : cards === 'ready' ? [] : cards === 'no_account' ? ['plan'] : ['cards']; }
   };
+  var cards = null;   // 'ready', 'no_account', 'other', or null (not known)
+  function askCards() {
+    return auth.ask('payments', { action: 'status' }, DEADLINE).then(function (r) {
+      if (r && r.status === 200 && r.json && typeof r.json.state === 'string') cards = r.json.state === 'ready' ? 'ready' : 'other';
+      else if (r && r.status === 409 && r.json && r.json.error === 'no_account') cards = 'no_account';
+    }, function () { /* the last answer stands */ }).then(render);
+  }
 
   /* "Add your license and your signature": the step's missing words, joined as a sentence. */
   function sentence(step, left) {
     var parts = left.map(function (k) { return words(step + '-' + k); });
     var list = parts.length < 2 ? parts[0] : parts.slice(0, -1).join(', ') + ' ' + words('and') + ' ' + parts[parts.length - 1];
-    return words('lead') + ' ' + list;
+    return (words(step + '-lead') || words('lead')) + ' ' + list;
   }
 
   // ---- what shows -------------------------------------------------------------------------------------------------
@@ -76,8 +99,8 @@
     all('[data-step]', box).forEach(function (tile) {
       var step = tile.getAttribute('data-step'), status = $('[data-status]', tile);
       total++;
-      if (!known) { status.hidden = true; tile.removeAttribute('data-done'); return; }
-      var left = STEPS[step]();
+      var left = known ? STEPS[step]() : null;
+      if (left === null) { status.hidden = true; tile.removeAttribute('data-done'); return; }
       status.hidden = false;
       $('[data-is="done"]', status).hidden = left.length > 0;
       var l = $('[data-is="left"]', status);
@@ -120,7 +143,8 @@
   auth.choices().then(function (c) { hidden = c ? c[HIDE] === true : null; }, function () { hidden = null; })
     .then(function () { read = true; render(); });
   pull();
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') pull(); });
+  askCards();
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { pull(); askCards(); } });
 
   // ---- never again, and back ---------------------------------------------------------------------------------------
 

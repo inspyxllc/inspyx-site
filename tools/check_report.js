@@ -14,6 +14,7 @@ const playwright = require('playwright');
 const engine = process.env.BROWSER === 'webkit' ? playwright.webkit : playwright.chromium;
 
 const sampleDir = process.argv[2];
+const PROD = process.env.PROD === '1';
 if (!sampleDir) { console.error('usage: node tools/check_report.js <sample folder>'); process.exit(2); }
 const base = process.env.URL || 'http://localhost:4174';
 const sample = JSON.parse(fs.readFileSync(path.join(sampleDir, 'report.json'), 'utf8'));
@@ -78,8 +79,11 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
 
 (async () => {
   const browser = await engine.launch();
-  console.log('engine: ' + engine.name());
+  console.log('engine: ' + engine.name() + (PROD ? ' (PROD=1: the states only, against ' + base + ')' : ''));
 
+  // PROD=1 (2026-11-23, the lead): against the live site there is no /r/sample, so only "the other states" run, the
+  // function's answers faked in the browser (gone, offline, locked with Pay, the brand, a pay page off Inspyx).
+  if (!PROD) {
   // ---- the page loads clean, under the headers the live page gets
   {
     const res = await (await browser.newContext()).request.get(base + '/r/sample');
@@ -673,6 +677,8 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     await ctx.close();
   }
 
+  }
+
   // ---- the other states
   {
     const gone = await open(browser, { answer: () => ({ status: 404, body: { state: 'gone' } }) });
@@ -739,6 +745,7 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     await b.ctx.close();
   }
 
+  if (!PROD) {
   // ---- a report with nothing wrong, and one with no PDF yet
   {
     const calm = clone(sample);
@@ -894,6 +901,8 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
         && back.h1 === start.h1 && back.rows === start.rows && back.sheets === 1 && back.open === 1 && errs.length === 0,
       JSON.stringify({ start, locked, back, errs }));
     await ctx.close();
+  }
+
   }
 
   await browser.close();

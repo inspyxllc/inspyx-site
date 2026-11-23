@@ -66,6 +66,7 @@ async function open(browser, o) {
     // The setup checklist's own asks (tools/check_setup.js checks them): nothing set up, and no choice kept.
     if (u === SERVER + '/functions/v1/sync') return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ rows: [], next: null, more: false }) });
     if (u === SERVER + '/auth/v1/user' && req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ id: ME, email: 'pat@example.com', user_metadata: {} }) });
+    if (u === SERVER + '/functions/v1/payments') return route.fulfill({ status: 409, contentType: 'application/json', headers: cors, body: JSON.stringify({ error: 'no_account' }) });
     if (u !== NEEDS) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
     s.calls.push({ headers: req.headers(), body });
@@ -119,9 +120,9 @@ const shown = async (page, sel) => (await vis(page, sel)).join(' | ');
       ok(label + ': the title, and who is signed in', (await shown(page, 'h1')) === 'What needs you' && (await shown(page, '.today-who')) === 'Signed in as pat@example.com' && (await shown(page, '.today-links a')) === 'Your numbers | Reports sent | Your inspections | Calendar | People | Account');
       // Set up your business (2026-11-22): the three setup pages that write the phone's own rows, each a tile.
       const tiles = await page.$$eval('.setup-tile', (as) => as.map((a) => [a.getAttribute('href'), a.querySelector('strong').textContent, a.getBoundingClientRect().height]));
-      ok(label + ': "Set up your business", with Your company, Prices and Agreements, each a link a finger can hit',
+      ok(label + ': "Set up your business", with Your company, Prices, Agreements, Booking page, Emails and Card payments, each a link a finger can hit',
         (await shown(page, '.setup h2')) === 'Set up your business' &&
-        JSON.stringify(tiles.map((t) => [t[0], t[1]])) === JSON.stringify([['/profile', 'Your company'], ['/prices', 'Prices'], ['/agreements', 'Agreements']]) &&
+        JSON.stringify(tiles.map((t) => [t[0], t[1]])) === JSON.stringify([['/profile', 'Your company'], ['/prices', 'Prices'], ['/agreements', 'Agreements'], ['/booking', 'Booking page'], ['/emails', 'Emails'], ['/payments', 'Card payments']]) &&
         tiles.every((t) => t[2] >= 44), JSON.stringify(tiles));
       const below = await page.evaluate(() => document.querySelector('.setup').getBoundingClientRect().top - document.querySelector('[data-items]').getBoundingClientRect().bottom);
       ok(label + ': the setup sits under the jobs, never between them and the title', below > 0, String(Math.round(below)));

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Emails</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/booking.css">
+<link rel="stylesheet" href="/assets/emails.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/emails.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,170.00 Q143.0,160.0 133.00,160.00 L107.00,160.00 Q97.0,160.0 97.00,170.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"/></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="bkg eml" data-eml hidden>
+<h1>Emails</h1>
+<p class="bkg-lede">Inspyx sends these for you. Each one is already set up. Change any of them, or turn it off.</p>
+
+<figure class="bkg-how eml-how" aria-label="How it works, in three steps">
+<div class="bkg-how-stage" aria-hidden="true">
+<div class="bkg-how-card eml-how-card">
+<p class="eml-how-row"><b>Booking confirmed</b><span class="eml-how-pill">Right away</span></p>
+<p class="eml-how-row"><b>Day-before reminder</b><span class="eml-how-pill eml-how-pill2">The day before, at 5 PM</span></p>
+<div class="eml-how-mail"><span></span><span></span><span></span></div>
+</div>
+<span class="bkg-how-finger eml-how-finger"></span>
+</div>
+<figcaption class="bkg-how-steps">
+<span class="bkg-how-step" data-n="1">Pick a message</span>
+<span class="bkg-how-step" data-n="2">Choose when, and who gets it</span>
+<span class="bkg-how-step" data-n="3">Inspyx sends it by itself</span>
+</figcaption>
+</figure>
+
+<p class="bkg-live" role="status">
+<span data-live="connecting">Connecting…</span>
+<span data-live="live" hidden>In step with your phone: a change on either shows on the other within a few minutes.</span>
+<span data-live="offline" hidden>Can't reach Inspyx right now. Trying again.</span>
+</p>
+<div class="bkg-state" role="status">
+<p data-state="loading">Loading your emails…</p>
+<p data-state="failed" hidden>Your automations couldn't be read just now. Check your connection; this page keeps trying.</p>
+</div>
+<p class="eml-night" data-ready hidden>Never sent between 9 PM and 7 AM, except your booking confirmation.</p>
+
+<ol class="eml-list" data-list></ol>
+
+<section class="bkg-card eml-review" data-review hidden>
+<h2>Your Google review link</h2>
+<p class="eml-review-say" data-review-say="needed">This one isn't sent until you add your Google review link.</p>
+<p class="eml-review-say" data-review-say="set" hidden>Review requests link here. Change it any time.</p>
+<label class="bkg-field">Your Google review link<input type="url" data-review-url inputmode="url" autocomplete="off" spellcheck="false" maxlength="500" placeholder="Paste the link from your Google Business Profile"></label>
+<p class="eml-bad" data-review-bad hidden>That doesn't look like a Google review link. Paste the whole link, starting with https://</p>
+<div class="bkg-actions"><button class="btn small" type="button" data-review-save>Save the link</button></div>
+</section>
+
+<div class="say" role="status">
+<p data-say="saved" hidden>Saved.</p>
+<p data-say="failed" hidden>That didn't save. Try again.</p>
+<p data-say="refused" hidden>Inspyx couldn't keep that change. Check it and try again.</p>
+</div>
+
+<p class="bkg-links"><a href="/today">What needs you</a><a href="/booking">Booking page</a><a href="/payments">Payments</a><a href="/agreements">Agreements</a><a href="/account">Account</a></p>
+</main>
+
+<template data-t="msg">
+<li class="bkg-card eml-msg">
+<div class="bkg-row">
+<h2 data-name></h2>
+<label class="bkg-switch"><input type="checkbox" data-on><span class="bkg-switch-ui" aria-hidden="true"></span><span class="bkg-switch-text"><span data-on-text="on">On</span><span data-on-text="off" hidden>Off</span></span></label>
+</div>
+<p class="eml-sub">Inspyx sends this by itself.</p>
+<div class="eml-grid" data-body>
+<label class="bkg-field">When<select data-when></select></label>
+<fieldset class="eml-who"><legend>Who gets it</legend><div data-who></div><small>Anyone with no email on the inspection is skipped.</small></fieldset>
+</div>
+<p class="eml-note" data-note hidden></p>
+<details class="eml-preview" data-preview>
+<summary>See the client's email</summary>
+<div class="eml-mail" data-mail>
+<p class="eml-mail-subject" data-mail-subject></p>
+<pre class="eml-mail-text" data-mail-text></pre>
+<p class="eml-mail-note">This is a plain preview. Your client gets the designed email, with your color and a button.</p>
+</div>
+<p class="eml-mail-wait" data-mail-wait>Loading the preview…</p>
+<p class="eml-mail-wait" data-mail-failed hidden>The preview couldn't be made just now.</p>
+</details>
+</li>
+</template>
+<template data-t="words">
+<div>
+<span data-w="name-booking_confirmed">Booking confirmed</span><span data-w="name-booking_rescheduled">Inspection rescheduled</span><span data-w="name-sign_and_pay">Sign and pay reminder</span><span data-w="name-day_before">Day-before reminder</span><span data-w="name-review_request">Review request</span>
+<span data-w="when-now">Right away</span>
+<span data-w="when-sign_and_pay-3d">3 days before, at 9 AM</span><span data-w="when-sign_and_pay-2d">2 days before, at 9 AM</span><span data-w="when-sign_and_pay-1d">1 day before, at 9 AM</span>
+<span data-w="when-day_before-1d">The day before, at 5 PM</span><span data-w="when-day_before-2d">2 days before, at 5 PM</span><span data-w="when-day_before-same_day">The morning of, at 7 AM</span>
+<span data-w="when-review_request-right_after">1 hour after the report is first opened</span><span data-w="when-review_request-1d">The next day, at 10 AM</span><span data-w="when-review_request-3d">3 days after, at 10 AM</span>
+<span data-w="role-client">Client</span><span data-w="role-buyer_agent">Buyer's agent</span><span data-w="role-listing_agent">Listing agent</span>
+<span data-w="note-day_before">The listing agent gets the arrival notice: when you arrive, and that the home should be open with the utilities on.</span>
+<span data-w="note-sign_and_pay">If it's still not done, a last reminder goes at 8 AM the day before.</span>
+</div>
+</template>
+</body>
+</html>
