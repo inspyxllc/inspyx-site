@@ -36,16 +36,16 @@
 <div class="tpl-drop-mini"><span class="tpl-mini-arrow"></span></div>
 <div class="tpl-file"><span class="tpl-file-fold"></span><span class="tpl-file-tag">PDF</span><span class="tpl-file-name">My template.pdf</span></div>
 <div class="tpl-finger"></div>
-<div class="tpl-sorting"><i></i><i></i><i></i><i></i><i></i></div>
 <div class="tpl-ready">
 <strong>My template</strong>
-<span>12 sections, 148 items</span>
-<b class="tpl-ready-row"></b><b class="tpl-ready-row"></b><b class="tpl-ready-row short"></b>
+<span class="tpl-ready-sum">3 sections, 6 items</span>
+<b class="tpl-sec s1">ROOF</b><b class="tpl-sec s2">KITCHEN</b><b class="tpl-sec s3">PLUMBING</b>
 <em>Add to my templates</em>
 </div>
+<i class="tpl-chip c1">Shingles</i><i class="tpl-chip c2">Flashing</i><i class="tpl-chip c3">Range</i><i class="tpl-chip c4">Sink</i><i class="tpl-chip c5">Water heater</i><i class="tpl-chip c6">Drain</i>
 </div>
 <ol class="tpl-steps">
-<li data-cap="1">Drag your template's file here, or pick it.</li>
+<li data-cap="1"><span class="on-mouse">Drag your template's file here, or pick it.</span><span class="on-touch">Tap to pick your template's file.</span></li>
 <li data-cap="2">Inspyx sorts its lines into sections, items and comments.</li>
 <li data-cap="3">Check it, then add it. It's on your phone too.</li>
 </ol>
@@ -54,8 +54,9 @@
 <label class="tpl-drop" data-drop>
 <input type="file" data-pick accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.html,.htm,.json,.rtf">
 <span class="tpl-drop-icon" aria-hidden="true"></span>
-<span class="tpl-drop-main">Drop your file here</span>
-<span class="tpl-drop-or">or <u>pick the file</u></span>
+<span class="tpl-drop-main on-mouse">Drop your file here</span>
+<span class="tpl-drop-main on-touch">Tap to pick your template's file</span>
+<span class="tpl-drop-or on-mouse">or <u>pick the file</u></span>
 <span class="tpl-drop-kinds">PDF, Word, Excel, CSV, text, HTML or JSON</span>
 </label>
 
@@ -64,8 +65,8 @@
 <p data-st="sorting" hidden><span class="tpl-spin" aria-hidden="true"></span><span data-sorting></span></p>
 </div>
 <div class="tpl-verdict" role="alert">
-<p data-v="scanned" hidden>This PDF is a scan (pictures of pages). Convert it on your phone, where Inspyx reads scans.</p>
-<p data-v="rtf" hidden>Convert this file on your phone, where Inspyx reads RTF files.</p>
+<p data-v="scanned" hidden>This PDF is a scan (pictures of pages). Convert it on your phone, where Inspyx reads scans: open Inspyx, tap the menu (☰) → Import → Convert my template.</p>
+<p data-v="rtf" hidden>Inspyx reads RTF files on your phone. Convert it there: open Inspyx, tap the menu (☰) → Import → Convert my template.</p>
 <p data-v="unsupported" hidden>Inspyx can't convert this kind of file here. Use a PDF, Word, Excel, CSV, text, HTML or JSON file.</p>
 <p data-v="unreadable" hidden><span data-unreadable></span></p>
 <p data-v="refused" hidden><span data-refused></span></p>
@@ -93,13 +94,14 @@
 <span data-w="full">Your templates are full (200). Remove one on your phone, then add this one.</span>
 <span data-w="soon">Adding from the website comes next. For now, convert it on your phone to add it.</span>
 <span data-w="another">Convert another file</span>
+<span data-w="rename">Rename</span>
 <span data-w="show-all">Show all {n}</span>
 </template>
 
 <template data-t="result">
 <article class="tpl-card">
 <p class="tpl-part" data-part hidden></p>
-<h2 data-name></h2>
+<div class="tpl-title"><h2 data-name></h2><button type="button" class="tpl-rename" data-rename><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path><path d="M13.5 6.5l4 4"></path></svg></button><input class="tpl-name-edit" data-name-edit type="text" maxlength="120" hidden></div>
 <p class="tpl-summary" data-summary></p>
 <h3 data-sections-label></h3>
 <ol class="tpl-sections" data-sections></ol>

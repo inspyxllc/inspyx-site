@@ -67,11 +67,35 @@
     show(n);
   }
 
+  /* The template's name as the inspector would write it: the file's name without its kind, its dashes and
+     underscores as spaces, and, when it's all small letters, each word capitalized ("roof_inspection" ->
+     "Roof Inspection"). A name with capitals of its own is kept as it is. */
+  function tidy(name) {
+    var n = String(name || '').replace(/\.[a-z0-9]{1,5}$/i, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (n && n === n.toLowerCase()) n = n.replace(/(^|\s)([a-z])/g, function (m, a, c) { return a + c.toUpperCase(); });
+    return n.slice(0, 120) || String(name || '');
+  }
+
   function card(t, i, count) {
     var el = $('template[data-t="result"]').content.firstElementChild.cloneNode(true);
     var w = t.words || {};
-    if (count > 1) { var part = $('[data-part]', el); part.hidden = false; part.textContent = words('part', { n: i + 1, count: count, name: t.name }); }
-    $('[data-name]', el).textContent = t.name;
+    if (count > 1) { var part = $('[data-part]', el); part.hidden = false; part.textContent = words('part', { n: i + 1, count: count, name: tidy(t.name) }); }
+    t.shown = tidy(t.name);
+    var title = $('[data-name]', el), pen = $('[data-rename]', el), edit = $('[data-name-edit]', el);
+    title.textContent = t.shown;
+    pen.setAttribute('aria-label', words('rename'));
+    var editing = function (on) { title.hidden = on; pen.hidden = on; edit.hidden = !on; if (on) { edit.value = t.shown; edit.focus(); edit.select(); } };
+    var keep = function () {
+      var v = edit.value.replace(/\s+/g, ' ').trim();
+      if (v) { t.shown = v.slice(0, 120); title.textContent = t.shown; }
+      editing(false);
+    };
+    pen.addEventListener('click', function () { editing(true); });
+    edit.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); keep(); }
+      if (e.key === 'Escape') { e.preventDefault(); editing(false); }
+    });
+    edit.addEventListener('blur', function () { if (!edit.hidden) keep(); });
     $('[data-summary]', el).textContent = t.summary || '';
     $('[data-sections-label]', el).textContent = w.sections_label || '';
     var list = $('[data-sections]', el);
@@ -196,7 +220,7 @@
   function save(t, button, said) {
     button.disabled = true; button.textContent = words('adding'); said.textContent = '';
     var done = function (key) {
-      said.textContent = words(key, { name: t.name });
+      said.textContent = words(key, { name: t.shown });
       button.textContent = words('add');
       button.disabled = key === 'added' || key === 'already';
     };
@@ -205,7 +229,10 @@
       manifest = JSON.parse(t.manifest);
       var only = manifest.templates[0];
       version = String(only.versions[0].version);
-      bytes = new TextEncoder().encode(t.manifest);
+      // The name the inspector sees (tidied or renamed) is the template's name, in its file too.
+      var text = t.manifest;
+      if (only.name !== t.shown) { only.name = t.shown; text = JSON.stringify(manifest); }
+      bytes = new TextEncoder().encode(text);
       if (manifest.templates.length !== 1 || only.id !== t.template_id || only.versions.length !== 1) throw new Error('shape');
     } catch (e) { done('add-failed'); return; }
     var sha;
@@ -223,7 +250,7 @@
         // The store's own refusal of his folder (its 200 files) comes as 403; anything else, a plain failure.
         if (!there) return f.status === 403 || f.inner === '403' ? 'full' : 'add-failed';
         var at = Math.max(Date.now(), was ? was.updated_at + 1 : 0);
-        var data = { id: t.template_id, ownerAccountId: me, name: t.name, version: version, source: 'converted',
+        var data = { id: t.template_id, ownerAccountId: me, name: t.shown, version: version, source: 'converted',
           sha256: sha, byteLength: bytes.length, createdAt: at, updatedAt: at, deletedAt: null };
         var row = { kind: KIND, id: t.template_id, updated_at: at, deleted_at: null, data: data };
         return auth.ask('sync', { push: [row], after: h.point, limit: 1 }, DEADLINE).then(function (r) {

@@ -25,7 +25,8 @@ let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
 const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
 
-const SCAN = 'This PDF is a scan (pictures of pages). Convert it on your phone, where Inspyx reads scans.';
+const PATH_WORDS = 'open Inspyx, tap the menu (\u2630) \u2192 Import \u2192 Convert my template.';
+const SCAN = 'This PDF is a scan (pictures of pages). Convert it on your phone, where Inspyx reads scans: ' + PATH_WORDS;
 
 function role(line) {
   const t = line.trim();
@@ -156,11 +157,14 @@ const settled = (page) => page.waitForFunction(() => {
     await drop(page, 'roof.txt');
     await page.waitForSelector('.tpl-card', { timeout: 30000 });
     const card = page.locator('.tpl-card').first();
-    ok('the template is named for the file', (await card.locator('[data-name]').innerText()) === 'roof', await card.locator('[data-name]').innerText());
+    ok('the template is named for the file, tidied ("roof" -> "Roof")', (await card.locator('[data-name]').innerText()) === 'Roof', await card.locator('[data-name]').innerText());
     ok('its summary is the phone\'s', /^2 sections, \d+ items?, \d+ comments?$/.test(await card.locator('[data-summary]').innerText()), await card.locator('[data-summary]').innerText());
     const secs = await card.locator('[data-sections] li strong').allInnerTexts();
     ok('each section shows, with its items', secs.length === 2 && secs[0].startsWith('ROOF') && secs[1].startsWith('PLUMBING') && (await card.locator('[data-sections] li span').first().innerText()).includes('Shingles'), secs.join(' / '));
-    ok('the lines to check show, in the phone\'s words', await card.locator('[data-dots]').isVisible() && (await card.locator('[data-dot-lines] li').count()) >= 1 && (await card.locator('[data-dot-lines] li').first().innerText()).startsWith('\u25CF Line '), await card.locator('[data-dot-lines]').innerText().catch(() => ''));
+    const dotLine = await card.locator('[data-dot-lines] li').first().innerText().catch(() => '');
+    ok('the lines to check show, in plain words: what it went in as and where', await card.locator('[data-dots]').isVisible() &&
+      dotLine === '\u25CF Line 3: \u201cThe shingles are worn and near the end of their life.\u201d went in as a comment under ROOF \u203a Shingles. Inspyx wasn\'t sure, so check it\'s right.', dotLine);
+    ok('no engineer words: no "readings", no "Information"', !/reading|Information/.test(await card.innerText()));
     ok('a section holding such a line says how many', (await card.locator('.tpl-dot').count()) >= 1);
     ok('the lines went to the Spex server as the website, signed in', w.hellos.length > 0 && w.hellos.every((h) => h.client === 'inspyx-web-convert' && h.access_token === 'test-access-1'));
     ok('with adding not yet on, nothing is offered to add, and it says so', !(await card.locator('[data-add]').isVisible()) && (await card.locator('[data-saved]').innerText()).startsWith('Adding from the website comes next'));
@@ -186,7 +190,7 @@ const settled = (page) => page.waitForFunction(() => {
     await drop(page, 'scan.pdf'); await settled(page);
     ok('a scanned PDF: his words, convert it on the phone', (await page.locator('[data-v="scanned"]').isVisible()) && (await page.locator('[data-v="scanned"]').innerText()) === SCAN);
     await drop(page, 'old.rtf'); await settled(page);
-    ok('an RTF file: convert it on the phone', await page.locator('[data-v="rtf"]').isVisible() && !(await page.locator('[data-v="scanned"]').isVisible()));
+    ok('an RTF file: convert it on the phone, with where to tap', await page.locator('[data-v="rtf"]').isVisible() && (await page.locator('[data-v="rtf"]').innerText()).endsWith(PATH_WORDS) && !(await page.locator('[data-v="scanned"]').isVisible()));
     await drop(page, 'archive.zip'); await settled(page);
     ok('a kind of file Inspyx can\'t convert says the kinds it can', await page.locator('[data-v="unsupported"]').isVisible());
     ok('none of them was sent anywhere', w.hellos.length === 0 && w.asked.length === 0 && w.outside.length === 0);
@@ -216,7 +220,7 @@ const settled = (page) => page.waitForFunction(() => {
     await page.waitForSelector('.tpl-card', { timeout: 60000 });
     await page.waitForTimeout(7000);
     const names = await page.locator('.tpl-card [data-name]').allInnerTexts();
-    ok('only the latest file\'s template shows', names.length === 1 && names[0] === 'roof', names.join(','));
+    ok('only the latest file\'s template shows', names.length === 1 && names[0] === 'Roof', names.join(','));
     await ctx.close();
   });
 
@@ -229,14 +233,14 @@ const settled = (page) => page.waitForFunction(() => {
     await page.click('.tpl-card [data-add]');
     await page.waitForFunction(() => document.querySelector('.tpl-card [data-saved]').textContent.length > 0, null, { timeout: 15000 });
     const said = await page.locator('.tpl-card [data-saved]').innerText();
-    ok('it says the phone\'s "Added"', said === 'Added "roof". Choose it when you start a new inspection.', said);
+    ok('it says the phone\'s "Added"', said === 'Added "Roof". Choose it when you start a new inspection.', said);
     const f = w.stores[0], r = w.pushes[0];
     const sha = f ? crypto.createHash('sha256').update(f.body).digest('hex') : '';
     ok('the file went first, to the inspector\'s own folder, named by its content', !!f && f.name === ME + '/' + (r && r.id) + '/' + sha + '.json' && f.type === 'application/json' && w.stores.length === 1, f && f.name);
-    ok('the file is the app\'s own template file', !!f && JSON.parse(f.body.toString('utf8')).templates[0].id === (r && r.id));
+    ok('the file is the app\'s own template file, under the name shown', !!f && JSON.parse(f.body.toString('utf8')).templates[0].id === (r && r.id) && JSON.parse(f.body.toString('utf8')).templates[0].name === 'Roof');
     ok('then its row, as the phone sends one', !!r && r.kind === 'inspection_templates' && /^inspector\.[a-z0-9]+(-[a-z0-9]+)*$/.test(r.id) && r.data.ownerAccountId === ME && r.data.source === 'converted' &&
       r.data.sha256 === sha && r.data.byteLength === f.body.length && r.data.createdAt === r.data.updatedAt && r.updated_at === r.data.updatedAt && r.data.deletedAt === null && r.deleted_at === null &&
-      typeof r.data.version === 'string' && r.data.name === 'roof' && !('base' in r.data), r && JSON.stringify(r.data));
+      typeof r.data.version === 'string' && r.data.name === 'Roof' && !('base' in r.data), r && JSON.stringify(r.data));
     ok('the row was kept', w.rows.has('inspection_templates/' + (r && r.id)));
     ok('the button can\'t add it twice', await page.locator('.tpl-card [data-add]').isDisabled());
     // The same file again: already added, nothing sent.
@@ -245,7 +249,7 @@ const settled = (page) => page.waitForFunction(() => {
     await page.waitForSelector('.tpl-card [data-add]', { state: 'visible', timeout: 30000 });
     await page.click('.tpl-card [data-add]');
     await page.waitForFunction(() => document.querySelector('.tpl-card [data-saved]').textContent.length > 0, null, { timeout: 15000 });
-    ok('the same template again: "already added", and nothing more is sent', (await page.locator('.tpl-card [data-saved]').innerText()).startsWith('"roof" was already added') && w.stores.length === 1 && w.pushes.length === 1);
+    ok('the same template again: "already added", and nothing more is sent', (await page.locator('.tpl-card [data-saved]').innerText()).startsWith('"Roof" was already added') && w.stores.length === 1 && w.pushes.length === 1);
     ok('nothing left the site and no error showed', w.outside.length === 0 && page.errors.length === 0, (w.outside.concat(page.errors)).join(' | '));
     await ctx.close();
   });
@@ -267,6 +271,41 @@ const settled = (page) => page.waitForFunction(() => {
     await o.page.waitForFunction(() => document.querySelector('.tpl-card [data-saved]').textContent.length > 0, null, { timeout: 15000 });
     ok('the server keeps the row out: "couldn\'t be added", and it can be tried again', (await o.page.locator('.tpl-card [data-saved]').innerText()) === "The template couldn't be added. Nothing changed." && !(await o.page.locator('.tpl-card [data-add]').isDisabled()));
     await o.ctx.close();
+  });
+
+  await group('renaming', async () => {
+    const w = world(); const { ctx, page } = await open(browser, w, { save: true });
+    await page.waitForSelector('[data-drop]');
+    await drop(page, 'roof.txt');
+    await page.waitForSelector('.tpl-card [data-add]', { state: 'visible', timeout: 30000 });
+    await page.click('.tpl-card [data-rename]');
+    await page.fill('.tpl-card [data-name-edit]', '  Roof and attic   check ');
+    await page.keyboard.press('Enter');
+    ok('the pencil renames the template (spaces tidied)', (await page.locator('.tpl-card [data-name]').innerText()) === 'Roof and attic check');
+    await page.click('.tpl-card [data-rename]'); await page.fill('.tpl-card [data-name-edit]', 'Something else'); await page.keyboard.press('Escape');
+    ok('Esc keeps the name it had', (await page.locator('.tpl-card [data-name]').innerText()) === 'Roof and attic check');
+    await page.click('.tpl-card [data-rename]'); await page.fill('.tpl-card [data-name-edit]', '   '); await page.keyboard.press('Enter');
+    ok('an empty name is never kept', (await page.locator('.tpl-card [data-name]').innerText()) === 'Roof and attic check');
+    await page.click('.tpl-card [data-add]');
+    await page.waitForFunction(() => document.querySelector('.tpl-card [data-saved]').textContent.length > 0, null, { timeout: 15000 });
+    const f = w.stores[0], r = w.pushes[0];
+    ok('the new name goes in the row and in the file', !!r && r.data.name === 'Roof and attic check' && JSON.parse(f.body.toString('utf8')).templates[0].name === 'Roof and attic check' &&
+      r.data.sha256 === crypto.createHash('sha256').update(f.body).digest('hex'));
+    await ctx.close();
+  });
+
+  await group('on a touch screen', async () => {
+    const w = world();
+    const ctx = await browser.newContext({ viewport: { width: PHONE, height: 844 }, hasTouch: true, isMobile: process.env.BROWSER !== 'webkit' ? true : true });
+    await ctx.addInitScript((s) => { try { localStorage.setItem('inspyx.signin', s); } catch (e) { /* none */ } }, kept());
+    const page = await ctx.newPage();
+    await page.route('**/*', (r) => new URL(r.request().url()).origin === HOME ? r.continue() : r.abort());
+    await page.goto(url + 'templates');
+    await page.waitForSelector('[data-drop]');
+    const said = await page.evaluate(() => [...document.querySelectorAll('.on-touch, .on-mouse')].filter((e) => e.offsetParent !== null).map((e) => e.textContent.trim()));
+    ok('nobody is asked to drag on a phone: "Tap to pick your template\'s file", in the steps and the box',
+      said.includes('Tap to pick your template\'s file.') && said.includes('Tap to pick your template\'s file') && !said.some((t) => /Drag|Drop/.test(t)), said.join(' | '));
+    await ctx.close();
   });
 
   await group('on a phone', async () => {
