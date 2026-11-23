@@ -365,7 +365,7 @@
       if (!want) return { error: 'status must be inspected, not_inspected or not_present' };
       // Only on the visitor's own word for that mark, as the app's phone check (spexMarkSaid): never from a photo
       // alone, never a guess on "rate it".
-      if (S.voice && marksSaid(S.voice.heard).indexOf(args.status) < 0) {
+      if (S.voice && !heardMark(args.status, S.voice.heard, args.item)) {
         return { ok: false, error: 'Nothing was marked: they did not say which. Ask only "Inspected, not inspected, or not present?" and mark it when they say.' };
       }
       var at = args.item ? placeFor(null, args.item) : (p ? { p: p } : null);
@@ -402,16 +402,16 @@
     for (var i = 0; i < rules.length; i++) if (rules[i][1].test(t)) return rules[i][0];
     return null;
   }
-  /* Every mark named outright ("the attic inspected and the roof not present"), else the one the words give: the
-     app's spexMarksSaid. */
-  function marksSaid(heard) {
-    var t = String(heard || '').toLowerCase(), named = [];
-    if (/\bnot inspected\b/.test(t)) named.push('not_inspected');
-    if (/\bnot present\b/.test(t)) named.push('not_present');
-    if (/(?<!\bnot )\binspected\b/.test(t)) named.push('inspected');
-    if (named.length) return named;
-    var one = markSaid(heard);
-    return one ? [one] : [];
+  /* The app's spexHeardMark: with no item, the last mark said wins (a mark taken back stays taken back); with an
+     item, the mark that follows the visitor's last mention of it ("the attic inspected and the roof not present"). */
+  function heardMark(status, heard, item) {
+    var name = String(item || '').trim().toLowerCase();
+    if (!name) return markSaid(heard) === status;
+    var parts = String(heard || '').toLowerCase().split(/[.;,!?]|\band\b|\bthen\b/), first = name.split(/\s+/)[0], last = -1;
+    parts.forEach(function (p, i) { if (p.indexOf(name) >= 0 || (first.length > 3 && p.indexOf(first) >= 0)) last = i; });
+    if (last < 0) return markSaid(heard) === status;
+    for (var i = last; i < parts.length; i++) { var m = markSaid(parts[i]); if (m) return m === status; }
+    return false;
   }
   function listAll() {
     var out = [];
@@ -614,5 +614,5 @@
     if (opener) opener.focus({ preventScroll: true });
   }
 
-  window.TrySpex = { open: open, close: close, _run: function (n, a) { return S ? runTool(n, a) : null; }, _markSaid: markSaid, _marksSaid: marksSaid };
+  window.TrySpex = { open: open, close: close, _run: function (n, a) { return S ? runTool(n, a) : null; }, _markSaid: markSaid, _heardMark: heardMark };
 })();
