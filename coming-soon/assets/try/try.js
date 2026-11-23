@@ -1,11 +1,11 @@
 /* TRY SPEX's door on the home page (2026-11-23): the "Try Spex now" button in the hero, beside "Join the waitlist".
-   Switched off (ON = false) until the demo may go public: then the page shows nothing new at all. The overlay's code
+   Public since 2026-11-23 (his word: "go public"). ON is the one switch: false takes it off everywhere, and the page
+   then shows nothing new at all. The overlay's code
    (try-app.js) loads only on the first click, so the home page's story never waits for it. */
 (function () {
   'use strict';
-  // Off on inspyx.com until it may go public (his word); on in private previews and local checks, so he can look.
-  var LIVE = /^(www\.)?inspyx\.com$/.test(location.hostname);
-  var ON = false || !LIVE;
+  // On everywhere, inspyx.com included, since he said go public (2026-11-23). To take it off: false.
+  var ON = true;
   if (!ON) return;
   var anchor = document.querySelector('.hero-in .btn');
   if (!anchor) return;
@@ -15,7 +15,8 @@
   var b = document.createElement('button');
   b.type = 'button'; b.className = 'try-btn'; b.setAttribute('data-try', '');
   var dot = document.createElement('i'), words = document.createElement('span'), small = document.createElement('small');
-  words.textContent = 'Try Spex now'; small.textContent = 'Talk to the app, live';
+  // A space before the small line, so a screen reader says "Try Spex now Talk to the app, live", not one run-on word.
+  words.textContent = 'Try Spex now '; small.textContent = 'Talk to the app, live';
   words.appendChild(small); b.appendChild(dot); b.appendChild(words);
   anchor.insertAdjacentElement('afterend', b);
   var loading = null;
