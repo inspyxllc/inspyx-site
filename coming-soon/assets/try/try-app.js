@@ -54,6 +54,9 @@
     { id: 'attic', title: 'Attic', room: 'Attic', photo: 'attic.jpg', n: 5, d: 0 }
   ];
   var KINDS = ['safety_hazard', 'recommendation', 'maintenance', 'information'];
+  // Voice marks stay off in the demo until the app's word rules settle (the lead, 2026-11-23): Spex says the full app
+  // does it. The rules below are kept and checked against the app's table, ready to switch on.
+  var MARKS_ON = false;
   // What Spex says for anything the app does that this demo doesn't (the demo's note says the same words).
   var FULL_APP = 'Say: "In the full app I\'d do that; this demo shows a few things," and offer something to try.';
   // The app's item marks (walk_marks.dart ItemStatusButtons): Inspected, Not inspected, Not present.
@@ -359,6 +362,7 @@
       if (S.screen === 'item' || S.screen === 'report') show(S.screen);
       return { ok: true, removed: r.f.id };
     }
+    if (name === 'mark_item' && !MARKS_ON) return { ok: false, say: FULL_APP };
     if (name === 'mark_item') {
       // The app's three marks (walk_marks.dart), as the app's screen answers mark_item.
       var want = { inspected: 'inspected', not_inspected: 'not inspected', not_present: 'not present' }[args.status];
@@ -637,5 +641,5 @@
     if (opener) opener.focus({ preventScroll: true });
   }
 
-  window.TrySpex = { open: open, close: close, _run: function (n, a) { return S ? runTool(n, a) : null; }, _markSaid: markSaid, _heardMark: heardMark };
+  window.TrySpex = { open: open, close: close, _run: function (n, a) { return S ? runTool(n, a) : null; }, _markSaid: markSaid, _heardMark: heardMark, _marksOn: function () { return MARKS_ON; } };
 })();
