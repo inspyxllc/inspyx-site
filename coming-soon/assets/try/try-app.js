@@ -91,7 +91,7 @@
     var s = el('section', 'scr', null, { 'data-ty-scr': 'walk' });
     add(s, bar(W.today, W.inspection, W.report, null, function () { show('report'); }));
     var body = el('div', 'body'), house = el('div', 'house'), img = el('img', null, null, { src: PHOTOS + 'exterior.jpg', alt: '' });
-    var info = el('div'), prog = el('div', 'prog'), bar2 = el('i');
+    var info = el('div'), prog = el('div', 'prog'), bar2 = el('span', 'prog-fill');
     var done = 0, all = 0;
     PLACES.forEach(function (p) { all += p.n; done += Math.min(p.n, p.d + (S.rates[p.id] ? 1 : 0)); });
     bar2.style.width = Math.round(done / all * 100) + '%';

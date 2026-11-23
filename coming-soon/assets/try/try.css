@@ -137,3 +137,5 @@
 .ty-done-card a, .ty-busy a{display:inline-block; margin-top:18px; padding:12px 22px; border-radius:999px; background:var(--a-ink); color:#fff; font-weight:600; text-decoration:none}
 .ty-busy button, .ty-done-card button{margin-top:12px; background:none; border:0; color:var(--a-blue); font-weight:600; font-size:15px; cursor:pointer}
 @media (prefers-reduced-motion: reduce){ .try-btn::after, .ty-wave i, .ty-iph, .ty-try-veil, .ty-find.ty-new{animation:none !important} .ty-scr{transition:none} }
+
+.ty-prog{height:6px; overflow:hidden} .ty-prog-fill{display:block; height:100%; border-radius:3px; background:var(--a-blue)}
