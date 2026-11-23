@@ -16,7 +16,10 @@ let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
 
 const SUPA = 'https://btxlrfvqifnrnxffohsz.supabase.co';
-const HOME_CSP = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src " + SUPA + "; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+// TRY SPEX (2026-11-23): the home page may also reach the Spex relay (its demo challenge and voice session), run
+// the challenge's Web Worker from this site, and play media from this site.
+const TRY_RELAY = 'chat---spex-relay-yu5bdad2fa-uc.a.run.app';
+const HOME_CSP = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src " + SUPA + " https://" + TRY_RELAY + " wss://" + TRY_RELAY + "; worker-src 'self'; media-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const PAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const POLICY = ['about', 'founders', 'pricing', 'privacy', 'refunds', 'support', 'terms'];
 
