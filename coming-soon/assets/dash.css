@@ -10,8 +10,8 @@
 
 /* Wide: the sidebar. */
 @media (min-width: 1000px){
-  body:has(> nav.dash){padding-left:var(--dash-w)}
-  body:has(> nav.dash) > .bar{max-width:none}
+  body.has-dash{padding-left:var(--dash-w)}
+  body.has-dash > .bar{max-width:none}
   .dash{position:fixed; z-index:20; top:0; left:0; bottom:0; width:var(--dash-w); padding:76px 14px 24px; overflow-y:auto;
     background:linear-gradient(180deg, #FFFFFF 0%, #F6F8FC 100%); box-shadow:inset -1px 0 0 rgba(15,32,60,.08)}
   .dash-items{display:grid; gap:2px}
@@ -21,12 +21,12 @@
   .dash-items a[aria-current="page"]::before{content:""; position:absolute; left:-14px; top:10px; bottom:10px; width:4px; border-radius:0 4px 4px 0; background:linear-gradient(180deg, #0284C7, var(--navy))}
   .dash-more{display:none}
   /* The logo sits over the sidebar's top, where the bar starts. */
-  body:has(> nav.dash) > .bar .logo{position:fixed; z-index:21; top:22px; left:28px}
+  body.has-dash > .bar .logo{position:fixed; z-index:21; top:22px; left:28px}
 }
 
 /* Narrow: the tab bar. */
 @media (max-width: 999.98px){
-  body:has(> nav.dash){padding-bottom:calc(var(--dash-bar) + env(safe-area-inset-bottom, 0px) + 12px)}
+  body.has-dash{padding-bottom:calc(var(--dash-bar) + env(safe-area-inset-bottom, 0px) + 12px)}
   .dash{position:fixed; z-index:20; left:0; right:0; bottom:0; padding:0 6px env(safe-area-inset-bottom, 0px);
     display:flex; background:rgba(255,255,255,.92); -webkit-backdrop-filter:saturate(180%) blur(18px); backdrop-filter:saturate(180%) blur(18px);
     box-shadow:0 -1px 0 rgba(15,32,60,.08), 0 -8px 24px rgba(15,32,60,.06)}
