@@ -233,6 +233,8 @@ const turnDone = { serverContent: { turnComplete: true } };
     const marked = await page.evaluate(() => [TrySpex._run('mark_item', { status: 'inspected' }), TrySpex._run('mark_item', { status: 'inspected' }), TrySpex._run('mark_item', { status: 'not_present', item: 'attic' }), TrySpex._run('mark_item', { status: 'great' })]);
     ok('"rate this item satisfactory" marks it Inspected, the app\'s word; said again it stays set', marked[0].mark === 'Inspected' && marked[1].already === true);
     ok('an item named in the house is marked too, and a status the app lacks is refused', marked[2].item === 'Attic' && marked[2].mark === 'Not present' && !!marked[3].error);
+    const both = await page.evaluate(() => [TrySpex._marksSaid('Mark the attic inspected and the roof not present.'), TrySpex._marksSaid('Mark it not inspected.'), TrySpex._marksSaid('Rate it.')]);
+    ok('each mark named in one breath counts; "not inspected" never counts as Inspected (the app\'s rules)', JSON.stringify(both) === JSON.stringify([['not_present', 'inspected'], ['not_inspected'], []]), JSON.stringify(both));
     // Opened, back to the walk, then marked by voice: it opens with its mark on (Codex on #72).
     const shown = await page.evaluate(() => { TrySpex._run('open_place', { stop: 'Kitchen' }); document.querySelector('[data-ty-scr="item"] .ty-bar .ty-back').click(); const r = TrySpex._run('mark_item', { status: 'not_present', item: 'kitchen' }); return [r.mark, document.querySelector('[data-ty-scr]').getAttribute('data-ty-scr'), (document.querySelector('[data-ty-rate].ty-on') || {}).textContent]; });
     ok('marked from the walk, the item opens with its mark on', JSON.stringify(shown) === JSON.stringify(['Not present', 'item', 'Not present']), JSON.stringify(shown));
