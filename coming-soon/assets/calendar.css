@@ -4,6 +4,7 @@
 .cal-head{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between}
 .cal h1{font-size:34px}
 .cal-nav{display:flex; gap:8px}
+.cal-new{display:inline-flex; align-items:center; min-height:44px; padding:0 18px; border-radius:999px; text-decoration:none; font:600 15px var(--font)}
 .cal-nav .btn.small{min-height:44px; min-width:44px; padding:0 16px; border:0; font:600 15px var(--font); cursor:pointer}
 .cal-live{margin:8px 0 14px; font-size:14px; color:var(--ink-faint)}
 .cal-state p{font-size:18px; line-height:1.45; color:var(--ink-soft); margin-bottom:12px}

@@ -180,7 +180,7 @@
       ]
     },
     {
-      "source": "/(signin|account|plan|reset|signup|today|numbers|reports|prices|agreements|booking|emails|payments)",
+      "source": "/(signin|account|plan|reset|signup|today|numbers|reports|prices|agreements|booking|emails|payments|new)",
       "headers": [
         {
           "key": "Content-Security-Policy",

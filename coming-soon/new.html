@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — New inspection</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/dash.css">
+<link rel="stylesheet" href="/assets/new.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/new.js" defer></script>
+</head>
+<body class="has-dash">
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z"></path><path d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" stroke="#0284C7" stroke-width="19"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+<nav class="dash" aria-label="Your dashboard">
+<ul class="dash-items"><li><a href="/today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 6.5 4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5l-1.5-6.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5Z"/></svg><span class="dash-l">What needs you</span><span class="dash-s">To do</span></a></li><li><a href="/inspections" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m9 13 2 2 4-4"/></svg><span class="dash-l">Inspections</span></a></li><li><a href="/calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="dash-l">Calendar</span></a></li><li><a href="/prices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"/><circle cx="8" cy="8" r="1.5"/></svg><span class="dash-l">Prices</span></a></li><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul>
+<details class="dash-more"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></summary><ul><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul></details>
+</nav>
+
+<main class="new" data-new hidden>
+<h1>New inspection</h1>
+<p class="new-lede">Book an inspection yourself: it lands on your calendar now, and on your phone at its next sync, with its client, agents, template and fee.</p>
+<p class="new-state" role="status"><span data-state="loading">Loading your prices…</span><span data-state="failed" hidden>Couldn’t load your prices. Check your connection; this page keeps trying.</span><span data-state="noprices" hidden>Add a service on <a href="/prices">Prices</a> first: an inspection is booked for a service.</span></p>
+
+<form class="new-form" data-form novalidate hidden>
+<section class="new-card">
+<h2>The house</h2>
+<div class="new-grid">
+<label class="wide">Street <input name="street" autocomplete="off" placeholder="12 Palm Way"></label>
+<label>Apt / Unit <input name="unit" autocomplete="off" placeholder="Apt 103"></label>
+<label>City <input name="city" autocomplete="off"></label>
+<label>State <input name="state" autocomplete="off" maxlength="40"></label>
+<label>ZIP <input name="zip" autocomplete="off" inputmode="numeric" maxlength="10"></label>
+</div>
+</section>
+
+<section class="new-card">
+<h2>People</h2>
+<fieldset><legend>Client</legend><div class="new-grid">
+<label>Name <input name="clientName" autocomplete="off"></label><label>Email <input name="clientEmail" type="email" autocomplete="off"></label><label>Phone <input name="clientPhone" type="tel" autocomplete="off"></label>
+</div></fieldset>
+<fieldset><legend>Buyer’s agent <small>(optional)</small></legend><div class="new-grid">
+<label>Name <input name="agentName" autocomplete="off"></label><label>Email <input name="agentEmail" type="email" autocomplete="off"></label><label>Phone <input name="agentPhone" type="tel" autocomplete="off"></label>
+</div></fieldset>
+<fieldset><legend>Listing agent <small>(optional)</small></legend><div class="new-grid">
+<label>Name <input name="listingName" autocomplete="off"></label><label>Email <input name="listingEmail" type="email" autocomplete="off"></label><label>Phone <input name="listingPhone" type="tel" autocomplete="off"></label>
+</div></fieldset>
+</section>
+
+<section class="new-card">
+<h2>What you’ll inspect</h2>
+<div class="new-services" data-services role="radiogroup" aria-label="Service"></div>
+<div class="new-addons" data-addons hidden><h3>Add-ons</h3><div data-addon-list></div></div>
+<div class="new-asks" data-asks hidden><h3>For its price</h3><div class="new-grid" data-ask-list></div></div>
+<label class="new-code">Discount code <small>(optional)</small> <input name="code" autocomplete="off"></label>
+</section>
+
+<section class="new-card">
+<h2>When</h2>
+<div class="new-grid">
+<label>Day <input name="day" type="date"></label>
+<label>Time <input name="time" type="time" step="300"></label>
+</div>
+<div class="new-slots" data-slots hidden><p class="new-hint">In your booking hours:</p><div data-slot-list></div></div>
+</section>
+
+<section class="new-card">
+<h2>Template and agreement</h2>
+<label>Template <select name="template" data-templates><option value="">Pick it on my phone when I start</option></select></label>
+<label class="tick" data-agreement-row hidden><input type="checkbox" name="agreement"> Send the client your agreement to sign</label>
+<label class="tick"><input type="checkbox" name="emailClient"> Email the client their confirmation <small data-email-why></small></label>
+</section>
+
+<aside class="new-quote" data-quote aria-live="polite">
+<h2>The price</h2>
+<p class="new-hint" data-quote-empty>Pick a service to see its price.</p>
+<ul class="new-lines" data-lines></ul>
+<p class="new-total" data-total-row hidden><span>Total</span><strong data-total></strong></p>
+<p class="new-length" data-length-row hidden><span data-length></span></p>
+<div class="new-warn" data-warnings hidden>
+<p data-warn="hours" hidden>Outside your booking hours.</p>
+<p data-warn="busy" hidden>You have an inspection then.</p>
+</div>
+<div class="new-problems" role="alert">
+<p data-problem="missing" hidden>Write the client’s name and the street.</p>
+<p data-problem="email" hidden>To email the client, write their email.</p>
+<p data-problem="time" hidden>Pick a day and a time.</p>
+<p data-problem="services" hidden>Pick a service.</p>
+<p data-problem="details" hidden>Check the people’s emails: one isn’t an email address.</p>
+<p data-problem="facts" hidden>Check the answers for its price.</p>
+<p data-problem="failed" hidden>That couldn’t be booked. Check your connection and try again.</p>
+</div>
+<button class="btn" type="submit" data-book><span data-book-say="book">Book it</span><span data-book-say="anyway" hidden>Book anyway</span><span data-book-say="busy" hidden>Booking…</span></button>
+</aside>
+</form>
+
+<div class="new-done" data-done hidden>
+<h2>Booked</h2>
+<p>It’s on your calendar now, and on your phone at its next sync, with its client, agents, template and fee.</p>
+<p class="new-done-links"><a class="btn" href="/calendar" data-done-day>See it on your calendar</a><a class="btn quiet" href="/new">Book another</a></p>
+</div>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<template data-t="words"><div>
+<span data-w="addon-plus">+</span>
+<span data-w="email-on">(your confirmation email is on)</span>
+<span data-w="email-off">(your confirmation email is off; tick to send it this once)</span>
+<span data-w="minutes">About</span>
+<span data-w="walkthrough">Walkthrough (Inspyx)</span>
+<span data-w="sqft">Square feet</span>
+<span data-w="year">Year built</span>
+<span data-w="foundation">Foundation</span>
+<span data-w="foundation-pick">Pick one</span>
+<span data-w="f-Slab">Slab</span><span data-w="f-Crawlspace">Crawlspace</span><span data-w="f-Basement">Basement</span><span data-w="f-Pier and beam">Pier and beam</span>
+<span data-w="h">h</span><span data-w="min">min</span>
+</div></template>
+</body>
+</html>
