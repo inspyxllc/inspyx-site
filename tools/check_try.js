@@ -237,6 +237,22 @@ const turnDone = { serverContent: { turnComplete: true } };
     await ctx.close();
   });
 
+  await group('a goodbye ends only its own session', async () => {
+    const r = relay({ plan: [{ sleep: 60000 }] });
+    const { ctx, page } = await open(browser, r);
+    await page.evaluate(() => document.querySelector('[data-try]').click());
+    await page.waitForSelector('.ty-try-veil');
+    await page.click('[data-ty-talk]');
+    await page.waitForSelector('[data-ty-spex].ty-on', { timeout: 15000 });
+    await page.evaluate(() => TrySpex._run('end_conversation', {}));
+    await page.click('[data-ty-live]');              // stopped by hand, then started again at once
+    await page.click('[data-ty-talk]');
+    await page.waitForSelector('[data-ty-spex].ty-on', { timeout: 15000 });
+    await page.waitForTimeout(2000);                // the first goodbye's timer has run
+    ok('the new session is still on after the old goodbye\'s timer', await page.locator('[data-ty-spex].ty-on').count() === 1);
+    await ctx.close();
+  });
+
   await group('stopping by keyboard', async () => {
     const r = relay({ plan: [{ sleep: 60000 }] });
     const { ctx, page } = await open(browser, r);

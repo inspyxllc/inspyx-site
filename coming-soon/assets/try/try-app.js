@@ -360,7 +360,12 @@
       return { ok: true, removed: r.f.id };
     }
     if (name === 'list_findings') return { findings: listAll().map(summary) };
-    if (name === 'end_conversation') { setTimeout(function () { if (S) stopVoice(); }, 1500); return { ok: true }; }
+    if (name === 'end_conversation') {
+      // Only the session that said goodbye ends: one started again meanwhile stays (Codex on #70).
+      var owner = S.voice;
+      setTimeout(function () { if (S && owner && S.voice === owner) stopVoice(); }, 1500);
+      return { ok: true };
+    }
     return { ok: false, say: FULL_APP };
   }
   function listAll() {
@@ -391,6 +396,8 @@
 
   function talk() {
     if (S.voice) { stopVoice(); return; }
+    // A new session: the last one's "ended" no longer applies, so a dropped socket always cleans up (Codex on #70).
+    S.ended = false;
     var v = S.voice = { ws: null, stream: null, mic: null, out: null, playAt: 0, sources: [], seconds: 0, tick: 0, heard: '', said: '', turnDone: true };
     cl(spex, 'add', 'wait'); spex.querySelector('.ty-spex-talk span').textContent = W.connecting;
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).then(function (stream) {
