@@ -24,7 +24,7 @@ const PCM = Buffer.alloc(4800 * 2).toString('base64');   // 0.2 s of silence at 
 /* The relay stand-in. `plan` is what it does after admitting: a list of steps, each a message to send, or
    {wait: 'tool_response'} to wait for the page's answer to the last tool call. */
 function relay(opts) {
-  const o = Object.assign({ deny: null, plan: [], seconds: 180 }, opts || {});
+  const o = Object.assign({ deny: null, plan: [], seconds: 180, lateDenyFirst: false }, opts || {});
   const r = { hellos: [], audio: 0, responses: [], challenges: 0, o };
   return r;
 }
@@ -82,6 +82,7 @@ async function open(browser, r, opts) {
         const p = m.hello.pow || {};
         const solved = p.number === 5 && p.salt === salt && p.challenge === CHALLENGE.challenge;
         if (r.o.deny || !solved) { ws.send(JSON.stringify({ relay: { status: 'denied', reason: r.o.deny || 'demo-check' } })); return; }
+        if (r.o.lateDenyFirst && r.hellos.length === 1) { setTimeout(() => { try { ws.send(JSON.stringify({ relay: { status: 'denied', reason: 'demo-busy' } })); } catch (e) { /* closed */ } }, 1500); return; }
         ws.send(JSON.stringify({ relay: { status: 'admitted', mode: 'demo', seconds: r.o.seconds } }));
         next();
       } else if (m.realtime_input) {
@@ -232,6 +233,22 @@ const turnDone = { serverContent: { turnComplete: true } };
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
     ok('Enter on "Tap to stop" stops Spex and the mic', !(await page.locator('[data-ty-spex].ty-on').count()) && await page.evaluate(() => window.__stream.getTracks().every((t) => t.readyState === 'ended')));
+    await ctx.close();
+  });
+
+  await group('stop and start again quickly', async () => {
+    const r = relay({ lateDenyFirst: true, plan: [{ sleep: 60000 }] });
+    const { ctx, page } = await open(browser, r);
+    await page.evaluate(() => document.querySelector('[data-try]').click());
+    await page.waitForSelector('.ty-try-veil');
+    await page.click('[data-ty-talk]');
+    await page.waitForFunction(() => document.querySelector('[data-ty-spex]').className.includes('ty-wait'));
+    await page.waitForTimeout(400);
+    await page.click('[data-ty-talk]');            // stop, before the first session is answered
+    await page.click('[data-ty-talk]');            // and start again
+    await page.waitForSelector('[data-ty-spex].ty-on', { timeout: 15000 });
+    await page.waitForTimeout(2000);               // the first session's late "denied" arrives now
+    ok('a stopped session\'s late answer never touches the new one', await page.locator('[data-ty-spex].ty-on').count() === 1 && !(await page.locator('[data-ty-busy].ty-show').count()) && r.hellos.length === 2);
     await ctx.close();
   });
 

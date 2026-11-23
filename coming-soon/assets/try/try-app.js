@@ -272,7 +272,8 @@
       if (!pow || !S || S.voice !== v) return;
       var ws = v.ws = new WebSocket('wss://' + RELAY + '/');
       ws.onopen = function () { ws.send(JSON.stringify({ hello: { mode: 'demo', client: 'inspyx-web-demo', pow: pow } })); };
-      ws.onmessage = function (e) { if (typeof e.data === 'string') heard(v, e.data); };
+      // A stopped session's socket may still deliver: only the current session's messages count.
+      ws.onmessage = function (e) { if (typeof e.data === 'string' && S && S.voice === v) heard(v, e.data); };
       ws.onclose = function () { if (S && S.voice === v && !S.ended) { stopVoice(); } };
     }).catch(function (e) { if (e !== null && S && S.voice === v) { stopVoice(); showBusy(); } });
   }
@@ -318,13 +319,14 @@
     tick(); v.tick = setInterval(tick, 1000);
     var ctx = v.mic = new AudioContext();
     ctx.audioWorklet.addModule('/assets/try/mic-worklet.js').then(function () {
-      if (S.voice !== v) return;
+      // This session may have been stopped (or the demo closed) while the module loaded (Codex on #70).
+      if (!S || S.voice !== v) return;
       var src = ctx.createMediaStreamSource(v.stream), node = new AudioWorkletNode(ctx, 'mic-chunks');
       node.port.onmessage = function (e) {
         if (v.ws && v.ws.readyState === 1) v.ws.send(JSON.stringify({ realtime_input: { media_chunks: [{ mime_type: 'audio/pcm;rate=16000', data: b64(e.data) }] } }));
       };
       src.connect(node);
-    }).catch(function () { stopVoice(); showBusy(); });
+    }).catch(function () { if (S && S.voice === v) { stopVoice(); showBusy(); } });
   }
 
   function play(v, buf) {
