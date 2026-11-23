@@ -220,7 +220,8 @@
       return auth.templateFile(me + '/' + t.template_id + '/' + sha + '.json', bytes, DEADLINE).then(function (f) {
         if (f === null) { window.location.replace('/signin'); return null; }
         var there = f.status === 200 || f.inner === '409' || f.status === 409;
-        if (!there) return f.status === 413 || f.inner === '413' || f.status === 403 ? 'full' : 'add-failed';
+        // The store's own refusal of his folder (its 200 files) comes as 403; anything else, a plain failure.
+        if (!there) return f.status === 403 || f.inner === '403' ? 'full' : 'add-failed';
         var at = Math.max(Date.now(), was ? was.updated_at + 1 : 0);
         var data = { id: t.template_id, ownerAccountId: me, name: t.name, version: version, source: 'converted',
           sha256: sha, byteLength: bytes.length, createdAt: at, updatedAt: at, deletedAt: null };
