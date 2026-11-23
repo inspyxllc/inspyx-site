@@ -246,7 +246,7 @@
     return [p.photo].concat(S.photos[p.id] || []).map(function (src, n) { return { src: src, label: fill(W.photo_n, { n: n + 1 }) }; });
   }
   function showPhoto(n) { var p = S.at && place(S.at); if (!p || n < 0 || n >= photosOf(p).length) return false; S.view = n; show('photo'); setHint(null); return true; }
-  function setRate(id, c) { if (!place(id) || CONDITIONS.indexOf(c) < 0) return false; S.rates[id] = c; if (S.screen === 'item') show('item'); return true; }
+  function setRate(id, c) { if (!place(id) || CONDITIONS.indexOf(c) < 0) return false; S.rates[id] = c; if (S.screen === 'item' || S.screen === 'walk') show(S.screen); return true; }
 
   // ---- Spex's tools: the app's own (spex.py TOOLS, picked by relay/demo_voice.py), answered as the app's screen does ----
   var lc = function (v) { return clip(v, 80).toLowerCase(); };
@@ -373,7 +373,8 @@
       var word = W.rate[CONDITIONS.indexOf(want)];
       if (S.rates[at.p.id] === want) return { ok: true, item: at.p.title, mark: word, already: true };
       setRate(at.p.id, want);
-      if (S.at !== at.p.id) openPlace(at.p.id);
+      // The item marked is the one on screen, with its mark (Codex on #72: marked from the walk, the row stayed old).
+      if (S.at !== at.p.id || S.screen !== 'item') openPlace(at.p.id);
       return { ok: true, item: at.p.title, mark: word };
     }
     if (name === 'list_findings') return { findings: listAll().map(summary) };
