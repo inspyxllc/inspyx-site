@@ -57,6 +57,8 @@
 .prc-change-dialog{width:min(680px, calc(100vw - 32px))}
 .prc-dialog [data-c-only][hidden], .prc-dialog [data-c-help][hidden], .prc-dialog [data-c-noq][hidden]{display:none}
 .prc-dialog [data-c-only]{display:grid; gap:8px}
+.prc-dialog div[data-c-edits]{display:grid; gap:14px}
+.prc-dialog [data-c-edits][hidden]{display:none !important}
 .prc-tiers-head, .prc-tier{display:grid; grid-template-columns:1fr 1fr 1fr 0.8fr 64px; gap:8px; align-items:center}
 .prc-tiers-head{font-size:12.5px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em}
 .prc-tiers{list-style:none; padding:0; margin:0; display:grid; gap:8px}

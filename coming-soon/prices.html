@@ -162,6 +162,8 @@
 <form data-form="change" novalidate>
 <h2 id="c-title"><span data-ctitle="new">A new price change</span><span data-ctitle="edit" hidden>Price change</span></h2>
 <p class="prc-note" data-c-service></p>
+<p class="prc-note" data-c-kept hidden>This price change was made on a newer version of the app, in a way this page can’t show yet. It stays exactly as it is; you can delete it here.</p>
+<div data-c-edits>
 <label>What it reads<select name="basis">
 <option value="square_feet">Square feet</option><option value="year_built">Year built</option><option value="age">Age of the house</option><option value="zip">Zip code</option><option value="distance">Distance (miles)</option><option value="foundation">Foundation</option><option value="yes_no_question">Your question (yes or no)</option><option value="number_question">Your question (a number)</option>
 </select></label>
@@ -189,8 +191,9 @@
 <label>Hours<input type="text" name="perHours" inputmode="decimal"></label>
 <small>"Past 3,000, for each 500, adds $25": a house of 3,600 square feet is 2 units past (any part of a unit counts as one), so it adds $50.</small>
 </div>
+</div>
 <div class="prc-problems" role="alert" data-c-problem hidden></div>
-<div class="prc-actions"><button class="btn small" type="submit">Save</button><button class="btn small quiet" type="button" data-close>Cancel</button><button class="link danger" type="button" data-cdelete hidden><span data-carm="0">Delete</span><span data-carm="1" hidden>Delete it: tap again</span></button></div>
+<div class="prc-actions"><button class="btn small" type="submit" data-c-edits>Save</button><button class="btn small quiet" type="button" data-close>Cancel</button><button class="link danger" type="button" data-cdelete hidden><span data-carm="0">Delete</span><span data-carm="1" hidden>Delete it: tap again</span></button></div>
 </form>
 </dialog>
 
@@ -208,7 +211,7 @@
 <template data-t="tier"><li class="prc-tier"><input type="text" data-k="from" inputmode="numeric" aria-label="From"><input type="text" data-k="to" inputmode="numeric" aria-label="To"><input type="text" data-k="fee" inputmode="decimal" aria-label="Adds $"><input type="text" data-k="hours" inputmode="decimal" aria-label="Hours"><button class="link" type="button" data-remove aria-label="Remove this line">Remove</button></li></template>
 <template data-t="line"><li class="prc-tier prc-line"><span class="prc-vals" data-vals></span><input type="text" data-k="fee" inputmode="decimal" aria-label="Adds $"><input type="text" data-k="hours" inputmode="decimal" aria-label="Hours"><button class="link" type="button" data-remove aria-label="Remove this line">Remove</button></li></template>
 <template data-t="cwords"><div>
-<span data-w="q-yes_no">Yes or no</span><span data-w="q-number">A number</span>
+<span data-w="q-missing">A question not on your list</span><span data-w="q-yes_no">Yes or no</span><span data-w="q-number">A number</span>
 <span data-w="yes">Yes</span><span data-w="no">No</span>
 <span data-w="zip-placeholder">33601, 33602</span>
 <span data-w="f-Slab">Slab</span><span data-w="f-Crawlspace">Crawlspace</span><span data-w="f-Basement">Basement</span><span data-w="f-Pier and beam">Pier and beam</span>

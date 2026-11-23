@@ -198,8 +198,13 @@
       var sel = cForm.elements.question, want = basis === 'yes_no_question' ? 'yes_no' : 'number', qs = questions().filter(function (q) { return q.kind === want; });
       sel.textContent = '';
       qs.forEach(function (q) { var o = document.createElement('option'); o.value = q.id; o.textContent = q.name; sel.appendChild(o); });
+      // A question not on this list (deleted, not here yet, or of the other kind) stays the one it reads, shown
+      // as such: editing never moves a change to another question (the lead's sweep after Codex on #78).
+      if (c && c.questionId && !qs.some(function (q) { return q.id === c.questionId; })) {
+        var gone = document.createElement('option'); gone.value = c.questionId; gone.textContent = words('q-missing'); sel.appendChild(gone);
+      }
       if (c && c.questionId) sel.value = c.questionId;
-      $('[data-c-noq]', cForm).hidden = qs.length > 0;
+      $('[data-c-noq]', cForm).hidden = qs.length > 0 || sel.options.length > 0;
     }
     $('[data-c-only="mode"]', cForm).hidden = !perOk;
     if (!perOk) all('input[name="mode"]', cForm).forEach(function (r) { r.checked = r.value === 'ranges'; });
@@ -240,11 +245,37 @@
     else c.tiers = (json && Array.isArray(json.tiers) ? json.tiers : []).map(function (t) { return { from: t.from == null ? null : t.from, to: t.to == null ? null : t.to, values: t.values || [], fee_cents: t.fee_cents, minutes: t.minutes || 0 }; });
     return c;
   }
+  /* Whether this page can show [row] as it is: a basis and a way it knows, and ranges or a unit it can read. One it
+     can't (made on a newer phone, say) is kept exactly as it is, never rewritten by an edit here: it can only be
+     deleted (the lead's sweep after Codex on #78: no value outside the form's choices is ever dropped). */
+  function showable(row) {
+    var known = [].some.call(cForm.elements.basis.options, function (o) { return o.value === row.basis; });
+    if (!known || (row.mode !== 'ranges' && row.mode !== 'per_unit_over')) return false;
+    if (row.mode === 'per_unit_over' && !PER_UNIT(row.basis)) return false;
+    var json = null, int = function (v) { return typeof v === 'number' && Math.floor(v) === v; };
+    try { json = JSON.parse(row.tiersJson); } catch (e) { return false; }
+    if (row.mode === 'per_unit_over') return !!json && [json.over, json.unit, json.fee_cents, json.minutes].every(int);
+    return !!json && Array.isArray(json.tiers) && json.tiers.every(function (t) {
+      return t && int(t.fee_cents) && (t.minutes == null || int(t.minutes)) && (t.from == null || int(t.from)) && (t.to == null || int(t.to)) &&
+        (t.values == null || (Array.isArray(t.values) && t.values.every(function (v) { return typeof v === 'string'; })));
+    });
+  }
   function openChange(row, serviceId) {
     var svc = P.held('price_services', serviceId);
     editingC = { row: row, serviceId: serviceId };
     showOne(cForm, 'data-ctitle', row ? 'edit' : 'new');
     $('[data-c-service]', cForm).textContent = svc ? svc.name : '';
+    var kept = !!row && !showable(row);
+    $('[data-c-kept]', cForm).hidden = !kept;
+    all('[data-c-edits]', cForm).forEach(function (x) { x.hidden = kept; });
+    if (kept) {
+      $('[data-c-problem]', cForm).hidden = true;
+      var d0 = $('[data-cdelete]', cForm);
+      d0.hidden = false; d0.setAttribute('data-armed', '0'); showOne(d0, 'data-carm', '0');
+      P.say('');
+      cDialog.showModal();
+      return;
+    }
     var c = row ? parsed(row) : null;
     cForm.elements.basis.value = c ? c.basis : 'square_feet';
     all('input[name="mode"]', cForm).forEach(function (r) { r.checked = r.value === (c ? c.mode : 'ranges'); });
@@ -322,6 +353,7 @@
   }
   cForm.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (!$('[data-c-kept]', cForm).hidden) return;
     var c = fromForm(), box = $('[data-c-problem]', cForm);
     var p = c.problem || problem(c);
     box.textContent = p || ''; box.hidden = !p;

@@ -331,6 +331,39 @@ const fill = async (loc, v) => { await loc.fill(''); if (v !== '') await loc.fil
     await ctx.close();
   });
 
+  // The lead's sweep after Codex on #78: a value outside the form's choices is never dropped by an edit here.
+  await group('values outside the form\'s choices are kept', async () => {
+    const s = server(); seed(s); withQuestions(s);
+    const base = { ownerAccountId: ME, createdAt: T, updatedAt: T, deletedAt: null };
+    const mod = (id, extra) => s.put(s.row('price_modifiers', Object.assign({ id, serviceId: 'svc-condo', position: 0, questionId: null }, base, extra)));
+    mod('k-basis', { basis: 'lot_size', mode: 'ranges', tiersJson: JSON.stringify({ tiers: [{ from: null, to: null, fee_cents: 1500, minutes: 0 }] }) });
+    mod('k-mode', { basis: 'square_feet', mode: 'stepped', tiersJson: JSON.stringify({ steps: [1, 2] }) });
+    mod('k-per', { basis: 'zip', mode: 'per_unit_over', tiersJson: JSON.stringify({ over: 1, unit: 1, fee_cents: 100, minutes: 0 }) });
+    mod('k-question', { basis: 'yes_no_question', questionId: 'q-not-here', mode: 'ranges', tiersJson: JSON.stringify({ tiers: [{ values: ['yes'], fee_cents: 1000, minutes: 0 }] }) });
+    const { page, ctx, errs, calls } = await open(browser, { server: s });
+    for (const id of ['k-basis', 'k-mode', 'k-per']) {
+      await card(page, 'Condo inspection').locator(`[data-edit-change="${id}"]`).click();
+      ok(id + ': opens kept as it is, with no Save, only Delete', await page.isVisible('[data-c-kept]') && !(await page.isVisible('[data-form="change"] [type="submit"]')) && await page.isVisible('[data-cdelete]'));
+      await page.evaluate(() => document.querySelector('[data-form="change"]').requestSubmit());
+      await page.click('[data-form="change"] [data-close]');
+    }
+    if (SHOTS) { await card(page, 'Condo inspection').locator('[data-edit-change="k-basis"]').click(); await shot(page, '13-change-kept'); await page.click('[data-form="change"] [data-close]'); }
+    ok('nothing was rewritten', !pushed(calls).some((r) => r.kind === 'price_modifiers'));
+    await card(page, 'Condo inspection').locator('[data-edit-change="k-mode"]').click();
+    await page.click('[data-cdelete]'); await page.click('[data-cdelete]');
+    ok('one kept as it is can be deleted, its ranges untouched', await until(() => pushed(calls).some((r) => r.id === 'k-mode' && r.deleted_at !== null && r.data.mode === 'stepped' && r.data.tiersJson === JSON.stringify({ steps: [1, 2] }))));
+    await card(page, 'Condo inspection').locator('[data-edit-change="k-question"]').click();
+    ok('a question not on the list stays the one it reads, shown as such', await page.evaluate(() => {
+      const sel = document.querySelector('[name="question"]');
+      return sel.value === 'q-not-here' && sel.options[sel.selectedIndex].textContent === 'A question not on your list';
+    }));
+    await fill(page.locator('[data-lines] [data-k="fee"]').first(), '12');
+    await page.click('[data-form="change"] [type="submit"]');
+    ok('saved, it still reads that question', await until(() => pushed(calls).some((r) => r.id === 'k-question' && r.data.questionId === 'q-not-here' && JSON.parse(r.data.tiersJson).tiers[0].fee_cents === 1200)));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
   await group('editing and deleting', async () => {
     const s = server(); seed(s); withQuestions(s);
     const base = { ownerAccountId: ME, createdAt: T, updatedAt: T, deletedAt: null };
