@@ -50,11 +50,12 @@ async function open(browser, r, opts) {
     const u = new URL(route.request().url());
     if (u.origin === HOME) {
       if (o.on && u.pathname === '/assets/try/try.js') {
-        return route.fulfill({ status: 200, contentType: 'text/javascript', body: fs.readFileSync(path.join(SITE, 'assets/try/try.js'), 'utf8').replace('var ON = false || !LIVE;', 'var ON = true;') });
+        // As on inspyx.com itself (public since 2026-11-23): its own hostname, the file as it ships.
+        return route.fulfill({ status: 200, contentType: 'text/javascript', body: fs.readFileSync(path.join(SITE, 'assets/try/try.js'), 'utf8').replace('location.hostname', "'inspyx.com'") });
       }
       if (!o.on && u.pathname === '/assets/try/try.js') {
-        // As on inspyx.com itself: the live domain, switched off.
-        return route.fulfill({ status: 200, contentType: 'text/javascript', body: fs.readFileSync(path.join(SITE, 'assets/try/try.js'), 'utf8').replace("location.hostname", "'inspyx.com'") });
+        // The one switch thrown: off, on inspyx.com.
+        return route.fulfill({ status: 200, contentType: 'text/javascript', body: fs.readFileSync(path.join(SITE, 'assets/try/try.js'), 'utf8').replace('var ON = true;', 'var ON = false;') });
       }
       return route.continue();
     }
@@ -109,6 +110,7 @@ const turnDone = { serverContent: { turnComplete: true } };
     const r = relay(); const { ctx, page } = await open(browser, r, { on: false });
     await page.waitForTimeout(800);
     ok('with its switch off, the home page shows nothing new', (await page.locator('[data-try]').count()) === 0 && r.challenges === 0);
+    ok('the switch ships on (public since 2026-11-23)', /\n  var ON = true;\n/.test(fs.readFileSync(path.join(SITE, 'assets/try/try.js'), 'utf8')));
     await ctx.close();
   });
 
