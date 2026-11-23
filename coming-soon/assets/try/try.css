@@ -14,7 +14,7 @@
 .ty-try-veil{position:fixed; inset:0; z-index:1000; display:grid; place-items:center; background:rgba(8,12,20,.62); backdrop-filter:blur(10px) saturate(1.1); animation:try-fade .35s ease}
 @keyframes try-fade{from{opacity:0}}
 .ty-try-x{position:absolute; top:22px; right:26px; width:48px; height:48px; border-radius:50%; border:0; background:rgba(255,255,255,.14); color:#fff; font:400 28px/1 sans-serif; cursor:pointer}
-.ty-try-side{position:absolute; left:calc(50% + 230px); top:50%; transform:translateY(-50%); width:300px; color:#fff; font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+.ty-try-side{position:absolute; left:calc(50% + 40px + 195px * var(--s,1)); top:50%; transform:translateY(-50%); width:300px; color:#fff; font-family:-apple-system,BlinkMacSystemFont,sans-serif}
 .ty-try-side h2{font-size:30px; letter-spacing:-.02em; line-height:1.1}
 .ty-try-side p{margin-top:12px; font-size:16px; line-height:1.5; color:rgba(255,255,255,.78)}
 .ty-try-side ul{margin-top:18px; padding:0; list-style:none; display:grid; gap:10px}
@@ -24,8 +24,8 @@
 
 /* the iPhone */
 .ty-iph{position:relative; width:390px; height:844px; border-radius:62px; padding:13px; background:linear-gradient(145deg,#4A4D52,#1C1D20 40%,#3A3C40);
-  box-shadow:0 0 0 2px #6B6E73, 0 50px 90px -30px rgba(0,0,0,.8), inset 0 0 6px rgba(255,255,255,.25); transform:scale(var(--s,1)); animation:try-rise .5s cubic-bezier(.2,.8,.2,1)}
-@keyframes try-rise{from{transform:translateY(40px) scale(.96); opacity:0}}
+  box-shadow:0 0 0 2px #6B6E73, 0 50px 90px -30px rgba(0,0,0,.8), inset 0 0 6px rgba(255,255,255,.25); position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(var(--s,1)); animation:try-rise .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes try-rise{from{transform:translate(-50%,calc(-50% + 40px)) scale(calc(var(--s,1) * .96)); opacity:0} to{transform:translate(-50%,-50%) scale(var(--s,1)); opacity:1}}
 .ty-iph::before{content:""; position:absolute; left:-3px; top:180px; width:4px; height:64px; border-radius:2px; background:#3A3C40; box-shadow:0 84px 0 #3A3C40}
 .ty-iph::after{content:""; position:absolute; right:-3px; top:230px; width:4px; height:96px; border-radius:2px; background:#3A3C40}
 .ty-iph-screen{position:relative; width:100%; height:100%; border-radius:50px; overflow:hidden; background:var(--a-page); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; color:var(--a-ink)}
@@ -107,7 +107,7 @@
 @media (max-width: 600px){
   .ty-try-veil{background:var(--a-page); backdrop-filter:none}
   .ty-try-side{display:none}
-  .ty-iph{position:fixed; inset:0; width:auto; height:auto; border-radius:0; padding:0; background:none; box-shadow:none; transform:none}
+  .ty-iph{position:fixed; inset:0; width:auto; height:auto; border-radius:0; padding:0; background:none; box-shadow:none; transform:none; animation:none}
   .ty-iph::before, .ty-iph::after, .ty-iph-island, .ty-iph-glare, .ty-iph-status{display:none}
   .ty-iph-screen{border-radius:0}
   .ty-scr{padding-top:58px}
@@ -148,3 +148,10 @@
   background:linear-gradient(rgba(242,243,245,0), var(--a-page) 46%)}
 .ty-iph-screen.ty-cam-on::after{display:none}
 .ty-iph-screen.ty-cam-on .ty-iph-status{color:#fff}
+/* A short window: the side panel tightens and never runs off the screen (it scrolls as a last resort). */
+.ty-try-side{max-height:calc(100vh - 32px); overflow:auto}
+@media (max-height: 760px){
+  .ty-try-side h2{font-size:24px} .ty-try-side p{margin-top:8px; font-size:14.5px}
+  .ty-try-side ul{margin-top:10px; gap:6px} .ty-try-side li{padding:7px 12px; font-size:14px}
+  .ty-try-credits{margin-top:8px}
+}

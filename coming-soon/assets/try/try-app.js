@@ -264,11 +264,12 @@
     var v = S.voice = { ws: null, stream: null, mic: null, out: null, playAt: 0, sources: [], seconds: 0, tick: 0, heard: '', said: '', turnDone: true };
     cl(spex, 'add', 'wait'); spex.querySelector('.ty-spex-talk span').textContent = W.connecting;
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).then(function (stream) {
-      if (S.voice !== v) { stream.getTracks().forEach(function (t) { t.stop(); }); return null; }
+      // Closed, or stopped, while the browser asked: the mic goes off at once (Codex on #70).
+      if (!S || S.voice !== v) { stream.getTracks().forEach(function (t) { t.stop(); }); return null; }
       v.stream = stream;
       return S.pow;
-    }, function () { noMic(); throw null; }).then(function (pow) {
-      if (!pow || S.voice !== v) return;
+    }, function () { if (S && S.voice === v) noMic(); throw null; }).then(function (pow) {
+      if (!pow || !S || S.voice !== v) return;
       var ws = v.ws = new WebSocket('wss://' + RELAY + '/');
       ws.onopen = function () { ws.send(JSON.stringify({ hello: { mode: 'demo', client: 'inspyx-web-demo', pow: pow } })); };
       ws.onmessage = function (e) { if (typeof e.data === 'string') heard(v, e.data); };
@@ -391,6 +392,13 @@
   }
 
   function onKey(e) { if (e.key === 'Escape') close(); }
+  /* The phone fits the window: scaled down on a short (or narrow) desktop window, so "Talk to Spex" is always in
+     view (Codex on #70). On a phone-sized screen the demo fills it and needs no scale. */
+  function fit() {
+    if (!root) return;
+    var s = Math.min(1, (window.innerHeight - 32) / 870, (window.innerWidth - 32) / 400);
+    root.style.setProperty('--s', String(Math.max(0.5, s)));
+  }
 
   function open(opener) {
     if (S) return;
@@ -402,6 +410,7 @@
     S.overflow = document.documentElement.style.overflow;
     document.documentElement.style.overflow = 'hidden';
     document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', fit); fit();
     root.querySelector('.ty-try-x').focus();
     // The bot check, while the visitor looks around: usually done before they tap "Talk to Spex".
     S.pow = solveChallenge(); S.pow.catch(function () {});
@@ -412,6 +421,7 @@
     stopVoice();
     if (S.worker) S.worker.terminate();
     document.removeEventListener('keydown', onKey);
+    window.removeEventListener('resize', fit);
     document.documentElement.style.overflow = S.overflow || '';
     var opener = S.opener;
     root.remove(); root = null; screen = null; S = null;

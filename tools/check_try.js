@@ -244,6 +244,33 @@ const turnDone = { serverContent: { turnComplete: true } };
     await ctx.close();
   });
 
+  await group('a short desktop window', async () => {
+    const r = relay(); const { ctx, page } = await open(browser, r, { width: 1280, height: 600 });
+    await page.evaluate(() => document.querySelector('[data-try]').click());
+    await page.waitForSelector('.ty-try-veil'); await page.waitForTimeout(700);
+    const b = await page.evaluate(() => { const r = document.querySelector('[data-ty-talk]').getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom), innerHeight]; });
+    ok('"Talk to Spex" is in view on a short window (the phone is scaled to fit)', b[0] >= 0 && b[1] <= b[2], b.join(','));
+    await ctx.close();
+  });
+
+  await group('closing while the browser asks for the mic', async () => {
+    const r = relay(); const { ctx, page } = await open(browser, r, { mic: false });
+    await page.evaluate(() => {
+      // The visitor allows the mic only after closing the demo.
+      navigator.mediaDevices.getUserMedia = () => new Promise((res) => {
+        window.__grant = () => { const a = new AudioContext(), d = a.createMediaStreamDestination(); a.createOscillator().connect(d); window.__late = d.stream; res(d.stream); };
+      });
+    });
+    await page.evaluate(() => document.querySelector('[data-try]').click());
+    await page.waitForSelector('.ty-try-veil');
+    await page.click('[data-ty-talk]');
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => window.__grant());
+    await page.waitForTimeout(400);
+    ok('the mic allowed after closing goes off at once', await page.evaluate(() => window.__late.getTracks().every((t) => t.readyState === 'ended')) && r.hellos.length === 0 && page.errors.length === 0, page.errors.join(' | '));
+    await ctx.close();
+  });
+
   await group('on a phone', async () => {
     const r = relay(); const { ctx, page } = await open(browser, r, { width: 390, height: 844, phone: true });
     await page.evaluate(() => document.querySelector('[data-try]').click());
