@@ -113,6 +113,16 @@ async function fillBasics(page) {
     await ctx.close();
   });
 
+  await group('the how-to', async () => {
+    const { page, ctx, errs } = await open(browser, { email: true });
+    ok('a how-to over the form, three steps', (await vis(page, '.new-how-step')).join(' | ') === 'Write the house, the client and the service | Tap a time in your booking hours, then Book it | It’s on your calendar now, and on your phone next sync');
+    ok('it moves', await page.evaluate(() => document.getAnimations().filter((a) => a.effect && a.effect.target && a.effect.target.closest('.new-how')).length >= 8));
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    ok('with motion turned down, it stands still on the result', await page.evaluate(() => getComputedStyle(document.querySelector('.new-how-c')).opacity === '1' && getComputedStyle(document.querySelector('.new-how-finger')).display === 'none'));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
   await group('booking, warned, then anyway', async () => {
     const { page, ctx, errs, asks } = await open(browser, { email: false });
     ok('his switch is off: the email is unticked, and it says so', !(await page.isChecked('[name="emailClient"]')) && (await vis(page, '[data-email-why]')).join() === '(your confirmation email is off; tick to send it this once)');
