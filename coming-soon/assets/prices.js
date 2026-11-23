@@ -292,7 +292,8 @@
     svcForm.elements.fee.value = data ? centsText(data.feeCents) : '';
     svcForm.elements.hours.value = data ? hoursText(data.minutes) : '';
     svcForm.elements.minimum.value = data && data.minimumFeeCents != null ? centsText(data.minimumFeeCents) : '';
-    svcForm.elements.taxName.value = data && typeof data.taxName === 'string' ? data.taxName : '';
+    // Pre-filled "Sales tax" (his pick A, 2026-11-23); an empty percent is no tax.
+    svcForm.elements.taxName.value = data && typeof data.taxName === 'string' ? data.taxName : svcForm.elements.taxName.getAttribute('placeholder');
     svcForm.elements.taxRate.value = data && typeof data.taxRate === 'number' ? String(data.taxRate / 100) : '';
     $('[data-delete]', svcForm).hidden = !data;
     armDelete(svcForm, false);
@@ -319,7 +320,7 @@
     }
     // Sales tax (his pick 3, 2026-11-16): none, or a name and 0.01% to 100% (PriceServiceFields.taxProblem).
     var taxName = null, taxRate = null;
-    if (!addOn && (f.taxName.value.trim() !== '' || f.taxRate.value.trim() !== '')) {
+    if (!addOn && f.taxRate.value.trim() !== '') {
       taxRate = parsePercent(f.taxRate.value);
       if (taxRate === null) return { problem: 'tax-rate' };
       taxName = f.taxName.value.trim();

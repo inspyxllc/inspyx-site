@@ -443,6 +443,8 @@ const fill = async (loc, v) => { await loc.fill(''); if (v !== '') await loc.fil
     const { page, ctx, errs, calls } = await open(browser, { server: s });
     const home = card(page, 'Home inspection');
     await home.locator('[data-edit]').first().click();
+    ok('the name comes pre-filled', await page.evaluate(() => document.querySelector('[name="taxName"]').value === 'Sales tax'));
+    await page.fill('[data-form="service"] [name="taxName"]', '');
     await page.fill('[data-form="service"] [name="taxRate"]', '7');
     const n = pushed(calls).length;
     await page.click('[data-form="service"] [type="submit"]');
@@ -459,9 +461,9 @@ const fill = async (loc, v) => { await loc.fill(''); if (v !== '') await loc.fil
     ok('the card says so', await until(async () => (await home.locator('[data-v="summary"]').first().innerText()).includes('Sales tax 7.25%')));
     await home.locator('[data-edit]').first().click();
     ok('it opens with its tax', await page.evaluate(() => document.querySelector('[name="taxName"]').value === 'Sales tax' && document.querySelector('[name="taxRate"]').value === '7.25'));
-    await page.fill('[data-form="service"] [name="taxName"]', ''); await page.fill('[data-form="service"] [name="taxRate"]', '');
+    await page.fill('[data-form="service"] [name="taxRate"]', '');
     await page.click('[data-form="service"] [type="submit"]');
-    ok('emptied, the tax is gone', await until(() => pushed(calls).filter((r) => r.id === 'svc-home').pop().data.taxRate === null));
+    ok('its percent emptied, the tax is gone (the name may stay)', await until(() => pushed(calls).filter((r) => r.id === 'svc-home').pop().data.taxRate === null));
     await page.locator('.prc-addon', { hasText: 'Radon test' }).locator('[data-edit]').first().click();
     ok('an add-on has no tax to set', !(await page.isVisible('[data-form="service"] [name="taxRate"]')));
     await page.fill('[data-form="service"] [name="fee"]', '160');
