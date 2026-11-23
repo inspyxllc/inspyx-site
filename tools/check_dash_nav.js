@@ -86,6 +86,12 @@ async function open(browser, path, w) {
     await page.click('.dash-more summary');
     const more = await page.evaluate(() => [...document.querySelectorAll('.dash-more ul a')].filter((a) => a.getClientRects().length).map((a) => a.getAttribute('href')));
     ok('phone: More opens the other six', JSON.stringify(more) === JSON.stringify(ITEMS.slice(4)), JSON.stringify(more));
+    await page.keyboard.press('Escape');
+    ok('phone: Escape closes More', !(await page.evaluate(() => document.querySelector('.dash-more').open)));
+    await page.click('.dash-more summary');
+    await page.mouse.click(200, 300);
+    ok('phone: a tap elsewhere closes More', !(await page.evaluate(() => document.querySelector('.dash-more').open)));
+    await page.click('.dash-more summary');
     if (SHOTS) await page.screenshot({ path: SHOTS + '/31-nav-phone-more.png' });
     await page.click('.dash-more ul a[href="/agreements"]');
     ok('phone: an item there opens its page', await page.waitForURL(/\/agreements$/).then(() => true, () => false));

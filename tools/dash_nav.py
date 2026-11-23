@@ -44,6 +44,8 @@ for page, here in PAGES.items():
     s = re.sub(r'<nav class="dash" aria-label="Your dashboard">.*?</nav>\n', '', s, flags=re.S)
     assert s.count('</header>\n') == 1, p
     s = s.replace('</header>\n', '</header>\n' + nav(here), 1)
+    # A class on the body says the page has the nav (sturdier than :has(), which an older Safari lacks).
+    s = s.replace('<body>', '<body class="has-dash">', 1)
     if '/assets/dash.css' not in s:
         s = s.replace('<link rel="stylesheet" href="/assets/app.css">', '<link rel="stylesheet" href="/assets/app.css">\n<link rel="stylesheet" href="/assets/dash.css">', 1)
         assert '/assets/dash.css' in s, p
