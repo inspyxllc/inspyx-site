@@ -26,7 +26,14 @@ const kept = (n, endsInMs) => JSON.stringify({ access: 'test-access-' + n, renew
 
 // The words of the two pages, as drafted on 2026-11-12. They wait for Moises's approval; once he gives it, they are
 // his words, and a change here needs his word too. The sentences about a failed sign-in are the app's own.
-const SIGNIN_WORDS = ['h1: Welcome back.', 'button: Continue with Google', 'p: or with your email', 'label: Email', 'label: Password',
+const SIGNIN_WORDS = ['h1: Welcome back.', 'button: Continue with Google', 'button: Email me a sign-in link',
+  // The sign-in link (2026-11-23, the lead's order for his test account): drafted words, as above.
+  'label: Email',
+  'p: If an Inspyx account uses that address, a sign-in link is on its way. Open it on this computer or on your phone. It works once and expires in 1 hour.',
+  'p: Inspyx could not reach the sign-in server. Check your connection and try again.',
+  'p: The sign-in server refused the request. Try again later.',
+  'p: You can send another link in 60 seconds.', 'button: Send the link', 'p: Rather type your password? Use your password',
+  'p: or with your email and password', 'label: Email', 'label: Password',
   'p: That email or password was not accepted. Check both and try again.',
   'p: Inspyx could not reach the sign-in server. Check your connection and try again.',
   'p: The sign-in server answered in an unexpected way. No session was created.',
@@ -117,7 +124,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
           robots: (q('meta[name=robots]') || {}).content, title: document.title, h1: document.querySelectorAll('h1').length,
           em: { type: em.type, auto: em.autocomplete, label: (q('label[for="signin-email"]') || {}).textContent, req: em.required, h: box(em).h },
           pw: { type: pw.type, auto: pw.autocomplete, label: (q('label[for="signin-password"]') || {}).textContent, req: pw.required, h: box(pw).h },
-          method: form.getAttribute('method'), action: form.getAttribute('action'), btn: box(q('[data-signin] button')).h, logo: box(q('.signin .logo')).h, wait: box(q('.help .line')).h,
+          method: form.getAttribute('method'), action: form.getAttribute('action'), btn: box(q('[data-signin] button')).h, logo: box(q('.signin .logo')).h, wait: box(q('main > .help .line')).h,
           said: [...document.querySelectorAll('[data-say]')].filter((p) => !p.hidden).length,
           stage: { hidden: stage.getAttribute('aria-hidden'), box: box(stage), phone: box(q('.phone3')), sides, focusable: stage.querySelectorAll('a, button, input, [tabindex]').length },
           font: getComputedStyle(document.body).fontFamily, foot: [...document.querySelectorAll('footer nav a')].map((a) => a.getAttribute('href')).join(',')
@@ -130,7 +137,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
       const s = r.stage, inside = (b) => b.l >= s.box.l - 2 && b.r <= s.box.r + 2 && b.t >= s.box.t - 2 && b.b <= s.box.b + 2;
       ok('sign-in page, ' + label + ': the picture beside the form is hidden from screen readers, holds nothing to tab to, and is whole (' + (desktop ? 'the phone and its three cards' : 'the phone alone') + ')', s.hidden === 'true' && s.focusable === 0 && inside(s.phone) && s.sides.length === (desktop ? 3 : 0) && s.sides.every(inside), JSON.stringify({ stage: s.box, phone: s.phone, cards: s.sides.length }));
       const words = await page.evaluate(read);
-      ok('sign-in page, ' + label + ': its words are the drafted ones', JSON.stringify(words) === JSON.stringify(SIGNIN_WORDS), JSON.stringify(words.filter((x, i) => x !== SIGNIN_WORDS[i]).slice(0, 2)));
+      ok('sign-in page, ' + label + ': its words are the drafted ones', JSON.stringify(words) === JSON.stringify(SIGNIN_WORDS), JSON.stringify(words.filter((x, i) => x !== SIGNIN_WORDS[i]).slice(0, 2)) + (process.env.SHOW_WORDS ? ' ALL=' + JSON.stringify(words) : ''));
       await ctx.close();
     });
   }
@@ -455,8 +462,8 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const safari = engine.name() === 'webkit';
     const here = () => page.evaluate(() => { const e = document.activeElement; return e.id || e.getAttribute('aria-label') || e.textContent.trim().slice(0, 18); });
     const order = [];
-    for (let i = 0; i < 6; i++) { await page.keyboard.press(safari ? 'Alt+Tab' : 'Tab'); order.push(await here()); }
-    ok('the Tab key goes: logo, Google, email, password, Sign in, then the help lines; never into the picture', order[0] === 'Inspyx, home' && order[1] === 'Continue with Goog' && order[2] === 'signin-email' && order[3] === 'signin-password' && order[4] === 'Sign in' && order[5] === 'Reset it', order.join(' > '));
+    for (let i = 0; i < 7; i++) { await page.keyboard.press(safari ? 'Alt+Tab' : 'Tab'); order.push(await here()); }
+    ok('the Tab key goes: logo, Google, the sign-in link, email, password, Sign in, then the help lines; never into the picture', order[0] === 'Inspyx, home' && order[1] === 'Continue with Goog' && order[2] === 'Email me a sign-in' && order[3] === 'signin-email' && order[4] === 'signin-password' && order[5] === 'Sign in' && order[6] === 'Reset it', order.join(' > '));
     if (safari) {
       await page.focus('#signin-email'); await page.keyboard.press('Tab');
       ok('in Safari the plain Tab key goes from the email box to the password box', (await here()) === 'signin-password', await here());

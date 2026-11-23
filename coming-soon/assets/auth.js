@@ -374,6 +374,54 @@
     });
   }
 
+  /* A sign-in link by email (2026-11-23, his order: "make sure it's done right"). For an inspector who would rather
+     not type a password, and for signing in on another device: the link opens the app on a phone that has it, the
+     website anywhere else.
+     linkRequest asks the account server to email a link to an account that already exists (create_user: false:
+     this never makes an account). Its answer never says whether an account uses the address: the server answers
+     an unknown address (422) and a second request too soon for a real one (429) differently, so all three are the
+     same 'sent' here, and the page waits a minute before another either way. Only a server that can't be reached
+     (network) or fails (server) says otherwise.
+     linkTake reads the link's one-time key from the address's fragment (#token_hash=...&type=magiclink): a fragment
+     never leaves the browser, so the key reaches no server's log and no other site's Referer. It is taken out of the
+     address at once, before anything else happens; linkVerify exchanges it once (POST /verify, no PKCE verifier, so a link
+     asked for on one device works on another). The server makes each key good once and for a limited time.
+     'missing': the page was opened without a key. More trouble: expired (used already, too old, or not a key). */
+  var LINK_KEY = /^[A-Za-z0-9_-]{20,256}$/;
+  function linkRequest(email) {
+    return send('POST', BASE + '/otp', null, { email: email, create_user: false }).then(function (r) {
+      if (r.status === 200 || r.status === 422 || r.status === 429) return 'sent';
+      throw new Refusal('server', r.status);
+    });
+  }
+  function linkKey(fragment) {
+    var h;
+    try { h = new URLSearchParams(String(fragment || '').replace(/^#/, '')); } catch (e) { return { kind: 'expired' }; }
+    var key = h.get('token_hash'), type = h.get('type'), error = h.get('error') || h.get('error_code');
+    if (!key && !error) return { kind: 'missing' };
+    if (error || type !== 'magiclink' || !LINK_KEY.test(key || '')) return { kind: 'expired' };
+    return { kind: 'key', key: key };
+  }
+  // The key, taken out of the address at once; kept by the page (in memory only) so a check that could not reach
+  // the server can be tried again without the link.
+  function linkTake() {
+    var found = linkKey(root.location.hash);
+    if (root.location.hash || root.location.search) {
+      try { root.history.replaceState(null, '', root.location.pathname); } catch (e) { /* the key stays in the address; it is good once */ }
+    }
+    return found;
+  }
+  function linkVerify(key) {
+    if (!LINK_KEY.test(String(key || ''))) return Promise.reject(new Refusal('expired'));
+    return send('POST', BASE + '/verify', null, { type: 'magiclink', token_hash: key }).then(function (r) {
+      if (r.status >= 400 && r.status < 500 && r.status !== 429) throw new Refusal('expired', r.status);
+      if (r.status !== 200) throw new Refusal('server', r.status);
+      var s = whole(r.json);
+      if (!keep(s)) { send('POST', BASE + '/logout?scope=local', s.access).then(function () {}, function () {}); throw new Refusal('storage'); }
+      return s;
+    });
+  }
+
   /* Making an account (2026-11-13; his rules: anyone may sign up, with Google or an email and a password; every
      account also has a password; the Terms tick is required). Nothing here opens sign-up: while the account server
      refuses new accounts, signUp answers 'closed'.
@@ -463,7 +511,7 @@
     });
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword, choices: choices, choose: choose };
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, linkRequest: linkRequest, linkKey: linkKey, linkTake: linkTake, linkVerify: linkVerify, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword, choices: choices, choose: choose };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the dashboard (/today, since 2026-11-15). It asks three times:
