@@ -5,7 +5,10 @@
    On a wide screen the month is a grid of weeks; on a phone it is the list of the days that have inspections.
    Day and Week (2026-11-23, job 4 of the lead's inspector review): the hours of a day, or of a week from Sunday, with
    each inspection at its start time (/calendar#week-2026-11-22, /calendar#day-2026-11-23). No inspection says when it
-   ends, so each shows as a block of HOLD minutes from its start, and only its start time is written. On a phone the
+   ends; one made from a booking takes the booking's length (the quote's hours, price changes and add-ons in), and
+   says its end ("9:00 – 12:00 PM"); any other is a block of HOLD minutes with only its start written. A booking the
+   phone hasn't made an inspection of yet shows too, marked so. Blocks sit side by side only where their times meet.
+   The bookings come from the sync function, read only (an empty push), as /booking reads them. On a phone the
    week is the list of its days, as the month is.
    This file says no words. The page holds every sentence. */
 (function () {
@@ -23,6 +26,7 @@
   var WEEKDAY = fmt({ weekday: 'short' }), LONG = fmt({ weekday: 'long', month: 'long', day: 'numeric' });
   var TIME_H = fmt({ hour: 'numeric' }), SHORT = fmt({ month: 'short', day: 'numeric' });
   var RANGE = function (a, b) { return SHORT.format(a) + ' – ' + SHORT.format(b) + ', ' + b.getFullYear(); };
+  var RANGE_T = function (a, b) { return TIME.formatRange ? TIME.formatRange(a, b) : TIME.format(a) + ' – ' + TIME.format(b); };
   var ID = /^[A-Za-z0-9_.:-]{1,64}$/;
   var text = function (v) { return typeof v === 'string' ? v : ''; };
   var two = function (n) { return (n < 10 ? '0' : '') + n; };
@@ -69,23 +73,69 @@
     return hashFor(view, d);
   }
 
-  /* Each inspection on show between [from] and [to] (ms), with its time. */
+  // ---- bookings (read only): a booked inspection's length, and bookings not yet on the phone ----------------
+  var rows = Object.create(null), point = null, pulling = null;
+  function pullBookings() {
+    if (pulling) return pulling;
+    var loop = function () {
+      return auth.ask('sync', { push: [], after: point, limit: 500 }, 20000).then(function (r) {
+        if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) return null;
+        r.json.rows.forEach(function (row) {
+          if (!row || row.kind !== 'bookings' || typeof row.id !== 'string') return;
+          var held = rows[row.id];
+          if (!held || row.updated_at >= held.updated_at) rows[row.id] = row;
+        });
+        if (r.json.next) point = r.json.next;
+        return r.json.more ? loop() : null;
+      });
+    };
+    pulling = loop().then(function () { pulling = null; draw(); }, function () { pulling = null; });
+    return pulling;
+  }
+  var num = function (v) { return typeof v === 'number' && isFinite(v) ? v : null; };
+  function bookings() {
+    return Object.keys(rows).map(function (k) { return rows[k]; }).filter(function (r) {
+      return r.deleted_at == null && r.data && (r.data.status === 'booked' || r.data.status === 'confirmed') &&
+        num(r.data.startsAt) !== null && num(r.data.endsAt) !== null && r.data.endsAt > r.data.startsAt;
+    }).map(function (r) { return r.data; });
+  }
+  /* The length in minutes of [id]'s booking, if it was made from one. */
+  function bookedLength(id) {
+    var b = bookings().filter(function (d) { return d.inspectionId === id; })[0];
+    return b ? Math.round((b.endsAt - b.startsAt) / 60000) : null;
+  }
+
+  /* Each inspection on show between [from] and [to] (ms), with its time and length (null: not known), and each
+     booking the phone hasn't made an inspection of yet. */
   function between(from, to) {
-    var out = [];
+    var out = [], here = Object.create(null);
     data.parts('inspection').forEach(function (id) {
       if (!ID.test(id)) return;
+      here[id] = true;
       var w = data.when(id);
-      if (w && w.at >= from && w.at < to) out.push({ id: id, at: w.at, timed: w.timed });
+      if (w && w.at >= from && w.at < to) out.push({ id: id, at: w.at, timed: w.timed, len: w.timed ? bookedLength(id) : null });
+    });
+    bookings().forEach(function (b) {
+      if (typeof b.inspectionId === 'string' && here[b.inspectionId]) return;
+      if (b.startsAt < from || b.startsAt >= to) return;
+      var p = b.property && typeof b.property === 'object' ? b.property : {};
+      var street = [text(p.street).trim(), text(p.unit).trim()].filter(Boolean).join(', ');
+      out.push({ id: 'b:' + text(b.id), booking: true, at: b.startsAt, timed: true, len: Math.round((b.endsAt - b.startsAt) / 60000),
+        title: street, address: [text(p.city).trim(), text(p.state).trim()].filter(Boolean).join(', ') });
     });
     return out.sort(function (a, b) { return a.at - b.at || (a.id < b.id ? -1 : 1); });
   }
   function jobLink(j) {
-    var job = tpl('job'), a = job.querySelector('a'), time = job.querySelector('[data-v="time"]');
-    a.href = '/inspections#' + j.id;
+    var job = tpl(j.booking ? 'booked' : 'job'), a = job.querySelector('a'), time = job.querySelector('[data-v="time"]');
+    if (a) a.href = '/inspections#' + j.id;
     time.hidden = !j.timed;
-    if (j.timed) { time.textContent = TIME.format(new Date(j.at)); time.setAttribute('datetime', new Date(j.at).toISOString()); }
-    job.querySelector('[data-v="title"]').textContent = text(data.val('inspection', j.id, 'title'));
-    job.querySelector('[data-v="address"]').textContent = text(data.val('inspection', j.id, 'address'));
+    if (j.timed) {
+      var start = new Date(j.at);
+      time.textContent = j.len ? RANGE_T(start, new Date(j.at + j.len * 60000)) : TIME.format(start);
+      time.setAttribute('datetime', start.toISOString());
+    }
+    job.querySelector('[data-v="title"]').textContent = j.booking ? j.title : text(data.val('inspection', j.id, 'title'));
+    job.querySelector('[data-v="address"]').textContent = j.booking ? j.address : text(data.val('inspection', j.id, 'address'));
     return job;
   }
 
@@ -152,11 +202,12 @@
     grid.textContent = '';
     grid.style.setProperty('--cols', String(n));
     var from = 7, to = 19;
+    var lenOf = function (j) { return j.len || HOLD; };
     jobs.forEach(function (j) {
       if (!j.timed) return;
       var t = new Date(j.at), h = t.getHours() + t.getMinutes() / 60;
       if (h < from) from = Math.floor(h);
-      if (h + HOLD / 60 > to) to = Math.min(24, Math.ceil(h + HOLD / 60));
+      if (h + lenOf(j) / 60 > to) to = Math.min(24, Math.ceil(h + lenOf(j) / 60));
     });
     grid.style.setProperty('--hours', String(to - from));
     var head = tpl('grid-head'), untimed = tpl('grid-untimed'), body = tpl('grid-body');
@@ -183,23 +234,28 @@
       var col = tpl('grid-col');
       col.setAttribute('data-date', iso(date));
       if (iso(now) === iso(date)) col.setAttribute('aria-current', 'date');
-      // Side by side when they meet: each takes the first lane free at its start.
-      var lanes = [], placed = [];
+      // Side by side only where times meet: a cluster is a run of blocks each meeting one before it; in it, each takes
+      // the first lane free at its start, and the cluster's blocks share its width.
+      var clusters = [], cur = null, reach = 0;
       on.filter(function (j) { return j.timed; }).forEach(function (j) {
+        var end = j.at + lenOf(j) * 60000;
+        if (!cur || j.at >= reach) { cur = { lanes: [], placed: [] }; clusters.push(cur); reach = end; } else if (end > reach) reach = end;
         var lane = 0;
-        while (lanes[lane] !== undefined && lanes[lane] > j.at) lane++;
-        lanes[lane] = j.at + HOLD * 60000;
-        placed.push({ j: j, lane: lane });
+        while (cur.lanes[lane] !== undefined && cur.lanes[lane] > j.at) lane++;
+        cur.lanes[lane] = end;
+        cur.placed.push({ j: j, lane: lane });
       });
-      placed.forEach(function (p) {
-        var t = new Date(p.j.at), start = (t.getHours() - from) * 60 + t.getMinutes();
-        var block = jobLink(p.j);
-        block.className = 'cal-block';
-        block.style.setProperty('--start', String(start));
-        block.style.setProperty('--len', String(HOLD));
-        block.style.setProperty('--lane', String(p.lane));
-        block.style.setProperty('--lanes', String(lanes.length));
-        col.appendChild(block);
+      clusters.forEach(function (c) {
+        c.placed.forEach(function (p) {
+          var t = new Date(p.j.at), start = (t.getHours() - from) * 60 + t.getMinutes();
+          var block = jobLink(p.j);
+          block.classList.add('cal-block');
+          block.style.setProperty('--start', String(start));
+          block.style.setProperty('--len', String(lenOf(p.j)));
+          block.style.setProperty('--lane', String(p.lane));
+          block.style.setProperty('--lanes', String(c.lanes.length));
+          col.appendChild(block);
+        });
       });
       body.appendChild(col);
     }
@@ -240,4 +296,7 @@
   main.hidden = false;
   draw();
   data.start(draw);
+  pullBookings();
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') pullBookings(); });
+  setInterval(function () { if (document.visibilityState === 'visible') pullBookings(); }, 60000);
 })();
