@@ -221,6 +221,20 @@ const turnDone = { serverContent: { turnComplete: true } };
     await ctx.close();
   });
 
+  await group('stopping by keyboard', async () => {
+    const r = relay({ plan: [{ sleep: 60000 }] });
+    const { ctx, page } = await open(browser, r);
+    await page.evaluate(() => document.querySelector('[data-try]').click());
+    await page.waitForSelector('.ty-try-veil');
+    await page.click('[data-ty-talk]');
+    await page.waitForSelector('[data-ty-spex].ty-on', { timeout: 15000 });
+    await page.focus('[data-ty-live]');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+    ok('Enter on "Tap to stop" stops Spex and the mic', !(await page.locator('[data-ty-spex].ty-on').count()) && await page.evaluate(() => window.__stream.getTracks().every((t) => t.readyState === 'ended')));
+    await ctx.close();
+  });
+
   await group('the demo is busy', async () => {
     const r = relay({ deny: 'demo-cap' });
     const { ctx, page } = await open(browser, r);

@@ -369,6 +369,8 @@
     you = el('p', 'cap you', null, { 'data-ty-you': '' }); say = el('p', 'cap spexsay', null, { 'data-ty-say': '', 'aria-live': 'polite' });
     add(live, add(el('div', 'spex-who'), el('span', null, '\u25cf ' + W.listening), el('span', null, W.stop)), wave, you, say);
     live.addEventListener('click', stopVoice);
+    // A keyboard stops it too (Codex on #70): Enter or Space, as a button.
+    live.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); stopVoice(); } });
     add(spex, tb, live);
     busy = el('div', 'busy', null, { 'data-ty-busy': '' });
     var again = el('button', null, W.busy_again, { type: 'button' });
