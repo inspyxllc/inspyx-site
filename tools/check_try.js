@@ -122,6 +122,16 @@ const turnDone = { serverContent: { turnComplete: true } };
     ok('the bot check started while the visitor looks around', r.challenges === 1);
     ok('the first-time hint says what to try', (await page.locator('[data-ty-hint]').innerText()).includes('go to the water heater'));
     ok('photo credits are on the page', (await page.locator('.ty-try-credits').innerText()).includes('CC BY-SA'));
+    const rows = await page.evaluate(() => [...document.querySelectorAll('[data-ty-place]')].map((r) => ({ ring: !!r.querySelector('svg.ty-ring'), text: r.innerText })));
+    ok('each walk row is the app\'s: its ring, "n of m done", no letter tile', rows.length === 6 && rows.every((r) => r.ring && / of \d+ done/.test(r.text) && !/^[A-Z]\n/.test(r.text)), JSON.stringify(rows.map((r) => r.text.split('\n').join(' / '))));
+    const clear = await page.evaluate(() => {
+      const body = document.querySelector('[data-ty-scr="walk"] .ty-body'); body.scrollTop = body.scrollHeight;
+      const last = [...document.querySelectorAll('[data-ty-place]')].pop().getBoundingClientRect();
+      const hint = document.querySelector('[data-ty-hint]').getBoundingClientRect();
+      return last.bottom <= hint.top;
+    });
+    ok('nothing hides under the hint or the Talk button: the last row scrolls clear', clear);
+    ok('the side panel\'s example is the burner\'s rust, as the photo shows', (await page.locator('.ty-try-side').innerText()).includes('rust flakes in the burner'));
     // Tap around.
     await page.click('[data-ty-place="water heater"]');
     ok('tapping a place opens it', (await page.locator('[data-ty-scr="item"] .ty-bar b').innerText()) === 'Water heater');
@@ -149,13 +159,13 @@ const turnDone = { serverContent: { turnComplete: true } };
   });
 
   await group('a visit by voice', async () => {
-    const injected = '<img src=x onerror="window.__pwned=1">Rust at the base';
+    const injected = '<img src=x onerror="window.__pwned=1">Rust flakes in the burner';
     const r = relay({ plan: [
       said('Go to the water heater'), call('c1', 'open_place', { place: 'water heater' }), { wait: 'tool_response' },
       spexSays('Here\u2019s the water heater, in the garage.'), turnDone,
       said('Open the camera'), call('c2', 'open_camera', {}), { wait: 'tool_response' },
       call('c3', 'take_photo', {}), { wait: 'tool_response' }, { sleep: 700 },
-      said('Add a finding: rust at the base'), call('c4', 'add_finding', { title: injected, report_text: 'Rust at the base of the tank. Have a plumber evaluate and repair or replace it.', kind: 'repair' }), { wait: 'tool_response' },
+      said('Add a finding: rust flakes in the burner'), call('c4', 'add_finding', { title: injected, report_text: 'Rust flakes and scale in the burner compartment. Have a plumber service the water heater.', kind: 'repair' }), { wait: 'tool_response' },
       call('c5', 'open_place', { place: 'the moon' }), { wait: 'tool_response' },
       call('c6', 'add_finding', { title: 'x', report_text: 'y', kind: 'invoice' }), { wait: 'tool_response' },
       call('c7', 'show_report', {}), { wait: 'tool_response' },

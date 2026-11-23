@@ -41,7 +41,7 @@
 .ty-bar b{font-size:17px; font-weight:650; flex:1; text-align:center}
 .ty-bar .ty-back{color:var(--a-blue); font-size:17px; min-width:60px}
 .ty-bar .ty-more{min-width:60px; text-align:right; color:var(--a-blue)}
-.ty-body{flex:1; overflow:hidden; padding:0 14px 120px}
+.ty-body{flex:1; overflow:auto; padding:0 14px 190px}
 .ty-house{border-radius:18px; overflow:hidden; background:var(--a-card); box-shadow:0 1px 0 var(--a-hair)}
 .ty-house img{display:block; width:100%; height:128px; object-fit:cover}
 .ty-house > div{padding:10px 14px 12px}
@@ -70,7 +70,7 @@
 .ty-cam{background:#000; color:#fff}
 .ty-cam .ty-view{flex:1; margin:0; background:#222 center/cover; position:relative}
 .ty-cam .ty-view::after{content:""; position:absolute; inset:28% 22%; border:2px solid rgba(255,214,10,.9); border-radius:6px}
-.ty-cam .ty-shut{height:auto; padding:20px 0 112px; display:grid; place-items:center}
+.ty-cam .ty-shut{height:auto; padding:18px 0 176px; display:grid; place-items:center}
 .ty-cam .ty-shut i{width:72px; height:72px; border-radius:50%; background:#fff; box-shadow:0 0 0 5px #000, 0 0 0 8px #fff}
 .ty-cam .ty-flash{position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none}
 .ty-cam .ty-flash.ty-go{animation:try-flash .4s}
@@ -139,3 +139,12 @@
 @media (prefers-reduced-motion: reduce){ .try-btn::after, .ty-wave i, .ty-iph, .ty-try-veil, .ty-find.ty-new{animation:none !important} .ty-scr{transition:none} }
 
 .ty-prog{height:6px; overflow:hidden} .ty-prog-fill{display:block; height:100%; border-radius:3px; background:var(--a-blue)}
+
+/* The app's walk row: ring, name and progress, chevron. The list scrolls clear of the hint and the Talk button. */
+.ty-ring{flex:none; width:26px; height:26px}
+.ty-chev{flex:none; color:var(--a-faint); font-size:22px; line-height:1}
+/* Under the hint and the Talk button, the screen fades to the page's colour: no row shows half-hidden behind them. */
+.ty-iph-screen::after{content:""; position:absolute; left:0; right:0; bottom:0; height:190px; z-index:13; pointer-events:none;
+  background:linear-gradient(rgba(242,243,245,0), var(--a-page) 46%)}
+.ty-iph-screen.ty-cam-on::after{display:none}
+.ty-iph-screen.ty-cam-on .ty-iph-status{color:#fff}

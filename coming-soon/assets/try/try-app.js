@@ -18,7 +18,7 @@
   var W = {
     side_title: 'Inspect a house, by voice.',
     side_text: 'This is the real Spex: say where to go and what you see, and it runs the app. About three minutes, on a demo house.',
-    side_try: ['\u201cGo to the water heater\u201d', '\u201cOpen the camera\u201d', '\u201cAdd a finding: rust at the base\u201d', '\u201cShow me the report\u201d'],
+    side_try: ['\u201cGo to the water heater\u201d', '\u201cOpen the camera\u201d', '\u201cAdd a finding: rust flakes in the burner\u201d', '\u201cShow me the report\u201d'],
     side_note: 'Or tap around the phone. Your voice is used only to answer you, and nothing is kept.',
     credits: 'Photos: Wikimedia Commons and rawpixel contributors (CC0, CC BY, CC BY-SA).',
     credits_link: 'Photo credits',
@@ -27,7 +27,7 @@
     left: '{t} left',
     hint_first: 'Try saying: \u201cgo to the water heater\u201d',
     hint_camera: 'Try: \u201copen the camera\u201d', hint_take: 'Try: \u201ctake it\u201d',
-    hint_finding: 'Try: \u201cadd a finding: rust at the base\u201d', hint_report: 'Try: \u201cshow me the report\u201d',
+    hint_finding: 'Try: \u201cadd a finding: rust flakes in the burner\u201d', hint_report: 'Try: \u201cshow me the report\u201d',
     no_mic: 'The microphone is off, so Spex can\u2019t hear you. You can still tap around.',
     busy_title: 'Spex is busy right now', busy_text: 'A lot of people are trying Spex at the moment. Try again in a few minutes. The rest of the page is all yours.',
     busy_again: 'Try again',
@@ -37,7 +37,7 @@
     rate: ['Satisfactory', 'Needs attention', 'Not inspected', 'Not present'],
     report_title: 'Home Inspection Report', prepared: 'Prepared by {c}',
     kinds: { safety: 'Safety', repair: 'Repair', maintenance: 'Maintenance', note: 'Note' },
-    items_of: '{d} of {n} items', next: 'Next', todo: 'To do', ok: 'Done', check: '1 to check'
+    done_of: '{d} of {n} done', one_finding: '1 finding', findings_n: '{n} findings'
   };
   var COMPANY = 'Saltmeadow Home Inspections';
   var ADDRESS = '7314 Willet Marsh Ct.';
@@ -100,14 +100,33 @@
     var list = el('div', 'list');
     PLACES.forEach(function (p) {
       var row = el('button', 'row', null, { type: 'button', 'data-ty-place': p.id });
-      var n = p.d + (S.rates[p.id] ? 1 : 0) + (S.finds[p.id] || []).length;
-      var t = add(el('span', 't', p.room === p.title ? p.title : p.room + ' \u00b7 ' + p.title), el('small', null, fill(W.items_of, { d: Math.min(n, p.n), n: p.n })));
-      var chip = n >= p.n ? el('span', 'chip ok', W.ok) : p.id === 'roof' ? el('span', 'chip need', W.check) : el('span', 'chip todo', p.id === 'kitchen' ? W.next : W.todo);
-      add(row, el('span', 'ic', p.title.charAt(0)), t, chip);
+      var done = Math.min(p.n, p.d + (S.rates[p.id] ? 1 : 0)), finds = (S.finds[p.id] || []).length;
+      // The app's walk row: the room's ring, its name, "3 of 9 done \u00b7 1 finding", and a chevron.
+      var status = fill(W.done_of, { d: done, n: p.n }) + (finds === 1 ? ' \u00b7 ' + W.one_finding : finds > 1 ? ' \u00b7 ' + fill(W.findings_n, { n: finds }) : '');
+      var t = add(el('span', 't', p.room === p.title ? p.title : p.room + ' \u00b7 ' + p.title), el('small', null, status));
+      add(row, ring(done, p.n), t, el('span', 'chev', '\u203a', { 'aria-hidden': 'true' }));
       row.addEventListener('click', function () { openPlace(p.id); });
       list.appendChild(row);
     });
     return add(s, add(body, list));
+  }
+
+  /* The app's RoomRing (walk_marks.dart): an arc as the room's items are done, a green check once they all are. */
+  function ring(done, total) {
+    var NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 26 26'); svg.setAttribute('class', 'ty-ring'); svg.setAttribute('aria-hidden', 'true');
+    var c = function (attrs) { var e = document.createElementNS(NS, 'circle'); Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); svg.appendChild(e); return e; };
+    if (total > 0 && done >= total) {
+      c({ cx: 13, cy: 13, r: 13, fill: '#157347' });
+      var path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', 'M8 13.5l3.2 3.2L18.5 9.4'); path.setAttribute('fill', 'none'); path.setAttribute('stroke', '#fff'); path.setAttribute('stroke-width', '2.4'); path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+    } else {
+      var r = 10, len = 2 * Math.PI * r;
+      c({ cx: 13, cy: 13, r: r, fill: 'none', stroke: 'rgba(128,138,152,.45)', 'stroke-width': 3 });
+      c({ cx: 13, cy: 13, r: r, fill: 'none', stroke: '#1D62D8', 'stroke-width': 3, 'stroke-dasharray': (len * (total ? done / total : 0)).toFixed(2) + ' ' + len.toFixed(2), transform: 'rotate(-90 13 13)', 'stroke-linecap': 'butt' });
+    }
+    return svg;
   }
 
   function itemScreen(p) {
@@ -179,6 +198,7 @@
     var p = S.at && place(S.at);
     var next = name === 'item' && p ? itemScreen(p) : name === 'camera' && p ? cameraScreen(p) : name === 'report' ? reportScreen() : walkScreen();
     if (screen) screen.replaceWith(next); else root.querySelector('.ty-iph-screen').insertBefore(next, timer);
+    cl(root.querySelector('.ty-iph-screen'), name === 'camera' ? 'add' : 'remove', 'cam-on');
     screen = next;
   }
 
