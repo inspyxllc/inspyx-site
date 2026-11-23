@@ -363,6 +363,11 @@
       // The app's three marks (walk_marks.dart), as the app's screen answers mark_item.
       var want = { inspected: 'inspected', not_inspected: 'not inspected', not_present: 'not present' }[args.status];
       if (!want) return { error: 'status must be inspected, not_inspected or not_present' };
+      // Only on the visitor's own word for that mark, as the app's phone check (spexMarkSaid): never from a photo
+      // alone, never a guess on "rate it".
+      if (S.voice && markSaid(S.voice.heard) !== args.status) {
+        return { ok: false, error: 'Nothing was marked: they did not say which. Ask only "Inspected, not inspected, or not present?" and mark it when they say.' };
+      }
       var at = args.item ? placeFor(null, args.item) : (p ? { p: p } : null);
       if (!at || !at.p) return { ok: false, say: 'No item page is open. Ask which item, and open it with open_place first.' };
       var word = W.rate[CONDITIONS.indexOf(want)];
@@ -379,6 +384,22 @@
       return { ok: true };
     }
     return { ok: false, say: FULL_APP };
+  }
+  /* The one mark the visitor's words name, or null: the app's spexMarkSaid (spex_online.dart), the same rules. */
+  function markSaid(heard) {
+    var t = String(heard || '').toLowerCase(), found = null, at = -1;
+    [['not_inspected', /\bnot inspected\b/g], ['not_present', /\bnot present\b/g], ['inspected', /(?<!\bnot )\binspected\b/g]].forEach(function (r) {
+      var m; r[1].lastIndex = 0;
+      while ((m = r[1].exec(t))) { if (m.index > at) { at = m.index; found = r[0]; } }
+    });
+    if (found) return found;
+    var rules = [
+      ['not_inspected', /\b(couldn'?t|could not|can'?t|cannot|didn'?t|did not|unable|blocked|inaccessible|no access|locked|skip(ped)?)\b/],
+      ['inspected', /\b(satisfactory|fine|good|ok|okay|checked|all set|no issues?|nothing wrong|passes|passed|acceptable|serviceable)\b/],
+      ['not_present', /\b(no [a-z]+|there'?s no|there is no|doesn'?t have|does not have|isn'?t (one|any|there)|none|missing)\b/]
+    ];
+    for (var i = 0; i < rules.length; i++) if (rules[i][1].test(t)) return rules[i][0];
+    return null;
   }
   function listAll() {
     var out = [];
@@ -581,5 +602,5 @@
     if (opener) opener.focus({ preventScroll: true });
   }
 
-  window.TrySpex = { open: open, close: close, _run: function (n, a) { return S ? runTool(n, a) : null; } };
+  window.TrySpex = { open: open, close: close, _run: function (n, a) { return S ? runTool(n, a) : null; }, _markSaid: markSaid };
 })();

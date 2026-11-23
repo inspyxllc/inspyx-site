@@ -233,6 +233,9 @@ const turnDone = { serverContent: { turnComplete: true } };
     const marked = await page.evaluate(() => [TrySpex._run('mark_item', { status: 'inspected' }), TrySpex._run('mark_item', { status: 'inspected' }), TrySpex._run('mark_item', { status: 'not_present', item: 'attic' }), TrySpex._run('mark_item', { status: 'great' })]);
     ok('"rate this item satisfactory" marks it Inspected, the app\'s word; said again it stays set', marked[0].mark === 'Inspected' && marked[1].already === true);
     ok('an item named in the house is marked too, and a status the app lacks is refused', marked[2].item === 'Attic' && marked[2].mark === 'Not present' && !!marked[3].error);
+    // The app's own word rules: the mark they named, never a near word or a photo (spexMarkSaid).
+    const named = await page.evaluate(() => ['Rate this item satisfactory.', 'Mark it not inspected.', 'No access; mark it not inspected.', 'No issues; mark it inspected.', "There's no garage door.", 'Rate it.', 'Pull up the photo.'].map((t) => TrySpex._markSaid(t)));
+    ok('the visitor\'s words decide the mark, as on the phone', JSON.stringify(named) === JSON.stringify(['inspected', 'not_inspected', 'not_inspected', 'inspected', 'not_present', null, null]), JSON.stringify(named));
     ok('a plain photo with its everyday settings opens the camera', await page.evaluate(() => TrySpex._run('open_camera', { zoom: 1, flash: 'auto', size: 'standard', mode: 'photo' }).camera === 'up'));
     ok('the end is "That\u2019s Spex." with the waitlist', (await page.locator('[data-ty-done]').innerText()).includes('Join the waitlist'));
     ok('at the end the mic is off', await page.evaluate(() => window.__stream.getTracks().every((t) => t.readyState === 'ended')));
