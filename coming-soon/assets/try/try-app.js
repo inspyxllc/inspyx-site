@@ -359,6 +359,18 @@
       if (S.screen === 'item' || S.screen === 'report') show(S.screen);
       return { ok: true, removed: r.f.id };
     }
+    if (name === 'mark_item') {
+      // The app's three marks (walk_marks.dart), as the app's screen answers mark_item.
+      var want = { inspected: 'inspected', not_inspected: 'not inspected', not_present: 'not present' }[args.status];
+      if (!want) return { error: 'status must be inspected, not_inspected or not_present' };
+      var at = args.item ? placeFor(null, args.item) : (p ? { p: p } : null);
+      if (!at || !at.p) return { ok: false, say: 'No item page is open. Ask which item, and open it with open_place first.' };
+      var word = W.rate[CONDITIONS.indexOf(want)];
+      if (S.rates[at.p.id] === want) return { ok: true, item: at.p.title, mark: word, already: true };
+      setRate(at.p.id, want);
+      if (S.at !== at.p.id) openPlace(at.p.id);
+      return { ok: true, item: at.p.title, mark: word };
+    }
     if (name === 'list_findings') return { findings: listAll().map(summary) };
     if (name === 'end_conversation') {
       // Only the session that said goodbye ends: one started again meanwhile stays (Codex on #70).
