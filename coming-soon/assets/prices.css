@@ -50,8 +50,33 @@
 .prc-problems p{font-size:14.5px; color:#8C1D18}
 .prc-actions{display:flex; flex-wrap:wrap; gap:10px}
 .prc-dialog .danger{color:#8C1D18}
+/* Price changes and questions (2026-11-23): one row per range or line, each with its fee and hours. */
+.prc-changes .prc-change{display:flex; gap:12px; align-items:center; justify-content:space-between}
+.prc-changes .prc-change .link{min-height:36px; flex:none}
+.prc-dialog select{width:100%; min-height:44px; padding:10px 12px; border:1px solid #C9C9D0; border-radius:12px; background:#FFFFFF; color:var(--ink); font:400 16px var(--font)}
+.prc-change-dialog{width:min(680px, calc(100vw - 32px))}
+.prc-dialog [data-c-only][hidden], .prc-dialog [data-c-help][hidden], .prc-dialog [data-c-noq][hidden]{display:none}
+.prc-dialog [data-c-only]{display:grid; gap:8px}
+.prc-tiers-head, .prc-tier{display:grid; grid-template-columns:1fr 1fr 1fr 0.8fr 64px; gap:8px; align-items:center}
+.prc-tiers-head{font-size:12.5px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em}
+.prc-tiers{list-style:none; padding:0; margin:0; display:grid; gap:8px}
+.prc-line, .prc-lines-head{grid-template-columns:2fr 1fr 0.8fr 64px}
+.prc-vals{display:flex; flex-wrap:wrap; gap:0 14px; min-width:0}
+.prc-vals strong{font-size:16px; color:var(--ink)}
+.prc-vals .tick{min-height:36px; font-size:15px}
+.prc-tier .link{min-height:36px}
+.prc-tier .link[hidden]{display:none}
+.prc-per{grid-template-columns:repeat(4, 1fr)}
+.prc-per small{grid-column:1 / -1}
+.prc-dialog [data-c-problem]{font-size:14.5px; color:#8C1D18}
 @media (max-width: 760px){
   .prc{padding-top:20px; padding-bottom:48px}
   .prc h1{font-size:28px}
   .prc-pair{grid-template-columns:1fr}
+  .prc-tiers-head, .prc-tier{grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px}
+  .prc-tiers-head span:last-child{display:none}
+  .prc-tier input[type="text"]{padding:10px 8px}
+  .prc-tier .link{grid-column:1 / -1; justify-self:end; min-height:28px; margin-top:-4px; font-size:14px}
+  .prc-line, .prc-lines-head{grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 0.8fr)}
+  .prc-per{grid-template-columns:1fr 1fr}
 }

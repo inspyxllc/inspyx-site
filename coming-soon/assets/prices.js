@@ -1,6 +1,7 @@
 /* Prices (2026-11-16, Inspyx 4): the inspector's price list on the web, the same list as on their phone. Moises's
    dashboard interview, answer 5: "business setup (services, prices, discounts...)". Phase 1: services and their
-   add-ons, and discount codes, read and edited here; price changes are shown, and made on the phone for now.
+   add-ons, and discount codes, read and edited here; price changes and the inspector's questions too, in
+   price-changes.js (2026-11-23, job 3).
    How: the sync function (inspyx-mobile, backend/supabase/functions/sync) keeps each price row as the phone's own
    row, newest change wins. This page pulls every row once, then what changed after its point, every half minute
    while it is in view and when it comes back into view. It writes a row whole, as the phone's store would
@@ -15,7 +16,7 @@
   var auth = window.InspyxAuth;
   if (!main || !auth) return;
   var DEADLINE = 20000, POLL = 30000, MAX_CENTS = 100000000;
-  var KINDS = ['price_services', 'price_modifiers', 'price_discounts', 'price_questions'];
+  var KINDS = ['price_services', 'price_modifiers', 'price_discounts', 'price_questions'];   // all four edited here (2026-11-23)
 
   var $ = function (sel, el) { return (el || document).querySelector(sel); };
   var all = function (sel, el) { return [].slice.call((el || document).querySelectorAll(sel)); };
@@ -223,10 +224,17 @@
         ol.appendChild(li);
       });
       var changes = changesOf(s.id), cl = $('[data-list="changes"]', card);
-      $('[data-changes]', card).hidden = changes.length === 0;
-      changes.forEach(function (m) { var li = tpl('change'); li.textContent = changeSummary(m); cl.appendChild(li); });
+      changes.forEach(function (m) {
+        var li = tpl('change');
+        $('[data-v="text"]', li).textContent = changeSummary(m);
+        $('[data-edit-change]', li).setAttribute('data-edit-change', m.id);
+        cl.appendChild(li);
+      });
       list.appendChild(card);
     });
+
+    // Price changes and questions are edited by price-changes.js (2026-11-23, job 3): it draws its own parts now.
+    document.dispatchEvent(new CustomEvent('inspyx:prices-render'));
 
     var dl = $('[data-list="discounts"]', main), disc = discounts();
     $('[data-empty="discounts"]', main).hidden = disc.length > 0;
@@ -459,6 +467,14 @@
   all('[data-close]').forEach(function (b) { b.addEventListener('click', function () { b.closest('dialog').close(); }); });
   all('[data-add="service"]').forEach(function (b) { b.addEventListener('click', function () { openService(null, null); }); });
   all('[data-add="discount"]').forEach(function (b) { b.addEventListener('click', function () { openDiscount(null); }); });
+
+  // What price-changes.js shares with this page: the rows, sending them, and the phone's formats (2026-11-23).
+  window.InspyxPrices = {
+    me: function () { return me; }, standing: standing, held: held, changesOf: changesOf, services: services,
+    wire: wire, nextAt: nextAt, newId: newId, finish: finish, say: say, words: words,
+    parseCents: parseCents, parseHours: parseHours, centsText: centsText, hoursText: hoursText,
+    formatCents: formatCents, formatMinutes: formatMinutes, render: render, ready: function () { return loaded; },
+  };
 
   // ---- start -----------------------------------------------------------------------------------------------------
 

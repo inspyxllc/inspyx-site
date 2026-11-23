@@ -15,6 +15,7 @@
 <script src="/assets/auth.js"></script>
 <script src="/assets/page.js" defer></script>
 <script src="/assets/prices.js" defer></script>
+<script src="/assets/price-changes.js" defer></script>
 </head>
 <body>
 <header class="bar">
@@ -48,6 +49,12 @@
 <div class="prc-head"><h2>Services</h2><button class="btn small" type="button" data-add="service">Add a service</button></div>
 <p class="prc-empty" data-empty="services" hidden>No prices yet. Add the services you sell, each with its fee, add-ons and price changes. Spex quotes from this list.</p>
 <ol class="prc-list" data-list="services"></ol>
+</section>
+
+<section class="prc-group" data-group="questions" hidden>
+<div class="prc-head"><h2>Your questions</h2><button class="btn small" type="button" data-add="question">Add a question</button></div>
+<p class="prc-empty" data-empty="questions">Ask your own questions when a price is worked out ("Pool?", "How many outbuildings?"), then give a service a price change on the answer.</p>
+<ol class="prc-list" data-list="questions"></ol>
 </section>
 
 <section class="prc-group" data-group="discounts" hidden>
@@ -121,16 +128,102 @@
 </form>
 </dialog>
 
+
+<dialog class="prc-dialog" data-dialog="question" aria-labelledby="q-title">
+<form data-form="question" novalidate>
+<h2 id="q-title"><span data-qtitle="new">A new question</span><span data-qtitle="edit" hidden>Your question</span></h2>
+<label>The question<input type="text" name="name" maxlength="60" autocomplete="off"><small>60 letters at most.</small></label>
+<fieldset><legend>Its answer</legend>
+<label class="tick"><input type="radio" name="kind" value="yes_no" checked> Yes or no</label>
+<label class="tick"><input type="radio" name="kind" value="number"> A number</label>
+</fieldset>
+<div class="prc-problems" role="alert"><p data-qproblem="name" hidden>Write the question.</p><p data-qproblem="long" hidden>Keep the question to 60 letters or fewer.</p><p data-qproblem="same" hidden>You already have a question with that name.</p><p data-qproblem="used" hidden>A price change reads this question: remove that first.</p></div>
+<div class="prc-actions"><button class="btn small" type="submit">Save</button><button class="btn small quiet" type="button" data-close>Cancel</button><button class="link danger" type="button" data-qdelete hidden><span data-qarm="0">Delete</span><span data-qarm="1" hidden>Delete it: tap again</span></button></div>
+</form>
+</dialog>
+
+<dialog class="prc-dialog prc-change-dialog" data-dialog="change" aria-labelledby="c-title">
+<form data-form="change" novalidate>
+<h2 id="c-title"><span data-ctitle="new">A new price change</span><span data-ctitle="edit" hidden>Price change</span></h2>
+<p class="prc-note" data-c-service></p>
+<label>What it reads<select name="basis">
+<option value="square_feet">Square feet</option><option value="year_built">Year built</option><option value="age">Age of the house</option><option value="zip">Zip code</option><option value="distance">Distance (miles)</option><option value="foundation">Foundation</option><option value="yes_no_question">Your question (yes or no)</option><option value="number_question">Your question (a number)</option>
+</select></label>
+<label data-c-only="question" hidden>Which question<select name="question"></select><small data-c-noq hidden>Add a question first, under Your questions.</small></label>
+<fieldset data-c-only="mode" hidden><legend>How</legend>
+<label class="tick"><input type="radio" name="mode" value="ranges" checked> In ranges</label>
+<label class="tick"><input type="radio" name="mode" value="per_unit_over"> For each unit past a number</label>
+</fieldset>
+<div data-c-only="ranges" hidden>
+<div class="prc-tiers-head" aria-hidden="true"><span data-c-head="from">From</span><span data-c-head="to">To</span><span>Adds</span><span>Hours</span><span></span></div>
+<ol class="prc-tiers" data-tiers></ol>
+<button class="link" type="button" data-add-tier>Add a range</button>
+<small>A house on a range's end is in that range; past the last range, nothing is added. Leave the last "To" empty for "and up".</small>
+</div>
+<div data-c-only="values" hidden>
+<div class="prc-tiers-head prc-lines-head" aria-hidden="true"><span data-c-head="vals"></span><span>Adds</span><span>Hours</span><span></span></div>
+<ol class="prc-tiers" data-lines></ol>
+<button class="link" type="button" data-add-line>Add a line</button>
+<small data-c-help="zip" hidden>Zip codes on one line share its price: 33601, 33602.</small>
+</div>
+<div data-c-only="per" hidden class="prc-per">
+<label>Past<input type="text" name="over" inputmode="numeric"></label>
+<label>For each<input type="text" name="unit" inputmode="numeric"></label>
+<label>Adds<input type="text" name="perFee" inputmode="decimal"></label>
+<label>Hours<input type="text" name="perHours" inputmode="decimal"></label>
+<small>"Past 3,000, for each 500, adds $25": a house of 3,600 square feet is 2 units past (any part of a unit counts as one), so it adds $50.</small>
+</div>
+<div class="prc-problems" role="alert" data-c-problem hidden></div>
+<div class="prc-actions"><button class="btn small" type="submit">Save</button><button class="btn small quiet" type="button" data-close>Cancel</button><button class="link danger" type="button" data-cdelete hidden><span data-carm="0">Delete</span><span data-carm="1" hidden>Delete it: tap again</span></button></div>
+</form>
+</dialog>
+
 <template data-t="service"><li class="prc-card">
 <div class="prc-row"><div class="prc-what"><strong data-v="name"></strong><span data-v="summary"></span><span class="prc-desc" data-v="description"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></div>
 <div class="prc-sub"><h3>Add-ons</h3><ol class="prc-addons" data-list="addons"></ol><button class="link" type="button" data-add="addon">Add an add-on</button></div>
-<div class="prc-sub" data-changes><h3>Price changes</h3><ol class="prc-changes" data-list="changes"></ol><p class="prc-note">Price changes are made on your phone for now: Prices, then the service.</p></div>
+<div class="prc-sub" data-changes><h3>Price changes</h3><ol class="prc-changes" data-list="changes"></ol><button class="link" type="button" data-add="change">Add a price change</button></div>
 </li></template>
 <template data-t="addon"><li class="prc-addon"><span class="prc-what"><span data-v="name"></span><span data-v="summary"></span></span><button class="link" type="button" data-edit>Edit</button></li></template>
-<template data-t="change"><li data-v="text"></li></template>
+<template data-t="change"><li class="prc-change"><span data-v="text"></span><button class="link" type="button" data-edit-change>Edit</button></li></template>
 <template data-t="discount"><li class="prc-card prc-code"><div class="prc-row"><div class="prc-what"><strong data-v="code"></strong><span data-v="summary"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></div></li></template>
 <template data-t="applies"><label class="tick"><input type="checkbox" name="applies"> <span data-v="name"></span></label></template>
 
+<template data-t="question"><li class="prc-card prc-q"><div class="prc-row"><div class="prc-what"><strong data-v="name"></strong><span data-v="kind"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></div></li></template>
+<template data-t="tier"><li class="prc-tier"><input type="text" data-k="from" inputmode="numeric" aria-label="From"><input type="text" data-k="to" inputmode="numeric" aria-label="To"><input type="text" data-k="fee" inputmode="decimal" aria-label="Adds $"><input type="text" data-k="hours" inputmode="decimal" aria-label="Hours"><button class="link" type="button" data-remove aria-label="Remove this line">Remove</button></li></template>
+<template data-t="line"><li class="prc-tier prc-line"><span class="prc-vals" data-vals></span><input type="text" data-k="fee" inputmode="decimal" aria-label="Adds $"><input type="text" data-k="hours" inputmode="decimal" aria-label="Hours"><button class="link" type="button" data-remove aria-label="Remove this line">Remove</button></li></template>
+<template data-t="cwords"><div>
+<span data-w="q-yes_no">Yes or no</span><span data-w="q-number">A number</span>
+<span data-w="yes">Yes</span><span data-w="no">No</span>
+<span data-w="zip-placeholder">33601, 33602</span>
+<span data-w="f-Slab">Slab</span><span data-w="f-Crawlspace">Crawlspace</span><span data-w="f-Basement">Basement</span><span data-w="f-Pier and beam">Pier and beam</span>
+<span data-w="v-zip">Zip codes</span><span data-w="v-foundation">Foundations</span><span data-w="v-yes_no_question">Answer</span>
+<span data-w="h-year">Built from</span><span data-w="h-year-to">Built to</span>
+<span data-w="p-question">Choose the question.</span>
+<span data-w="p-per">Set the number, the unit and the fee.</span>
+<span data-w="p-over">The number to start after can’t be below zero.</span>
+<span data-w="p-unit">Each unit must be at least 1.</span>
+<span data-w="p-minutes">Time added can’t be below zero.</span>
+<span data-w="p-per-zero">Add a fee or time for each unit.</span>
+<span data-w="p-big">That fee is too large.</span>
+<span data-w="p-none-yesno">Set what a yes or a no adds.</span>
+<span data-w="p-none-ranges">Add at least one range.</span>
+<span data-w="p-none">Add at least one.</span>
+<span data-w="p-yesno">A yes or no question’s lines are "yes" or "no".</span>
+<span data-w="p-zip-empty">Each line needs at least one zip code.</span>
+<span data-w="p-yesno-empty">Each line needs yes or no.</span>
+<span data-w="p-found-empty">Each line needs a foundation.</span>
+<span data-w="p-zip-bad">isn’t a 5-digit zip code.</span>
+<span data-w="p-twice">is on two lines.</span>
+<span data-w="p-start">Each range after the first needs a start.</span>
+<span data-w="p-end">Only the last range can go on with no end.</span>
+<span data-w="p-below">A range can’t start below zero.</span>
+<span data-w="p-backwards">A range can’t end before it starts.</span>
+<span data-w="p-overlap">The ranges overlap: start each one where the one before ends.</span>
+<span data-w="p-number">Write whole numbers for the ranges.</span>
+<span data-w="p-money">Write the fee as dollars, like 25 or 25.50.</span>
+<span data-w="p-hours">Write the hours as a number, like 0.5.</span>
+<span data-w="p-ranges-only">can only be priced in ranges.</span>
+</div></template>
 <template data-t="words">
 <span data-w="off_percent">off</span>
 <span data-w="all_services">all services</span>
