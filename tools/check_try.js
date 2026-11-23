@@ -50,7 +50,11 @@ async function open(browser, r, opts) {
     const u = new URL(route.request().url());
     if (u.origin === HOME) {
       if (o.on && u.pathname === '/assets/try/try.js') {
-        return route.fulfill({ status: 200, contentType: 'text/javascript', body: fs.readFileSync(path.join(SITE, 'assets/try/try.js'), 'utf8').replace('var ON = false;', 'var ON = true;') });
+        return route.fulfill({ status: 200, contentType: 'text/javascript', body: fs.readFileSync(path.join(SITE, 'assets/try/try.js'), 'utf8').replace('var ON = false || !LIVE;', 'var ON = true;') });
+      }
+      if (!o.on && u.pathname === '/assets/try/try.js') {
+        // As on inspyx.com itself: the live domain, switched off.
+        return route.fulfill({ status: 200, contentType: 'text/javascript', body: fs.readFileSync(path.join(SITE, 'assets/try/try.js'), 'utf8').replace("location.hostname", "'inspyx.com'") });
       }
       return route.continue();
     }

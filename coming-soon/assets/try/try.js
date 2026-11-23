@@ -3,7 +3,9 @@
    (try-app.js) loads only on the first click, so the home page's story never waits for it. */
 (function () {
   'use strict';
-  var ON = false;
+  // Off on inspyx.com until it may go public (his word); on in private previews and local checks, so he can look.
+  var LIVE = /^(www\.)?inspyx\.com$/.test(location.hostname);
+  var ON = false || !LIVE;
   if (!ON) return;
   var anchor = document.querySelector('.hero-in .btn');
   if (!anchor) return;

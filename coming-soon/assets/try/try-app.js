@@ -20,7 +20,7 @@
     side_text: 'This is the real Spex: say where to go and what you see, and it runs the app. About three minutes, on a demo house.',
     side_try: ['\u201cGo to the water heater\u201d', '\u201cOpen the camera\u201d', '\u201cAdd a finding: rust flakes in the burner\u201d', '\u201cShow me the report\u201d'],
     side_note: 'Or tap around the phone. Your voice is used only to answer you, and nothing is kept.',
-    credits: 'Photos: Wikimedia Commons and rawpixel contributors (CC0, CC BY, CC BY-SA).',
+    credits: 'Photos: Zach Miller, Robin Joshua and Canada\u2019s Restoration Services on Unsplash; Wikimedia Commons contributors (CC0, CC BY, CC BY-SA).',
     credits_link: 'Photo credits',
     close: 'Close the demo',
     talk: 'Talk to Spex', connecting: 'Connecting to Spex\u2026', listening: 'Spex is listening', stop: 'Tap to stop',
@@ -41,7 +41,7 @@
   };
   var COMPANY = 'Saltmeadow Home Inspections';
   var ADDRESS = '7314 Willet Marsh Ct.';
-  var HOUSE = 'Tampa, FL \u00b7 Single family \u00b7 1998 \u00b7 2,140 sq ft';
+  var HOUSE = 'Tampa, FL \u00b7 2 stories \u00b7 1925 \u00b7 2,480 sq ft';
   var PLACES = [
     { id: 'exterior', title: 'Exterior', room: 'Exterior', photo: 'exterior.jpg', n: 8, d: 8 },
     { id: 'roof', title: 'Roof', room: 'Roof', photo: 'roof.jpg', n: 6, d: 5 },
