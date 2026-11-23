@@ -161,6 +161,9 @@ const settled = (page) => page.waitForFunction(() => {
     ok('its summary is the phone\'s', /^2 sections, \d+ items?, \d+ comments?$/.test(await card.locator('[data-summary]').innerText()), await card.locator('[data-summary]').innerText());
     const secs = await card.locator('[data-sections] li strong').allInnerTexts();
     ok('each section shows, with its items', secs.length === 2 && secs[0].startsWith('ROOF') && secs[1].startsWith('PLUMBING') && (await card.locator('[data-sections] li span').first().innerText()).includes('Shingles'), secs.join(' / '));
+    // Every item shows, however many: never cut off at two lines (Codex on #69).
+    const cut = await card.locator('[data-sections] li span').evaluateAll((els) => els.filter((e) => { const st = getComputedStyle(e); return (st.webkitLineClamp && st.webkitLineClamp !== 'none') || st.overflow === 'hidden' || e.scrollHeight > e.clientHeight + 1; }).length);
+    ok('each section\'s item list shows in full', cut === 0, String(cut));
     const dotLine = await card.locator('[data-dot-lines] li').first().innerText().catch(() => '');
     ok('the lines to check show, in plain words: what it went in as and where', await card.locator('[data-dots]').isVisible() &&
       dotLine === '\u25CF Line 3: \u201cThe shingles are worn and near the end of their life.\u201d went in as a comment under ROOF \u203a Shingles. Inspyx wasn\'t sure, so check it\'s right.', dotLine);
