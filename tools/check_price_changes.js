@@ -319,14 +319,14 @@ const fill = async (loc, v) => { await loc.fill(''); if (v !== '') await loc.fil
     ok('saved unchanged, it is kept (one row per answer)', await until(() => pushed(calls).some((r) => r.id === 'qm-both' && JSON.stringify(JSON.parse(r.data.tiersJson).tiers.map((t) => t.values)) === '[["yes"],["no"]]')), (await vis(page, '[data-c-problem]')).join());
     // A foundation line holding one that isn't among the four choices keeps it (Codex on #78).
     s.put(s.row('price_modifiers', Object.assign({ id: 'fd-stone', serviceId: 'svc-home', basis: 'foundation', mode: 'ranges', position: 1,
-      tiersJson: JSON.stringify({ tiers: [{ values: ['Slab', 'Stone'], fee_cents: 4000, minutes: 0 }] }) }, base)));
+      tiersJson: JSON.stringify({ tiers: [{ values: ['Slab', 'Stone', '8" block'], fee_cents: 4000, minutes: 0 }] }) }, base)));
     await page.reload(); await page.waitForTimeout(400);
     await card(page, 'Home inspection').locator('[data-edit-change="fd-stone"]').click();
     ok('a foundation outside the four opens ticked, beside them', await page.evaluate(() =>
-      [...document.querySelectorAll('[data-lines] input[type="checkbox"]:checked')].map((b) => b.value).join('|') === 'Slab|Stone'));
+      [...document.querySelectorAll('[data-lines] input[type="checkbox"]:checked')].map((b) => b.value).join('|') === 'Slab|Stone|8" block'));
     await fill(page.locator('[data-lines] [data-k="fee"]').first(), '45');
     await page.click('[data-form="change"] [type="submit"]');
-    ok('saved, it still holds it', await until(() => pushed(calls).some((r) => r.id === 'fd-stone' && JSON.stringify(JSON.parse(r.data.tiersJson).tiers[0].values) === '["Slab","Stone"]')));
+    ok('saved, it still holds it', await until(() => pushed(calls).some((r) => r.id === 'fd-stone' && JSON.stringify(JSON.parse(r.data.tiersJson).tiers[0].values) === '["Slab","Stone","8\\" block"]')));
     ok('no errors', errs.length === 0, errs.join(' | '));
     await ctx.close();
   });
