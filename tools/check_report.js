@@ -704,6 +704,13 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
       l.state === 'locked' && l.text.includes(report.cover.address) && l.text.includes('This report opens once the inspection is paid.') && l.pay === base + '/pay/AAAAAAAAAAAAAAAAAAAAAA' && l.findings === 0 && l.pdf === 0, l.text.replace(/\n+/g, ' / ').slice(0, 120));
     await locked.ctx.close();
 
+    for (const [cents, words] of [[42500, 'Pay $425.00'], [123456, 'Pay $1,234.56'], [null, 'Pay now'], [-5, 'Pay now'], [1.5, 'Pay now'], ['425', 'Pay now']]) {
+      const due = await open(browser, { answer: () => ({ body: { state: 'locked', about, pay_url: '/pay/AAAAAAAAAAAAAAAAAAAAAA', due_cents: cents } }) });
+      const said = await due.page.evaluate(() => (document.querySelector('main a[data-pay]') || {}).textContent);
+      ok('the Pay button says what is due (' + JSON.stringify(cents) + ' -> ' + words + ')', said === words, said);
+      await due.ctx.close();
+    }
+
     const badPay = await open(browser, { answer: () => ({ body: { state: 'locked', about, pay_url: 'https://evil.example/pay' } }) });
     ok('a pay page anywhere but Inspyx is not offered', (await badPay.page.evaluate(() => document.querySelectorAll('main a.btn').length)) === 0);
     await badPay.ctx.close();

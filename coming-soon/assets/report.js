@@ -83,6 +83,8 @@
     locked: 'This report opens once the inspection is paid.',
     lockedMore: 'Paid another way? Ask your inspector to open it for you.',
     pay: 'Pay now',
+    /* With what is due (the server's due_cents, 2026-11-23): "Pay $425.00". */
+    payAmount: function (dollars) { return 'Pay ' + dollars; },
     sample: 'Sample report',
     pdf: 'PDF',
     pdfLong: 'Download the PDF',
@@ -1194,6 +1196,13 @@
     );
   }
 
+  /* The Pay button's words: the amount when the server says a whole number of cents above zero, else "Pay now". */
+  function payWords(cents) {
+    if (typeof cents !== 'number' || !isFinite(cents) || cents <= 0 || Math.floor(cents) !== cents) return WORDS.pay;
+    var dollars = '$' + (cents / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return WORDS.payAmount(dollars);
+  }
+
   function render(answer) {
     if (!answer || typeof answer !== 'object') return show(message('failed', retry()));
     if (answer.state === 'gone') return show(message('gone'));
@@ -1204,7 +1213,7 @@
         about(answer.about),
         h('p', { class: 'lockmark', 'aria-hidden': 'true' }, icon('lock')),
         h('h1', { class: 'state-t' }, WORDS.locked),
-        pay ? h('p', { class: 'state-act' }, h('a', { class: 'btn btn-wide', href: pay, rel: 'noopener' }, WORDS.pay)) : null,
+        pay ? h('p', { class: 'state-act' }, h('a', { class: 'btn btn-wide', href: pay, rel: 'noopener', 'data-pay': true }, payWords(answer.due_cents))) : null,
         h('p', { class: 'state-m' }, WORDS.lockedMore)
       ));
     }
