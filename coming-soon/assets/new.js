@@ -221,6 +221,9 @@
     // His agreement, when he has one the clients sign.
     var signs = held('legal_default', 'signs');
     $('[data-agreement-row]').hidden = !signs;
+    // Ticked whenever he has one, as his booking page has clients sign before the inspection (the lead's pick,
+    // 2026-11-23); always in view, so never a silent send, and his own untick stands.
+    if (!form.hasAttribute('data-touched-agreement')) f.agreement.checked = !!signs;
     // The client's confirmation email: ticked as his own switch says (his 11-21 automation settings), never silently.
     var a = held('automation_settings', 'automation'), c = a && a.messages && a.messages.booking_confirmed;
     var on = c ? c.on !== false && (!Array.isArray(c.to) || c.to.indexOf('client') >= 0) : true;
@@ -302,6 +305,7 @@
     if (e.target.name === 'addon') drawAsks();
     if (e.target.name === 'day') drawSlots();
     if (e.target.name === 'emailClient') form.setAttribute('data-touched-email', '');
+    if (e.target.name === 'agreement') form.setAttribute('data-touched-agreement', '');
     live();
   });
   form.addEventListener('input', function (e) { if (e.target.name !== 'emailClient') live(); });

@@ -29,8 +29,8 @@ function rows(o) {
     row('price_questions', { id: 'q-pool', name: 'Is there a pool?', kind: 'yes_no', position: 0 }),
     row('booking_settings', { id: 'booking', on: true, slug: 'pat', timeZone: 'America/New_York', week: [1, 2, 3, 4, 5].map((day) => ({ day, from: '08:00', to: '17:00' })), maxPerDay: 3, minNoticeHours: 24, daysAhead: 30, gapMinutes: 30 }),
     row('inspection_templates', { id: 'inspector.my-home', name: 'My home template' }),
-    row('legal_default', { id: 'signs', documentId: 'doc-1' }),
   ];
+  if (!o.noAgreement) out.push(row('legal_default', { id: 'signs', documentId: 'doc-1' }));
   if (o.email !== undefined) out.push(row('automation_settings', { id: 'automation', messages: { booking_confirmed: { on: o.email, when: 'now', to: ['client', 'buyer_agent'] } } }));
   return out;
 }
@@ -100,7 +100,7 @@ async function fillBasics(page) {
     await page.check('[name="addon"][value="radon"]');
     ok('an add-on\'s own question is asked once it\'s picked', await until(async () => (await vis(page, '[data-ask-list] label')).join(' | ') === 'Square feet | Is there a pool?'));
     ok('templates: pick on the phone, Walkthrough, and his own', (await page.evaluate(() => [...document.querySelector('[name="template"]').options].map((o) => o.value))).join() === ',inspyx.walkthrough,inspector.my-home');
-    ok('his agreement can be sent; the client email ticked, as his switch is on, and it says so', await page.isVisible('[data-agreement-row]') && await page.isChecked('[name="emailClient"]') && (await vis(page, '[data-email-why]')).join() === '(your confirmation email is on)');
+    ok('his agreement can be sent, ticked to send (in view, never silent); the client email ticked, as his switch is on, and it says so', await page.isVisible('[data-agreement-row]') && await page.isChecked('[name="agreement"]') && await page.isChecked('[name="emailClient"]') && (await vis(page, '[data-email-why]')).join() === '(your confirmation email is on)');
     await page.fill('[name="day"]', '2026-12-07');
     await page.dispatchEvent('[name="day"]', 'change');
     ok('his booking hours that day, to tap', await until(async () => (await vis(page, '.new-slot')).length === 18) && (await vis(page, '.new-slot'))[0] === '8:00 AM');
@@ -136,10 +136,27 @@ async function fillBasics(page) {
     const sent = asks.filter((a) => !a.check)[0];
     ok('it sends what the form says: the unit in its own box, the listing agent, the template, the tick',
       sent.details.property.unit === 'Apt 103' && sent.details.property.street === '12 Palm Way' && sent.details.listingAgent.name === 'Lee Park' &&
-      sent.emailClient === false && sent.templateId === null && sent.serviceIds.join() === 'home' && sent.startsAt === Date.UTC(2026, 11, 7, 15, 0), JSON.stringify(sent));
+      sent.emailClient === false && sent.agreement === true && sent.templateId === null && sent.serviceIds.join() === 'home' && sent.startsAt === Date.UTC(2026, 11, 7, 15, 0), JSON.stringify(sent));
     ok('booked: it says so, and links to that day on the calendar', await page.getAttribute('[data-done-day]', 'href') === '/calendar#day-2026-12-07');
     if (SHOTS) await page.screenshot({ path: SHOTS + '/42-new-booked.png' });
     ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
+  await group('the agreement tick (the lead\'s pick, 2026-11-23)', async () => {
+    let { page, ctx, asks } = await open(browser, { email: false });
+    await page.uncheck('[name="agreement"]');
+    await fillBasics(page);
+    await page.fill('[name="day"]', '2026-12-08'); await page.dispatchEvent('[name="day"]', 'change');
+    await page.fill('[name="time"]', '10:00'); await page.dispatchEvent('[name="time"]', 'input');
+    await until(async () => (await vis(page, '[data-book]')).join() === 'Book it');
+    await page.click('[data-book]');
+    await until(() => page.isVisible('[data-done]'));
+    const unticked = asks.filter((a) => !a.check)[0];
+    ok('his untick stands: the agreement is not sent', unticked && unticked.agreement === false, JSON.stringify(unticked && unticked.agreement));
+    await ctx.close();
+    ({ page, ctx } = await open(browser, { email: false, noAgreement: true }));
+    ok('with no agreement: no tick to see, and none ticked', !(await page.isVisible('[data-agreement-row]')) && !(await page.isChecked('[name="agreement"]')));
     await ctx.close();
   });
 
