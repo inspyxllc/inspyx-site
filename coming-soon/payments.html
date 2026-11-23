@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Payments</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/booking.css">
+<link rel="stylesheet" href="/assets/payments.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/payments.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,170.00 Q143.0,160.0 133.00,160.00 L107.00,160.00 Q97.0,160.0 97.00,170.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"/></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="bkg pay" data-pay hidden>
+<h1>Payments</h1>
+<p class="bkg-lede">Get paid by card: your clients pay on their own phone, from the pay link and the report's Pay button, and the money goes to your bank.</p>
+
+<ol class="pay-steps" aria-label="Three steps">
+<li class="pay-step" data-step="plan"><span class="pay-dot" aria-hidden="true"></span><div><strong>Your Inspyx plan</strong><span>Card payments use your plan's Stripe account.</span></div></li>
+<li class="pay-step" data-step="stripe"><span class="pay-dot" aria-hidden="true"></span><div><strong>Your business with Stripe</strong><span>Stripe asks a few questions about your business and your bank.</span></div></li>
+<li class="pay-step" data-step="ready"><span class="pay-dot" aria-hidden="true"></span><div><strong>Clients pay you by card</strong><span>Pay links work, and locked reports open once paid.</span></div></li>
+</ol>
+
+<section class="bkg-card pay-card" role="status">
+<h2>Get paid by card</h2>
+<p class="pay-words">
+<span data-stands="checking">Checking…</span>
+<span data-stands="no-plan" hidden>Start your plan first, from your account: card payments use the same Stripe account.</span>
+<span data-stands="none" hidden>Not set up. Clients can pay you by card once Stripe has your business details and bank account.</span>
+<span data-stands="needs_info" hidden>Stripe needs a few more details before clients can pay you by card.</span>
+<span data-stands="pending" hidden>Stripe is checking your details. This usually takes a few minutes.</span>
+<span data-stands="ready" hidden>Ready: clients can pay you by card.</span>
+<span data-stands="failed" hidden>Couldn’t check. Try again.</span>
+<span data-stands="not-set-up" hidden>Card payments aren’t set up yet.</span>
+</p>
+<p class="pay-under" data-payouts hidden>Payouts to your bank start once Stripe has checked it.</p>
+<div class="bkg-actions">
+<a class="btn" href="/account" data-do="plan" hidden>Your account</a>
+<button class="btn" type="button" data-do="setup" hidden>Set up</button>
+<button class="btn" type="button" data-do="finish" hidden>Finish setup</button>
+<button class="btn small" type="button" data-do="again" hidden>Check again</button>
+<p class="pay-page-failed" data-page-failed hidden role="alert">Couldn’t open the page. Try again.</p>
+</div>
+<p class="pay-fee">Stripe charges 2.9% + 30¢ a card payment. Inspyx takes nothing during the pilot.</p>
+</section>
+
+<p class="bkg-links"><a href="/today">What needs you</a><a href="/booking">Booking page</a><a href="/emails">Emails</a><a href="/account">Account</a></p>
+</main>
+</body>
+</html>
