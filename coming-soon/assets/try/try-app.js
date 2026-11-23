@@ -18,7 +18,7 @@
   var W = {
     side_title: 'Inspect a house, by voice.',
     side_text: 'This is the real Spex: say where to go and what you see, and it runs the app. About three minutes, on a demo house.',
-    side_try: ['\u201cGo to the water heater\u201d', '\u201cOpen the camera\u201d', '\u201cAdd a finding: rust flakes in the burner\u201d', '\u201cShow me the report\u201d'],
+    side_try: ['\u201cGo to the water heater\u201d', '\u201cPull up the photo\u201d', '\u201cTake a photo\u201d', '\u201cRust flakes in the burner, call it a repair\u201d'],
     side_note: 'Or tap around the phone. Your voice is used only to answer you, and nothing is kept.',
     credits: 'Photos: Zach Miller, Robin Joshua and Canada\u2019s Restoration Services on Unsplash; Wikimedia Commons contributors (CC0, CC BY, CC BY-SA).',
     credits_link: 'Photo credits',
@@ -26,8 +26,9 @@
     talk: 'Talk to Spex', connecting: 'Connecting to Spex\u2026', listening: 'Spex is listening', stop: 'Tap to stop',
     left: '{t} left',
     hint_first: 'Try saying: \u201cgo to the water heater\u201d',
-    hint_camera: 'Try: \u201copen the camera\u201d', hint_take: 'Try: \u201ctake it\u201d',
-    hint_finding: 'Try: \u201cadd a finding: rust flakes in the burner\u201d', hint_report: 'Try: \u201cshow me the report\u201d',
+    hint_camera: 'Try: \u201cpull up the photo\u201d or \u201ctake a photo\u201d', hint_take: 'Try: \u201ctake it\u201d',
+    hint_finding: 'Try: \u201crust flakes in the burner, call it a repair\u201d', hint_report: 'Tap Report to see it in the report',
+    photo_n: 'Photo {n}', photo_of: 'Photo {i} of {n}', photo_close: 'Close', photo_prev: 'Previous photo', photo_next: 'Next photo',
     no_mic: 'The microphone is off, so Spex can\u2019t hear you. You can still tap around.',
     busy_title: 'Spex is busy right now', busy_text: 'A lot of people are trying Spex at the moment. Try again in a few minutes. The rest of the page is all yours.',
     busy_again: 'Try again',
@@ -36,7 +37,8 @@
     condition: 'Condition', photos: 'Photos', findings: 'Findings', camera_close: 'Close',
     rate: ['Inspected', 'Not inspected', 'Not present'],
     report_title: 'Home Inspection Report', prepared: 'Prepared by {c}',
-    kinds: { safety: 'Safety', repair: 'Repair', maintenance: 'Maintenance', note: 'Note' },
+    // The app's four severities (spex.py _SEVERITY), as the report names them; none yet: the inspector still says.
+    kinds: { safety_hazard: 'Safety', recommendation: 'Repair', maintenance: 'Maintenance', information: 'Note', none: 'Severity to set' },
     done_of: '{d} of {n} done', one_finding: '1 finding', findings_n: '{n} findings'
   };
   var COMPANY = 'Saltmeadow Home Inspections';
@@ -51,7 +53,9 @@
     { id: 'electrical panel', title: 'Electrical panel', room: 'Garage', photo: 'electrical-panel.jpg', n: 7, d: 0 },
     { id: 'attic', title: 'Attic', room: 'Attic', photo: 'attic.jpg', n: 5, d: 0 }
   ];
-  var KINDS = ['safety', 'repair', 'maintenance', 'note'];
+  var KINDS = ['safety_hazard', 'recommendation', 'maintenance', 'information'];
+  // What Spex says for anything the app does that this demo doesn't (the demo's note says the same words).
+  var FULL_APP = 'Say: "In the full app I\'d do that; this demo shows a few things," and offer something to try.';
   // The app's item marks (walk_marks.dart ItemStatusButtons): Inspected, Not inspected, Not present.
   var CONDITIONS = ['inspected', 'not inspected', 'not present'];
   var place = function (id) { return PLACES.filter(function (p) { return p.id === id; })[0] || null; };
@@ -73,7 +77,7 @@
   var S = null;   // the visit's state; null while closed
 
   function fresh() {
-    return { screen: 'walk', at: null, camera: false, rates: {}, photos: {}, finds: {}, voice: null, ended: false, opener: null };
+    return { screen: 'walk', at: null, camera: false, rates: {}, photos: {}, finds: {}, seq: 0, view: -1, voice: null, ended: false, opener: null };
   }
 
   // ---- screens ------------------------------------------------------------------------------------------------------
@@ -141,14 +145,19 @@
       rate.appendChild(b);
     });
     var photos = el('div', 'photos');
-    var first = el('i'); first.style.backgroundImage = 'url(' + PHOTOS + p.photo + ')'; photos.appendChild(first);
-    (S.photos[p.id] || []).forEach(function (f) { var i = el('i', null, null, { 'data-ty-taken': '' }); i.style.backgroundImage = 'url(' + PHOTOS + f + ')'; photos.appendChild(i); });
+    photosOf(p).forEach(function (f, n) {
+      var i = el('button', 'shot', null, { type: 'button', 'aria-label': f.label, 'data-ty-photo': String(n + 1) });
+      if (n > 0) i.setAttribute('data-ty-taken', '');
+      i.style.backgroundImage = 'url(' + PHOTOS + f.src + ')';
+      i.addEventListener('click', function () { showPhoto(n); });
+      photos.appendChild(i);
+    });
     var cam = el('button', 'add', '+', { type: 'button', 'aria-label': 'Camera' });
     cam.addEventListener('click', function () { openCamera(); });
     photos.appendChild(cam);
     var finds = el('div', null, null, { 'data-ty-finds': '' });
     if (p.fact) finds.appendChild(findCard(p.fact[0], p.fact[1], null));
-    (S.finds[p.id] || []).forEach(function (f) { finds.appendChild(findCard(f.title, f.text, f.kind)); });
+    (S.finds[p.id] || []).forEach(function (f) { finds.appendChild(findCard(f.title, f.text, f.sev || 'none')); });
     add(body, el('p', 'label', W.condition), rate, el('p', 'label', W.photos), photos, el('p', 'label', W.findings), finds);
     return add(s, body);
   }
@@ -171,20 +180,35 @@
     return add(s, close, view, add(shut, b), el('div', 'flash', null, { 'data-ty-flash': '' }));
   }
 
+  /* The app's photo viewer (PhotoViewerScreen): the item's photo full screen, "2 of 3", Close; previous and next. */
+  function photoScreen(p) {
+    var all = photosOf(p), f = all[S.view] || all[0];
+    var s = el('section', 'scr cam view-scr', null, { 'data-ty-scr': 'photo' });
+    var close = el('button', 'close', W.photo_close, { type: 'button' });
+    close.addEventListener('click', function () { S.view = -1; show('item'); });
+    var view = el('div', 'view', null, { role: 'img', 'aria-label': f.label }); view.style.backgroundImage = 'url(' + PHOTOS + f.src + ')';
+    var nav = el('div', 'photo-nav'), prev = el('button', null, '\u2039', { type: 'button', 'aria-label': W.photo_prev }), next = el('button', null, '\u203a', { type: 'button', 'aria-label': W.photo_next });
+    prev.disabled = S.view <= 0; next.disabled = S.view >= all.length - 1;
+    prev.addEventListener('click', function () { showPhoto(S.view - 1); });
+    next.addEventListener('click', function () { showPhoto(S.view + 1); });
+    add(nav, prev, el('span', null, fill(W.photo_of, { i: S.view + 1, n: all.length })), next);
+    return add(s, close, view, nav);
+  }
+
   function reportScreen() {
     var s = el('section', 'scr rep', null, { 'data-ty-scr': 'report' });
     var cover = el('div', 'cover'); cover.style.backgroundImage = 'url(' + PHOTOS + 'exterior.jpg)';
     add(cover, add(el('div'), el('b', null, W.report_title), el('span', null, ADDRESS + ' \u00b7 ' + fill(W.prepared, { c: COMPANY }))));
     var all = [];
     PLACES.forEach(function (p) { (S.finds[p.id] || []).forEach(function (f) { all.push({ p: p, f: f }); }); });
-    var count = function (k) { return all.filter(function (x) { return x.f.kind === k; }).length; };
+    var count = function (k) { return all.filter(function (x) { return x.f.sev === k; }).length; };
     var sum = el('div', 'sum');
-    [['safety', 3], ['repair', 6], ['maintenance', 11]].forEach(function (k) {
+    [['safety_hazard', 3], ['recommendation', 6], ['maintenance', 11]].forEach(function (k) {
       add(sum, add(el('div'), el('b', null, String(k[1] + count(k[0]))), el('span', null, W.kinds[k[0]])));
     });
     var body = el('div', 'body'); body.style.paddingTop = '0';
-    KINDS.forEach(function (k) {
-      var these = all.filter(function (x) { return x.f.kind === k; });
+    KINDS.concat(['none']).forEach(function (k) {
+      var these = all.filter(function (x) { return (x.f.sev || 'none') === k; });
       if (!these.length) return;
       body.appendChild(el('p', 'label', W.kinds[k]));
       these.forEach(function (x) { body.appendChild(findCard(x.p.title + ': ' + x.f.title, x.f.text, k)); });
@@ -197,9 +221,11 @@
     S.screen = name;
     if (name !== 'camera') S.camera = false;
     var p = S.at && place(S.at);
-    var next = name === 'item' && p ? itemScreen(p) : name === 'camera' && p ? cameraScreen(p) : name === 'report' ? reportScreen() : walkScreen();
+    if (name !== 'photo') S.view = -1;
+    var next = name === 'item' && p ? itemScreen(p) : name === 'camera' && p ? cameraScreen(p) : name === 'photo' && p ? photoScreen(p)
+      : name === 'report' ? reportScreen() : walkScreen();
     if (screen) screen.replaceWith(next); else root.querySelector('.ty-iph-screen').insertBefore(next, timer);
-    cl(root.querySelector('.ty-iph-screen'), name === 'camera' ? 'add' : 'remove', 'cam-on');
+    cl(root.querySelector('.ty-iph-screen'), name === 'camera' || name === 'photo' ? 'add' : 'remove', 'cam-on');
     screen = next;
   }
 
@@ -215,28 +241,132 @@
     setHint(W.hint_finding);
     return true;
   }
-  function addFinding(title, text, kind) {
-    if (!S.at || KINDS.indexOf(kind) < 0) return false;
-    title = clip(title, 60); text = clip(text, 300);
-    if (!title || !text) return false;
-    (S.finds[S.at] = S.finds[S.at] || []).push({ title: title, text: text, kind: kind });
-    if (S.screen !== 'item') show('item'); else show('item');
-    setHint(W.hint_report);
-    return true;
+  /* The item's photos, as the app names them ("Photo 1"): the one it has, then the ones taken here. */
+  function photosOf(p) {
+    return [p.photo].concat(S.photos[p.id] || []).map(function (src, n) { return { src: src, label: fill(W.photo_n, { n: n + 1 }) }; });
   }
+  function showPhoto(n) { var p = S.at && place(S.at); if (!p || n < 0 || n >= photosOf(p).length) return false; S.view = n; show('photo'); setHint(null); return true; }
   function setRate(id, c) { if (!place(id) || CONDITIONS.indexOf(c) < 0) return false; S.rates[id] = c; if (S.screen === 'item') show('item'); return true; }
 
-  /* One of Spex's tool calls, checked against the demo's own lists. Answers what the model is told. */
+  // ---- Spex's tools: the app's own (spex.py TOOLS, picked by relay/demo_voice.py), answered as the app's screen does ----
+  var lc = function (v) { return clip(v, 80).toLowerCase(); };
+  var where = function (p) { return p.room === p.title ? p.title : p.room + ' › ' + p.title; };
+  function findingById(ref) {
+    ref = clip(ref, 12).toUpperCase();
+    for (var i = 0; i < PLACES.length; i++) {
+      var list = S.finds[PLACES[i].id] || [];
+      for (var j = 0; j < list.length; j++) if (list[j].id === ref) return { p: PLACES[i], f: list[j], list: list };
+    }
+    return null;
+  }
+  function placeFor(stop, item) {
+    stop = lc(stop); item = lc(item);
+    var hit = function (a, b) { return a && b && (a === b || a.indexOf(b) >= 0 || b.indexOf(a) >= 0); };
+    var byItem = PLACES.filter(function (p) { return hit(p.title.toLowerCase(), item); });
+    if (byItem.length === 1) return { p: byItem[0] };
+    var byStop = PLACES.filter(function (p) { return hit(p.room.toLowerCase(), stop) || hit(p.title.toLowerCase(), stop); });
+    if (byStop.length === 1) return { p: byStop[0] };
+    if (byStop.length > 1) return { ask: 'Which one in the ' + byStop[0].room + ': ' + byStop.map(function (p) { return p.title; }).join(' or ') + '?' };
+    return null;
+  }
+  function photoAnswer(p, extra) {
+    var o = { item: p.title, stop: p.room, photos: photosOf(p).map(function (f, n) { return { number: n + 1, label: f.label }; }) };
+    Object.keys(extra).forEach(function (k) { o[k] = extra[k]; });
+    return o;
+  }
+  var SEV = { safety_hazard: 1, recommendation: 1, maintenance: 1, information: 1 };
+  var summary = function (x) { return { finding_id: x.f.id, where: where(x.p), title: x.f.title, severity: x.f.sev || null }; };
+
+  /* One of Spex's tool calls, checked against the demo's own lists and capped in length. Answers what Spex is told. */
   function runTool(name, args) {
     args = args || {};
-    var ok = false;
-    if (name === 'open_place') ok = openPlace(String(args.place || '').toLowerCase());
-    else if (name === 'open_camera') ok = openCamera();
-    else if (name === 'take_photo') ok = takePhoto();
-    else if (name === 'add_finding') ok = addFinding(args.title, args.report_text, String(args.kind || '').toLowerCase());
-    else if (name === 'rate_item') ok = !!S.at && setRate(S.at, String(args.condition || '').toLowerCase());
-    else if (name === 'show_report') { show('report'); setHint(null); ok = true; }
-    return ok ? { ok: true, screen: S.screen, place: S.at } : { ok: false, why: 'not possible here', screen: S.screen, place: S.at };
+    var p = S.at && place(S.at);
+    if (name === 'open_place') {
+      var found = args.finding_id ? findingById(args.finding_id) : null;
+      var to = found ? { p: found.p } : placeFor(args.stop, args.item);
+      if (!to) return { ok: false, error: 'No stop or item by that name in this demo house. Its places: ' + PLACES.map(where).join(', ') + '.' };
+      if (to.ask) return { ok: false, ask: to.ask };
+      openPlace(to.p.id);
+      return photoAnswer(to.p, { on_screen: where(to.p) });
+    }
+    if (name === 'show_photo') {
+      if (!p) return { ok: false, say: 'No item page is open, so there are no photos to show. Ask which item they mean and open it with open_place, then show its photo.' };
+      var all = photosOf(p), up = S.screen === 'photo' ? S.view : -1;
+      if (args.close === true) {
+        if (up < 0) return photoAnswer(p, { ok: false, say: 'No photo is open. Say so in a few words.' });
+        S.view = -1; show('item'); return photoAnswer(p, { ok: true });
+      }
+      var word = lc(args.label), byLabel = -1;
+      all.forEach(function (f, n) { if (word && byLabel < 0 && f.label.toLowerCase().indexOf(word) >= 0) byLabel = n; });
+      var num = typeof args.number === 'number' ? Math.round(args.number) : null, step = args.step;
+      if (word && byLabel < 0 && num === null && !step && all.length > 1) {
+        return photoAnswer(p, up < 0 ? { ok: false, say: 'None of its photos is labeled that. Say what its photos are, and ask which one.' }
+          : { ok: false, showing: up + 1, say: 'None of its photos is labeled that. Say what its photos are, and ask which one.' });
+      }
+      var at = byLabel >= 0 && !step && num === null ? byLabel
+        : step === 'next' ? up + 1 : step === 'previous' ? (up < 0 ? -1 : up - 1) : step === 'last' ? all.length - 1 : step === 'first' ? 0 : (num === null ? 1 : num) - 1;
+      if (at < 0 || at >= all.length) {
+        var why = step === 'next' ? 'That was its last photo. Say so; the same one stays open.' : step === 'previous' ? 'That was its first photo. Say so; the same one stays open.'
+          : 'The item has no photo by that number. Say how many it has.';
+        return photoAnswer(p, up < 0 ? { ok: false, say: why } : { ok: false, showing: up + 1, say: why });
+      }
+      showPhoto(at);
+      return photoAnswer(p, { ok: true, showing: at + 1 });
+    }
+    if (name === 'open_camera') {
+      if (!p) return { ok: false, say: 'No item page is open. Ask which item, and open it with open_place first.' };
+      // Zoom, lens, light, flash, size and clips are the app's: nothing opens for them here ("zoom in", probe 11-23).
+      // Their everyday settings (zoom 1, flash auto or off, standard size) are a plain photo; anything else is the app's.
+      var extra = (args.mode && args.mode !== 'photo') || (args.zoom != null && Number(args.zoom) !== 1) || args.light === true
+        || args.flash === 'on' || (args.lens && args.lens !== 'wide') || args.size === 'most';
+      if (extra) return { ok: false, say: FULL_APP };
+      openCamera();
+      return { camera: 'up', how: 'It stays up while they aim. They say "take it", or ask you to: call camera with take. Never tell them to tap.' };
+    }
+    if (name === 'camera') {
+      if (!S.camera) return { ok: false, say: 'The camera is not up: open it with open_camera.' };
+      if (args.take === true) { takePhoto(); return { taken: true, how: 'The photo is on the item now. Ask what it shows.' }; }
+      return { ok: false, say: FULL_APP };
+    }
+    if (name === 'record_finding') {
+      var into = args.item ? placeFor(null, args.item) : null;
+      into = into && into.p ? into.p : p;
+      var title = clip(args.title, 60), text = clip(args.report_text, 300);
+      if (!into) return { ok: false, say: 'No item is open here. Ask where it is, then open it with open_place.' };
+      if (!title || !text) return { error: 'title and report_text are required' };
+      var sev = SEV[args.severity] ? args.severity : null;
+      var f = { id: 'F' + (++S.seq), title: title, text: text, sev: sev };
+      (S.finds[into.id] = S.finds[into.id] || []).push(f);
+      if (S.at !== into.id) S.at = into.id;
+      show('item'); setHint(sev ? W.hint_report : null);
+      return { finding_id: f.id, filed_in: where(into), missing: sev ? [] : ['severity'] };
+    }
+    if (name === 'update_finding') {
+      var x = findingById(args.finding_id);
+      if (!x) return { error: 'no finding called "' + clip(args.finding_id, 12) + '"', findings: listAll().map(summary) };
+      if (SEV[args.severity]) x.f.sev = args.severity;
+      if (args.title) x.f.title = clip(args.title, 60);
+      if (args.report_text) x.f.text = clip(args.report_text, 300);
+      if (args.note) x.f.text = clip(x.f.text + ' ' + clip(args.note, 200), 500);
+      if (S.screen === 'item' || S.screen === 'report') show(S.screen);
+      if (x.f.sev) setHint(W.hint_report);
+      return { ok: true, finding_id: x.f.id, filed_in: where(x.p), severity: x.f.sev || null };
+    }
+    if (name === 'remove_finding') {
+      var r = findingById(args.finding_id);
+      if (!r) return { error: 'no finding called "' + clip(args.finding_id, 12) + '"', findings: listAll().map(summary) };
+      r.list.splice(r.list.indexOf(r.f), 1);
+      if (S.screen === 'item' || S.screen === 'report') show(S.screen);
+      return { ok: true, removed: r.f.id };
+    }
+    if (name === 'list_findings') return { findings: listAll().map(summary) };
+    if (name === 'end_conversation') { setTimeout(function () { if (S) stopVoice(); }, 1500); return { ok: true }; }
+    return { ok: false, say: FULL_APP };
+  }
+  function listAll() {
+    var out = [];
+    PLACES.forEach(function (q) { (S.finds[q.id] || []).forEach(function (f) { out.push({ p: q, f: f }); }); });
+    return out;
   }
 
   function setHint(t) { hint.textContent = t || ''; hint.style.opacity = t ? '1' : '0'; }

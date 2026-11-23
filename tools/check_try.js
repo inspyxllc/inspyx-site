@@ -136,7 +136,8 @@ const turnDone = { serverContent: { turnComplete: true } };
       return last.bottom <= hint.top;
     });
     ok('nothing hides under the hint or the Talk button: the last row scrolls clear', clear);
-    ok('the side panel\'s example is the burner\'s rust, as the photo shows', (await page.locator('.ty-try-side').innerText()).includes('rust flakes in the burner'));
+    ok('the side panel\'s example is the burner\'s rust, as the photo shows', (await page.locator('.ty-try-side').innerText()).toLowerCase().includes('rust flakes in the burner'));
+    ok('the side panel offers "pull up the photo"', (await page.locator('.ty-try-side').innerText()).toLowerCase().includes('pull up the photo'));
     // Tap around.
     await page.click('[data-ty-place="water heater"]');
     ok('tapping a place opens it', (await page.locator('[data-ty-scr="item"] .ty-bar b').innerText()) === 'Water heater');
@@ -178,7 +179,7 @@ const turnDone = { serverContent: { turnComplete: true } };
     await page.evaluate(() => document.querySelector('[data-try]').click());
     await page.waitForSelector('.ty-try-veil');
     const kitchen = await page.locator('[data-ty-place="kitchen"] small').innerText();
-    await page.evaluate(() => { TrySpex._run('open_place', { place: 'kitchen' }); TrySpex._run('add_finding', { title: 'a', report_text: 'b', kind: 'note' }); TrySpex._run('open_place', { place: 'water heater' }); TrySpex._run('add_finding', { title: 'a', report_text: 'b', kind: 'note' }); TrySpex._run('add_finding', { title: 'c', report_text: 'd', kind: 'note' }); });
+    await page.evaluate(() => { TrySpex._run('open_place', { stop: 'Kitchen' }); TrySpex._run('record_finding', { title: 'a', report_text: 'b', said: 'a' }); TrySpex._run('open_place', { stop: 'Garage', item: 'Water heater' }); TrySpex._run('record_finding', { title: 'a', report_text: 'b', said: 'a' }); TrySpex._run('record_finding', { title: 'c', report_text: 'd', said: 'c' }); });
     const marks = await page.locator('[data-ty-rate]').allInnerTexts();
     await page.click('[data-ty-scr="item"] .ty-bar .ty-back');
     const kitchen1 = await page.locator('[data-ty-place="kitchen"] small').innerText();
@@ -191,14 +192,20 @@ const turnDone = { serverContent: { turnComplete: true } };
   await group('a visit by voice', async () => {
     const injected = '<img src=x onerror="window.__pwned=1">Rust flakes in the burner';
     const r = relay({ plan: [
-      said('Go to the water heater'), call('c1', 'open_place', { place: 'water heater' }), { wait: 'tool_response' },
+      said('Go to the water heater'), call('c1', 'open_place', { stop: 'Garage', item: 'Water heater' }), { wait: 'tool_response' },
       spexSays('Here\u2019s the water heater, in the garage.'), turnDone,
-      said('Open the camera'), call('c2', 'open_camera', {}), { wait: 'tool_response' },
-      call('c3', 'take_photo', {}), { wait: 'tool_response' }, { sleep: 700 },
-      said('Add a finding: rust flakes in the burner'), call('c4', 'add_finding', { title: injected, report_text: 'Rust flakes and scale in the burner compartment. Have a plumber service the water heater.', kind: 'repair' }), { wait: 'tool_response' },
-      call('c5', 'open_place', { place: 'the moon' }), { wait: 'tool_response' },
-      call('c6', 'add_finding', { title: 'x', report_text: 'y', kind: 'invoice' }), { wait: 'tool_response' },
-      call('c7', 'show_report', {}), { wait: 'tool_response' },
+      said('Pull up the photo'), call('c2', 'show_photo', {}), { wait: 'tool_response' },
+      call('c3', 'show_photo', { step: 'next' }), { wait: 'tool_response' },
+      call('c4', 'show_photo', { close: true }), { wait: 'tool_response' },
+      said('Take a photo'), call('c5', 'open_camera', {}), { wait: 'tool_response' },
+      call('c6', 'camera', { take: true }), { wait: 'tool_response' }, { sleep: 700 },
+      said('Rust flakes in the burner'), call('c7', 'record_finding', { title: injected, report_text: 'Rust flakes and scale in the burner compartment. Have a plumber service the water heater.', said: 'Rust flakes in the burner' }), { wait: 'tool_response' },
+      call('c8', 'update_finding', { finding_id: 'F1', severity: 'recommendation' }), { wait: 'tool_response' },
+      call('c9', 'open_place', { stop: 'the moon' }), { wait: 'tool_response' },
+      call('c10', 'mark_photo', { shape: 'circle', box_2d: [1, 2, 3, 4] }), { wait: 'tool_response' },
+      call('c11', 'show_photo', { number: 2 }), { wait: 'tool_response' },
+      call('c12', 'show_photo', { close: true }), { wait: 'tool_response' },
+      call('c13', 'open_camera', { zoom: 2 }), { wait: 'tool_response' },
       { sleep: 300 }, { relay: { status: 'ended', reason: 'time-limit' } },
     ] });
     const { ctx, page } = await open(browser, r);
@@ -210,12 +217,20 @@ const turnDone = { serverContent: { turnComplete: true } };
     ok('the page solved the relay\'s challenge and said who it is', r.hellos.length === 1 && r.hellos[0].mode === 'demo' && r.hellos[0].client === 'inspyx-web-demo' && r.hellos[0].pow.number === 5);
     ok('the microphone went up as audio', r.audio > 0, String(r.audio));
     const res = r.responses.map((t) => t.function_responses[0]);
-    ok('Spex took it to the water heater, opened the camera and took the photo', res[0].response.ok && res[0].response.place === 'water heater' && res[1].response.ok && res[1].response.screen === 'camera' && res[2].response.ok);
-    ok('the finding was added', res[3].response.ok && res[3].name === 'add_finding');
-    ok('a place the demo doesn\'t have, or a kind it doesn\'t know, is refused, not shown', res[4].response.ok === false && res[5].response.ok === false);
-    ok('the report shows', res[6].response.ok && res[6].response.screen === 'report');
-    const report = await page.locator('[data-ty-scr="report"]').innerText();
-    ok('the model\'s words are text, never markup', report.includes('<img src=x') && !(await page.evaluate(() => window.__pwned)) && (await page.locator('[data-ty-scr="report"] img').count()) === 0);
+    const rs = (i) => res[i].response;
+    ok('Spex took it to the water heater by the app\'s stop and item names', rs(0).on_screen === 'Garage \u203a Water heater' && rs(0).photos.length === 1);
+    ok('"pull up the photo" opens the item\'s photo on the viewer, never the camera', rs(1).ok === true && rs(1).showing === 1 && res[1].name === 'show_photo');
+    ok('next past its last photo is an honest answer, and close closes it', rs(2).ok === false && /last photo/.test(rs(2).say) && rs(3).ok === true);
+    ok('the camera opens, and camera take takes the photo', rs(4).camera === 'up' && rs(5).taken === true);
+    ok('the finding is filed in its item, and Spex is told to ask how serious', rs(6).finding_id === 'F1' && rs(6).filed_in === 'Garage \u203a Water heater' && rs(6).missing[0] === 'severity');
+    ok('its severity is set as the inspector says', rs(7).ok === true && rs(7).severity === 'recommendation');
+    ok('a place the demo doesn\'t have is refused, not shown', rs(8).ok === false);
+    ok('an app tool the demo doesn\'t have gets "in the full app", never another tool', rs(9).ok === false && /In the full app/.test(rs(9).say));
+    ok('"zoom in" opens nothing: the demo\'s camera has no zoom', rs(12).ok === false && /In the full app/.test(rs(12).say) && res[12].name === 'open_camera');
+    ok('the photo taken is the item\'s second', rs(10).showing === 2 && rs(10).photos.length === 2 && rs(11).ok === true);
+    const item = await page.locator('[data-ty-scr="item"]').innerText();
+    ok('the model\'s words are text, never markup', item.includes('<img src=x') && item.includes('Repair') && !(await page.evaluate(() => window.__pwned)) && (await page.locator('[data-ty-finds] img').count()) === 0);
+    ok('a plain photo with its everyday settings opens the camera', await page.evaluate(() => TrySpex._run('open_camera', { zoom: 1, flash: 'auto', size: 'standard', mode: 'photo' }).camera === 'up'));
     ok('the end is "That\u2019s Spex." with the waitlist', (await page.locator('[data-ty-done]').innerText()).includes('Join the waitlist'));
     ok('at the end the mic is off', await page.evaluate(() => window.__stream.getTracks().every((t) => t.readyState === 'ended')));
     ok('nothing left the site and no error showed', page.outside.length === 0 && page.errors.length === 0, page.outside.concat(page.errors).join(' | '));

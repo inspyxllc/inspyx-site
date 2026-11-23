@@ -155,3 +155,11 @@
   .ty-try-side ul{margin-top:10px; gap:6px} .ty-try-side li{padding:7px 12px; font-size:14px}
   .ty-try-credits{margin-top:8px}
 }
+/* The item's photos open on the app's photo viewer (2026-11-22: "pull up the photo"). */
+.ty-photos button.ty-shot{width:74px; height:74px; border-radius:12px; border:0; padding:0; background:#C9D2DE center/cover; cursor:pointer}
+.ty-view-scr .ty-view{margin-top:44px; background-color:#000; background-size:contain; background-repeat:no-repeat}
+.ty-view-scr .ty-view::after{display:none}
+.ty-view-scr .ty-photo-nav{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px 176px; font-size:14px}
+.ty-photo-nav button{width:44px; height:44px; flex:none; border-radius:50%; border:0; background:rgba(255,255,255,.16); color:#fff; font-size:26px; line-height:1; cursor:pointer}
+.ty-photo-nav button:disabled{opacity:.3; cursor:default}
+.ty-photo-nav span{text-align:center}
