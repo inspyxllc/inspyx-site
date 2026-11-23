@@ -30,9 +30,12 @@
     });
   }
 
+  var asked = 0;   // each check is numbered: only the newest one's answer shows (a slow older one never overwrites it)
   function check() {
+    var mine = ++asked;
     show('checking', '', false);
     return auth.ask('payments', { action: 'status' }, DEADLINE).then(function (r) {
+      if (mine !== asked) return;
       if (r === null) { window.location.replace('/signin'); return; }
       if (r.status === 409 && r.json && r.json.error === 'no_account') { show('no-plan', 'plan', false); return; }
       if (r.status === 404 || r.status === 501) { show('not-set-up', '', false); return; }
@@ -42,7 +45,7 @@
       else if (s === 'needs_info') show('needs_info', 'finish', false);
       else if (s === 'pending') show('pending', 'again', false);
       else show('failed', 'again', false);
-    }, function () { show('failed', 'again', false); });
+    }, function () { if (mine === asked) show('failed', 'again', false); });
   }
 
   function openStripe(button) {

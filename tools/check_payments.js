@@ -12,9 +12,10 @@ async function open(browser, status, connect) {
   const page = await ctx.newPage();
   const errs = [], went = [], asks = [];
   page.on('pageerror', (e) => errs.push(e.message));
-  await page.route('**/functions/v1/payments', (r) => {
+  await page.route('**/functions/v1/payments', async (r) => {
     const b = JSON.parse(r.request().postData() || '{}'); asks.push(b.action);
-    const a = b.action === 'connect' ? connect : status;
+    let a = b.action === 'connect' ? connect : status;
+    if (Array.isArray(a)) { const [delay, answer] = a[Math.min(asks.filter((x) => x === 'status').length - 1, a.length - 1)]; await new Promise((d) => setTimeout(d, delay)); a = answer; }
     if (a === 'down') return r.abort('failed');
     r.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a.json) });
   });
@@ -41,7 +42,14 @@ async function open(browser, status, connect) {
       ok(what + ': says so, with the one button that moves it on', JSON.stringify(v.words) === JSON.stringify([words]) && JSON.stringify(v.buttons) === JSON.stringify(buttons) && JSON.stringify(v.now) === JSON.stringify(now) && o.errs.length === 0, JSON.stringify(v));
       await o.ctx.close();
     }
-    let o = await open(browser, { status: 200, json: { state: 'none', payouts: false } }, { status: 200, json: { url: 'https://connect.stripe.com/setup/e/acct_1/abc' } });
+    // Back to the tab while the first check is still out: the newer answer stands (a slow older one never wins).
+    let o = await open(browser, [[900, { status: 200, json: { state: 'pending', payouts: false } }], [50, { status: 200, json: { state: 'ready', payouts: true } }]], null);
+    await o.page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+    await o.page.waitForTimeout(1300);
+    const latest = await o.seen();
+    ok('two checks out at once: the newer answer stands', JSON.stringify(latest.words) === JSON.stringify(['Ready: clients can pay you by card.']), JSON.stringify(latest.words));
+    await o.ctx.close();
+    o = await open(browser, { status: 200, json: { state: 'none', payouts: false } }, { status: 200, json: { url: 'https://connect.stripe.com/setup/e/acct_1/abc' } });
     await o.page.click('[data-do="setup"]');
     await o.page.waitForTimeout(700);
     ok('Set up opens Stripe\'s own page', o.went.some((u) => u.startsWith('https://connect.stripe.com/setup/')) && o.asks.includes('connect'), o.went.join(','));

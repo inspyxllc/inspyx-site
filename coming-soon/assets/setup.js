@@ -74,8 +74,11 @@
     payments: function () { return cards === null ? null : cards === 'ready' ? [] : cards === 'no_account' ? ['plan'] : ['cards']; }
   };
   var cards = null;   // 'ready', 'no_account', 'other', or null (not known)
+  var cardsAsked = 0;   // only the newest ask's answer counts (a slow older one never overwrites it)
   function askCards() {
+    var mine = ++cardsAsked;
     return auth.ask('payments', { action: 'status' }, DEADLINE).then(function (r) {
+      if (mine !== cardsAsked) return;
       if (r && r.status === 200 && r.json && typeof r.json.state === 'string') cards = r.json.state === 'ready' ? 'ready' : 'other';
       else if (r && r.status === 409 && r.json && r.json.error === 'no_account') cards = 'no_account';
     }, function () { /* the last answer stands */ }).then(render);
