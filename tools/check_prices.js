@@ -113,7 +113,7 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     mod('qm-gone', 'number_question', 'q-gone', { tiers: [{ from: null, to: null, fee_cents: 2500, minutes: 0 }] });
     mod('qm-later', 'yes_no_question', 'q-not-here', { tiers: [{ values: ['yes'], fee_cents: 1000, minutes: 0 }] });
     const { page, ctx, errs } = await open(browser, { server: s });
-    const lines = await card(page, 'Condo inspection').locator('.prc-changes li').allInnerTexts();
+    const lines = await card(page, 'Condo inspection').locator('.prc-changes li [data-v="text"]').allInnerTexts();
     ok('opens with no errors', errs.length === 0, errs.join(' | '));
     ok('named by the question in quotes; yes and no read as answers, a count per unit',
       lines.includes('“Pool”: yes +$75 · no +$0') && lines.includes('“Outbuildings”: +$50 for each 1 past 1'), JSON.stringify(lines));
@@ -140,8 +140,8 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     ok('services in their order, each with its summary in the phone\'s words',
       JSON.stringify(await vis(page, '[data-list="services"] > li > .prc-row [data-v="summary"]')) === JSON.stringify(['$400 · 3 h · at least $350 · 2 add-ons · 1 price change', '$300 · 2 h']), JSON.stringify(await vis(page, '[data-list="services"] > li > .prc-row [data-v="summary"]')));
     ok('a service\'s add-ons, with fee and time', JSON.stringify(await vis(page, '.prc-addon .prc-what')) === JSON.stringify(['Radon test $150 · 1 h', 'Termite (WDO) $95']), JSON.stringify(await vis(page, '.prc-addon .prc-what')));
-    ok('a price change in one line, as the phone says it', (await vis(page, '.prc-changes li')).join() === 'Square feet: up to 2,000 +$0 · 2,000 and up +$50');
-    ok('a service with no price changes shows no such part', (await card(page, 'Condo inspection').locator('[data-changes]').isVisible()) === false);
+    ok('a price change in one line, as the phone says it', (await vis(page, '.prc-changes li [data-v="text"]')).join() === 'Square feet: up to 2,000 +$0 · 2,000 and up +$50');
+    ok('a service with no price changes lists none, and offers to add one', (await card(page, 'Condo inspection').locator('.prc-changes li').count()) === 0 && await card(page, 'Condo inspection').locator('[data-add="change"]').isVisible());
     ok('the discount code in one line', JSON.stringify(await vis(page, '[data-list="discounts"] [data-v="summary"]')) === JSON.stringify(['10% off · all services · until Dec 31, 2026 · up to 20 uses']), JSON.stringify(await vis(page, '[data-list="discounts"] [data-v="summary"]')));
     ok('nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await ctx.close();
@@ -149,7 +149,7 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
 
   await group('nothing yet', async () => {
     const { page, ctx } = await open(browser, { server: server() });
-    ok('with no prices, it says what to do, and offers to add', (await vis(page, '[data-empty]')).length === 2 && (await vis(page, '[data-add="service"]')).join() === 'Add a service' && (await vis(page, '[data-add="discount"]')).join() === 'Add a discount code');
+    ok('with no prices, it says what to do, and offers to add', (await vis(page, '[data-empty]')).length === 3 && (await vis(page, '[data-add="question"]')).join() === 'Add a question' && (await vis(page, '[data-add="service"]')).join() === 'Add a service' && (await vis(page, '[data-add="discount"]')).join() === 'Add a discount code');
     await ctx.close();
   });
 
