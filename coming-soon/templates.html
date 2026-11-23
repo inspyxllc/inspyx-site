@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Templates</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/templates.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/convert/inspyx_pdf.js" defer></script>
+<script src="/assets/convert/inspyx_convert.js" defer></script>
+<script src="/assets/templates.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="tpl" data-tpl>
+<h1>Bring in your template</h1>
+<p class="tpl-lede">Drop the template you use now, and Inspyx turns it into an Inspyx template in your file's own words.</p>
+
+<!-- How it works: a finger drags a PDF in, Inspyx sorts it, and the template is ready. Still, in its last frame,
+     when the browser asks for less motion. -->
+<figure class="tpl-show" aria-hidden="true" data-show>
+<div class="tpl-stage">
+<div class="tpl-drop-mini"><span class="tpl-mini-arrow"></span></div>
+<div class="tpl-file"><span class="tpl-file-fold"></span><span class="tpl-file-tag">PDF</span><span class="tpl-file-name">My template.pdf</span></div>
+<div class="tpl-finger"></div>
+<div class="tpl-sorting"><i></i><i></i><i></i><i></i><i></i></div>
+<div class="tpl-ready">
+<strong>My template</strong>
+<span>12 sections, 148 items</span>
+<b class="tpl-ready-row"></b><b class="tpl-ready-row"></b><b class="tpl-ready-row short"></b>
+<em>Add to my templates</em>
+</div>
+</div>
+<ol class="tpl-steps">
+<li data-cap="1">Drag your template's file here, or pick it.</li>
+<li data-cap="2">Inspyx sorts its lines into sections, items and comments.</li>
+<li data-cap="3">Check it, then add it. It's on your phone too.</li>
+</ol>
+</figure>
+
+<label class="tpl-drop" data-drop>
+<input type="file" data-pick accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.html,.htm,.json,.rtf">
+<span class="tpl-drop-icon" aria-hidden="true"></span>
+<span class="tpl-drop-main">Drop your file here</span>
+<span class="tpl-drop-or">or <u>pick the file</u></span>
+<span class="tpl-drop-kinds">PDF, Word, Excel, CSV, text, HTML or JSON</span>
+</label>
+
+<div class="tpl-status" role="status" aria-live="polite">
+<p data-st="reading" hidden><span class="tpl-spin" aria-hidden="true"></span><span>Reading the file…</span></p>
+<p data-st="sorting" hidden><span class="tpl-spin" aria-hidden="true"></span><span data-sorting></span></p>
+</div>
+<div class="tpl-verdict" role="alert">
+<p data-v="scanned" hidden>This PDF is a scan (pictures of pages). Convert it on your phone, where Inspyx reads scans.</p>
+<p data-v="rtf" hidden>Convert this file on your phone, where Inspyx reads RTF files.</p>
+<p data-v="unsupported" hidden>Inspyx can't convert this kind of file here. Use a PDF, Word, Excel, CSV, text, HTML or JSON file.</p>
+<p data-v="unreadable" hidden><span data-unreadable></span></p>
+<p data-v="refused" hidden><span data-refused></span></p>
+<p data-v="failed" hidden>The file couldn't be converted. Check your connection and try again.</p>
+</div>
+
+<section class="tpl-results" data-results hidden></section>
+
+<p class="tpl-links"><a href="/today">What needs you</a><a href="/prices">Prices</a><a href="/agreements">Agreements</a><a href="/account">Account</a></p>
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<!-- The page's words for what templates.js builds. The converter's own preview words come with each template. -->
+<template data-t="words">
+<span data-w="sorting">Sorting the lines…</span>
+<span data-w="sorting-of">Sorting the lines… ({done} of {total})</span>
+<span data-w="unreadable">Inspyx couldn't read this file: {why}.</span>
+<span data-w="unreadable-plain">Inspyx couldn't read this file.</span>
+<span data-w="part">Template {n} of {count}: {name}</span>
+<span data-w="add">Add to my templates</span>
+<span data-w="adding">Adding…</span>
+<span data-w="added">Added "{name}". Choose it when you start a new inspection.</span>
+<span data-w="already">"{name}" was already added. Choose it when you start a new inspection.</span>
+<span data-w="add-failed">The template couldn't be added. Nothing changed.</span>
+<span data-w="full">Your templates are full (200). Remove one on your phone, then add this one.</span>
+<span data-w="soon">Adding from the website comes next. For now, convert it on your phone to add it.</span>
+<span data-w="another">Convert another file</span>
+<span data-w="show-all">Show all {n}</span>
+</template>
+
+<template data-t="result">
+<article class="tpl-card">
+<p class="tpl-part" data-part hidden></p>
+<h2 data-name></h2>
+<p class="tpl-summary" data-summary></p>
+<h3 data-sections-label></h3>
+<ol class="tpl-sections" data-sections></ol>
+<details class="tpl-dots" data-dots open hidden><summary><span data-dots-label></span><small data-dots-hint></small></summary><ul data-dot-lines></ul></details>
+<details class="tpl-left" data-left hidden><summary><span data-left-label></span><small data-left-hint></small></summary><ul data-left-lines></ul></details>
+<div class="tpl-save"><button class="btn" type="button" data-add></button><p class="tpl-saved" data-saved role="status"></p></div>
+</article>
+</template>
+</body>
+</html>
