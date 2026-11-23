@@ -250,7 +250,7 @@
 
   // ---- Spex's tools: the app's own (spex.py TOOLS, picked by relay/demo_voice.py), answered as the app's screen does ----
   var lc = function (v) { return clip(v, 80).toLowerCase(); };
-  var where = function (p) { return p.room === p.title ? p.title : p.room + ' › ' + p.title; };
+  var where = function (p) { return p.room === p.title ? p.title : p.room + ' \u203a ' + p.title; };
   function findingById(ref) {
     ref = clip(ref, 12).toUpperCase();
     for (var i = 0; i < PLACES.length; i++) {
