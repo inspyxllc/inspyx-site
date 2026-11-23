@@ -35,3 +35,6 @@
   .insp{grid-template-columns:1fr; gap:20px; padding:20px 16px 48px}
   .insp-cover{grid-template-columns:1fr}
 }
+/* New inspection (2026-11-23, job 4): beside the title. */
+.insp-head{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; justify-content:space-between}
+.insp-new{display:inline-flex; align-items:center; min-height:44px; padding:0 18px; border-radius:999px; text-decoration:none; font:600 15px var(--font)}

@@ -1,0 +1,64 @@
+/* New inspection (2026-11-23, job 4): the form in cards on the left, the price beside it, staying in view. */
+.new{display:block; max-width:1180px; margin:0 auto; padding:28px var(--gr) 64px var(--gl)}
+.new h1{font-size:34px; margin-bottom:8px}
+.new-lede{font-size:17px; line-height:1.45; color:var(--ink-soft); max-width:720px}
+.new-state{margin:12px 0; font-size:16px; color:var(--ink-soft)}
+.new-state:empty{display:none}
+.new-form{display:grid; grid-template-columns:minmax(0, 1fr) 340px; gap:18px 24px; align-items:start; margin-top:18px}
+.new-form[hidden]{display:none}
+.new-card{grid-column:1; display:grid; gap:12px; padding:20px; border-radius:20px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.07), 0 10px 30px rgba(15,32,60,.05)}
+.new-card h2, .new-quote h2{font-size:19px}
+.new-card h3{font-size:13.5px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px}
+.new-card fieldset{margin:0; padding:0; border:0; display:grid; gap:6px}
+.new-card legend{font-size:14.5px; font-weight:600; color:var(--ink); margin-bottom:4px}
+.new-card legend small, .new-card label small{font-weight:400; color:var(--ink-faint)}
+.new-grid{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px 12px}
+.new-grid .wide{grid-column:span 2}
+.new label{display:grid; gap:5px; font-size:13.5px; color:var(--ink-soft)}
+.new label.tick{display:flex; gap:10px; align-items:center; font-size:15px; color:var(--ink)}
+.new label.tick input{width:20px; height:20px; margin:0}
+.new input:not([type="checkbox"]):not([type="radio"]), .new select{width:100%; min-height:44px; padding:10px 12px; border:1px solid #C9C9D0; border-radius:12px; background:#FFFFFF; color:var(--ink); font:400 16px var(--font)}
+.new input:focus-visible, .new select:focus-visible{outline:2px solid var(--navy); outline-offset:1px}
+.new-services{display:grid; gap:8px}
+.new-choice{display:grid !important; grid-template-columns:auto 1fr auto; align-items:center; gap:12px !important; min-height:52px; padding:0 14px; border-radius:14px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.1); font-size:16px !important; color:var(--ink) !important; cursor:pointer}
+.new-choice:has(input:checked){box-shadow:inset 0 0 0 2px var(--navy); background:rgba(2,132,199,.06)}
+.new-choice input{width:20px; height:20px; margin:0}
+.new-choice small, .new-addon small{font-size:15px; color:var(--ink-soft)}
+.new-addon{justify-content:flex-start}
+.new-addon small{margin-left:auto}
+.new-addons, .new-asks{display:grid; gap:6px}
+.new-addons[hidden], .new-asks[hidden], .new-slots[hidden]{display:none}
+.new-code{max-width:280px}
+.new-hint{font-size:14px; color:var(--ink-faint)}
+.new-slots{display:grid; gap:8px}
+.new-slots [data-slot-list]{display:flex; flex-wrap:wrap; gap:6px}
+.new-slot{min-height:36px; padding:0 12px; border:0; border-radius:999px; background:#EEF3F9; color:var(--navy); font:600 14px var(--font); cursor:pointer}
+.new-slot[aria-pressed="true"]{background:var(--navy); color:#FFFFFF}
+.new-quote{grid-column:2; grid-row:1 / span 5; position:sticky; top:20px; display:grid; gap:10px; padding:20px; border-radius:20px;
+  background:linear-gradient(180deg, #FFFFFF, #F6F9FD); box-shadow:inset 0 0 0 1px rgba(15,32,60,.08), 0 18px 40px rgba(15,32,60,.10)}
+.new-lines{list-style:none; margin:0; padding:0; display:grid; gap:6px}
+.new-line{display:flex; justify-content:space-between; gap:12px; font-size:15px; color:var(--ink)}
+.new-line-discount span:last-child, .new-line-add_on span:last-child{color:var(--ink-soft)}
+.new-line-tax{color:var(--ink-soft)}
+.new-total{display:flex; justify-content:space-between; padding-top:10px; border-top:1px solid var(--line); font-size:17px}
+.new-total strong{font-size:22px}
+.new-total[hidden], .new-length[hidden]{display:none}
+.new-length{font-size:14px; color:var(--ink-faint)}
+.new-warn{display:grid; gap:4px; padding:10px 12px; border-radius:12px; background:#FFF6E5; color:#7A4A00; font-size:14.5px; font-weight:600}
+.new-warn[hidden]{display:none}
+.new-problems p{font-size:14.5px; color:#8C1D18}
+.new-quote .btn{min-height:50px; border:0; font:600 16px var(--font); cursor:pointer}
+.new-quote .btn:disabled{opacity:.6; cursor:default}
+.new-done{display:grid; gap:12px; max-width:640px; margin-top:24px; padding:24px; border-radius:20px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.07)}
+.new-done[hidden]{display:none}
+.new-done-links{display:flex; flex-wrap:wrap; gap:10px}
+.new-done-links .btn{display:inline-flex; align-items:center; min-height:46px; padding:0 18px; text-decoration:none}
+@media (max-width: 999.98px){
+  .new{padding-top:20px}
+  .new h1{font-size:28px}
+  .new-form{grid-template-columns:1fr}
+  .new-quote{grid-column:1; grid-row:auto; position:static}
+  .new-grid{grid-template-columns:1fr 1fr}
+  .new-grid .wide{grid-column:1 / -1}
+}
+@media (max-width: 420px){ .new-grid{grid-template-columns:1fr} }
