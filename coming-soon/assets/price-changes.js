@@ -168,10 +168,15 @@
       input.value = t ? t.values.join(', ') : '';
       vals.appendChild(input);
     } else if (basis === 'foundation') {
-      FOUNDATIONS.forEach(function (f) {
+      // The four choices, and any other foundation the line already holds (typed on the phone or a booking page),
+      // so editing never drops one (Codex on #78).
+      var others = (t ? t.values : []).filter(function (v) {
+        return !FOUNDATIONS.some(function (f) { return normal('foundation', f) === normal('foundation', v); });
+      });
+      FOUNDATIONS.concat(others).forEach(function (f) {
         var lab = document.createElement('label'), box = document.createElement('input'), span = document.createElement('span');
         lab.className = 'tick'; box.type = 'checkbox'; box.value = f; box.checked = !!t && t.values.some(function (v) { return normal('foundation', v) === normal('foundation', f); });
-        span.textContent = words('f-' + f); lab.appendChild(box); lab.appendChild(span); vals.appendChild(lab);
+        span.textContent = words('f-' + f) || f; lab.appendChild(box); lab.appendChild(span); vals.appendChild(lab);
       });
     } else {
       var yn = document.createElement('strong');
