@@ -16,13 +16,16 @@ ITEMS = [
  ('people', '/people', 'People', I('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>')),
  ('account', '/account', 'Account', I('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')),
 ]
+# The tab bar's own shorter word, where the full one doesn't fit a phone's tab (the lead, 11-23).
+SHORT = {'today': 'To do'}
 MORE = I('<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>')
 FIRST = 4   # on a phone, the bar holds these; the rest are under More
 
 def li(item, here):
     key, href, label, icon = item
     cur = ' aria-current="page"' if key == here else ''
-    return '<li><a href="%s"%s>%s<span>%s</span></a></li>' % (href, cur, icon, label)
+    short = '<span class="dash-s">%s</span>' % SHORT[key] if key in SHORT else ''
+    return '<li><a href="%s"%s>%s<span class="dash-l">%s</span>%s</a></li>' % (href, cur, icon, label, short)
 
 def nav(here):
     more_here = any(k == here for k, *_ in ITEMS[FIRST:])

@@ -33,7 +33,7 @@ async function open(browser, path, w) {
   const browser = await engine.launch();
   console.log('browser: ' + engine.name() + ' ' + browser.version());
   for (const [name, here] of Object.entries(PAGES)) {
-    for (const w of [1280, 390]) {
+    for (const w of [1280, 390, 320]) {
       const { ctx, page, errs } = await open(browser, name, w);
       const v = await page.evaluate(() => {
         const nav = document.querySelector('body > nav.dash');
@@ -42,7 +42,12 @@ async function open(browser, path, w) {
         return {
           nav: !!nav,
           hrefs: items.map((a) => a.getAttribute('href')),
-          labels: items.map((a) => a.textContent.trim()).join(' | '),
+          labels: items.map((a) => a.querySelector('.dash-l').textContent.trim()).join(' | '),
+          // His 11-16 mark: the house with the blue S (its second stroke is the S). The old house alone fails.
+          logo: !!document.querySelector('.bar .logo svg path[stroke="#0284C7"]') && shown(document.querySelector('.bar .logo')),
+          // Each tab's words fit it, never cut off.
+          cut: items.filter(shown).concat([...(nav ? nav.querySelectorAll('.dash-more summary') : [])].filter(shown))
+            .map((a) => [...a.querySelectorAll('span')].filter(shown)[0]).filter((sp) => sp && sp.scrollWidth > sp.clientWidth + 1).map((sp) => sp.textContent),
           current: [...(nav ? nav.querySelectorAll('.dash-items [aria-current="page"]') : [])].map((a) => a.getAttribute('href')),
           visible: items.filter(shown).map((a) => a.getAttribute('href')),
           more: nav ? shown(nav.querySelector('.dash-more summary')) : false,
@@ -56,9 +61,23 @@ async function open(browser, path, w) {
       if (w === 1280) ok(label + ': a sidebar down the left, all ten shown, no More', v.rect.left === 0 && v.rect.height >= 800 && v.visible.length === 10 && !v.more, JSON.stringify(v.rect));
       else ok(label + ': a tab bar along the bottom: four, then More', Math.round(v.rect.bottom) === 860 && JSON.stringify(v.visible) === JSON.stringify(ITEMS.slice(0, 4)) && v.more, JSON.stringify(v.visible));
       ok(label + ': nothing runs off the side', !v.sideways);
+      ok(label + ': his logo, the house with the S', v.logo);
+      ok(label + ': every tab\'s words fit, none cut off', v.cut.length === 0, JSON.stringify(v.cut));
       ok(label + ': no errors', errs.length === 0, errs.join(' | '));
       await ctx.close();
     }
+  }
+  // The phone's first tab says "To do"; the page and the sidebar keep "What needs you".
+  {
+    const { ctx, page } = await open(browser, 'today', 320);
+    const tab = await page.evaluate(() => [...document.querySelectorAll('.dash-items a[href="/today"] span')].filter((s) => getComputedStyle(s).display !== 'none').map((s) => s.textContent));
+    ok('phone: the first tab reads "To do"', JSON.stringify(tab) === '["To do"]', JSON.stringify(tab));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/32-nav-phone-320.png' });
+    await ctx.close();
+    const wide = await open(browser, 'today', 1280);
+    const side = await wide.page.evaluate(() => [...document.querySelectorAll('.dash-items a[href="/today"] span')].filter((s) => getComputedStyle(s).display !== 'none').map((s) => s.textContent));
+    ok('wide: the sidebar keeps "What needs you"', JSON.stringify(side) === '["What needs you"]', JSON.stringify(side));
+    await wide.ctx.close();
   }
   // On a phone, More holds the other six; on one of them, More is marked.
   {
@@ -76,7 +95,7 @@ async function open(browser, path, w) {
   {
     const { ctx, page } = await open(browser, 'prices', 1280);
     const order = [];
-    for (let i = 0; i < 3; i++) { await page.keyboard.press(engine.name() === 'webkit' ? 'Alt+Tab' : 'Tab'); order.push(await page.evaluate(() => (document.activeElement.getAttribute('aria-label') || document.activeElement.textContent || '').trim())); }
+    for (let i = 0; i < 3; i++) { await page.keyboard.press(engine.name() === 'webkit' ? 'Alt+Tab' : 'Tab'); order.push(await page.evaluate(() => (document.activeElement.getAttribute('aria-label') || document.activeElement.innerText || '').trim())); }
     ok('wide: Tab goes logo, then the sidebar', order[0] === 'Inspyx, home' && order[1] === 'What needs you' && order[2] === 'Inspections', JSON.stringify(order));
     if (SHOTS) await page.screenshot({ path: SHOTS + '/30-nav-wide.png' });
     await ctx.close();

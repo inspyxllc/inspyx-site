@@ -76,6 +76,9 @@ async function open(browser, where, opts) {
     // (none). Neither is a sign-in call, so neither is counted.
     if (req.url() === SERVER + '/functions/v1/sync') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows: [], next: null, more: false }) });
     if (req.url() === SERVER + '/auth/v1/user' && req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ id: 'x', email: 'x@example.com', user_metadata: {} }) });
+    // /today asks the payments function where card payments stand (job 2, #77): answered here, never counted as
+    // another site. Every other request outside sign-in still is.
+    if (req.url() === SERVER + '/functions/v1/payments') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ state: 'none', payouts: false }) });
     if (!req.url().startsWith(SERVER + '/auth/v1/')) { away.push(req.url()); return route.abort(); }
     const call = { method: req.method(), path: req.url().slice(SERVER.length), headers: req.headers(), body: req.postData() };
     calls.push(call);
@@ -279,11 +282,12 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const s = await stored(page), who = await whoOnToday(page);
     ok('a good sign-in: lands on the dashboard, which names who is signed in', (await at(page)) === '/today' && who === 'Signed in as ' + WHO && errs.length === 0 && away.length === 0, JSON.stringify(who) + ' ' + errs.join(' | '));
     ok('a good sign-in: the browser keeps the sign-in and never the password', !!s && JSON.parse(s).access === 'test-access-1' && JSON.parse(s).email === WHO && !s.includes(PASS) && !(await page.evaluate((p) => JSON.stringify(Object.assign({}, localStorage, sessionStorage)) + document.cookie + location.href, PASS)).includes(PASS), 'kept: ' + (s ? s.length + ' characters' : 'nothing'));
-    // The account page, one tap from the dashboard.
-    await page.click('.today-links a[href="/account"]');
+    // The account page, in reach from the dashboard: on a phone, under More in the tab bar (job 5's navigation).
+    await page.click('nav.dash .dash-more summary');
+    await page.click('nav.dash .dash-more a[href="/account"]');
     await page.waitForURL('**/account');
     const acct = await page.evaluate(() => { const m = document.querySelector('[data-account]'); return { hidden: m.hidden, text: m.querySelector('.who').textContent.replace(/\s+/g, ' ').trim() }; });
-    ok('a good sign-in: the account page is one tap from the dashboard, and names who is signed in', (await at(page)) === '/account' && !acct.hidden && acct.text === 'Signed in as ' + WHO && errs.length === 0 && away.length === 0, JSON.stringify(acct) + ' ' + errs.join(' | '));
+    ok('a good sign-in: the account page is in reach from the dashboard (More, then Account, on a phone), and names who is signed in', (await at(page)) === '/account' && !acct.hidden && acct.text === 'Signed in as ' + WHO && errs.length === 0 && away.length === 0, JSON.stringify(acct) + ' ' + errs.join(' | '));
     const words = await page.evaluate(read);
     ok('the account page: its words are the drafted ones', JSON.stringify(words) === JSON.stringify(ACCOUNT_WORDS), JSON.stringify(words));
     const a = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, robots: (document.querySelector('meta[name=robots]') || {}).content, btn: Math.round(document.querySelector('[data-signout]').getBoundingClientRect().height), inline: document.querySelectorAll('[style], style, script:not([src])').length, title: document.title }));
