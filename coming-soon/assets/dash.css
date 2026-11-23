@@ -4,6 +4,7 @@
 :root{--dash-w:244px; --dash-bar:64px}
 .dash ul{list-style:none; margin:0; padding:0}
 .dash a, .dash summary{display:flex; align-items:center; gap:12px; color:var(--ink-soft); text-decoration:none; font-weight:600; cursor:pointer}
+.dash-s{display:none}
 .dash svg{flex:none; width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
 .dash a:focus-visible, .dash summary:focus-visible{outline:2px solid var(--navy); outline-offset:2px}
 
@@ -34,6 +35,14 @@
   .dash-items li:nth-child(n+5){display:none}
   .dash-items a, .dash-more summary{flex-direction:column; justify-content:center; gap:3px; height:var(--dash-bar); padding:0 2px; font-size:11px; text-align:center}
   .dash-items a span, .dash-more summary span{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  /* The bar's own shorter word where there is one; the sidebar and the More sheet keep the full one. */
+  .dash-items a:has(.dash-s) .dash-l{display:none}
+  .dash-items a .dash-s{display:block}
+}
+/* The narrowest phones (320 px): a touch less room around, a touch smaller words, so every tab's word fits whole. */
+@media (max-width: 360px){
+  .dash{padding-left:2px; padding-right:2px}
+  .dash-items a, .dash-more summary{padding:0; font-size:10.5px; letter-spacing:-.01em}
   .dash-items a[aria-current="page"], .dash-more summary[aria-current="page"]{color:var(--navy)}
   .dash-items a[aria-current="page"] svg, .dash-more summary[aria-current="page"] svg{stroke-width:2.2}
   .dash-more{flex:1; min-width:0; position:static}
