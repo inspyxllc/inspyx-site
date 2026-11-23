@@ -230,6 +230,33 @@ const turnDone = { serverContent: { turnComplete: true } };
     ok('the photo taken is the item\'s second', rs(10).showing === 2 && rs(10).photos.length === 2 && rs(11).ok === true);
     const item = await page.locator('[data-ty-scr="item"]').innerText();
     ok('the model\'s words are text, never markup', item.includes('<img src=x') && item.includes('Repair') && !(await page.evaluate(() => window.__pwned)) && (await page.locator('[data-ty-finds] img').count()) === 0);
+    const marksOn = await page.evaluate(() => TrySpex._marksOn());
+    if (!marksOn) {
+      // Voice marks are off in the demo for now (the lead, 2026-11-23): Spex is told the full app does it; nothing changes.
+      const off = await page.evaluate(() => { const before = document.body.innerText; const r = TrySpex._run('mark_item', { status: 'inspected', item: 'attic' }); return [r.ok, /In the full app/.test(r.say), document.body.innerText === before]; });
+      ok('with voice marks off, mark_item says "in the full app" and changes nothing', JSON.stringify(off) === JSON.stringify([false, true, true]), JSON.stringify(off));
+    } else {
+    const marked = await page.evaluate(() => [TrySpex._run('mark_item', { status: 'inspected' }), TrySpex._run('mark_item', { status: 'inspected' }), TrySpex._run('mark_item', { status: 'not_present', item: 'attic' }), TrySpex._run('mark_item', { status: 'great' })]);
+    ok('"rate this item satisfactory" marks it Inspected, the app\'s word; said again it stays set', marked[0].mark === 'Inspected' && marked[1].already === true);
+    ok('an item named in the house is marked too, and a status the app lacks is refused', marked[2].item === 'Attic' && marked[2].mark === 'Not present' && !!marked[3].error);
+    }
+    // The app's mark table, run here too (tools/fixtures/spex_mark_cases.json, a copy of inspyx-mobile's): the two
+    // can't drift.
+    const table = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'spex_mark_cases.json'), 'utf8')).cases;
+    const wrong = await page.evaluate((cases) => {
+      const out = [];
+      cases.forEach((c) => ['inspected', 'not_inspected', 'not_present'].forEach((s) => { if (TrySpex._heardMark(s, c.heard, c.item) !== (s === c.mark)) out.push(s + ' ' + c.heard + ' / ' + c.item); }));
+      return out;
+    }, table);
+    ok('the app\'s mark table (' + table.length + ' phrasings) gives the same marks here', table.length >= 40 && wrong.length === 0, wrong.slice(0, 3).join(' | '));
+    // Opened, back to the walk, then marked by voice: it opens with its mark on (Codex on #72).
+    if (marksOn) {
+    const shown = await page.evaluate(() => { TrySpex._run('open_place', { stop: 'Kitchen' }); document.querySelector('[data-ty-scr="item"] .ty-bar .ty-back').click(); const r = TrySpex._run('mark_item', { status: 'not_present', item: 'kitchen' }); return [r.mark, document.querySelector('[data-ty-scr]').getAttribute('data-ty-scr'), (document.querySelector('[data-ty-rate].ty-on') || {}).textContent]; });
+    ok('marked from the walk, the item opens with its mark on', JSON.stringify(shown) === JSON.stringify(['Not present', 'item', 'Not present']), JSON.stringify(shown));
+    }
+    // The app's own word rules: the mark they named, never a near word or a photo (spexMarkSaid).
+    const named = await page.evaluate(() => ['Rate this item satisfactory.', 'Mark it not inspected.', 'No access; mark it not inspected.', 'No issues; mark it inspected.', "There's no garage door.", 'Rate it.', 'Pull up the photo.'].map((t) => TrySpex._markSaid(t)));
+    ok('the visitor\'s words decide the mark, as on the phone', JSON.stringify(named) === JSON.stringify(['inspected', 'not_inspected', 'not_inspected', 'inspected', 'not_present', null, null]), JSON.stringify(named));
     ok('a plain photo with its everyday settings opens the camera', await page.evaluate(() => TrySpex._run('open_camera', { zoom: 1, flash: 'auto', size: 'standard', mode: 'photo' }).camera === 'up'));
     ok('the end is "That\u2019s Spex." with the waitlist', (await page.locator('[data-ty-done]').innerText()).includes('Join the waitlist'));
     ok('at the end the mic is off', await page.evaluate(() => window.__stream.getTracks().every((t) => t.readyState === 'ended')));

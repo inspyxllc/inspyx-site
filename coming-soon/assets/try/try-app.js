@@ -54,6 +54,9 @@
     { id: 'attic', title: 'Attic', room: 'Attic', photo: 'attic.jpg', n: 5, d: 0 }
   ];
   var KINDS = ['safety_hazard', 'recommendation', 'maintenance', 'information'];
+  // Voice marks stay off in the demo until the app's word rules settle (the lead, 2026-11-23): Spex says the full app
+  // does it. The rules below are kept and checked against the app's table, ready to switch on.
+  var MARKS_ON = false;
   // What Spex says for anything the app does that this demo doesn't (the demo's note says the same words).
   var FULL_APP = 'Say: "In the full app I\'d do that; this demo shows a few things," and offer something to try.';
   // The app's item marks (walk_marks.dart ItemStatusButtons): Inspected, Not inspected, Not present.
@@ -246,7 +249,7 @@
     return [p.photo].concat(S.photos[p.id] || []).map(function (src, n) { return { src: src, label: fill(W.photo_n, { n: n + 1 }) }; });
   }
   function showPhoto(n) { var p = S.at && place(S.at); if (!p || n < 0 || n >= photosOf(p).length) return false; S.view = n; show('photo'); setHint(null); return true; }
-  function setRate(id, c) { if (!place(id) || CONDITIONS.indexOf(c) < 0) return false; S.rates[id] = c; if (S.screen === 'item') show('item'); return true; }
+  function setRate(id, c) { if (!place(id) || CONDITIONS.indexOf(c) < 0) return false; S.rates[id] = c; if (S.screen === 'item' || S.screen === 'walk') show(S.screen); return true; }
 
   // ---- Spex's tools: the app's own (spex.py TOOLS, picked by relay/demo_voice.py), answered as the app's screen does ----
   var lc = function (v) { return clip(v, 80).toLowerCase(); };
@@ -359,6 +362,25 @@
       if (S.screen === 'item' || S.screen === 'report') show(S.screen);
       return { ok: true, removed: r.f.id };
     }
+    if (name === 'mark_item' && !MARKS_ON) return { ok: false, say: FULL_APP };
+    if (name === 'mark_item') {
+      // The app's three marks (walk_marks.dart), as the app's screen answers mark_item.
+      var want = { inspected: 'inspected', not_inspected: 'not inspected', not_present: 'not present' }[args.status];
+      if (!want) return { error: 'status must be inspected, not_inspected or not_present' };
+      // Only on the visitor's own word for that mark, as the app's phone check (spexMarkSaid): never from a photo
+      // alone, never a guess on "rate it".
+      if (S.voice && !heardMark(args.status, S.voice.heard, args.item)) {
+        return { ok: false, error: 'Nothing was marked: they did not say which. Ask only "Inspected, not inspected, or not present?" and mark it when they say.' };
+      }
+      var at = args.item ? placeFor(null, args.item) : (p ? { p: p } : null);
+      if (!at || !at.p) return { ok: false, say: 'No item page is open. Ask which item, and open it with open_place first.' };
+      var word = W.rate[CONDITIONS.indexOf(want)];
+      if (S.rates[at.p.id] === want) return { ok: true, item: at.p.title, mark: word, already: true };
+      setRate(at.p.id, want);
+      // The item marked is the one on screen, with its mark (Codex on #72: marked from the walk, the row stayed old).
+      if (S.at !== at.p.id || S.screen !== 'item') openPlace(at.p.id);
+      return { ok: true, item: at.p.title, mark: word };
+    }
     if (name === 'list_findings') return { findings: listAll().map(summary) };
     if (name === 'end_conversation') {
       // Only the session that said goodbye ends: one started again meanwhile stays (Codex on #70).
@@ -367,6 +389,56 @@
       return { ok: true };
     }
     return { ok: false, say: FULL_APP };
+  }
+  /* The app's voice mark rules (spex_online.dart _markRules, spexMarkSaid, spexHeardMark), the same table
+     (tools/fixtures/spex_mark_cases.json, a copy of the app's): every mark word by priority, never one word read twice;
+     the last mark said; for a named item, the last mark in its own run. */
+  var MARK_RULES = [
+    ['not_inspected', /\bnot inspected\b/g],
+    ['not_present', /\bnot present\b/g],
+    ['inspected', /(?<!\bnot )\binspected\b/g],
+    ['not_inspected', /\b(couldn'?t|could not|can'?t|cannot|didn'?t|did not|unable|blocked|inaccessible|no access|locked|skip(ped)?)\b/g],
+    ['inspected', /\b(satisfactory|fine|good|ok|okay|checked|all set|no (issues?|problems?)|nothing wrong|pass(es|ed)?|acceptable|serviceable)\b/g],
+    ['not_present', /\b(no (?!wait\b|sorry\b|actually\b|i\b|no\b|yes\b|issues?\b|problems?\b|access\b)[a-z]+|there'?s no|there is no|doesn'?t have|does not have|isn'?t (one|any|there)|none|missing)\b/g]
+  ];
+  function markSaid(heard) {
+    var t = String(heard || '').toLowerCase(), taken = [], at = -1, found = null;
+    MARK_RULES.forEach(function (r) {
+      var m; r[1].lastIndex = 0;
+      while ((m = r[1].exec(t))) {
+        var s0 = m.index, e0 = m.index + m[0].length;
+        if (!taken.some(function (x) { return s0 < x[1] && x[0] < e0; })) {
+          taken.push([s0, e0]);
+          if (s0 > at) { at = s0; found = r[0]; }
+        }
+        if (m[0].length === 0) r[1].lastIndex++;
+      }
+    });
+    return found;
+  }
+  var NOT_A_THING = ['same', 'one', 'item', 'thing', 'mark', 'way'];
+  function heardMark(status, heard, item) {
+    var name = String(item || '').trim().toLowerCase(), t = String(heard || '').toLowerCase();
+    if (!name) return markSaid(t) === status;
+    var words = name.split(/\s+/), first = words[0].replace(/s$/, '');
+    var parts = t.split(/[.;,!?:]|\band\b|\bthen\b|\bbut\b|\bso\b/);
+    var full = [], loose = [];
+    parts.forEach(function (p, i) { if (p.indexOf(name) >= 0) full.push(i); if (first.length > 3 && p.indexOf(first) >= 0) loose.push(i); });
+    var hits = full.length ? full : loose;
+    var things = function (p) { var out = [], m, re = /\bthe ([a-z]+)/g; while ((m = re.exec(p))) out.push(m[1]); return out; };
+    if (!hits.length) {
+      var other = things(t).some(function (w) { return NOT_A_THING.indexOf(w) < 0; });
+      return !other && markSaid(t) === status;
+    }
+    var run = [parts[hits[hits.length - 1]]];
+    for (var i = hits[hits.length - 1] + 1; i < parts.length; i++) {
+      var p = parts[i];
+      var otherThing = things(p).some(function (w) { return words.indexOf(w) < 0 && w !== first && NOT_A_THING.indexOf(w) < 0 && w.replace(/s$/, '') !== first; });
+      if (otherThing) break;
+      if (full.length && words.length > 1 && p.indexOf(first) >= 0 && p.indexOf(name) < 0) break;
+      run.push(p);
+    }
+    return markSaid(run.join(' , ')) === status;
   }
   function listAll() {
     var out = [];
@@ -569,5 +641,5 @@
     if (opener) opener.focus({ preventScroll: true });
   }
 
-  window.TrySpex = { open: open, close: close, _run: function (n, a) { return S ? runTool(n, a) : null; } };
+  window.TrySpex = { open: open, close: close, _run: function (n, a) { return S ? runTool(n, a) : null; }, _markSaid: markSaid, _heardMark: heardMark, _marksOn: function () { return MARKS_ON; } };
 })();
