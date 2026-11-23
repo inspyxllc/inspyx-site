@@ -147,7 +147,8 @@
     var h = held(), url = h && typeof h.googleReviewUrl === 'string' ? h.googleReviewUrl : null, box = $('[data-review]', main);
     box.hidden = false;
     showOne(box, 'data-review-say', url ? 'set' : 'needed');
-    if (document.activeElement !== $('[data-review-url]', box)) $('[data-review-url]', box).value = url || '';
+    // A link typed and not yet saved stays, whatever redraws the page (Codex on #77).
+    if (!reviewDraft) $('[data-review-url]', box).value = url || '';
   }
   function preview(id, li) {
     $('[data-mail]', li).hidden = true; $('[data-mail-wait]', li).hidden = false; $('[data-mail-failed]', li).hidden = true;
@@ -163,12 +164,18 @@
     }, function () { $('[data-mail-wait]', li).hidden = true; $('[data-mail-failed]', li).hidden = false; });
   }
 
+  var reviewDraft = false;   // the link box holds a change not yet saved
+  $('[data-review-url]', main).addEventListener('input', function () { reviewDraft = true; });
   $('[data-review-save]', main).addEventListener('click', function () {
     var raw = $('[data-review-url]', main).value.trim(), url = raw === '' ? null : raw;
     var bad = reviewProblem(url);
     $('[data-review-bad]', main).hidden = !bad;
     if (bad) return;
-    save(function (d) { d.googleReviewUrl = url; });
+    save(function (d) { d.googleReviewUrl = url; }).then(function () {
+      // Saved (and nothing typed since): the box follows the saved row again.
+      var h = held();
+      if (h && h.googleReviewUrl === url && $('[data-review-url]', main).value.trim() === raw) { reviewDraft = false; shown(); }
+    });
   });
 
   function shown() {

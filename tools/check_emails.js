@@ -71,6 +71,15 @@ async function open(browser, o) {
     ok('two quick changes on a slow server: sent one after the other, the second holding the first', o.pushes.length === 2 && both.data.messages.day_before.on === false && both.data.messages.sign_and_pay.when === '1d' && both.updated_at > o.pushes[0].updated_at, JSON.stringify(o.pushes.map((p) => [p.data.messages.day_before.on, p.data.messages.sign_and_pay.when])));
     ok('…and the page shows both', await o.page.evaluate(() => !document.querySelector('[data-msg="day_before"] [data-on]').checked && document.querySelector('[data-msg="sign_and_pay"] [data-when]').value === '1d'));
     await o.ctx.close();
+    // A link typed, not yet saved, then another change: the typed link stays (Codex on #77).
+    o = await open(browser, {});
+    await o.page.fill('[data-review-url]', 'https://g.page/r/draft/review');
+    await o.page.locator('[data-msg="day_before"] [data-on]').uncheck({ force: true });
+    await o.page.waitForTimeout(500);
+    await o.page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+    await o.page.waitForTimeout(500);
+    ok('a link typed and not saved survives another change and a pull', (await o.page.inputValue('[data-review-url]')) === 'https://g.page/r/draft/review', await o.page.inputValue('[data-review-url]'));
+    await o.ctx.close();
     // Wording written on the phone is kept as it is.
     const row = { kind: 'automation_settings', id: 'automation', updated_at: 5, deleted_at: null, data: { id: 'automation', ownerAccountId: ME, design: 'bold_1', brandColor: '#0F766E', googleReviewUrl: null, messages: { sign_and_pay: { on: true, when: '1d', to: ['client'], subject: 'My subject', body: 'My words' } }, updatedAt: 5, deletedAt: null } };
     o = await open(browser, { rows: [row] });
