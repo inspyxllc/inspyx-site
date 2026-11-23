@@ -89,7 +89,7 @@
 <label>Name <input type="text" name="name" autocomplete="off" maxlength="200"></label>
 <label>What the client reads (optional) <textarea name="description" rows="2" maxlength="2000"></textarea></label>
 <div class="prc-pair">
-<label>Base fee <input type="text" name="fee" inputmode="decimal" autocomplete="off" placeholder="450"></label>
+<label>Base fee <input type="text" name="fee" inputmode="decimal" autocomplete="off" placeholder="450"><small data-only="addon" hidden>Below zero for a credit, like -25.</small></label>
 <label><span data-time="service">Time</span><span data-time="addon" hidden>Extra time</span> <input type="text" name="hours" inputmode="decimal" autocomplete="off" placeholder="hours"></label>
 </div>
 <label data-only="service">Minimum fee (optional) <input type="text" name="minimum" inputmode="decimal" autocomplete="off"><small>Spex never quotes below it</small></label>
@@ -202,7 +202,7 @@
 <div class="prc-sub"><h3>Add-ons</h3><ol class="prc-addons" data-list="addons"></ol><button class="link" type="button" data-add="addon">Add an add-on</button></div>
 <div class="prc-sub" data-changes><h3>Price changes</h3><ol class="prc-changes" data-list="changes"></ol><button class="link" type="button" data-add="change">Add a price change</button></div>
 </li></template>
-<template data-t="addon"><li class="prc-addon"><span class="prc-what"><span data-v="name"></span><span data-v="summary"></span></span><button class="link" type="button" data-edit>Edit</button></li></template>
+<template data-t="addon"><li class="prc-addon"><div class="prc-addon-row"><span class="prc-what"><span data-v="name"></span><span data-v="summary"></span></span><button class="link" type="button" data-edit>Edit</button></div><ol class="prc-changes" data-list="addon-changes"></ol><button class="link prc-addon-change" type="button" data-add="change">Add a price change</button></li></template>
 <template data-t="change"><li class="prc-change"><span data-v="text"></span><button class="link" type="button" data-edit-change>Edit</button></li></template>
 <template data-t="discount"><li class="prc-card prc-code"><div class="prc-row"><div class="prc-what"><strong data-v="code"></strong><span data-v="summary"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></div></li></template>
 <template data-t="applies"><label class="tick"><input type="checkbox" name="applies"> <span data-v="name"></span></label></template>

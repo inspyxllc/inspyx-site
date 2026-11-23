@@ -400,6 +400,43 @@ const fill = async (loc, v) => { await loc.fill(''); if (v !== '') await loc.fil
     await ctx.close();
   });
 
+  // His pick 2 (2026-11-16): an add-on may be a credit, and has its own price changes, which go with it.
+  await group('add-ons: a credit, and their own price changes', async () => {
+    const s = server(); seed(s);
+    const { page, ctx, errs, calls } = await open(browser, { server: s });
+    const home = card(page, 'Home inspection');
+    await home.locator('[data-add="addon"]').click();
+    ok('an add-on says it may be below zero', (await vis(page, '[data-form="service"] [data-only="addon"]')).join() === 'Below zero for a credit, like -25.');
+    await page.fill('[data-form="service"] [name="name"]', 'No attic access');
+    await page.fill('[data-form="service"] [name="fee"]', '-25');
+    await page.click('[data-form="service"] [type="submit"]');
+    ok('an add-on of -$25 is saved as a credit', await until(() => pushed(calls).some((r) => r.kind === 'price_services' && r.data.name === 'No attic access' && r.data.feeCents === -2500 && r.data.parentId === 'svc-home')));
+    ok('and shows as one', await until(async () => (await vis(page, '.prc-addon [data-v="summary"]')).includes('-$25')), JSON.stringify(await vis(page, '.prc-addon [data-v="summary"]')));
+    const n = pushed(calls).length;
+    await home.locator('[data-edit]').first().click();
+    await page.fill('[data-form="service"] [name="fee"]', '-400');
+    await page.click('[data-form="service"] [type="submit"]');
+    await page.waitForTimeout(200);
+    ok('a service below zero is refused, nothing sent', pushed(calls).length === n && (await vis(page, '[data-form="service"] [data-problem]')).length === 1);
+    await page.click('[data-form="service"] [data-close]');
+
+    const radon = page.locator('.prc-addon', { hasText: 'Radon test' });
+    await radon.locator('[data-add="change"]').click();
+    ok('the dialog names the add-on', (await vis(page, '[data-c-service]')).join() === 'Radon test');
+    await page.check('[name="mode"][value="per_unit_over"]');
+    await page.fill('[name="over"]', '3000'); await page.fill('[name="unit"]', '1000'); await page.fill('[name="perFee"]', '25');
+    await page.click('[data-form="change"] [type="submit"]');
+    ok('the change is the add-on\'s own', await until(() => pushed(calls).some((r) => r.kind === 'price_modifiers' && r.data.serviceId === 'add-radon' && r.data.position === 0)));
+    ok('and is listed under the add-on', await until(async () => (await radon.locator('.prc-changes [data-v="text"]').allInnerTexts()).join() === 'Square feet: +$25 for each 1,000 past 3,000'), JSON.stringify(await radon.locator('.prc-changes [data-v="text"]').allInnerTexts()));
+    const made = pushed(calls).find((r) => r.kind === 'price_modifiers' && r.data.serviceId === 'add-radon');
+    await radon.locator('[data-edit]').first().click();
+    await page.click('[data-form="service"] [data-delete]'); await page.click('[data-form="service"] [data-delete]');
+    ok('deleting the add-on deletes its own change with it', await until(() => pushed(calls).some((r) => r.id === 'add-radon' && r.deleted_at !== null) && pushed(calls).some((r) => r.id === made.id && r.deleted_at !== null)));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await shot(page, '12-addon-changes');
+    await ctx.close();
+  });
+
   await group('at phone width', async () => {
     const s = server(); seed(s); withQuestions(s);
     const { page, ctx, errs } = await open(browser, { server: s, w: PHONE_W });

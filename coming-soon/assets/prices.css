@@ -23,7 +23,11 @@
 .prc-sub[hidden]{display:none}
 .prc-sub h3{font-size:14px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em}
 .prc-addons, .prc-changes{list-style:none; padding:0; margin:0; display:grid; gap:4px}
-.prc-addon{display:flex; gap:12px; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:10px; background:#F5F5F7}
+.prc-addon{display:grid; gap:0; padding:8px 10px; border-radius:10px; background:#F5F5F7}
+.prc-addon-row{display:flex; gap:12px; align-items:center; justify-content:space-between}
+.prc-addon .prc-changes{padding-left:12px}
+.prc-addon .prc-changes:empty{display:none}
+.prc .prc-addon-change{min-height:32px; font-size:14px}
 .prc-addon .prc-what{display:flex; flex-wrap:wrap; gap:2px 10px}
 .prc-addon .prc-what span:first-child{color:var(--ink); font-weight:600}
 .prc-changes li{font-size:14.5px; color:var(--ink-soft); overflow-wrap:anywhere}

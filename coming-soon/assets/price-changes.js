@@ -30,15 +30,7 @@
   var sameName = function (n) { return n.trim().toLowerCase().replace(/\s+/g, ' '); };
   var questions = function () { return P.standing('price_questions').sort(function (a, b) { return (a.position - b.position) || (a.createdAt - b.createdAt); }); };
 
-  /* parseCents(…, allowNegative: true): a minus before or after the dollar sign. */
-  function signedCents(text) {
-    var t = String(text).trim(), neg = false;
-    if (/^[-−]/.test(t)) { neg = true; t = t.slice(1); }
-    if (t.charAt(0) === '$') t = t.slice(1);
-    if (/^[-−]/.test(t)) { neg = true; t = t.slice(1); }
-    var c = P.parseCents(t);
-    return c === null ? null : neg ? -c : c;
-  }
+  var signedCents = P.parseSignedCents;   // parseCents(…, allowNegative: true)
   var whole = function (text) { var t = String(text).trim().replace(/,/g, ''); return /^\d{1,9}$/.test(t) ? parseInt(t, 10) : null; };
   var normal = function (basis, v) {
     var t = String(v).trim();

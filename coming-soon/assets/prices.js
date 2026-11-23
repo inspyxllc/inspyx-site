@@ -129,6 +129,15 @@
     var cents = (m[1] === '' ? 0 : parseInt(m[1], 10)) * 100 + parseInt(((m[2] || '') + '00').slice(0, 2), 10);
     return cents > MAX_CENTS ? null : cents;
   }
+  /* parseCents(…, allowNegative: true): a minus before or after the dollar sign (an add-on's credit, a price change). */
+  function parseSignedCents(text) {
+    var t = String(text).trim(), neg = false;
+    if (/^[-\u2212]/.test(t)) { neg = true; t = t.slice(1); }
+    if (t.charAt(0) === '$') t = t.slice(1);
+    if (/^[-\u2212]/.test(t)) { neg = true; t = t.slice(1); }
+    var c = parseCents(t);
+    return c === null ? null : neg ? -c : c;
+  }
   /* parseHours: hours as typed, in whole minutes; null unless from 0 to 24. */
   function parseHours(text) {
     var t = String(text).trim().replace(',', '.');
@@ -218,9 +227,18 @@
       var ol = $('[data-list="addons"]', card);
       addOnsOf(s.id).forEach(function (a) {
         var li = tpl('addon');
+        li.setAttribute('data-id', a.id);
         $('[data-v="name"]', li).textContent = a.name;
         $('[data-v="summary"]', li).textContent = [formatCents(a.feeCents), a.minutes > 0 ? formatMinutes(a.minutes) : null].filter(Boolean).join(' · ');
         $('[data-edit]', li).addEventListener('click', function () { openService(a, s.id); });
+        // Its own price changes (his pick 2, 2026-11-16), edited by price-changes.js as a service's are.
+        var acl = $('[data-list="addon-changes"]', li);
+        changesOf(a.id).forEach(function (m) {
+          var c = tpl('change');
+          $('[data-v="text"]', c).textContent = changeSummary(m);
+          $('[data-edit-change]', c).setAttribute('data-edit-change', m.id);
+          acl.appendChild(c);
+        });
         ol.appendChild(li);
       });
       var changes = changesOf(s.id), cl = $('[data-list="changes"]', card);
@@ -266,6 +284,7 @@
     showOne(svcForm, 'data-title', (data ? 'edit-' : 'new-') + (addOn ? 'addon' : 'service'));
     showOne(svcForm, 'data-time', addOn ? 'addon' : 'service');
     all('[data-only="service"]', svcForm).forEach(function (x) { x.hidden = addOn; });
+    all('[data-only="addon"]', svcForm).forEach(function (x) { x.hidden = !addOn; });
     $('[data-only="delete-service"]', svcForm).hidden = !data || addOn;
     svcForm.elements.name.value = data ? data.name : '';
     svcForm.elements.description.value = data && data.description ? data.description : '';
@@ -285,7 +304,8 @@
     var f = svcForm.elements, addOn = editing.parentId != null;
     var name = f.name.value.trim();
     if (name === '') return { problem: 'name' };
-    var fee = parseCents(f.fee.value);
+    // An add-on's fee may be below zero, a credit (his pick 2, 2026-11-16); a service's may not.
+    var fee = addOn ? parseSignedCents(f.fee.value) : parseCents(f.fee.value);
     if (fee === null) return { problem: 'fee' };
     var minutes = parseHours(f.hours.value === '' ? '0' : f.hours.value);
     if (minutes === null) return { problem: 'hours' };
@@ -336,10 +356,14 @@
       copy.deletedAt = when;
       return wire(kind, copy);
     };
+    // Its price changes go with it, and a service's add-ons with theirs (the phone's softDeleteService).
     var push = [gone('price_services', was)];
+    changesOf(was.id).forEach(function (m) { push.push(gone('price_modifiers', m)); });
     if (was.parentId == null) {
-      addOnsOf(was.id).forEach(function (a) { push.push(gone('price_services', a)); });
-      changesOf(was.id).forEach(function (m) { push.push(gone('price_modifiers', m)); });
+      addOnsOf(was.id).forEach(function (a) {
+        push.push(gone('price_services', a));
+        changesOf(a.id).forEach(function (m) { push.push(gone('price_modifiers', m)); });
+      });
     }
     finish(svcDialog, push, 'deleted');
   });
@@ -472,7 +496,7 @@
   window.InspyxPrices = {
     me: function () { return me; }, standing: standing, held: held, changesOf: changesOf, services: services,
     wire: wire, nextAt: nextAt, newId: newId, finish: finish, say: say, words: words,
-    parseCents: parseCents, parseHours: parseHours, centsText: centsText, hoursText: hoursText,
+    parseCents: parseCents, parseSignedCents: parseSignedCents, parseHours: parseHours, centsText: centsText, hoursText: hoursText,
     formatCents: formatCents, formatMinutes: formatMinutes, render: render, ready: function () { return loaded; },
   };
 
