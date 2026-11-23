@@ -143,6 +143,59 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     });
   }
 
+  // ---- a week and a day (2026-11-23, job 4) --------------------------------------------------------------------
+  const SHOTS = process.env.SHOTS || '';
+  const blocks = (page, d) => page.evaluate((x) => [...document.querySelectorAll('.cal-gcol[data-date="' + x + '"] .cal-block')].map((b) => ({
+    t: b.querySelector('time').textContent, title: b.querySelector('strong').textContent, top: Math.round(b.getBoundingClientRect().top - b.parentElement.getBoundingClientRect().top),
+    lane: b.style.getPropertyValue('--lane'), lanes: b.style.getPropertyValue('--lanes') })), d);
+  await group('the calendar, a week and a day', async () => {
+    const s = server(); seed(s);
+    // Two that meet on the 18th: side by side.
+    s.insp(id('c1'), '5 Overlap Ct', '5 Overlap Ct', { created_at: ny('2026-11-07T10:00:00'), scheduled_at: ny('2026-11-18T09:30:00') });
+    const { page, ctx, errs } = await open(browser, { server: s, path: 'calendar', hash: '#week-2026-11-18' });
+    ok('week: opens on the week holding that day, Sunday first', (await vis(page, '[data-month]')).join() === 'Nov 15 – Nov 21, 2026' &&
+      same(await page.evaluate(() => [...document.querySelectorAll('.cal-gcol')].map((c) => c.dataset.date)), ['2026-11-15', '2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20', '2026-11-21']));
+    ok('week: Week is on; Day and Month show the same time (today, the 16th, is in it)', await page.getAttribute('[data-view="week"]', 'aria-current') === 'page' &&
+      await page.getAttribute('[data-view="day"]', 'href') === '/calendar#day-2026-11-16' && await page.getAttribute('[data-view="month"]', 'href') === '/calendar#2026-11');
+    const b18 = await blocks(page, '2026-11-18');
+    ok('week: each inspection at its start; two that meet side by side', same(b18.map((b) => b.t + ' ' + b.title + ' ' + b.lane + '/' + b.lanes), ['9:00 AM 12 Oak St 0/2', '9:30 AM 5 Overlap Ct 1/2', '3:00 PM 2 Palm Dr 0/2']), JSON.stringify(b18));
+    ok('week: 9 AM sits two hours below 7 AM, the first hour shown', b18[0].top === 132, String(b18[0].top));
+    ok('week: a started one at its start, on the day it started', same((await blocks(page, '2026-11-20')).map((b) => b.t + ' ' + b.title), ['10:15 AM 9 Elm Ave']));
+    ok('week: today\'s column is marked', await page.getAttribute('.cal-gcol[aria-current="date"]', 'data-date') === '2026-11-16');
+    ok('week: each one opens that inspection', await page.getAttribute('.cal-gcol[data-date="2026-11-18"] .cal-block a', 'href') === '/inspections#' + A);
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/20-calendar-week.png' });
+    await page.click('[data-go="1"]');
+    ok('week: next goes a week on', await until(() => page.evaluate(() => location.hash === '#week-2026-11-22')));
+    await page.click('[data-go="-1"]'); await page.click('[data-go="-1"]');
+    ok('week: back goes a week back', await until(() => page.evaluate(() => location.hash === '#week-2026-11-08')));
+    await page.click('[data-go="0"]');
+    ok('week: This week comes back to this week', await until(() => page.evaluate(() => location.hash === '#week-2026-11-15')));
+    await page.click('.cal-gday a >> text=18');
+    ok('week: a day\'s name opens that day', await until(async () => (await vis(page, '[data-month]')).join() === 'Wednesday, November 18'));
+    ok('day: its inspections in one column', same((await blocks(page, '2026-11-18')).map((b) => b.t), ['9:00 AM', '9:30 AM', '3:00 PM']) && await page.evaluate(() => document.querySelectorAll('.cal-gcol').length === 1));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/21-calendar-day.png' });
+    await page.evaluate(() => { location.hash = '#day-2026-11-05'; });
+    ok('day: one with no set time sits in the row above the hours', await until(async () => (await vis(page, '.cal-guntimed strong')).join() === '3 Pine Ct'));
+    await page.evaluate(() => { location.hash = '#day-2026-11-10'; });
+    ok('day: an empty day says so', await until(async () => (await vis(page, '[data-state]')).join() === 'Nothing on your calendar this day.'));
+    await page.evaluate(() => { location.hash = '#day-2026-02-30'; });
+    ok('a day that doesn\'t exist shows this month', await until(async () => (await vis(page, '[data-month]')).join() === 'November 2026'));
+    ok('nothing runs off the side', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+  await group('the calendar, a week on a phone', async () => {
+    const s = server(); seed(s);
+    const { page, ctx, errs } = await open(browser, { server: s, path: 'calendar', hash: '#week-2026-11-18', w: PHONE });
+    ok('phone: a week is the list of its days', !(await page.isVisible('[data-grid]')) && same(await day(page, '2026-11-18'), ['9:00 AM 12 Oak St', '3:00 PM 2 Palm Dr']) &&
+      (await page.evaluate(() => document.querySelectorAll('.cal-days .cal-day').length)) === 7);
+    await page.evaluate(() => { location.hash = '#day-2026-11-18'; });
+    ok('phone: a day is its hours, and fits', await until(() => page.isVisible('.cal-gcol')) && await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/22-calendar-day-phone.png' });
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
   // ---- the calendar ------------------------------------------------------------------------------------------
   await group('the calendar, wide', async () => {
     const s = server(); seed(s);
