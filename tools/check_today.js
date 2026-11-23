@@ -117,7 +117,8 @@ const shown = async (page, sel) => (await vis(page, sel)).join(' | ');
       ok(label + ': opens with no errors, asks only the needs function, as the signed-in inspector, for the list', errs.length === 0 && away.length === 0 && c.headers.authorization === 'Bearer test-access-1' && JSON.stringify(c.body) === '{"action":"list"}', errs.concat(away).join(' | '));
       const csp = res.headers()['content-security-policy'] || '';
       ok(label + ': served with the signed-in pages\' rule, and never kept by a cache', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
-      ok(label + ': the title, and who is signed in', (await shown(page, 'h1')) === 'What needs you' && (await shown(page, '.today-who')) === 'Signed in as pat@example.com' && (await shown(page, '.today-links a')) === 'Your numbers | Reports sent | Your inspections | Calendar | People | Account');
+      ok(label + ': the title, and who is signed in', (await shown(page, 'h1')) === 'What needs you' && (await shown(page, '.today-who')) === 'Signed in as pat@example.com' && (await shown(page, '.today-links a')) === 'Your numbers | Reports sent' &&
+        await page.getAttribute('nav.dash a[aria-current="page"]', 'href') === '/today');
       // Set up your business (2026-11-22): the three setup pages that write the phone's own rows, each a tile.
       const tiles = await page.$$eval('.setup-tile', (as) => as.map((a) => [a.getAttribute('href'), a.querySelector('strong').textContent, a.getBoundingClientRect().height]));
       ok(label + ': "Set up your business", with Your company, Prices, Agreements, Booking page, Emails and Card payments, each a link a finger can hit',

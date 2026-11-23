@@ -88,7 +88,8 @@ const shown = async (page, sel) => (await page.evaluate((q) => [...document.quer
       ok(label + ': reports published, this month, and client links opened', t[2] === 'reports | Reports | 12 published | 4 this month·7 of 10 client links opened', t[2]);
       ok(label + ': report emails: sent, delivered, bounced; nothing about spam when there was none', t[3] === 'emails | Report emails | 15 sent | 13 delivered·1 bounced·5 this month', t[3]);
       ok(label + ': Mia: one call this month (said as one), last month, callbacks, minutes', t[4] === 'mia | Mia | 1 call this month | 6 last month·2 asked for a call back·14 minutes this month', t[4]);
-      ok(label + ': no state line while numbers show; who is signed in; the way back', (await shown(page, '[data-state]')) === '' && (await shown(page, '.numbers-who')) === 'Signed in as pat@example.com' && (await shown(page, '.numbers-links a')) === 'What needs you | Reports sent | Account');
+      ok(label + ': no state line while numbers show; who is signed in; the way back', (await shown(page, '[data-state]')) === '' && (await shown(page, '.numbers-who')) === 'Signed in as pat@example.com' && (await shown(page, '.numbers-links a')) === 'Reports sent' &&
+        await page.isVisible('nav.dash a[href="/today"]') && (await page.$('nav.dash [aria-current]')) === null);
       ok(label + ': "See them" goes to What needs you', await page.getAttribute('[data-group="owed"] a', 'href') === '/today');
       ok(label + ': nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
       await ctx.close();
