@@ -176,7 +176,9 @@
       FOUNDATIONS.concat(others).forEach(function (f) {
         var lab = document.createElement('label'), box = document.createElement('input'), span = document.createElement('span');
         lab.className = 'tick'; box.type = 'checkbox'; box.value = f; box.checked = !!t && t.values.some(function (v) { return normal('foundation', v) === normal('foundation', f); });
-        span.textContent = words('f-' + f) || f; lab.appendChild(box); lab.appendChild(span); vals.appendChild(lab);
+        // Others as typed, never looked up as words (Codex r3 on #78: a quote in one broke the lookup).
+        span.textContent = FOUNDATIONS.indexOf(f) >= 0 ? words('f-' + f) : f;
+        lab.appendChild(box); lab.appendChild(span); vals.appendChild(lab);
       });
     } else {
       var yn = document.createElement('strong');
