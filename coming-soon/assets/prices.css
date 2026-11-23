@@ -51,6 +51,8 @@
 .prc-dialog .tick{display:flex; gap:10px; align-items:center; min-height:40px; font-size:15.5px; color:var(--ink)}
 .prc-dialog .tick input{width:20px; height:20px; margin:0}
 .prc-pair{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.prc-dialog .prc-tax{gap:8px}
+.prc-dialog .prc-tax[hidden]{display:none}
 .prc-problems p{font-size:14.5px; color:#8C1D18}
 .prc-actions{display:flex; flex-wrap:wrap; gap:10px}
 .prc-dialog .danger{color:#8C1D18}
