@@ -65,16 +65,29 @@ const got = (p) => {
   return h;
 };
 const SUPA = 'https://btxlrfvqifnrnxffohsz.supabase.co';
-const HOME_CSP = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src " + SUPA + "; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+// Inspyx's own Spex relay (Cloud Run, project inspyx-prod, its "chat" tag), 2026-11-23: the home page's Try Spex
+// demo asks it for a challenge (https) and talks to Spex over its socket (wss). Ours, named here by its exact host:
+// no other run.app address, and no other site, is let through by it.
+const RELAY = 'chat---spex-relay-yu5bdad2fa-uc.a.run.app';
+// Every address a public page may reach: Inspyx's server, and the home page's relay (both schemes).
+const OURS = [SUPA, 'https://' + RELAY, 'wss://' + RELAY];
+const HOME_CSP = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src " + SUPA + ' https://' + RELAY + ' wss://' + RELAY + "; worker-src 'self'; media-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+// No inline script, no eval, no wildcard or bare scheme, and every https: or wss: address one of OURS.
+const onlyOurs = (c) => !/'unsafe-eval'|\*|'unsafe-hashes'|'strict-dynamic'|\bhttp:|\bws:|https:(\s|;|$)|wss:(\s|;|$)/.test(c) && !/script-src[^;]*'unsafe-inline'/.test(c) && (c.match(/(https|wss):\/\/[^\s;]+/g) || []).every((u) => OURS.includes(u));
 const PAGE_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const POLICY = ['/about', '/founders', '/pricing', '/privacy', '/refunds', '/support', '/terms'];
 const PUBLIC = ['/'].concat(POLICY);
 const PRIVATE = ['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/inspections', '/calendar', '/people', '/r', '/r/' + key, '/report', '/a', '/agent'];
-ok('the home page: scripts from this site only; its own inline styles; it may send only to Inspyx\'s server (the waitlist)', got('/')['Content-Security-Policy'] === HOME_CSP, got('/')['Content-Security-Policy']);
+ok('the home page: scripts from this site only; its own inline styles; it may send only to Inspyx\'s server (the waitlist) and the Spex relay (Try Spex)', got('/')['Content-Security-Policy'] === HOME_CSP, got('/')['Content-Security-Policy']);
 ok('the policy pages, About, Founders and Support: this site\'s own scripts and style sheets only, and they send nowhere', POLICY.every((p) => got(p)['Content-Security-Policy'] === PAGE_CSP), POLICY.filter((p) => got(p)['Content-Security-Policy'] !== PAGE_CSP).join(' '));
 ok('every public page: nosniff, never in a frame, and the address alone (no path) sent to other sites', PUBLIC.every((p) => { const h = got(p); return h['X-Content-Type-Options'] === 'nosniff' && h['X-Frame-Options'] === 'DENY' && h['Referrer-Policy'] === 'strict-origin-when-cross-origin'; }), PUBLIC.filter((p) => { const h = got(p); return h['X-Content-Type-Options'] !== 'nosniff' || h['X-Frame-Options'] !== 'DENY' || h['Referrer-Policy'] !== 'strict-origin-when-cross-origin'; }).join(' '));
 ok('the public pages stay public: no noindex, and no no-store', PUBLIC.every((p) => !got(p)['X-Robots-Tag'] && !got(p)['Cache-Control']));
-ok('no public rule allows inline script, eval, or any site but Inspyx\'s server', PUBLIC.every((p) => { const c = got(p)['Content-Security-Policy']; return !/'unsafe-eval'|\*|'unsafe-hashes'|'strict-dynamic'|\bhttp:|https:(\s|;|$)/.test(c) && !/script-src[^;]*'unsafe-inline'/.test(c) && (c.match(/https:\/\/[^\s;]+/g) || []).every((u) => u === SUPA); }));
+ok('no public rule allows inline script, eval, or any site but Inspyx\'s own (its server, its Spex relay)', PUBLIC.every((p) => onlyOurs(got(p)['Content-Security-Policy'])), PUBLIC.filter((p) => !onlyOurs(got(p)['Content-Security-Policy'])).join(' '));
+// The check itself (2026-11-23): the relay is let through by its exact host only, in either scheme; anything else
+// still fails it, wss: addresses included (before, only https: addresses were looked at).
+const base = "default-src 'none'; script-src 'self'; connect-src ";
+ok('the any-site check passes Inspyx\'s server and the relay, both schemes', onlyOurs(base + OURS.join(' ')));
+ok('the any-site check refuses any other site, run.app relay look-alike, bare scheme or plain ws', ['https://evil.example', 'wss://evil.example', 'wss://chat---spex-relay-yu5bdad2fa-uc.a.run.app.evil.example', 'https://chat---spex-relay-other-uc.a.run.app', 'wss://other---spex-relay-yu5bdad2fa-uc.a.run.app', 'wss:', 'ws://' + RELAY, 'http://' + RELAY].every((u) => !onlyOurs(base + SUPA + ' ' + u)));
 // Matched at all, not only outdone: which of two rules Vercel lets win for the same header isn't something to
 // rest on, so no public rule may even match a private address.
 const publicRules = (out.routes || []).filter((r) => r.headers && r.headers['Content-Security-Policy'] && r.headers['Cache-Control'] !== 'no-store');
