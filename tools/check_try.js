@@ -208,6 +208,7 @@ const turnDone = { serverContent: { turnComplete: true } };
       call('c13', 'open_camera', { zoom: 2 }), { wait: 'tool_response' },
       said('Rate it'), call('c14', 'mark_item', { status: 'inspected' }), { wait: 'tool_response' },
       turnDone, said('Rate this item satisfactory'), call('c15', 'mark_item', { status: 'inspected' }), { wait: 'tool_response' },
+      turnDone, call('c16', 'mark_item', { status: 'not_present', item: 'attic' }), { wait: 'tool_response' },
       { sleep: 300 }, { relay: { status: 'ended', reason: 'time-limit' } },
     ] });
     const { ctx, page } = await open(browser, r);
@@ -230,6 +231,7 @@ const turnDone = { serverContent: { turnComplete: true } };
     ok('an app tool the demo doesn\'t have gets "in the full app", never another tool', rs(9).ok === false && /In the full app/.test(rs(9).say));
     ok('"zoom in" opens nothing: the demo\'s camera has no zoom', rs(12).ok === false && /In the full app/.test(rs(12).say) && res[12].name === 'open_camera');
     ok('in a voice visit, "rate it" marks nothing; "rate this item satisfactory" marks it, said back (the app\'s gate)', rs(13).ok === false && rs(14).ok === true && /Marked Water heater Inspected/.test(rs(14).say), JSON.stringify([rs(13), rs(14)]));
+    ok('a mark call after the turn ended, with no new words, marks nothing (Codex on #73)', rs(15).ok === false, JSON.stringify(rs(15)));
     ok('the photo taken is the item\'s second', rs(10).showing === 2 && rs(10).photos.length === 2 && rs(11).ok === true);
     const item = await page.locator('[data-ty-scr="item"]').innerText();
     ok('the model\'s words are text, never markup', item.includes('<img src=x') && item.includes('Repair') && !(await page.evaluate(() => window.__pwned)) && (await page.locator('[data-ty-finds] img').count()) === 0);

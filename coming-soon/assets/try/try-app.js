@@ -368,7 +368,8 @@
       if (!want) return { error: 'status must be inspected, not_inspected or not_present' };
       // Only on the visitor's own word for that mark, as the app's phone check (spexMarkSaid): never from a photo
       // alone, never a guess on "rate it".
-      if (S.voice && !markWordSaid(S.voice.heard)) {
+      // This turn's words only: once a turn ends, its words authorize nothing more (Codex on #73).
+      if (S.voice && (S.voice.turnDone || !markWordSaid(S.voice.heard))) {
         return { ok: false, error: 'Nothing was marked: they did not say which. Ask only "Inspected, not inspected, or not present?" and mark it when they say.' };
       }
       var at = args.item ? placeFor(null, args.item) : (p ? { p: p } : null);
