@@ -142,6 +142,17 @@ const fill = async (loc, v) => { await loc.fill(''); if (v !== '') await loc.fil
     await ctx.close();
   });
 
+  await group('the how-to', async () => {
+    const s = server(); seed(s);
+    const { page, ctx, errs } = await open(browser, { server: s });
+    ok('a how-to sits over the services, three steps', (await vis(page, '.prc-how-step')).join(' | ') === 'On a service, tap Add a price change | Pick what it reads, and what each range adds | Save: a bigger house\'s quote goes up on its own');
+    ok('it moves (a finger and its scenes run)', await page.evaluate(() => document.getAnimations().filter((a) => a.effect && a.effect.target && a.effect.target.closest('.prc-how')).length >= 8));
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    ok('with motion turned down, it stands still on the result', await page.evaluate(() => getComputedStyle(document.querySelector('.prc-how-c')).opacity === '1' && getComputedStyle(document.querySelector('.prc-how-finger')).display === 'none'));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
   await group('your questions', async () => {
     const s = server(); seed(s);
     const { page, ctx, errs, calls } = await open(browser, { server: s });
