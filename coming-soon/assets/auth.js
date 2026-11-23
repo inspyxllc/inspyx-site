@@ -257,6 +257,42 @@
     });
   }
 
+  /* A template's file (T4, the template upload page, 2026-11-23): one converted template's version file (its manifest
+     JSON) in the private store business-templates, added (never over another: a file is named by its content), as the
+     signed-in inspector: <their id>/<template id>/<sha256>.json (the app's templateFileName and the server's
+     template_rules.ts hold the same name; the store's policies, the same folder). It answers { status, inner } as
+     picture does, or null when nobody is signed in. The token stays in this file, as in ask; a refused sign-in (401)
+     is renewed once. */
+  var TEMPLATE_FILE = /^[0-9a-f-]{36}\/inspector\.[a-z0-9]+(-[a-z0-9]+)*\/[0-9a-f]{64}\.json$/;
+  function templateFile(name, bytes, deadline) {
+    if (!TEMPLATE_FILE.test(String(name)) || !(bytes instanceof Uint8Array) || !bytes.length) return Promise.reject(new Refusal('malformed'));
+    var once = function (s) {
+      if (name.split('/')[0] !== s.id) return Promise.reject(new Refusal('malformed'));
+      return sendPictureBytes('POST', PICTURES + 'business-templates/' + name, s.access, bytes, 'application/json', deadline);
+    };
+    return current().then(function (s) {
+      if (!s) return null;
+      return once(s).then(function (r) {
+        if (r.status !== 401) return r;
+        return current(true).then(function (fresh) { return fresh ? once(fresh) : null; });
+      });
+    });
+  }
+
+  /* Converting a template over the Spex server (T4): the converter (assets/convert/inspyx_convert.js, the app's own
+     converter compiled for the web) is handed the sign-in here, so the page's script never holds it. It answers the
+     converter's own answer (parsed), or null when nobody is signed in. */
+  function convertTemplate(fileName, bytes, url, onProgress) {
+    var conv = root.inspyxConvert;
+    if (!conv || typeof conv.convert !== 'function' || !(bytes instanceof Uint8Array)) return Promise.reject(new Refusal('malformed'));
+    return current().then(function (s) {
+      if (!s) return null;
+      return conv.convert(fileName, bytes, { accessToken: s.access, url: url, onProgress: onProgress }).then(function (text) {
+        return JSON.parse(text);
+      });
+    });
+  }
+
   /* Hearing "something changed" (inspection sync, 2026-11-14): the server's pings for the signed-in inspector's
      own inspections, on their private Realtime topic insp:<their id>. The sign-in goes to the server inside this
      file, as in ask: the page gives a function to call on each ping, and gets back a way to stop. Only the
@@ -511,7 +547,7 @@
     });
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, linkRequest: linkRequest, linkKey: linkKey, linkTake: linkTake, linkVerify: linkVerify, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword, choices: choices, choose: choose };
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, templateFile: templateFile, convertTemplate: convertTemplate, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, linkRequest: linkRequest, linkKey: linkKey, linkTake: linkTake, linkVerify: linkVerify, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword, choices: choices, choose: choose };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the dashboard (/today, since 2026-11-15). It asks three times:
