@@ -66,6 +66,7 @@ async function open(browser, o) {
       }
       const quote = { lines, totalCents: total, minutes: 210 };
       if (b.check && o.failCheck && o.failCheck(b)) return reply(503, { error: 'database' });
+      if (b.check && o.slowCheck) await new Promise((r) => setTimeout(r, o.slowCheck));
       if (b.check) return reply(200, { state: 'check', quote, length: 210, warnings });
       if (warnings.length && !b.force) return reply(409, { error: 'warn', warnings });
       return reply(200, { state: 'booked', id: 'bk-1', startsAt: b.startsAt, endsAt: b.startsAt + 210 * 60000, totalCents: total });
@@ -165,6 +166,24 @@ async function fillBasics(page) {
     const made = asks.filter((a) => !a.check);
     ok('the next Book books what he saw: the condo', made.length === 1 && made[0].serviceIds[0] === 'condo', JSON.stringify(made.map((a) => a.serviceIds)));
     ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
+  await group('an edit while Book waits on its check never leaves Book shut (Codex on #86, r2)', async () => {
+    const { page, ctx, asks } = await open(browser, { slowCheck: 900 });
+    await fillBasics(page);
+    await page.fill('[name="day"]', '2026-12-08'); await page.dispatchEvent('[name="day"]', 'change');
+    await page.fill('[name="time"]', '10:00'); await page.dispatchEvent('[name="time"]', 'input');
+    await until(() => asks.some((a) => a.check && a.startsAt === Date.UTC(2026, 11, 8, 15, 0)));
+    await page.waitForTimeout(1200);
+    await page.check('[name="service"][value="condo"]');
+    await page.click('[data-book]');          // a check, slow
+    await page.waitForTimeout(100);
+    await page.fill('[name="code"]', 'SAVE10'); await page.dispatchEvent('[name="code"]', 'input');   // a later check replaces it
+    await page.waitForTimeout(2600);
+    ok('both checks back: Book is open again', await page.isEnabled('[data-book]'));
+    await page.click('[data-book]');
+    ok('and Book books', await until(() => page.isVisible('[data-done]'), 4000) && asks.filter((a) => !a.check).length === 1);
     await ctx.close();
   });
 

@@ -242,6 +242,8 @@
     return JSON.stringify([b.serviceIds, b.facts, b.discountCode || null, b.startsAt === undefined ? null : b.startsAt]);
   }
   function live() {
+    // Nothing the price depends on changed (a name typed, a box left): the check stands, and nothing is asked.
+    if (checkedFor !== null && checkedFor === priceKey()) return;
     checkedFor = null;
     clearTimeout(timer);
     timer = setTimeout(check, LIVE);
@@ -250,9 +252,11 @@
     var mine = ++asked, key = priceKey();
     clearTimeout(timer);
     checkedFor = null;
-    if (chosen().length === 0) { drawQuote(null); return; }
+    if (chosen().length === 0) { drawQuote(null); if (then) then(); return; }
     auth.ask('booking', body({ check: true }), DEADLINE).then(function (r) {
-      if (mine !== asked) return;
+      // A later check replaced this one: it draws nothing, but whatever waited on it (a Book) is let go, so the button
+      // never stays shut (Codex on #86, r2).
+      if (mine !== asked) { if (then) then(); return; }
       if (r && r.status === 200 && r.json && r.json.state === 'check') {
         drawQuote(r.json); problem('');
         if (key === priceKey()) checkedFor = key;
@@ -261,7 +265,7 @@
       }
       problem(r && r.json && typeof r.json.error === 'string' ? r.json.error : 'failed');
       if (then) then();
-    }, function () { if (mine === asked) { problem('failed'); if (then) then(); } });
+    }, function () { if (mine === asked) problem('failed'); if (then) then(); });
   }
   function drawQuote(a) {
     var list = $('[data-lines]');
