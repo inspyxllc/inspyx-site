@@ -395,7 +395,9 @@
         list.appendChild(li);
       });
     }
-    var needsFee = st.changes.some(function (c) { return (c.blank === 'fee' || c.blank === 'feeLines') && Fill.dartTrim(c.now) === ''; });
+    // No price on record, or one taken off: an updated agreement carries the price, and none would send it as zero
+    // (Codex on #89), whatever else changed.
+    var needsFee = !facts.fee || st.changes.some(function (c) { return (c.blank === 'fee' || c.blank === 'feeLines') && Fill.dartTrim(c.now) === ''; });
     $('[data-agr-needsfee]').hidden = !needsFee;
     var send = $('[data-agr-send]');
     send.hidden = needsFee || agrAsking === id;

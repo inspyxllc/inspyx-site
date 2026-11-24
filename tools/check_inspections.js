@@ -208,6 +208,19 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
+  await group('agreement out of date: no price on record, no Send (an update would carry zero; Codex on #89)', async () => {
+    const s = server(); seed(s);
+    const P = '6f1c2a3b-0000-4000-8000-0000000000d1', S1 = '5e000000-0000-4000-8000-000000000001';
+    s.phone('person', P, 'role', 'client'); s.phone('person', P, 'name', 'Bo Lee'); s.phone('person', P, 'position', 0);
+    const rows = [
+      { kind: 'signings', id: S1, updated_at: 3, deleted_at: null, data: { id: S1, inspectionId: INSP, bookingId: 'b', status: 'signed', sentAt: 1, deletedAt: null } },
+      { kind: 'signing_details', id: S1, updated_at: 4, deleted_at: null, data: { id: S1, signingId: S1, inspectionId: INSP, bookingId: 'b', supersededBy: null, filled: { clientName: 'Ana Diaz' } } }];
+    const { page, ctx, bookCalls } = await open(browser, { server: s, hash: '#' + INSP, biz: () => rows, booking: () => ({ status: 200, json: { state: 'sent' } }) });
+    ok('no price: the change is named, Send isn\'t offered, it says to set the price', await until(async () => same(await vis(page, '[data-agr-changes] li'), ['Client: Ana Diaz → Bo Lee'])) &&
+      (await vis(page, '[data-agr-send]')).length === 0 && (await vis(page, '[data-agr-needsfee]')).length === 1 && bookCalls.length === 0);
+    await ctx.close();
+  });
+
   await group('agreement out of date: nothing to say when it holds, or with no snapshot', async () => {
     const s = server(); seed(s);
     const S1 = '5e000000-0000-4000-8000-000000000001';
