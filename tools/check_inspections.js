@@ -300,6 +300,14 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await page.evaluate((sel) => { const t = document.querySelector(sel); t.disabled = false; t.value = 'typed meanwhile'; }, k);
       await page.waitForTimeout(600);
       ok(label + ': details changed while Spex worked: its version isn\'t offered', !(await finding.locator('[data-ai-version]').isVisible()) && await page.locator(k).inputValue() === 'typed meanwhile');
+      // Over the relay's limit: never cut and sent (Keep would delete the rest; Codex on #90): Spex isn't asked.
+      const long = 'x'.repeat(PROTO.edit.max_text_chars) + ' the last observation';
+      await page.evaluate(([sel, v]) => { const t = document.querySelector(sel); t.disabled = false; t.value = v; }, [k, long]);
+      const before = asked.length;
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="grammar"]').click();
+      await page.waitForTimeout(400);
+      ok(label + ': details over the limit: Spex isn\'t asked, it says so, the details are whole', asked.length === before &&
+        /longer than Spex can edit/.test(await finding.locator('[data-ai-error]').textContent()) && await page.locator(k).inputValue() === long);
       ok(label + ': no errors, nothing else leaves the site', errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
       ok(label + ': nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
       await ctx.close();

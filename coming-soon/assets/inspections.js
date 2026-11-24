@@ -456,6 +456,7 @@
      relay says this inspector may use it ("edit": true); asking is a hello alone, never billed. The sign-in stays in
      auth.js (InspyxAuth.editFinding). ---- */
   var RELAY = 'wss://chat---spex-relay-yu5bdad2fa-uc.a.run.app/';
+  var AI_MAX_TEXT = 4000;   // the contract's max_text_chars
   var aiOpen = null;   // null: not known yet; true or false once the relay answered
   function checkAI() {
     if (aiOpen !== null || typeof auth.editFinding !== 'function') return;
@@ -483,8 +484,15 @@
     all('[data-ai-action]', box).forEach(function (b) {
       b.addEventListener('click', function () {
         var title = el.querySelector('[data-field="finding_title"]');
+        // The details are never cut: Keep replaces them whole, so a cut would delete what was past the limit
+        // (Codex on #90). Over the relay's limit, Spex isn't asked. The title, item and stop are only context.
+        var words = Fill ? Fill.dartTrim(details.value) : details.value.trim();
+        if (words.length > AI_MAX_TEXT) {
+          q('[data-ai-error]').textContent = word('ai-too-long');
+          return shown('error');
+        }
         var request = { action: b.getAttribute('data-ai-action'),
-          title: cut(title ? title.value : val('item', finding, 'finding_title'), 200), text: cut(details.value, 4000) };
+          title: cut(title ? title.value : val('item', finding, 'finding_title'), 200), text: words };
         var itemName = cut(val('item', item, 'label'), 100), stopName = cut(val('section', stop, 'name'), 100);
         if (itemName) request.item = itemName;
         if (stopName) request.stop = stopName;
