@@ -81,6 +81,8 @@ async function open(browser, o) {
     // The business sync, read only (Agreements outdated): the rows o.biz() holds now; and the booking function.
     if (u.startsWith(SERVER + '/functions/v1/sync')) {
       const b = JSON.parse(req.postData() || '{}'); bizCalls.push({ headers: req.headers(), body: b });
+      // A stand-in that takes pushes too (flags): it answers as the sync function does.
+      if (o.bizServer) return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(o.bizServer(b)) });
       const rows = o.biz ? o.biz() : [];
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows, next: rows.length, more: false }) });
     }
@@ -317,7 +319,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       ok(label + ': Delete: the stop, its items and their findings go, together', s.value('section', SEC, '_del') === true && s.value('item', ITEM, '_del') === true &&
         s.value('item', FIND, '_del') === true && s.value('item', item, '_del') === true && s.value('item', partBy('finding_title', 'Loose bracket'), '_del') === true);
       ok(label + ': and it is gone from the page', await until(async () => (await page.locator('.insp-stop').count()) === 1));
-      ok(label + ': its how-to, in three steps', await page.locator('.st-how').isVisible() && (await page.locator('.st-how-step').count()) === 3);
+      ok(label + ': its how-to, in three steps', await page.locator('.st-how:not(.fl-how)').isVisible() && (await page.locator('.st-how:not(.fl-how) .st-how-step').count()) === 3);
       if (process.env.SHOTS) await page.locator('.insp-one').screenshot({ path: require('path').join(process.env.SHOTS, 'structure-' + label + '.png') });
       ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
@@ -340,6 +342,133 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await until(async () => JSON.stringify(await labels()) !== JSON.stringify(before));
     const after = await labels();
     ok('tied places: Down swaps the first two and leaves the third', JSON.stringify(after) === JSON.stringify([before[1], before[0], before[2]]), JSON.stringify([before, after]));
+    await ctx.close();
+  });
+
+  /* The business sync for flags, with the server's rules (flag_rules.ts in the app's repo): exactly six fields, an
+     item's version-4 id, newest wins; o.refuse makes it skip every flag (a refusal), as a rule would. */
+  function flagServer() {
+    const held = new Map(), pushed = [];
+    let refuse = false, seq = 0;
+    const FIELDS = ['id', 'ownerAccountId', 'inspectionId', 'flaggedAt', 'updatedAt', 'deletedAt'];
+    const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+    const problem = (d) => Object.keys(d).length !== 6 || FIELDS.some((f) => !(f in d)) || !V4.test(d.id) || d.ownerAccountId !== ME ? 'shape' : null;
+    const answer = (b) => {
+      const skipped = [], applied = [];
+      for (const r of b.push || []) {
+        pushed.push(r);
+        if (refuse || r.kind !== 'item_flags' || problem(r.data)) { skipped.push({ kind: r.kind, id: r.id, reason: 'flag:shape' }); continue; }
+        const h = held.get(r.id);
+        if (h && h.row.updated_at >= r.updated_at) { applied.push({ kind: r.kind, id: r.id, applied: false }); continue; }
+        held.set(r.id, { row: r, seq: ++seq }); applied.push({ kind: r.kind, id: r.id, applied: true });
+      }
+      const after = typeof b.after === 'number' ? b.after : 0;
+      const rows = [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row);
+      return { rows, next: seq, more: false, skipped, applied };
+    };
+    // A flag set or cleared elsewhere (the phone).
+    const elsewhere = (id, on, at) => held.set(id, { seq: ++seq, row: { kind: 'item_flags', id, updated_at: at, deleted_at: on ? null : at,
+      data: { id, ownerAccountId: ME, inspectionId: INSP, flaggedAt: at, updatedAt: at, deletedAt: on ? null : at } } });
+    return { answer, pushed, held, elsewhere, set refuse(v) { refuse = v; } };
+  }
+
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('flag for later, ' + label, async () => {
+      const s = server(); seed(s);
+      // A second item in Roof, and a second stop with one item: what the filter hides.
+      const DOWN = '6f1c2a3b-0000-4000-8000-0000000000a3', SEC2 = '6f1c2a3b-0000-4000-8000-0000000000b2', WIN = '6f1c2a3b-0000-4000-8000-0000000000a4';
+      s.phone('item', DOWN, 'section_id', SEC); s.phone('item', DOWN, 'label', 'Downspouts'); s.phone('item', DOWN, 'position', 1);
+      s.phone('section', SEC2, 'name', 'Kitchen'); s.phone('section', SEC2, 'position', 1);
+      s.phone('item', WIN, 'section_id', SEC2); s.phone('item', WIN, 'label', 'Windows'); s.phone('item', WIN, 'position', 0);
+      const f = flagServer();
+      const { page, ctx, errs, away } = await open(browser, { server: s, w, hash: '#' + INSP, bizServer: f.answer });
+      await page.waitForSelector('.insp-flag');
+      const flagOf = (id) => page.locator('[data-flag="' + id + '"]');
+      const pressed = async (id) => (await flagOf(id).getAttribute('aria-pressed')) === 'true';
+      const filter = page.locator('[data-flagfilter]');
+
+      ok(label + ': each item and finding has its flag, named for what it flags', (await page.locator('[data-flag]').count()) === 4 &&
+        (await flagOf(ITEM).getAttribute('aria-label')) === 'Flag “Gutters” for later' &&
+        (await flagOf(FIND).getAttribute('aria-label')) === 'Flag “Gutter pulling away” for later', await flagOf(FIND).getAttribute('aria-label'));
+      ok(label + ': nothing flagged: Flagged (0), not pressable', (await filter.textContent()).trim() === 'Flagged (0)' && await filter.isDisabled());
+      ok(label + ': the page says flags never show in the report', await page.locator('.insp-flagnote').isVisible() &&
+        /never show in the report/.test(await page.locator('.insp-flagnote').textContent()));
+
+      // Flag the finding: one row up, the six fields only, this inspector's, this inspection's.
+      await flagOf(FIND).click();
+      await until(async () => f.pushed.length === 1);
+      const up = f.pushed[0];
+      ok(label + ': flag: one row goes up, as the rules want it: the finding, this inspection, standing', up.kind === 'item_flags' && up.id === FIND &&
+        JSON.stringify(Object.keys(up.data).sort()) === JSON.stringify(['deletedAt', 'flaggedAt', 'id', 'inspectionId', 'ownerAccountId', 'updatedAt']) &&
+        up.data.inspectionId === INSP && up.data.ownerAccountId === ME && up.data.deletedAt === null && up.deleted_at === null &&
+        up.updated_at === up.data.updatedAt && up.data.flaggedAt === up.data.updatedAt, JSON.stringify(up));
+      ok(label + ': the flag shows pressed, and says it clears now', await pressed(FIND) && (await flagOf(FIND).getAttribute('aria-label')) === 'Clear the flag on “Gutter pulling away”');
+      ok(label + ': the inspection field sync is never asked for a flag', ![...s.held.values()].some((h) => /flag/.test(h.field)));
+      await flagOf(WIN).click();
+      await until(async () => f.pushed.length === 2);
+      ok(label + ': Flagged counts both', await until(async () => (await filter.textContent()).trim() === 'Flagged (2)'));
+
+      // The filter: only what is flagged, with the item a flagged finding sits under; a stop with none goes.
+      await filter.click();
+      const shown = async () => page.locator('.insp-item:visible .insp-label').evaluateAll((els) => els.map((e) => e.value));
+      ok(label + ': Flagged shows only the flagged, with the item a flagged finding is under', await until(async () => JSON.stringify(await shown()) === JSON.stringify(['Gutters', 'Windows'])), JSON.stringify(await shown()));
+      ok(label + ': the filter is pressed', (await filter.getAttribute('aria-pressed')) === 'true');
+      if (process.env.SHOTS) await page.locator('.insp-one').screenshot({ path: require('path').join(process.env.SHOTS, 'flag-filter-' + label + '.png') });
+
+      // Clear: a newer row, deleted; the count drops; with none left the filter lets go.
+      const setAt = f.held.get(WIN).row.updated_at;
+      await flagOf(WIN).click();
+      await until(async () => f.pushed.length === 3);
+      const clr = f.pushed[2];
+      ok(label + ': clear: the same row, deleted, newer than the flag', clr.id === WIN && clr.deleted_at !== null && clr.data.deletedAt === clr.updated_at && clr.updated_at > setAt, JSON.stringify(clr));
+      ok(label + ': Flagged (1), and the cleared item goes from the filtered list', await until(async () => (await filter.textContent()).trim() === 'Flagged (1)' &&
+        JSON.stringify(await shown()) === JSON.stringify(['Gutters'])));
+      await flagOf(FIND).click();
+      await until(async () => f.pushed.length === 4);
+      ok(label + ': nothing flagged: the filter lets go and every item shows', await until(async () => (await filter.getAttribute('aria-pressed')) === 'false' && (await shown()).length === 3));
+
+      // Its how-to.
+      ok(label + ': its how-to, in three steps', await page.locator('.fl-how').isVisible() && (await page.locator('.fl-how .st-how-step').count()) === 3);
+      if (process.env.SHOTS) { await flagOf(ITEM).click(); await until(async () => f.pushed.length === 5); await page.waitForTimeout(200);
+        await page.locator('.insp-one').screenshot({ path: require('path').join(process.env.SHOTS, 'flag-' + label + '.png') }); }
+      ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
+      await ctx.close();
+    });
+  }
+
+  await group('flag for later: refused, from the phone, and on a deleted item', async () => {
+    const s = server(); seed(s);
+    const f = flagServer();
+    const { page, ctx, ping } = await open(browser, { server: s, hash: '#' + INSP, bizServer: f.answer });
+    await page.waitForSelector('.insp-flag');
+    const flagOf = (id) => page.locator('[data-flag="' + id + '"]');
+    f.refuse = true;
+    await flagOf(ITEM).click();
+    await until(async () => f.pushed.length === 1);
+    ok('refused: the flag goes back off, and the page says it didn\u2019t save', await until(async () => (await flagOf(ITEM).getAttribute('aria-pressed')) === 'false' &&
+      await page.locator('[data-flagtrouble]').isVisible()));
+    ok('refused: nothing is counted', (await page.locator('[data-flagfilter]').textContent()).trim() === 'Flagged (0)');
+    f.refuse = false;
+    await flagOf(ITEM).click();
+    ok('the next try saves, and the line goes', await until(async () => (await flagOf(ITEM).getAttribute('aria-pressed')) === 'true' && !(await page.locator('[data-flagtrouble]').isVisible())));
+
+    // Set on the phone: heard at the next ping, without a reload.
+    f.elsewhere(FIND, true, Date.now() + 1000);
+    ping();
+    ok('a flag set on the phone shows here, without a reload', await until(async () => (await flagOf(FIND).getAttribute('aria-pressed')) === 'true' &&
+      (await page.locator('[data-flagfilter]').textContent()).trim() === 'Flagged (2)'));
+    // Cleared on the phone: goes.
+    f.elsewhere(FIND, false, Date.now() + 2000);
+    ping();
+    ok('a flag cleared on the phone goes here', await until(async () => (await flagOf(FIND).getAttribute('aria-pressed')) === 'false'));
+
+    // A flag held for an item deleted on the phone is never counted (the server deletes it too).
+    f.elsewhere(FIND, true, Date.now() + 3000);
+    s.phone('item', FIND, '_del', true);
+    ping();
+    ok('a deleted finding\u2019s flag is not counted', await until(async () => (await page.locator('[data-flag="' + FIND + '"]').count()) === 0 &&
+      (await page.locator('[data-flagfilter]').textContent()).trim() === 'Flagged (1)'));
     await ctx.close();
   });
 
