@@ -152,7 +152,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
         await boxValue(page, 'section', SEC, 'name') === 'Roof' && await boxValue(page, 'item', ITEM, 'label') === 'Gutters' &&
         await boxValue(page, 'item', ITEM, 'note') === 'Loose at the corner' && await boxValue(page, 'item', ITEM, 'status') === 'inspected_deficiency' &&
         await boxValue(page, 'item', FIND, 'finding_title') === 'Gutter pulling away' && await boxValue(page, 'item', FIND, 'severity') === 'MD');
-      ok(label + ': counts the finding\'s photos on the phone', (await vis(page, '[data-photos]')).join() === '1 photos on your phone');
+      ok(label + ': counts the finding\'s photos on the phone, one photo in the singular', (await vis(page, '[data-photos]')).join() === '1 photo on your phone');
       ok(label + ': joins its own private topic with the sign-in, and says it is live',
         sockets.length === 1 && sockets[0].joins[0] && sockets[0].joins[0].topic === 'realtime:insp:' + ME && sockets[0].joins[0].payload.access_token === 'test-access-1' && sockets[0].joins[0].payload.config.private === true &&
         (await vis(page, '[data-live]')).join().startsWith('Live'), JSON.stringify(sockets.map((x) => x.joins.map((j) => j.topic))));
@@ -251,13 +251,19 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
   for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
     await group('Edit with AI, ' + label, async () => {
       const s = server(); seed(s);
-      s.phone('item', FIND, 'note', 'outlet by sink has no gfci');
-      let answer = { text: 'The outlet beside the kitchen sink has no GFCI protection. A qualified licensed electrician should evaluate and correct this.' };
+      // The app example's own finding (finding_edit_example.dart): Spex's version keeps every fact, adds none.
+      // Written after the seed (a later time: the server keeps the first of two at the same moment).
+      const later = (entity, id, field, value) => s.push('phone-aaaaaaaaaaaaaaaaaa', { inspection: INSP, entity, id, field, value, at: Date.now() + 1000 });
+      later('section', SEC, 'name', 'Kitchen'); later('item', ITEM, 'label', 'Kitchen outlets');
+      later('item', FIND, 'finding_title', 'Missing GFCI protection');
+      s.phone('item', FIND, 'note', 'outlet by kitchen sink not gfci protected');
+      const ROUGH = 'outlet by kitchen sink not gfci protected';
+      let answer = { text: 'The electrical outlet by the kitchen sink does not have ground fault circuit interrupter (GFCI) protection.' };
       const asked = [];
       const { page, ctx, errs, away, relay, calls } = await open(browser, { server: s, w, hash: '#' + INSP, edit: (r) => { asked.push(r); return answer; }, editDelay: 300 });
       const k = '[data-key="item/' + FIND + '.note"]';
       const finding = page.locator('.insp-finding').first();
-      ok(label + ': the finding shows its details; Edit with AI is offered once the relay says so', await until(async () => (await finding.locator('[data-ai-open]').isVisible())) && await boxValue(page, 'item', FIND, 'note') === 'outlet by sink has no gfci', errs.concat(away).join(' | '));
+      ok(label + ': the finding shows its details; Edit with AI is offered once the relay says so', await until(async () => (await finding.locator('[data-ai-open]').isVisible())) && await boxValue(page, 'item', FIND, 'note') === ROUGH, errs.concat(away).join(' | '));
       const hello = relay.find((m) => m.hello) || {};
       ok(label + ': the hello is Spex Chat\'s, signed in as the inspector', !!hello.hello && hello.hello.mode === 'chat' && hello.hello.access_token === 'test-access-1' && hello.hello.client === 'inspyx-web');
       const shotAI = async (name) => { if (process.env.SHOTS) { await page.waitForTimeout(500); await finding.screenshot({ path: require('path').join(process.env.SHOTS, 'ai-' + label + '-' + name + '.png') }); } };
@@ -269,22 +275,23 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await until(async () => await finding.locator('[data-ai-version]').isVisible());
       const req = asked[0] || {};
       ok(label + ': the request is the contract\'s: the action, the title, the details, the item and the stop',
-        same(Object.keys(req).sort(), Object.keys(PROTO.edit_request.chat.edit).sort()) && req.action === 'recommend' && req.title === 'Gutter pulling away' && req.text === 'outlet by sink has no gfci' && req.item === 'Gutters' && req.stop === 'Roof', JSON.stringify(req));
+        same(Object.keys(req).sort(), Object.keys(PROTO.edit_request.chat.edit).sort()) && req.action === 'recommend' && req.title === 'Missing GFCI protection' && req.text === ROUGH && req.item === 'Kitchen outlets' && req.stop === 'Kitchen', JSON.stringify(req));
       await shotAI('2-version');
       ok(label + ': Spex\'s version shows beside the inspector\'s; nothing changed yet',
-        (await finding.locator('[data-ai-text]').textContent()) === answer.text && await page.locator(k).inputValue() === 'outlet by sink has no gfci' && s.value('item', FIND, 'note') === 'outlet by sink has no gfci' && !(await page.locator(k).isDisabled()));
+        (await finding.locator('[data-ai-text]').textContent()) === answer.text && await page.locator(k).inputValue() === ROUGH && s.value('item', FIND, 'note') === ROUGH && !(await page.locator(k).isDisabled()));
       await finding.locator('[data-ai-discard]').click();
       await page.waitForTimeout(900);
-      ok(label + ': Discard changes nothing', await page.locator(k).inputValue() === 'outlet by sink has no gfci' && s.value('item', FIND, 'note') === 'outlet by sink has no gfci' && !(await finding.locator('[data-ai-version]').isVisible()));
+      ok(label + ': Discard changes nothing', await page.locator(k).inputValue() === ROUGH && s.value('item', FIND, 'note') === ROUGH && !(await finding.locator('[data-ai-version]').isVisible()));
       await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="clearer"]').click();
       await until(async () => await finding.locator('[data-ai-version]').isVisible());
       await finding.locator('[data-ai-keep]').click();
       ok(label + ': Keep puts Spex\'s version in Details, and it saves as typing does', await page.locator(k).inputValue() === answer.text &&
         await until(async () => s.value('item', FIND, 'note') === answer.text), String(s.value('item', FIND, 'note')).slice(0, 60));
       await shotAI('3-kept');
+      const kept = answer.text;
       answer = PROTO.edit_refused.relay.result;
       await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="shorter"]').click();
-      ok(label + ': a refusal shows its sentence as given; the details untouched', await until(async () => (await finding.locator('[data-ai-error]').textContent()) === answer.error) && await page.locator(k).inputValue() === PROTO.edit_result.relay.result.edit.text);
+      ok(label + ': a refusal shows its sentence as given; the details untouched', await until(async () => (await finding.locator('[data-ai-error]').textContent()) === answer.error) && await page.locator(k).inputValue() === kept);
       await shotAI('4-refused');
       // Typed over while Spex worked: its version is never offered over the new words.
       answer = { text: 'Something else.' };
@@ -431,7 +438,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     s.phone('item', NEWF, 'section_id', SEC); s.phone('item', NEWF, 'parent_item_id', ITEM); s.phone('item', NEWF, 'label', 'Downspout loose'); s.phone('item', NEWF, 'position', 1); s.phone('item', NEWF, 'finding_title', 'Downspout loose');
     ping();
     ok('a finding made on the phone appears under its item', await until(async () => await boxValue(page, 'item', NEWF, 'finding_title') === 'Downspout loose'));
-    ok('a photo counts only on its own finding', same(await vis(page, '[data-photos]'), ['1 photos on your phone']), JSON.stringify(await vis(page, '[data-photos]')));
+    ok('a photo counts only on its own finding', same(await vis(page, '[data-photos]'), ['1 photo on your phone']), JSON.stringify(await vis(page, '[data-photos]')));
     s.phone('item', FIND, '_del', true);
     ping();
     ok('a finding deleted on the phone goes', await until(async () => await boxValue(page, 'item', FIND, 'finding_title') === null));

@@ -207,6 +207,7 @@
             var line = finding.querySelector('[data-photos]');
             line.hidden = photos === 0;
             line.querySelector('[data-v="photos"]').textContent = String(photos);
+            line.querySelector('[data-v="photos-word"]').textContent = word(photos === 1 ? 'photo-one' : 'photo-many');
             wireAI(finding, f, i, s);
             fol.appendChild(finding);
           });

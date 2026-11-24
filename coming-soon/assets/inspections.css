@@ -140,9 +140,10 @@
 .insp-details{display:grid; gap:8px}
 .ai[hidden], .ai [hidden]{display:none}
 .ai{display:grid; gap:8px}
-.ai-open{justify-self:start; display:inline-flex; align-items:center; gap:7px; min-height:40px; padding:0 14px; border:0; border-radius:999px; background:linear-gradient(120deg, #2E6DA4, #5B3FA8); color:#FFFFFF; font:600 14.5px var(--font); cursor:pointer; box-shadow:0 6px 16px rgba(91,63,168,.25)}
+.ai-open{justify-self:start; display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 16px 0 10px; border:0; border-radius:999px; background:#FFFFFF; color:var(--navy); font:600 14.5px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1.5px #BAE6FD, 0 6px 16px rgba(14,165,233,.18)}
+.ai-open:hover{background:#F0F9FF}
 .ai-open:disabled{opacity:.55; cursor:default}
-.ai-open svg{width:18px; height:18px; fill:currentColor}
+.ai-open img{width:22px; height:22px; flex:none}
 .ai-open:focus-visible, .ai-actions button:focus-visible, .ai-keep:focus-visible, .ai-discard:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
 .ai-actions{display:flex; flex-wrap:wrap; gap:8px; padding:10px; border-radius:14px; background:#F6F3FD; box-shadow:inset 0 0 0 1px rgba(91,63,168,.15)}
 .ai-actions > button{min-height:40px; padding:0 14px; border:0; border-radius:999px; background:#FFFFFF; color:var(--ink); font:600 14px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(91,63,168,.25)}
@@ -159,22 +160,31 @@
 .ai-how{flex-basis:100%; display:grid; grid-template-columns:minmax(0, 230px) 1fr; gap:10px 18px; align-items:center; margin-top:4px; padding:10px; border-radius:12px; background:#FFFFFF}
 .ai-how-stage{position:relative; height:120px; width:100%; max-width:230px}
 .ai-how-scene{position:absolute; inset:0; display:grid; gap:6px; align-content:start; padding:8px; border-radius:10px; background:#FAF8FE; font-size:11px; opacity:0; overflow:hidden}
-.ai-how-a{animation:look-a 9s infinite} .ai-how-b{animation:look-b 9s infinite} .ai-how-c{animation:look-c 9s infinite}
+.ai-how-a{animation:ai-a 10s infinite} .ai-how-b{animation:ai-b 10s infinite} .ai-how-c{animation:ai-c 10s infinite} .ai-how-d{animation:ai-d 10s infinite}
 .ai-how-mine{padding:5px 7px; border-radius:7px; background:#FFFFFF; color:var(--ink-soft); box-shadow:inset 0 0 0 1px rgba(0,0,0,.07)}
-.ai-how-mine.done{color:var(--ink); animation:look-rise 9s infinite}
-.ai-how-btn{justify-self:start; font-style:normal; padding:4px 9px; border-radius:999px; background:#5B3FA8; color:#FFFFFF; font-weight:600; animation:look-press 9s infinite}
+.ai-how-mine.done{color:var(--ink)}
+.ai-how-btn{justify-self:start; font-style:normal; padding:4px 9px; border-radius:999px; background:#FFFFFF; color:var(--navy); font-weight:600; box-shadow:inset 0 0 0 1px #BAE6FD}
 .ai-how-spex{display:grid; gap:2px; padding:5px 7px; border-radius:7px; background:#EFEAFB; color:var(--ink)} .ai-how-spex b{font-size:9.5px; color:#5B3FA8}
-.ai-how-keep{justify-self:start; padding:3px 10px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-weight:600}
-.ai-how-finger{position:absolute; z-index:2; width:20px; height:20px; border-radius:50%; background:rgba(91,63,168,.35); border:2px solid rgba(91,63,168,.8); animation:ai-finger 9s infinite}
+.ai-how-keep{justify-self:start; font-style:normal; padding:3px 12px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-weight:600; animation:ai-press 10s infinite}
+.ai-how-finger{position:absolute; z-index:2; width:20px; height:20px; border-radius:50%; background:rgba(31,78,121,.35); border:2px solid rgba(31,78,121,.8); animation:ai-finger 10s infinite}
 .ai-how-steps{display:grid; gap:7px; counter-reset:step}
-.ai-how-step{display:flex; gap:9px; align-items:center; font-size:13.5px; color:var(--ink-faint); animation:look-s1 9s infinite}
+.ai-how-step{display:flex; gap:9px; align-items:center; font-size:13.5px; color:var(--ink-faint); animation:ai-s1 10s infinite}
 .ai-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; background:#FFFFFF; color:#5B3FA8; font-weight:700; box-shadow:inset 0 0 0 1px rgba(91,63,168,.35)}
-.ai-how-step[data-n="2"]{animation-name:look-s2} .ai-how-step[data-n="3"]{animation-name:look-s3}
-@keyframes ai-finger{0%{left:70%; top:90%; opacity:1} 14%,24%{left:40px; top:34px; opacity:1} 30%,44%{left:70%; top:90%; opacity:0} 52%,60%{left:22px; top:86px; opacity:1} 64%,100%{left:22px; top:86px; opacity:0}}
+.ai-how-step[data-n="2"]{animation-name:ai-s2} .ai-how-step[data-n="3"]{animation-name:ai-s3} .ai-how-step[data-n="4"]{animation-name:ai-s4}
+@keyframes ai-a{0%,23%{opacity:1} 25%,100%{opacity:0}}
+@keyframes ai-b{0%,23%{opacity:0} 25%,48%{opacity:1} 50%,100%{opacity:0}}
+@keyframes ai-c{0%,48%{opacity:0} 50%,73%{opacity:1} 75%,100%{opacity:0}}
+@keyframes ai-d{0%,73%{opacity:0} 75%,97%{opacity:1} 100%{opacity:0}}
+@keyframes ai-press{0%,60%{transform:none} 64%{transform:scale(.9)} 68%,100%{transform:none}}
+@keyframes ai-finger{0%{left:70%; top:90%; opacity:1} 10%,20%{left:40px; top:34px; opacity:1} 24%,52%{left:70%; top:90%; opacity:0} 58%,68%{left:28px; top:72px; opacity:1} 72%,100%{left:28px; top:72px; opacity:0}}
+@keyframes ai-s1{0%,23%{color:var(--ink); font-weight:600} 25%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes ai-s2{0%,23%{color:var(--ink-faint); font-weight:400} 25%,48%{color:var(--ink); font-weight:600} 50%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes ai-s3{0%,48%{color:var(--ink-faint); font-weight:400} 50%,73%{color:var(--ink); font-weight:600} 75%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes ai-s4{0%,73%{color:var(--ink-faint); font-weight:400} 75%,100%{color:var(--ink); font-weight:600}}
 @media (prefers-reduced-motion: reduce){
   .ai-how *, .ai-how-step{animation:none !important}
-  .ai-how-finger, .ai-how-a, .ai-how-b{display:none}
-  .ai-how-c{opacity:1}
+  .ai-how-finger, .ai-how-a, .ai-how-b, .ai-how-c{display:none}
+  .ai-how-d{opacity:1}
   .ai-how-step{color:var(--ink)}
 }
 @media (max-width: 760px){ .ai-how{grid-template-columns:1fr} }
