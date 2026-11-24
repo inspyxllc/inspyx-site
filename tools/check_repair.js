@@ -13,6 +13,7 @@ const url = process.env.URL || 'http://localhost:4173/';
 const HOME = new URL(url).origin;
 const API = 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/report';
 const KEY = 'AbCdEfGhIjKlMnOpQrStUv', AGENT = 'ZyXwVuTsRqPoNmLkJiHgFe', LOCKED = 'LoCkEdLoCkEdLoCkEdLoCk';
+const SETTLE_MS = 700;   // repair.js waits this long after a change before it saves
 const SAMPLE = JSON.parse(fs.readFileSync(path.join(__dirname, 'repair_sample.json'), 'utf8'));
 const FINDINGS = new Set();
 SAMPLE.report.sections.forEach((s) => s.items.forEach((i) => i.findings.forEach((f) => FINDINGS.add(f.id))));
@@ -23,7 +24,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
 
 /* The report function, as far as these pages reach it. */
 function server() {
-  const s = { saves: [], requests: {}, shares: {}, version: SAMPLE.published_at, changed: false, docKeys: 0 };
+  const s = { saves: [], requests: {}, shares: {}, version: SAMPLE.published_at, changed: false, docKeys: 0, saveDelay: 0, failSaves: 0, dropSaves: 0 };
   s.answer = (body) => {
     if (body.repair_doc) { const d = s.shares[body.repair_doc]; return d ? [200, { state: 'repair_doc', doc: d, created_at: 1 }] : [404, { state: 'gone' }]; }
     if (body.key === LOCKED) return body.repair ? [403, { state: 'locked' }] : [200, Object.assign({}, SAMPLE, { published_at: s.version })];
@@ -35,6 +36,7 @@ function server() {
     if (body.repair === 'get') return [200, { state: 'repair', role, items: held.items, note: held.note, total_cents: total(held.items), missing: [], updated_at: null, shares: 0 }];
     if (body.repair === 'save') {
       s.saves.push(body);
+      if (s.failSaves > 0) { s.failSaves--; return [503, { error: 'database' }]; }
       if (s.changed || body.version !== s.version) return [409, { error: 'report_changed' }];
       for (const i of body.items) {
         if (!FINDINGS.has(i.finding)) return [400, { error: 'finding' }];
@@ -73,6 +75,9 @@ async function open(browser, o) {
     if (u === API && req.method() === 'POST') {
       const body = JSON.parse(req.postData() || '{}');
       asked.push(body);
+      // A slow save is kept when it is answered, as a real one: never before.
+      if (body.repair === 'save' && o.server.saveDelay) await new Promise((r) => setTimeout(r, o.server.saveDelay));
+      if (body.repair === 'save' && o.server.dropSaves > 0) { o.server.dropSaves--; o.server.saves.push(body); return route.abort('failed'); }
       const [status, json] = o.server.answer(body);
       return route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(json) });
     }
@@ -174,6 +179,52 @@ const shot = async (page, sel, name) => {
     const last = saves[saves.length - 1] || {};
     ok('share at once: the save with the new amount went first', JSON.stringify(last.items || []).includes('"cents":90000'), JSON.stringify(saves.map((x) => x.items)));
     await ctx.close();
+  });
+
+  await group('Share while a save is on the wire, and after a failed one: what is shared is what is on the page (Codex on #91)', async () => {
+    const s = server();
+    s.saveDelay = 900;
+    const { page, ctx, asked } = await open(browser, { server: s });
+    await until(async () => (await page.locator('[data-rr-add]').count()) > 0);
+    await page.locator('[data-rr-add="C1.1"]').click();
+    await page.locator('[data-rr-open]').click();
+    await page.locator('[data-rr-item="C1.1"] [data-rr-ask="credit"]').click();
+    await page.locator('[data-rr-amount="C1.1"]').fill('500');
+    await page.waitForTimeout(SETTLE_MS + 200);   // the $500 save is on the wire, slowly
+    await page.locator('[data-rr-amount="C1.1"]').fill('700');
+    await page.locator('[data-rr-share]').click();
+    await until(async () => Object.keys(s.shares).length === 1, 6000);
+    const shared = Object.values(s.shares)[0] || { items: [] };
+    ok('in flight: the share froze the amount on the page, $700', shared.items[0] && shared.items[0].cents === 70000, JSON.stringify(shared.items));
+    await ctx.close();
+
+    const f = server();
+    f.failSaves = 1;
+    const b = await open(browser, { server: f });
+    await until(async () => (await b.page.locator('[data-rr-add]').count()) > 0);
+    await b.page.locator('[data-rr-add="C1.2"]').click();
+    await until(async () => f.saves.length === 1, 3000);   // that save fails
+    await b.page.locator('[data-rr-open]').click();
+    await b.page.locator('[data-rr-share]').click();
+    await until(async () => Object.keys(f.shares).length === 1, 6000);
+    const order = b.asked.map((x) => x.repair).filter(Boolean);
+    ok('after a failed save: Share saved again first, then shared what is on the page', f.saves.length === 2 && order.lastIndexOf('save') < order.indexOf('share') &&
+      (Object.values(f.shares)[0] || { items: [] }).items.map((i) => i.title).join() === 'Loose flashing', JSON.stringify(order));
+    await b.ctx.close();
+
+    const g = server();
+    g.dropSaves = 1;
+    const c = await open(browser, { server: g });
+    await until(async () => (await c.page.locator('[data-rr-add]').count()) > 0);
+    await c.page.locator('[data-rr-add="C2.1"]').click();
+    await until(async () => g.saves.length === 1, 3000);   // that save never arrives
+    await c.page.waitForTimeout(300);
+    await c.page.locator('[data-rr-open]').click();
+    await c.page.locator('[data-rr-share]').click();
+    await until(async () => Object.keys(g.shares).length === 1, 6000);
+    ok('after a save that never arrived: Share saved again first', g.saves.length === 2 &&
+      (Object.values(g.shares)[0] || { items: [] }).items.map((i) => i.title).join() === 'Corroded fitting', String(g.saves.length));
+    await c.ctx.close();
   });
 
   await group('a page older than the report: it says so, and saves nothing', async () => {

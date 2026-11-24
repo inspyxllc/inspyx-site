@@ -247,9 +247,13 @@
       inp.closest('.rr-amount').classList.toggle('is-bad', bad);
     });
   }
+  /* Saves what is on the page; its promise settles only when every edit made so far is kept (true), or a save
+     failed (false). A save already on the wire is followed by one more when the page changed meanwhile, and the
+     promise waits for that one too; a failed save leaves the page unsaved, so the next save or a Share tries again
+     (Codex on inspyx-site #91). */
   function save() {
     if (anyBadAmount() || problem === WORDS.changed) return Promise.resolve(false);
-    if (saving) { saving.then(function () { if (dirty) save(); }); return saving; }
+    if (saving) return saving.then(function (ok) { return ok && dirty ? save() : ok; });
     dirty = false;
     var items = state.order.map(function (id) {
       var i = state.items[id], out = { finding: id, ask: i.ask, note: i.note };
@@ -261,12 +265,14 @@
       saving = null;
       if (r.status === 200 && r.json.state === 'saved') {
         state.total = r.json.total_cents; state.savedOnce = true;
-        if (!dirty) setStatus(WORDS.saved);
+        if (dirty) return save();   // changed while on the wire: keep that too before saying it's kept
+        setStatus(WORDS.saved);
         return true;
       }
+      dirty = true;
       fail(r);
       return false;
-    }, function () { saving = null; problem = WORDS.failed; setStatus(problem); return false; });
+    }, function () { saving = null; dirty = true; problem = WORDS.failed; setStatus(problem); return false; });
     return saving;
   }
   function fail(r) {
@@ -286,6 +292,7 @@
   /* ---- share: what was saved, frozen; its link to send ---- */
   function shareNow() {
     clearTimeout(timer);
+    // Everything on the page is kept before it is frozen: a save on the wire, and any edit after it.
     var ready = dirty || saving ? save() : Promise.resolve(true);
     Promise.resolve(ready).then(function (ok) {
       if (ok === false) return;
