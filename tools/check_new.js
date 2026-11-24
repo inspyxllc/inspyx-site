@@ -65,6 +65,7 @@ async function open(browser, o) {
         if (b.startsAt === Date.UTC(2026, 11, 7, 15, 0)) warnings.push('busy');
       }
       const quote = { lines, totalCents: total, minutes: 210 };
+      if (b.check && o.failCheck && o.failCheck(b)) return reply(503, { error: 'database' });
       if (b.check) return reply(200, { state: 'check', quote, length: 210, warnings });
       if (warnings.length && !b.force) return reply(409, { error: 'warn', warnings });
       return reply(200, { state: 'booked', id: 'bk-1', startsAt: b.startsAt, endsAt: b.startsAt + 210 * 60000, totalCents: total });
@@ -143,13 +144,56 @@ async function fillBasics(page) {
     await ctx.close();
   });
 
+  await group('Book right after a change: never at a price he didn\'t see (Codex on #86)', async () => {
+    const { page, ctx, asks, errs } = await open(browser, {});
+    await fillBasics(page);
+    await page.fill('[name="day"]', '2026-12-08'); await page.dispatchEvent('[name="day"]', 'change');
+    await page.fill('[name="time"]', '10:00'); await page.dispatchEvent('[name="time"]', 'input');
+    await until(() => asks.some((a) => a.check && a.startsAt === Date.UTC(2026, 11, 8, 15, 0)));
+    await page.waitForTimeout(300);
+    const before = (await vis(page, '[data-total]')).join();
+    // A different service, and Book at once, before the live check (400 ms) has run.
+    await page.check('[name="service"][value="condo"]');
+    await page.click('[data-book]');
+    await page.waitForTimeout(700);
+    ok('the quick Book books nothing: it checks the new choice instead', asks.filter((a) => !a.check).length === 0 &&
+      asks.filter((a) => a.check).slice(-1)[0].serviceIds[0] === 'condo', JSON.stringify(asks.map((a) => [a.check ? 'check' : 'create', a.serviceIds])));
+    const after = (await vis(page, '[data-total]')).join();
+    ok('it shows the new price and says to look it over', after !== before && (await vis(page, '[data-problem]')).join() === 'The price is updated for what you changed. Look it over, then book.', before + ' -> ' + after);
+    await page.click('[data-book]');
+    await until(() => page.isVisible('[data-done]'));
+    const made = asks.filter((a) => !a.check);
+    ok('the next Book books what he saw: the condo', made.length === 1 && made[0].serviceIds[0] === 'condo', JSON.stringify(made.map((a) => a.serviceIds)));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
+  await group('a check that fails: Book books nothing (Codex on #86)', async () => {
+    let fail = false;
+    const { page, ctx, asks } = await open(browser, { failCheck: () => fail });
+    await fillBasics(page);
+    await page.fill('[name="day"]', '2026-12-08'); await page.dispatchEvent('[name="day"]', 'change');
+    await page.fill('[name="time"]', '10:00'); await page.dispatchEvent('[name="time"]', 'input');
+    await until(() => asks.some((a) => a.check && a.startsAt === Date.UTC(2026, 11, 8, 15, 0)));
+    await page.waitForTimeout(300);
+    fail = true;
+    await page.fill('[name="time"]', '11:00'); await page.dispatchEvent('[name="time"]', 'input');
+    await page.waitForTimeout(800);
+    await page.click('[data-book]');
+    await page.waitForTimeout(700);
+    ok('the old price is no longer usable: nothing is booked, and it says so', asks.filter((a) => !a.check).length === 0 && (await vis(page, '[data-problem]')).length === 1, JSON.stringify(await vis(page, '[data-problem]')));
+    await ctx.close();
+  });
+
   await group('the agreement tick (the lead\'s pick, 2026-11-23)', async () => {
     let { page, ctx, asks } = await open(browser, { email: false });
     await page.uncheck('[name="agreement"]');
     await fillBasics(page);
     await page.fill('[name="day"]', '2026-12-08'); await page.dispatchEvent('[name="day"]', 'change');
     await page.fill('[name="time"]', '10:00'); await page.dispatchEvent('[name="time"]', 'input');
-    await until(async () => (await vis(page, '[data-book]')).join() === 'Book it');
+    // Book only once the price shown is the one checked for this time (Codex on #86).
+    await until(() => asks.some((a) => a.check && a.startsAt === Date.UTC(2026, 11, 8, 15, 0)));
+    await page.waitForTimeout(300);
     await page.click('[data-book]');
     await until(() => page.isVisible('[data-done]'));
     const unticked = asks.filter((a) => !a.check)[0];

@@ -275,6 +275,16 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     let r = await open(browser, { server: empty, path: 'calendar' });
     ok('calendar: with no inspections synced yet, it says so and shows no grid', (await vis(r.page, '[data-state]')).join() === 'No inspections here yet. They show up here once your phone has synced.' && (await vis(r.page, '[data-days]')).length === 0);
     await r.ctx.close();
+    // A first booking made on /new, before the phone has synced anything: it shows at once (Codex on #86).
+    const only = [{ kind: 'bookings', id: 'bk-9', updated_at: 1, deleted_at: null, data: { id: 'bk-9', status: 'booked', inspectionId: null,
+      startsAt: ny('2026-11-19T13:00:00'), endsAt: ny('2026-11-19T15:30:00'), property: { street: '88 New Booking Blvd', city: 'Miami', state: 'FL' } } }];
+    r = await open(browser, { server: server(), path: 'calendar', hash: '#week-2026-11-18', bookings: only });
+    await r.page.waitForTimeout(300);
+    ok('calendar: with no inspections but a booking, the week shows the booking, not "no inspections yet"',
+      (await blocks(r.page, '2026-11-19')).map((b) => b.title).join() === '88 New Booking Blvd' && (await vis(r.page, '[data-state]')).length === 0, JSON.stringify(await vis(r.page, '[data-state]')));
+    await r.page.evaluate(() => { location.hash = '#2026-11'; });
+    ok('calendar: and the month shows it too', await until(async () => (await day(r.page, '2026-11-19')).join().includes('88 New Booking Blvd')), JSON.stringify(await day(r.page, '2026-11-19')));
+    await r.ctx.close();
     const s = server(); seed(s);
     r = await open(browser, { server: s, path: 'calendar', hash: '#2026-13' });
     ok('calendar: a month that doesn\'t exist in the address opens this month', (await vis(r.page, '[data-month]')).join() === 'November 2026');

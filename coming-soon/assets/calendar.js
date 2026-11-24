@@ -125,6 +125,11 @@
     });
     return out.sort(function (a, b) { return a.at - b.at || (a.id < b.id ? -1 : 1); });
   }
+  /* Whether there is anything to show at all: an inspection, or a booking the phone hasn't made one of yet (a first
+     booking made on /new shows at once, before the phone syncs: Codex on #86). */
+  function anything() {
+    return data.parts('inspection').some(function (id) { return ID.test(id); }) || bookings().length > 0;
+  }
   function jobLink(j) {
     var job = tpl(j.booking ? 'booked' : 'job'), a = job.querySelector('a'), time = job.querySelector('[data-v="time"]');
     if (a) a.href = '/inspections#' + j.id;
@@ -162,7 +167,7 @@
     var after = new Date(c.y, c.m, c.d + n);
     $('[data-month]').textContent = c.view === 'day' ? LONG.format(first) : RANGE(first, new Date(c.y, c.m, c.d + 6));
     var jobs = between(first.getTime(), after.getTime());
-    var any = data.parts('inspection').some(function (id) { return ID.test(id); });
+    var any = anything();
     show('data-state', !any ? 'empty' : jobs.length === 0 ? 'none-' + c.view : '');
     if (!any) { grid.hidden = true; return; }
     // A week on a phone: the list of its days, as the month is there.
@@ -269,10 +274,10 @@
     var first = new Date(c.y, c.m, 1), next = new Date(c.y, c.m + 1, 1);
     $('[data-month]').textContent = MONTH.format(first);
     days.classList.remove('cal-list');
-    var ids = data.parts('inspection').filter(function (id) { return ID.test(id); });
+    var any = anything();
     var jobs = between(first.getTime(), next.getTime());
-    show('data-state', ids.length === 0 ? 'empty' : jobs.length === 0 ? 'none' : '');
-    days.hidden = ids.length === 0;
+    show('data-state', !any ? 'empty' : jobs.length === 0 ? 'none' : '');
+    days.hidden = !any;
     days.textContent = '';
     // The week's day names (Sunday first, as the US calendar), then blanks up to the 1st.
     for (var i = 0; i < 7; i++) {

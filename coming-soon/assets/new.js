@@ -233,18 +233,35 @@
 
   // ---- the price and the warnings, live -----------------------------------------------------------------------------
   var asked = 0, timer = null, warned = [];
+  /* What the shown price and warnings were checked for: the services, the price answers, the code and the time. Any
+     edit clears it, and so does a check that fails; Book goes only while the form still matches it (Codex on #86:
+     a quick Book must never book at a price, or past warnings, the inspector didn't see). */
+  var checkedFor = null;
+  function priceKey() {
+    var b = body();
+    return JSON.stringify([b.serviceIds, b.facts, b.discountCode || null, b.startsAt === undefined ? null : b.startsAt]);
+  }
   function live() {
+    checkedFor = null;
     clearTimeout(timer);
     timer = setTimeout(check, LIVE);
   }
-  function check() {
-    var mine = ++asked;
+  function check(then) {
+    var mine = ++asked, key = priceKey();
+    clearTimeout(timer);
+    checkedFor = null;
     if (chosen().length === 0) { drawQuote(null); return; }
     auth.ask('booking', body({ check: true }), DEADLINE).then(function (r) {
       if (mine !== asked) return;
-      if (r && r.status === 200 && r.json && r.json.state === 'check') { drawQuote(r.json); problem(''); return; }
+      if (r && r.status === 200 && r.json && r.json.state === 'check') {
+        drawQuote(r.json); problem('');
+        if (key === priceKey()) checkedFor = key;
+        if (then) then();
+        return;
+      }
       problem(r && r.json && typeof r.json.error === 'string' ? r.json.error : 'failed');
-    }, function () { if (mine === asked) problem('failed'); });
+      if (then) then();
+    }, function () { if (mine === asked) { problem('failed'); if (then) then(); } });
   }
   function drawQuote(a) {
     var list = $('[data-lines]');
@@ -265,7 +282,11 @@
     $('[data-total]').textContent = money(a.quote.totalCents);
     $('[data-length]').textContent = length(a.length);
   }
-  function problem(which) { showOne('data-problem', which, $('[data-quote]')); }
+  // A refusal the page has no words for (the server down, say) says the general "couldn't", never nothing.
+  function problem(which) {
+    if (which && !$('[data-problem="' + which + '"]')) which = 'failed';
+    showOne('data-problem', which, $('[data-quote]'));
+  }
 
   // ---- booking -----------------------------------------------------------------------------------------------------
   var busy = false;
@@ -276,8 +297,19 @@
     if (startsAt() === null) { problem('time'); return; }
     if (!f.clientName.value.trim() || !f.street.value.trim()) { problem('missing'); return; }
     if (f.emailClient.checked && !f.clientEmail.value.trim()) { problem('email'); return; }
-    busy = true;
     var btn = $('[data-book]');
+    // The price shown isn't for what the form holds now (an edit not yet checked, or a check that failed): check it,
+    // show it, and let him look before he books.
+    if (checkedFor === null || checkedFor !== priceKey()) {
+      busy = true; btn.disabled = true; showOne('data-book-say', 'busy');
+      check(function () {
+        busy = false; btn.disabled = false;
+        showOne('data-book-say', warned.length ? 'anyway' : 'book');
+        if (checkedFor !== null) problem('changed');
+      });
+      return;
+    }
+    busy = true;
     btn.disabled = true;
     showOne('data-book-say', 'busy');
     var at = startsAt();
