@@ -222,6 +222,21 @@ async function fillBasics(page) {
     await ctx.close();
   });
 
+  await group('the spring night: a time that doesn\'t exist is refused in plain words (follow-up 2)', async () => {
+    const { page, ctx, asks } = await open(browser, {});
+    await fillBasics(page);
+    await page.fill('[name="day"]', '2027-03-14'); await page.dispatchEvent('[name="day"]', 'change');
+    await page.fill('[name="time"]', '02:30'); await page.dispatchEvent('[name="time"]', 'input');
+    ok('2:30 AM on March 14, 2027 in New York: it says the time doesn\'t exist that night', await until(async () => (await vis(page, '[data-problem]')).join() === '2:30 AM doesn’t exist that night (the clocks move forward); pick another time.'), JSON.stringify(await vis(page, '[data-problem]')));
+    await page.waitForTimeout(600);
+    await page.click('[data-book]');
+    await page.waitForTimeout(500);
+    ok('Book books nothing, and no instant for it was ever sent', asks.filter((a) => !a.check).length === 0 && !asks.some((a) => typeof a.startsAt === 'number' && a.startsAt >= Date.UTC(2027, 2, 14, 6, 0) && a.startsAt < Date.UTC(2027, 2, 14, 8, 0)), JSON.stringify(asks.map((a) => a.startsAt)));
+    await page.fill('[name="time"]', '03:30'); await page.dispatchEvent('[name="time"]', 'input');
+    ok('3:30 AM exists: the line goes, and it is asked for 3:30 AM daylight time', await until(async () => (await vis(page, '[data-problem]')).length === 0 && asks.some((a) => a.startsAt === Date.UTC(2027, 2, 14, 7, 30))));
+    await ctx.close();
+  });
+
   await group('a check that fails: Book books nothing (Codex on #86)', async () => {
     let fail = false;
     const { page, ctx, asks } = await open(browser, { failCheck: () => fail });
