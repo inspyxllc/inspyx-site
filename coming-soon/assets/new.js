@@ -331,7 +331,9 @@
     btn.disabled = true;
     showOne('data-book-say', 'busy');
     var at = startsAt();
-    auth.ask('booking', body({ force: warned.length > 0 }), DEADLINE).then(function (r) {
+    // Book anyway passes only the warnings he was shown: one that came since is warned about again (inspyx-mobile
+    // #722; Codex on #86).
+    auth.ask('booking', body(warned.length > 0 ? { force: true, seen: warned.slice() } : { force: false }), DEADLINE).then(function (r) {
       busy = false; btn.disabled = false;
       if (r && r.status === 200 && r.json && r.json.state === 'booked') {
         form.hidden = true;

@@ -67,10 +67,13 @@ async function open(browser, o) {
         if (b.startsAt === Date.UTC(2026, 11, 7, 15, 0)) warnings.push('busy');
       }
       const quote = { lines, totalCents: total, minutes: 210 };
+      // Another booking took the time since the page looked: the server sees it, on a check and on a create.
+      if (o.takenSince && o.takenSince(b) && typeof b.startsAt === 'number' && !warnings.includes('busy')) warnings.push('busy');
       if (b.check && o.failCheck && o.failCheck(b)) return reply(503, { error: 'database' });
       if (b.check && o.slowCheck) await new Promise((r) => setTimeout(r, o.slowCheck));
       if (b.check) return reply(200, { state: 'check', quote, length: 210, warnings });
-      if (warnings.length && !b.force) return reply(409, { error: 'warn', warnings });
+      // As the server (inspyx-mobile #722): force passes only the warnings the page says it showed.
+      if (warnings.length && (!b.force || (Array.isArray(b.seen) && warnings.some((w) => !b.seen.includes(w))))) return reply(409, { error: 'warn', warnings });
       return reply(200, { state: 'booked', id: 'bk-1', startsAt: b.startsAt, endsAt: b.startsAt + 210 * 60000, totalCents: total });
     }
     away.push(u); return route.abort();
@@ -197,6 +200,25 @@ async function fillBasics(page) {
     ok('both checks back: Book is open again', await page.isEnabled('[data-book]'));
     await page.click('[data-book]');
     ok('and Book books', await until(() => page.isVisible('[data-done]'), 4000) && asks.filter((a) => !a.check).length === 1);
+    await ctx.close();
+  });
+
+  await group('Book anyway passes only what he saw: a time taken since is warned about, then booked (#722)', async () => {
+    let taken = false;
+    const { page, ctx, asks } = await open(browser, { takenSince: () => taken });
+    await fillBasics(page);
+    await page.fill('[name="day"]', '2026-12-08'); await page.dispatchEvent('[name="day"]', 'change');
+    await page.fill('[name="time"]', '16:00'); await page.dispatchEvent('[name="time"]', 'input');   // after his hours
+    await until(() => asks.some((a) => a.check && a.startsAt === Date.UTC(2026, 11, 8, 21, 0)));
+    await page.waitForTimeout(300);
+    ok('outside his hours: he sees it, and the button says Book anyway', (await vis(page, '[data-warn]')).join() === 'Outside your booking hours.' && (await vis(page, '[data-book]')).join() === 'Book anyway', JSON.stringify(await vis(page, '[data-warn]')));
+    taken = true;   // another booking takes the time before he presses
+    await page.click('[data-book]');
+    ok('Book anyway sends what he saw', await until(() => asks.some((a) => !a.check && a.force === true && JSON.stringify(a.seen) === JSON.stringify(['hours']))));
+    ok('the new warning is shown, and nothing is booked', await until(async () => (await vis(page, '[data-warn]')).includes('You have an inspection then.')) && !(await page.isVisible('[data-done]')));
+    await page.waitForTimeout(300);
+    await page.click('[data-book]');
+    ok('Book anyway again, having seen both: booked', await until(() => page.isVisible('[data-done]')) && JSON.stringify(asks.filter((a) => !a.check).slice(-1)[0].seen) === JSON.stringify(['hours', 'busy']));
     await ctx.close();
   });
 
