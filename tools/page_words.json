@@ -245,7 +245,7 @@
  "privacy": {
   "words": [
    "h1: Privacy Policy",
-   "p: Last updated: November 22, 2026",
+   "p: Last updated: November 24, 2026",
    "h2: Who we are",
    "p: Inspyx is made by INSPYX LLC, Miami Gardens, Florida. Questions about privacy: support@inspyx.com or (888) 772-2919.",
    "h2: Who this covers",
@@ -255,6 +255,8 @@
    "h2: What we collect, and why",
    "li: Your account. Your name, email address and sign-in, handled by our sign-in provider, Supabase. We never see your password. You can add business details (your license number, logo, photo and signature), which print on your reports. Your company details, picture, logo, signature and agreements are kept on Inspyx's servers.",
    "li: Your inspections. Property addresses and details; your clients' and agents' names, phone numbers and emails; findings, notes, answers and photos (photos can show the inside of a home); your client's signature on your agreement; and payments you record. These are saved on your iPhone. They leave it when you share or export them, or when a feature below sends what it needs to do its job.",
+   "li: Your inspections on the website. So you can see your inspections, calendar and the people on them on inspyx.com, their details are kept on Inspyx's servers with your account.",
+   "li: People you keep. The clients and agents you keep in People (their names, phone numbers, emails, companies and your notes about them) are kept on Inspyx's servers with your account, so they show on the website as well as in the app, and they're removed when you delete your account.",
    "li: Your booking page. If you turn on your booking page, your clients can book you at inspyx.com/book/your-name. They see your name, company, services, prices and open times. We work out your open times from the hours you set and your inspections' times only (when each starts and ends, never the address or the client). When a client books, we keep what they enter (their name, email, phone, the property's address and details, and the services they pick) and send it to your app. Booking emails (and Inspyx's other automatic emails) go out through Amazon's email service. If they stop partway, we keep what they entered for 30 days so you can follow up.",
    "li: Agreements signed online. When a client books, we email them your agreement to sign on their phone or computer. We keep the exact text they were sent, their initials and drawn signature, their typed name, when they signed, their device's browser name, and a scrambled form of their internet address, so the signature can be shown to be theirs. The signed copy (a PDF) is emailed to them and to you, and kept on our servers while your account is open. We remind a client to sign only while they haven't, at most three times, and never after the inspection starts.",
    "li: Emails you forward. If you forward a client's email to your Inspyx address (your-name@book.inspyx.com), we keep its sender, subject and words for 90 days so Spex can draft your reply. Attachments aren't kept. Amazon holds the email itself only until we've kept its words, and never longer than 7 days. Spex only drafts: nothing is sent until you tap Send.",
