@@ -455,13 +455,16 @@
   var finding = null;
   $('[data-find]').addEventListener('input', function () { clearTimeout(finding); finding = setTimeout(renderList, 120); });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } });
-  setInterval(function () { if (document.visibilityState === 'visible') sync(); }, FALLBACK);
+  // The business pull rides the same clock (Codex on inspyx-site #89): a fee changed on the phone or an updated
+  // agreement signed reaches an open tab within a minute, never only on a tab switch. It asks from where it left off.
+  setInterval(function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } }, FALLBACK);
 
   if (!auth.who()) { window.location.replace('/signin'); return; }
   main.hidden = false;
   auth.listen(function (ping) {
     if (ping && ping.signedOut) { window.location.replace('/signin'); return; }
     if (ping && ping.joined) { listening = true; showLive('live'); }
+    else pullBusiness();
     sync();
   });
   sync();

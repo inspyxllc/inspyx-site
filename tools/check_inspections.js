@@ -192,6 +192,22 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     });
   }
 
+  await group('agreement out of date: an open tab hears a change made elsewhere (Codex on #89)', async () => {
+    const s = server(); seed(s);
+    const S1 = '5e000000-0000-4000-8000-000000000001';
+    let cents = 47500;
+    const biz = () => [
+      { kind: 'inspection_fees', id: 'fee1', updated_at: cents === 47500 ? 5 : 6, deleted_at: null, data: { id: 'fee1', inspectionId: INSP, selectionJson: '{"services":["svc"]}', totalCents: cents, updatedAt: cents === 47500 ? 5 : 6, deletedAt: null, linesJson: JSON.stringify([{ kind: 'service', id: 'svc', name: 'Home inspection', cents, minutes: 180 }]) } },
+      { kind: 'signings', id: S1, updated_at: 3, deleted_at: null, data: { id: S1, inspectionId: INSP, bookingId: 'b', status: 'signed', sentAt: 1, deletedAt: null } },
+      { kind: 'signing_details', id: S1, updated_at: 4, deleted_at: null, data: { id: S1, signingId: S1, inspectionId: INSP, bookingId: 'b', supersededBy: null, filled: { fee: '$425.00' } } }];
+    const { page, ctx, ping } = await open(browser, { server: s, hash: '#' + INSP, biz });
+    ok('a change elsewhere: the banner shows the price as it stands', await until(async () => same(await vis(page, '[data-agr-changes] li'), ['Price: $425.00 → $475.00'])));
+    cents = 42500;   // the inspector set the price back on the phone
+    ping();
+    ok('a change elsewhere: heard without a reload or a tab switch; the banner goes', await until(async () => (await vis(page, '[data-agr]')).length === 0), JSON.stringify(await vis(page, '[data-agr-changes] li')));
+    await ctx.close();
+  });
+
   await group('agreement out of date: nothing to say when it holds, or with no snapshot', async () => {
     const s = server(); seed(s);
     const S1 = '5e000000-0000-4000-8000-000000000001';
