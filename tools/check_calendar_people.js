@@ -110,7 +110,11 @@ async function open(browser, o) {
     if (u === SERVER + '/functions/v1/sync') {
       const b = JSON.parse(req.postData() || '{}');
       bookingCalls.push(b);
-      const list = (o.bookings || []).filter(() => !b.after);
+      // The People book (job 7): a pushed person is kept newest-wins; o.lose() drops the answer of one that landed.
+      const book = o.book || (o.book = new Map());
+      for (const r of b.push || []) if (r.kind === 'inspector_contacts') { const h = book.get(r.id); if (!h || r.updated_at > h.updated_at) book.set(r.id, Object.assign({}, r, { changed_at: 'b' })); }
+      if ((b.push || []).length && o.lose && o.lose()) return route.abort('failed');
+      const list = [...(o.bookings || []), ...book.values()].filter(() => !b.after);
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
         body: JSON.stringify({ applied: [], skipped: [], rows: list, next: list.length ? { at: 'z', kind: 'bookings', id: 'z' } : b.after || null, more: false }) });
     }
@@ -337,10 +341,55 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     });
   }
 
+  await group('people: the People book (job 7, W19)', async () => {
+    const s = server(); seed(s);
+    const row = (idv, role, name, more) => ({ kind: 'inspector_contacts', id: idv, updated_at: 1795000000000, deleted_at: null, changed_at: 'a',
+      data: Object.assign({ id: idv, ownerAccountId: ME, role, name, phone: null, email: null, company: null, note: null, lastUsedAt: 1795000000000, createdAt: 1795000000000, updatedAt: 1795000000000, deletedAt: null }, more) });
+    const book = new Map([
+      ['k1', row('k1', 'buyer_agent', 'Rita Gomez', { email: 'rita@example.com', company: 'Coastal Realty' })],
+      ['k2', row('k2', 'client', 'Dana Reyes', { email: 'dana@example.com', company: 'Reyes Family Trust' })],   // on inspections too
+      ['k3', row('k3', 'client', 'Old Friend', { deletedAt: 1795000000001 })],
+    ]);
+    book.get('k3').deleted_at = 1795000000001;
+    let lose = false;
+    const o = { server: s, path: 'people', book, lose: () => lose };
+    const { page, ctx, errs } = await open(browser, o);
+    await until(async () => (await vis(page, '.ppl-one h3')).includes('Rita Gomez'));
+    const names = async () => vis(page, '.ppl-one h3');
+    ok('someone kept in People shows, with the company the book keeps', (await names()).includes('Rita Gomez') && (await vis(page, '.ppl-company')).includes('Coastal Realty'));
+    ok('a person both kept and on inspections shows once, with their inspections and the book\'s company', (await names()).filter((n) => /^Dana Reyes/.test(n)).length === 1 && (await vis(page, '.ppl-company')).includes('Reyes Family Trust'));
+    ok('a deleted one doesn\'t show', !(await names()).includes('Old Friend'));
+    await page.click('[data-add-person]');
+    await page.click('[data-form] button[type="submit"]');
+    ok('Add with no name: says so, sends nothing', (await vis(page, '[data-problem]')).join() === 'Write their name.' && ![...book.keys()].some((k) => !['k1', 'k2', 'k3'].includes(k)));
+    await page.fill('[data-form] [name="name"]', 'n'.repeat(201));
+    await page.click('[data-form] button[type="submit"]');
+    ok('a name of 201 letters: too long, as the rules say', (await vis(page, '[data-problem]')).join() === 'A name can be at most 200 characters.');
+    await page.selectOption('[data-form] [name="role"]', 'listing_agent');
+    await page.fill('[data-form] [name="name"]', '  Mia Chen\u0085 ');
+    await page.fill('[data-form] [name="phone"]', '(786) 555-0144');
+    await page.fill('[data-form] [name="company"]', 'Bayside Homes');
+    lose = true;
+    await page.click('[data-form] button[type="submit"]');
+    ok('the answer lost: it says so, and the dialog stays', await until(async () => (await vis(page, '[data-problem]')).join() === 'That couldn’t be saved. Check your connection and try again.') && await page.isVisible('[data-dialog]'));
+    lose = false;
+    await page.click('[data-form] button[type="submit"]');
+    ok('saved: the dialog closes and it says so', await until(async () => (await vis(page, '[data-say]')).join() === 'Saved. It’s in People on your phone too, at its next sync.') && !(await page.isVisible('[data-dialog]')));
+    const added = [...book.values()].filter((r) => !['k1', 'k2', 'k3'].includes(r.id));
+    const d = added[0] && added[0].data;
+    ok('one person, the same row both tries (one id), trimmed as Dart trims, as the phone keeps it', added.length === 1 && !!d && d.name === 'Mia Chen' && d.role === 'listing_agent' && d.phone === '(786) 555-0144' && d.company === 'Bayside Homes' && d.email === null && d.note === null && d.ownerAccountId === ME && d.deletedAt === null && d.updatedAt === added[0].updated_at && d.lastUsedAt === d.updatedAt && Number.isSafeInteger(d.createdAt) && /^[0-9a-f-]{36}$/.test(added[0].id), JSON.stringify(d));
+    ok('and it shows at once, under listing agents', await until(async () => (await names()).includes('Mia Chen')));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/56-people.png', fullPage: true });
+    await page.click('[data-add-person]');
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/57-people-add.png' });
+    await ctx.close();
+  });
+
   await group('people: no one yet', async () => {
     const s = server(); s.insp(A, '12 Oak St', '12 Oak St', { created_at: ny('2026-11-01T10:00:00') });
     const { page, ctx } = await open(browser, { server: s, path: 'people' });
-    ok('people: with no one on any inspection, it says so', (await vis(page, '[data-state]')).join() === 'No one here yet. The people on your inspections show up here once your phone has synced.' && (await vis(page, '.ppl-group')).length === 0);
+    ok('people: with no one on any inspection, it says so', (await vis(page, '[data-state]')).join() === 'No one here yet. Add a person, or they show up here from your inspections once your phone has synced.' && (await vis(page, '.ppl-group')).length === 0);
     await ctx.close();
   });
 
