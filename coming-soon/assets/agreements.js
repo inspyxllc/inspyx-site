@@ -17,7 +17,8 @@
   var auth = window.InspyxAuth;
   if (!main || !auth) return;
   var DEADLINE = 20000, POLL = 30000, NAME_MAX = 120, WORDS_MAX_BYTES = 100000;
-  var KINDS = ['legal_documents', 'legal_default'], SIGNS = 'signs';
+  // The profile is read only, for the preview's own blanks (his name, company and license).
+  var KINDS = ['legal_documents', 'legal_default', 'inspector_profile'], SIGNS = 'signs';
 
   var $ = function (sel, el) { return (el || document).querySelector(sel); };
   var all = function (sel, el) { return [].slice.call((el || document).querySelectorAll(sel)); };
@@ -165,6 +166,8 @@
     form.elements.name.value = d ? d.title : '';
     form.elements.words.value = d ? d.body : '';
     form.elements.signs.checked = false;
+    tab('write');
+    $('[data-starter]', form).hidden = !!d;
     $('[data-only="choose"]', form).hidden = !d || signs;
     $('[data-only="signs"]', form).hidden = !d || !signs;
     $('[data-delete]', form).hidden = !d;
@@ -239,6 +242,79 @@
 
   all('[data-close]').forEach(function (b) { b.addEventListener('click', function () { dialog.close(); }); });
   all('[data-add="agreement"]').forEach(function (b) { b.addEventListener('click', function () { open(null, false); }); });
+
+  // ---- the starter, the blanks and the preview (job 7, W14) --------------------------------------------------------
+
+  var starter = document.querySelector('template[data-t="starter"]').content;
+  // The starter's name and words in the dialog: only for a new one, and never over words he has typed.
+  function useStarter() {
+    var w = form.elements.words;
+    if (dartTrim(w.value) !== '' && !window.confirm(words('replace'))) return;
+    if (dartTrim(form.elements.name.value) === '') form.elements.name.value = $('[data-s="name"]', starter).textContent;
+    w.value = $('[data-s="words"]', starter).textContent;
+    tab('preview');
+  }
+  $('[data-starter]', form).addEventListener('click', useStarter);
+  all('[data-starter-open]').forEach(function (b) { b.addEventListener('click', function () { open(null, false); useStarter(); }); });
+
+  // A blank goes where he is typing, as one piece.
+  all('[data-blank]', form).forEach(function (b) {
+    b.addEventListener('click', function () {
+      var w = form.elements.words, at = w.selectionStart == null ? w.value.length : w.selectionStart;
+      w.setRangeText(b.getAttribute('data-blank'), at, w.selectionEnd == null ? at : w.selectionEnd, 'end');
+      w.focus();
+    });
+  });
+
+  function tab(which) {
+    all('[data-tab]', form).forEach(function (t) { t.setAttribute('aria-selected', String(t.getAttribute('data-tab') === which)); });
+    showOne(form, 'data-pane', which);
+    if (which === 'preview') paint();
+  }
+  all('[data-tab]', form).forEach(function (t) { t.addEventListener('click', function () { tab(t.getAttribute('data-tab')); }); });
+
+  var BLANK = /\[(Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today's date)\]/g;
+  var DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  // What each blank reads as in the preview, and whose it is: his own from his profile, a sample client's, or missing.
+  function fill(blank) {
+    var p = rows['inspector_profile/profile'], d = p && p.deleted_at === null ? p.data : {};
+    var mine = function (v, missing) { var t = typeof v === 'string' ? dartTrim(v) : ''; return t ? [t, 'yours'] : [words(missing), 'missing']; };
+    switch (blank) {
+      case 'Client name': return [words('sample-client'), 'sample'];
+      case 'Property address': return [words('sample-address'), 'sample'];
+      case 'Inspection date': return [words('sample-date'), 'sample'];
+      case 'Fee': return [words('sample-fee'), 'sample'];
+      case 'Your name': return mine(d.inspectorName, 'missing-name');
+      case 'Your company': return mine(d.companyName, 'missing-company');
+      case 'License number': return mine(d.licenseNumber, 'missing-license');
+      default: return [DAY.format(new Date()), 'yours'];
+    }
+  }
+  // The words as the client reads them: paragraphs, each blank filled and marked.
+  function paint() {
+    var paper = $('[data-paper]', form);
+    paper.textContent = '';
+    form.elements.words.value.split(/\n{2,}/).forEach(function (para) {
+      if (dartTrim(para) === '') return;
+      var el = document.createElement('p'), last = 0, m;
+      BLANK.lastIndex = 0;
+      while ((m = BLANK.exec(para))) {
+        el.appendChild(document.createTextNode(para.slice(last, m.index)));
+        var f = fill(m[1]), mark = document.createElement('mark');
+        mark.className = 'agr-fill';
+        mark.setAttribute('data-fill', f[1]);
+        mark.textContent = f[0];
+        el.appendChild(mark);
+        last = BLANK.lastIndex;
+      }
+      el.appendChild(document.createTextNode(para.slice(last)));
+      paper.appendChild(el);
+    });
+    var sign = document.createElement('p');
+    sign.className = 'agr-sign';
+    sign.textContent = words('signed-by') + ' ' + words('sample-client');
+    paper.appendChild(sign);
+  }
 
   // ---- start -----------------------------------------------------------------------------------------------------
 
