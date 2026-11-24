@@ -223,6 +223,7 @@
       var want = el.getAttribute('data-kind') === 'time' ? (typeof v === 'number' && isFinite(v) ? toBox(v) : '') : v === null || v === undefined ? '' : String(v);
       if (el.value !== want) el.value = want;
     });
+    renderPeople(id);
     var started = val('inspection', id, 'inspection_at'), line = $('[data-started]');
     line.hidden = !(typeof started === 'number' && isFinite(started));
     if (!line.hidden) { var t = line.querySelector('[data-v="started"]'); t.textContent = DAY.format(new Date(started)) + ', ' + CLOCK.format(new Date(started)); t.setAttribute('datetime', new Date(started).toISOString()); }
@@ -265,6 +266,31 @@
         box.addEventListener('input', function () { dirty[k] = true; clearTimeout(timers[k]); timers[k] = setTimeout(send, SETTLE); });
         box.addEventListener('blur', function () { send(); delete dirty[k]; render(); });
       }
+    });
+  }
+
+  /* The inspection's people, each with a button that opens the inspection as they see it (Client View / Agent View,
+     2026-11-24): a new tab at /look, where a one-time ticket is asked for as this inspector (look.js). */
+  var ROLES = { client: 'client', buyer_agent: 'agent', listing_agent: 'agent' };
+  var word = function (w) { var el = document.querySelector('[data-words] [data-w="' + w + '"]'); return el ? el.textContent : ''; };
+  function renderPeople(id) {
+    var box = $('[data-people]'), list = $('[data-people-list]');
+    var people = parts('person', function (p) { return owner['person/' + p] === id && Object.prototype.hasOwnProperty.call(ROLES, val('person', p, 'role')); }).sort(byPosition('person'));
+    var next = JSON.stringify(people.map(function (p) { return [p, val('person', p, 'role'), text(val('person', p, 'name'))]; }));
+    box.hidden = people.length === 0;
+    if (list.getAttribute('data-shape') === id + next) return;
+    list.setAttribute('data-shape', id + next);
+    list.textContent = '';
+    people.forEach(function (p) {
+      var role = val('person', p, 'role'), as = ROLES[role];
+      var row = tpl('person');
+      row.querySelector('[data-v="name"]').textContent = text(val('person', p, 'name')).trim() || word('noname');
+      row.querySelector('[data-v="role"]').textContent = word(role);
+      row.querySelector('[data-v="look"]').textContent = word('look-' + as);
+      var a = row.querySelector('[data-look]');
+      a.setAttribute('href', '/look#i=' + encodeURIComponent(id) + '&as=' + as);
+      a.setAttribute('data-as', as);
+      list.appendChild(row);
     });
   }
 

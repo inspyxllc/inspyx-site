@@ -64,10 +64,31 @@
 <span data-save="saving" hidden>Saving…</span>
 <span data-save="failed" hidden>Couldn't save. Trying again.</span>
 </p>
+<section class="insp-people" data-people hidden>
+<h2>People</h2>
+<p class="insp-people-hint">See this inspection exactly as each of them sees it. Opens in a new tab; nothing is counted or sent.</p>
+<figure class="look-how" aria-label="How it works, in three steps">
+<div class="look-how-stage" aria-hidden="true">
+<div class="look-how-scene look-how-a"><span class="look-how-row"><span><b>Dana Reyes</b><i>Client</i></span><em class="look-how-btn">Client view</em></span><span class="look-how-row dim"><span><b>Alex Agent</b><i>Buyer’s agent</i></span><em>Agent view</em></span></div>
+<div class="look-how-scene look-how-b"><span class="look-how-bar"><b>Client view</b><i>What your client sees</i></span><span class="look-how-line"></span><span class="look-how-line short"></span></div>
+<div class="look-how-scene look-how-c"><span class="look-how-bar"><b>Client view</b><i>What your client sees</i></span><span class="look-how-cover"><b>12 Oak St</b><i>This report opens once the inspection is paid.</i><em>Pay $425.00</em></span><span class="look-how-pill">nothing is counted</span></div>
+<span class="look-how-finger"></span>
+</div>
+<figcaption class="look-how-steps">
+<span class="look-how-step" data-n="1">Tap Client view (or Agent view) by the person</span>
+<span class="look-how-step" data-n="2">A new tab opens on exactly what they see</span>
+<span class="look-how-step" data-n="3">Look around: nothing is counted, paid or sent</span>
+</figcaption>
+</figure>
+<ul class="insp-people-list" data-people-list></ul>
+</section>
 <div data-stops></div>
 </div>
 </section>
 </main>
+
+<template data-t="person"><li><span class="insp-who"><strong data-v="name"></strong><span data-v="role"></span></span><a class="insp-look" data-look target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span data-v="look"></span></a></li></template>
+<div data-words hidden><span data-w="client">Client</span><span data-w="buyer_agent">Buyer’s agent</span><span data-w="listing_agent">Listing agent</span><span data-w="look-client">Client view</span><span data-w="look-agent">Agent view</span><span data-w="noname">No name yet</span></div>
 
 <template data-t="row"><li><a href="#"><strong data-v="title"></strong><span data-v="address"></span><time data-v="day"></time></a></li></template>
 
