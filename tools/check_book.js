@@ -105,7 +105,10 @@ const lastBook = (calls) => calls.filter((c) => c.action === 'book').pop();
     await page.waitForSelector('[data-state="open"]:not([hidden])');
     await fill(page);
     await page.waitForSelector('[data-quote]:not([hidden])');
-    ok('the price shows', (await page.textContent('[data-v="total"]')) === '$600');
+    // The quote shows a moment before its total is filled in: wait for the total itself (it flaked about one run in
+    // three on a read taken at once).
+    const total = await page.waitForFunction(() => { const t = document.querySelector('[data-v="total"]'); return t && t.textContent === '$600' ? t.textContent : null; }, null, { timeout: 5000 }).then((h) => h.jsonValue(), () => null);
+    ok('the price shows', total === '$600', String(total));
     await page.click('[data-book]');
     await page.waitForSelector('[data-state="booked"]:not([hidden])');
     const b = lastBook(calls);
