@@ -84,6 +84,11 @@ async function open(browser, o) {
       const rows = o.biz ? o.biz() : [];
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows, next: rows.length, more: false }) });
     }
+    // The reports-sent function (which inspections have a published report): o.published lists them.
+    if (u.startsWith(SERVER + '/functions/v1/reports-sent')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+        body: JSON.stringify({ reports: (o.published || []).map((id) => ({ inspection_id: id, published_at: 1, locked: false, links: [], emails: [] })), as_of: new Date().toISOString() }) });
+    }
     if (u.startsWith(SERVER + '/functions/v1/booking') && o.booking) {
       const b = JSON.parse(req.postData() || '{}'); bookCalls.push({ headers: req.headers(), body: b });
       const a = o.booking(b);
@@ -251,7 +256,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await group('the report\'s structure, ' + label, async () => {
       const s = server(); seed(s);
       s.phone('section', SEC, 'report_section_id', 'C1');
-      const { page, ctx, errs, away } = await open(browser, { server: s, w, hash: '#' + INSP });
+      const { page, ctx, errs, away } = await open(browser, { server: s, w, hash: '#' + INSP, published: label === 'phone' ? [INSP] : [] });
       const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
       const partBy = (field, value) => { for (const h of s.held.values()) if (h.field === field && h.value === value) return h.id; return null; };
       const fieldsOf = (id) => { const o = {}; for (const h of s.held.values()) if (h.id === id) o[h.field] = { value: h.value, at: h.at }; return o; };
@@ -293,10 +298,19 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await page.locator('.insp-stop').first().locator('.insp-stop-head [data-delete]').click();
       const asked = await page.locator('[data-confirm-text]').textContent();
       ok(label + ': delete asks first, naming what goes', asked === 'Delete the stop “Roof”, with 2 items, 2 findings and 1 photo?', asked);
+      if (label === 'phone') ok(label + ': a published report: the question says the client’s copy stays until the next publish',
+        await until(async () => await page.locator('[data-confirm-published]').isVisible()));
       ok(label + ': the question sits in the middle of the screen', await page.evaluate(() => { const r = document.querySelector('[data-confirm]').getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 4; }));
       if (process.env.SHOTS) { await page.waitForTimeout(300); await page.screenshot({ path: require('path').join(process.env.SHOTS, 'structure-confirm-' + label + '.png') }); }
       await page.locator('[data-confirm-no]').click();
       ok(label + ': Keep it: nothing is deleted', s.value('section', SEC, '_del') === undefined && !(await page.locator('[data-confirm]').isVisible()));
+      // Return on the question keeps everything: Keep it has the focus, never Delete.
+      await page.locator('.insp-stop').first().locator('.insp-stop-head [data-delete]').click();
+      ok(label + ': the question opens on Keep it', await page.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-confirm-no')));
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(300);
+      ok(label + ': Return keeps it', s.value('section', SEC, '_del') === undefined && !(await page.locator('[data-confirm]').isVisible()));
+      if (label === 'wide') ok(label + ': no report out: no word of one', !(await page.locator('[data-confirm-published]').isVisible()));
       await page.locator('.insp-stop').first().locator('.insp-stop-head [data-delete]').click();
       await page.locator('[data-confirm-go]').click();
       await until(async () => s.value('section', SEC, '_del') === true);

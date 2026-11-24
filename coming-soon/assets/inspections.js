@@ -555,9 +555,23 @@
     var tail = counts.length === 0 ? '' : word('del-with') + (counts.length === 1 ? counts[0] : counts.slice(0, -1).join(', ') + word('and') + counts[counts.length - 1]);
     return fill(kind, name) + tail + '?';
   }
+  /* Which inspections have a published report (the reports-sent function, as the Reports page reads it): a delete's
+     question says the client's copy stays as it is until the next publish. Unknown (not asked yet, or it failed): the
+     line is left out, never guessed. */
+  var published = null;
+  function pullPublished() {
+    return auth.ask('reports-sent', { action: 'list' }, DEADLINE).then(function (r) {
+      if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.reports)) return;
+      published = {};
+      r.json.reports.forEach(function (x) { if (x && typeof x.inspection_id === 'string') published[x.inspection_id] = true; });
+    }, function () { /* unknown: the line stays out */ });
+  }
+  function publishedLine(inspection) { $('[data-confirm-published]').hidden = !(published && published[inspection]); }
   function askDelete(inspection, entity, id) {
     var d = $('[data-confirm]');
     $('[data-confirm-text]').textContent = deleteWords(entity, id);
+    publishedLine(inspection);
+    pullPublished().then(function () { if (d.open) publishedLine(inspection); });
     var go = $('[data-confirm-go]'), no = $('[data-confirm-no]');
     var done = function (yes) {
       go.onclick = no.onclick = null;
@@ -573,6 +587,7 @@
     no.onclick = function () { done(false); };
     d.onclose = function () { go.onclick = no.onclick = null; };
     if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
+    // Keep it has the focus: Return or Enter keeps everything; only a deliberate Delete deletes.
     no.focus();
   }
   /* The tools on a stop, an item or a finding: its moves (off at the ends) and its delete. */
@@ -633,4 +648,5 @@
   });
   sync();
   pullBusiness();
+  pullPublished();
 })();
