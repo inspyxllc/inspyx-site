@@ -57,7 +57,8 @@ async function open(browser, o) {
   return { ctx, page, errs, away, calls, asked, res };
 }
 
-const until = async (fn, ms) => { const end = Date.now() + (ms || TIMEOUT / 2); for (;;) { if (await fn()) return true; if (Date.now() > end) return false; await new Promise((r) => setTimeout(r, 50)); } };
+// A look taken while the page reloads (it reloads on purpose when its address's mark changes) is no answer: try again.
+const until = async (fn, ms) => { const end = Date.now() + (ms || TIMEOUT / 2); for (;;) { let got = false; try { got = await fn(); } catch (e) { got = false; } if (got) return true; if (Date.now() > end) return false; await new Promise((r) => setTimeout(r, 50)); } };
 const shown = async (page, sel) => (await page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.closest('[hidden]') && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel)).join(' | ');
 const items = (page) => page.evaluate(() => {
   const vis = (e) => !e.closest('[hidden]') && e.getClientRects().length > 0;
