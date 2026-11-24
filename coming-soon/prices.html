@@ -93,11 +93,16 @@
 <label><span data-time="service">Time</span><span data-time="addon" hidden>Extra time</span> <input type="text" name="hours" inputmode="decimal" autocomplete="off" placeholder="hours"></label>
 </div>
 <label data-only="service">Minimum fee (optional) <input type="text" name="minimum" inputmode="decimal" autocomplete="off"><small>Spex never quotes below it</small></label>
+<fieldset data-only="service" class="prc-tax"><legend>Sales tax (optional)</legend>
+<div class="prc-pair"><label>Its name <input type="text" name="taxName" maxlength="40" autocomplete="off" placeholder="Sales tax"></label><label>Percent <input type="text" name="taxRate" inputmode="decimal" autocomplete="off" placeholder="7"></label></div>
+<small>Charged on this service after any discount, on its own line. Never on add-ons.</small></fieldset>
 <div class="prc-problems" role="alert">
 <p data-problem="name" hidden>It needs a name.</p>
 <p data-problem="fee" hidden>Write the fee as dollars, like 450 or 450.50.</p>
 <p data-problem="hours" hidden>Write the time in hours, like 2 or 2.5.</p>
 <p data-problem="minimum" hidden>Write the minimum fee as dollars, or leave it empty.</p>
+<p data-problem="tax-rate" hidden>Write the tax as a percent, like 7 or 7.5.</p>
+<p data-problem="tax-name" hidden>Name the tax, like Sales tax.</p>
 </div>
 <div class="prc-actions">
 <button class="btn small" type="submit" value="save">Save</button>
