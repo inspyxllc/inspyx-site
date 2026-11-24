@@ -123,6 +123,36 @@ const lookPath = (as) => 'look#i=' + INSP + '&as=' + as;
     });
   }
 
+  await group('the how-to', async () => {
+    const people = [{ id: '6f1c2a3b-0000-4000-8000-0000000000e1', role: 'client', name: 'Dana Reyes' }];
+    const { page, ctx } = await open(browser, { path: 'inspections#' + INSP, people });
+    await until(async () => (await vis(page, '.look-how-step')).length === 3);
+    ok('the People card shows how it works, in three steps', (await vis(page, '.look-how-step')).join(' | ') === 'Tap Client view (or Agent view) by the person | A new tab opens on exactly what they see | Look around: nothing is counted, paid or sent');
+    if (SHOTS) {
+      await page.evaluate(() => document.querySelector('.look-how').scrollIntoView({ block: 'center' }));
+      for (const [ms, name] of [[2000, 'a'], [4500, 'b'], [7500, 'c']]) {
+        await page.evaluate((t) => document.getAnimations().forEach((an) => { an.pause(); an.currentTime = t; }), ms);
+        await page.locator('.look-how').screenshot({ path: path.join(SHOTS, 'howto-' + name + '.png') });
+      }
+    }
+    await ctx.close();
+    const calm = await browser.newContext({ reducedMotion: 'reduce', viewport: { width: WIDE, height: 900 } });
+    await calm.addInitScript((v) => { try { localStorage.setItem('inspyx.signin', v); } catch (e) { /* none */ } }, kept());
+    const p2 = await calm.newPage();
+    await p2.route((u) => !u.href.startsWith(HOME), (route) => {
+      const u = route.request().url();
+      if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, content-type' } });
+      if (u === SYNC) { const rows = fields(people); return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ results: [], skipped: [], fields: rows, next: rows.length, more: false, now: Date.now() }) }); }
+      return route.abort();
+    });
+    await p2.routeWebSocket(/realtime/, () => {});
+    await p2.goto(url + 'inspections#' + INSP, { waitUntil: 'load' });
+    await until(async () => (await vis(p2, '.look-how-step')).length === 3);
+    const still = await p2.evaluate(() => ['a', 'b', 'c'].map((n) => getComputedStyle(document.querySelector('.look-how-' + n)).display !== 'none' && getComputedStyle(document.querySelector('.look-how-' + n)).opacity === '1').concat([getComputedStyle(document.querySelector('.look-how-finger')).display]));
+    ok('motion turned down: a still of the result (the client\'s view), no finger', JSON.stringify(still) === JSON.stringify([false, false, true, 'none']), JSON.stringify(still));
+    await calm.close();
+  });
+
   await group('no people', async () => {
     const { page, ctx } = await open(browser, { path: 'inspections#' + INSP, people: [] });
     await page.waitForTimeout(500);
