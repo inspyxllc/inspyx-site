@@ -227,6 +227,29 @@ const shot = async (page, sel, name) => {
     await c.ctx.close();
   });
 
+  await group('the sheet is what is shared: Remove takes a finding off it; back to Credit, its amount counts (Codex on #91, r2)', async () => {
+    const s = server();
+    const { page, ctx } = await open(browser, { server: s });
+    await until(async () => (await page.locator('[data-rr-add]').count()) > 0);
+    await page.locator('[data-rr-add="C1.1"]').click();
+    await page.locator('[data-rr-add="C1.2"]').click();
+    await page.locator('[data-rr-open]').click();
+    await page.locator('[data-rr-item="C1.2"] .rr-remove').click();
+    ok('Remove: the finding goes from the sheet at once, and from its card', (await page.locator('[data-rr-item="C1.2"]').count()) === 0 &&
+      (await page.locator('[data-rr-add="C1.2"]').getAttribute('aria-pressed')) === 'false');
+    const item = page.locator('[data-rr-item="C1.1"]');
+    await item.locator('[data-rr-ask="credit"]').click();
+    await page.locator('[data-rr-amount="C1.1"]').fill('300');
+    await page.locator('[data-rr-item="C1.1"] [data-rr-ask="repair"]').click();
+    ok('Repair: no credit counts', (await page.locator('[data-rr-total] strong').textContent()) === '$0.00');
+    await page.locator('[data-rr-item="C1.1"] [data-rr-ask="credit"]').click();
+    ok('back to Credit: the amount in the box counts again, and Share is open', (await page.locator('[data-rr-amount="C1.1"]').inputValue()) === '300' &&
+      (await page.locator('[data-rr-total] strong').textContent()) === '$300.00' && !(await page.locator('[data-rr-share]').isDisabled()));
+    await until(async () => JSON.stringify((s.saves[s.saves.length - 1] || {}).items || []) === JSON.stringify([{ finding: 'C1.1', ask: 'credit', note: '', cents: 30000 }]), 3000);
+    ok('back to Credit: what is saved is the sheet: one finding, a $300 credit', JSON.stringify((s.saves[s.saves.length - 1] || {}).items) === JSON.stringify([{ finding: 'C1.1', ask: 'credit', note: '', cents: 30000 }]), JSON.stringify((s.saves[s.saves.length - 1] || {}).items));
+    await ctx.close();
+  });
+
   await group('a page older than the report: it says so, and saves nothing', async () => {
     const s = server();
     const { page, ctx } = await open(browser, { server: s });

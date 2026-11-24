@@ -119,7 +119,9 @@
   function toggle(id) {
     if (picked(id)) { delete state.items[id]; state.order = state.order.filter(function (x) { return x !== id; }); }
     else { state.items[id] = { ask: 'repair', cents: null, amount: '', note: '' }; state.order.push(id); }
-    changed();
+    // The sheet shows what will be shared: a finding taken off (or added) while it is open goes from it at once
+    // (Codex on inspyx-site #91, r2).
+    changed(!!(sheet && sheet.open));
   }
 
   /* ---- the bar and the sheet ---- */
@@ -167,7 +169,8 @@
       ['repair', 'replace', 'credit'].forEach(function (a) {
         asks.appendChild(el('button', {
           type: 'button', role: 'radio', 'aria-checked': it.ask === a ? 'true' : 'false', 'data-rr-ask': a,
-          on: { click: function () { it.ask = a; if (a !== 'credit') { it.cents = null; } changed(true); } }
+          // Back to Credit: the amount still in the box is the credit again (Codex on inspyx-site #91, r2).
+          on: { click: function () { it.ask = a; it.cents = a === 'credit' ? centsOf(it.amount) : null; changed(true); } }
         }, [WORDS.asks[a]]));
       });
       var amount = null;
