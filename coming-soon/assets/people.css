@@ -47,3 +47,8 @@
 .ppl-problems p{margin:0; font-size:14.5px; font-weight:600; color:#8C1D18}
 .ppl-actions{display:flex; gap:10px}
 @media (max-width: 480px){ .ppl-two{grid-template-columns:1fr} }
+/* "Saved." on a green tint, never the warning pink (W6); the role box as tall as the others, with its own arrow. */
+.ppl .say p[data-say="saved"]{padding:10px 12px; border-radius:12px; background:#E3F4EA}
+.ppl-dialog select{-webkit-appearance:none; appearance:none; height:44px; padding-right:38px; cursor:pointer;
+  background-image:linear-gradient(45deg, transparent 50%, #4A5362 50%), linear-gradient(135deg, #4A5362 50%, transparent 50%);
+  background-position:calc(100% - 20px) 19px, calc(100% - 15px) 19px; background-size:5px 5px, 5px 5px; background-repeat:no-repeat}
