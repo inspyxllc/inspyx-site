@@ -86,6 +86,12 @@ async function open(browser, path, w) {
     await page.click('.dash-more summary');
     const more = await page.evaluate(() => [...document.querySelectorAll('.dash-more ul a')].filter((a) => a.getClientRects().length).map((a) => a.getAttribute('href')));
     ok('phone: More opens the other six', JSON.stringify(more) === JSON.stringify(ITEMS.slice(4)), JSON.stringify(more));
+    // At an ordinary phone's width (390 px), not only the narrowest: a sheet floating above the bar (Codex on #85).
+    const sheet = await page.evaluate(() => {
+      const ul = document.querySelector('.dash-more ul'), bar = document.querySelector('.dash');
+      return { pos: getComputedStyle(ul).position, bottom: ul.getBoundingClientRect().bottom, top: bar.getBoundingClientRect().top, barH: bar.getBoundingClientRect().height };
+    });
+    ok('phone (390 px): More opens as a sheet above the tab bar, which stays one row', sheet.pos === 'absolute' && sheet.bottom <= sheet.top && sheet.barH < 100, JSON.stringify(sheet));
     await page.keyboard.press('Escape');
     ok('phone: Escape closes More', !(await page.evaluate(() => document.querySelector('.dash-more').open)));
     await page.click('.dash-more summary');
@@ -95,6 +101,18 @@ async function open(browser, path, w) {
     if (SHOTS) await page.screenshot({ path: SHOTS + '/31-nav-phone-more.png' });
     await page.click('.dash-more ul a[href="/agreements"]');
     ok('phone: an item there opens its page', await page.waitForURL(/\/agreements$/).then(() => true, () => false));
+    await ctx.close();
+  }
+  // Every page with the bar closes More on Escape or a tap elsewhere (Codex on #85: Account and Templates didn't).
+  for (const name of Object.keys(PAGES)) {
+    const { ctx, page } = await open(browser, name, 390);
+    await page.click('.dash-more summary');
+    await page.keyboard.press('Escape');
+    const esc = !(await page.evaluate(() => document.querySelector('.dash-more').open));
+    await page.click('.dash-more summary');
+    await page.mouse.click(200, 300);
+    const tap = !(await page.evaluate(() => document.querySelector('.dash-more').open));
+    ok(name + ' (phone): Escape and a tap elsewhere close More', esc && tap, JSON.stringify({ esc, tap }));
     await ctx.close();
   }
   // The sidebar comes right after the logo for the Tab key; the page's own words after it.
