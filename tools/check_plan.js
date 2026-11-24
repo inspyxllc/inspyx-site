@@ -713,13 +713,15 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
   // ---- getting there and back, and the keys
   await group('getting around', async () => {
     const a = await open(browser, 'account', { answers: () => bill(FREE) });
-    const link = await a.page.evaluate(() => { const l = document.querySelector('.account a[href="/plan"]'); const b = l ? l.getBoundingClientRect() : { height: 0, width: 0 }; const o = document.querySelector('[data-signout]'); return l ? { text: l.textContent.trim(), h: Math.round(b.height), sw: document.documentElement.scrollWidth, out: o.getBoundingClientRect().height, solid: getComputedStyle(l).backgroundColor, quiet: getComputedStyle(o).backgroundColor, next: o.previousElementSibling === l } : null; });
+    const link = await a.page.evaluate(() => { const l = document.querySelector('.account a[href="/plan"]'); const b = l ? l.getBoundingClientRect() : { height: 0, width: 0 }; const o = document.querySelector('[data-signout]'); return l ? { text: (l.querySelector('strong') || l).textContent.trim(), h: Math.round(b.height), sw: document.documentElement.scrollWidth, out: o.getBoundingClientRect().height, quiet: getComputedStyle(o).backgroundColor, signinCard: !!o.closest('section') && !!o.closest('section').querySelector('#acct-signin'), planCard: !!l.closest('section') && !!l.closest('section').querySelector('#acct-plan') } : null; });
     await a.page.click('.account a[href="/plan"]'); await a.page.waitForURL('**/plan'); await a.page.waitForTimeout(400);
     const there = shows(await sees(a.page), 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing');
     await a.page.click('.more a'); await a.page.waitForURL('**/account');
     ok('the account page has a link to the plan page, big enough to tap, and the plan page one back', !!link && link.text === 'Your plan' && link.h >= 44 && link.out >= 44 && link.sw <= PHONE && there && (await at(a.page)) === '/account', JSON.stringify(link));
     // Beside it in the row of buttons: since the dashboard's pages joined that row (2026-11-14), the two may wrap apart on a phone.
-    ok('on the account page the plan is the solid button and signing out the quiet one right after it', !!link && link.solid === 'rgb(0, 0, 0)' && link.quiet === 'rgb(255, 255, 255)' && link.next, JSON.stringify(link));
+    // The account page's design since job 7 (the lead's review, 2026-11-23): the plan is a row of "Your plan and your
+    // account", and Sign out the quiet button of the Sign-in card.
+    ok('on the account page the plan is a row of "Your plan and your account", and signing out the quiet button of the Sign-in card', !!link && link.planCard && link.signinCard && link.quiet === 'rgb(255, 255, 255)', JSON.stringify(link));
     await a.ctx.close();
 
     const k = await open(browser, 'plan', { w: WIDE, h: 900, desktop: true, stripe: true, answers: (c) => (action(c) === 'status' ? bill(plan({})) : { status: 200, json: { url: CHECKOUT } }) });

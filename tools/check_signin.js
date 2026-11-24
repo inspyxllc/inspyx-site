@@ -44,7 +44,8 @@ const SIGNIN_WORDS = ['h1: Welcome back.', 'button: Continue with Google', 'butt
   'button: Sign in',
   'p: Forgot your password? Reset it',
   'p: New to Inspyx? Join the waitlist'];
-const ACCOUNT_WORDS = ['h1: Account', 'p: Signed in as', 'button: Sign out', 'p: Inspyx could not reach the sign-in server. Check your connection and try again.', 'p: The sign-in server refused the request. Try again later.'];
+// The account page (job 7, W20, 2026-11-23): the sign-in, the password, the business in one place, the plan. Drafted.
+const ACCOUNT_WORDS = ["h1: Account", "p: Your sign-in, your business in one place, and your plan.", "p: Inspyx could not reach the sign-in server. Check your connection and try again.", "p: The sign-in server refused the request. Try again later.", "h2: Sign-in", "p: Signed in as", "label: New password", "label: The same again", "p: Saved. Use it the next time you sign in, here or on your phone.", "p: Use at least 8 characters.", "p: The two don’t match. Type the same password twice.", "p: Inspyx won’t take that password. Try a longer one, or one you haven’t used before.", "p: Inspyx couldn’t be reached. Check your connection and try again.", "p: That didn’t go through. Try again in a minute.", "p: Your sign-in has ended. Sign in again, then change it.", "button: Save the new password", "button: Sign out", "h2: Your business", "p: Everything your phone uses, set up here too.", "h2: Your plan and your account", "p: On your phone: More → Account → Delete your account. Your sign-in stops working, your records on Inspyx are removed, and your plan ends: the unused days you’ve paid for are refunded to your card. It can’t be undone."];
 const read = () => {
   const flat = (t) => t.replace(/\s+/g, ' ').trim();
   const main = document.querySelector('main').cloneNode(true);

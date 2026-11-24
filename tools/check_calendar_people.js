@@ -110,9 +110,25 @@ async function open(browser, o) {
     if (u === SERVER + '/functions/v1/sync') {
       const b = JSON.parse(req.postData() || '{}');
       bookingCalls.push(b);
-      const list = (o.bookings || []).filter(() => !b.after);
+      // The People book (job 7): a pushed person is kept newest-wins; o.lose() drops the answer of one that landed.
+      const book = o.book || (o.book = new Map());
+      // o.bookDown(): the sync function fails; o.notApplied(): a pushed person is answered "not applied" (the server
+      // holds a newer copy) and not kept; o.slowPush: ms before a push is answered (Codex on #87).
+      if (o.bookDown && o.bookDown()) return route.fulfill({ status: 503, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"error":"database"}' });
+      if ((b.push || []).length && o.slowPush) await new Promise((r) => setTimeout(r, o.slowPush));
+      const refused = (b.push || []).length && o.notApplied && o.notApplied();
+      // Newest wins, as the server: an older push than the held copy is answered "not applied".
+      const applied = (b.push || []).map((r) => {
+        if (refused || r.kind !== 'inspector_contacts') return { kind: r.kind, id: r.id, applied: !refused };
+        const h = book.get(r.id), newer = !h || r.updated_at > h.updated_at;
+        if (newer) book.set(r.id, Object.assign({}, r, { changed_at: 'b' }));
+        return { kind: r.kind, id: r.id, applied: newer };
+      });
+      if ((b.push || []).length && o.lose && o.lose()) return route.abort('failed');
+      // Rows changed after the page's point (a row marked changed_at 'zz' is newer than any point the page holds).
+      const list = [...(o.bookings || []), ...book.values()].filter((r) => !b.after || String(r.changed_at || '') > String(b.after.at || ''));
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
-        body: JSON.stringify({ applied: [], skipped: [], rows: list, next: list.length ? { at: 'z', kind: 'bookings', id: 'z' } : b.after || null, more: false }) });
+        body: JSON.stringify({ applied, skipped: [], rows: list, next: list.length ? { at: 'z', kind: 'bookings', id: 'z' } : b.after || null, more: false }) });
     }
     if (!u.startsWith(SERVER + SYNC)) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
@@ -337,10 +353,99 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     });
   }
 
+  await group('people: the People book (job 7, W19)', async () => {
+    const s = server(); seed(s);
+    const row = (idv, role, name, more) => ({ kind: 'inspector_contacts', id: idv, updated_at: 1795000000000, deleted_at: null, changed_at: 'a',
+      data: Object.assign({ id: idv, ownerAccountId: ME, role, name, phone: null, email: null, company: null, note: null, lastUsedAt: 1795000000000, createdAt: 1795000000000, updatedAt: 1795000000000, deletedAt: null }, more) });
+    const book = new Map([
+      ['k1', row('k1', 'buyer_agent', 'Rita Gomez', { email: 'rita@example.com', company: 'Coastal Realty' })],
+      ['k2', row('k2', 'client', 'Dana Reyes', { email: 'dana@example.com', company: 'Reyes Family Trust' })],   // on inspections too
+      ['k3', row('k3', 'client', 'Old Friend', { deletedAt: 1795000000001 })],
+    ]);
+    book.get('k3').deleted_at = 1795000000001;
+    let lose = false;
+    const o = { server: s, path: 'people', book, lose: () => lose };
+    const { page, ctx, errs } = await open(browser, o);
+    await until(async () => (await vis(page, '.ppl-one h3')).includes('Rita Gomez'));
+    const names = async () => vis(page, '.ppl-one h3');
+    ok('someone kept in People shows, with the company the book keeps', (await names()).includes('Rita Gomez') && (await vis(page, '.ppl-company')).includes('Coastal Realty'));
+    ok('a person both kept and on inspections shows once, with their inspections and the book\'s company', (await names()).filter((n) => /^Dana Reyes/.test(n)).length === 1 && (await vis(page, '.ppl-company')).includes('Reyes Family Trust'));
+    ok('a deleted one doesn\'t show', !(await names()).includes('Old Friend'));
+    await page.click('[data-add-person]');
+    await page.click('[data-form] button[type="submit"]');
+    ok('Add with no name: says so, sends nothing', (await vis(page, '[data-problem]')).join() === 'Write their name.' && ![...book.keys()].some((k) => !['k1', 'k2', 'k3'].includes(k)));
+    await page.fill('[data-form] [name="name"]', 'n'.repeat(201));
+    await page.click('[data-form] button[type="submit"]');
+    ok('a name of 201 letters: too long, as the rules say', (await vis(page, '[data-problem]')).join() === 'A name can be at most 200 characters.');
+    await page.selectOption('[data-form] [name="role"]', 'listing_agent');
+    await page.fill('[data-form] [name="name"]', '  Mia Chen\u0085 ');
+    await page.fill('[data-form] [name="phone"]', '(786) 555-0144');
+    await page.fill('[data-form] [name="company"]', 'Bayside Homes');
+    lose = true;
+    await page.click('[data-form] button[type="submit"]');
+    ok('the answer lost: it says so, and the dialog stays', await until(async () => (await vis(page, '[data-problem]')).join() === 'That couldn’t be saved. Check your connection and try again.') && await page.isVisible('[data-dialog]'));
+    lose = false;
+    await page.click('[data-form] button[type="submit"]');
+    ok('saved: the dialog closes and it says so', await until(async () => (await vis(page, '[data-say]')).join() === 'Saved. It’s in People on your phone too, at its next sync.') && !(await page.isVisible('[data-dialog]')));
+    const added = [...book.values()].filter((r) => !['k1', 'k2', 'k3'].includes(r.id));
+    const d = added[0] && added[0].data;
+    ok('one person, the same row both tries (one id), trimmed as Dart trims, as the phone keeps it', added.length === 1 && !!d && d.name === 'Mia Chen' && d.role === 'listing_agent' && d.phone === '(786) 555-0144' && d.company === 'Bayside Homes' && d.email === null && d.note === null && d.ownerAccountId === ME && d.deletedAt === null && d.updatedAt === added[0].updated_at && d.lastUsedAt === d.updatedAt && Number.isSafeInteger(d.createdAt) && /^[0-9a-f-]{36}$/.test(added[0].id), JSON.stringify(d));
+    ok('and it shows at once, under listing agents', await until(async () => (await names()).includes('Mia Chen')));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/56-people.png', fullPage: true });
+    await page.click('[data-add-person]');
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/57-people-add.png' });
+    await ctx.close();
+  });
+
+  await group('people: the book\'s answers (Codex on #87)', async () => {
+    const s = server(); seed(s);
+    let refuse = true, down = false;
+    const o = { server: s, path: 'people', book: new Map(), notApplied: () => refuse, bookDown: () => down, slowPush: 0 };
+    const { page, ctx } = await open(browser, o);
+    await until(async () => (await vis(page, '.ppl-one h3')).length > 0);
+    // Not applied: the server holds a newer copy. Never "saved".
+    await page.click('[data-add-person]');
+    await page.fill('[data-form] [name="name"]', 'Kai Lane');
+    await page.click('[data-form] button[type="submit"]');
+    ok('a person the server didn\'t apply: not saved, it says so, the dialog stays, and the person isn\'t shown',
+      await until(async () => (await vis(page, '[data-problem]')).join() === 'Inspyx couldn’t keep that. Check it and try again.') &&
+      await page.isVisible('[data-dialog]') && !(await vis(page, '.ppl-one h3')).includes('Kai Lane') && (await vis(page, '[data-say]')).length === 0);
+    // A slow Add: the dialog can't be closed or reopened for another person until it is answered.
+    refuse = false; o.slowPush = 1200;
+    await page.fill('[data-form] [name="name"]', 'Kai Lane');
+    await page.click('[data-form] button[type="submit"]');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+    ok('while an Add waits: Escape and Cancel don\'t close it', await page.isVisible('[data-dialog]') && await page.isDisabled('[data-form] [data-close]'));
+    ok('and it lands on its own draft: saved, closed, shown', await until(async () => !(await page.isVisible('[data-dialog]')) && (await vis(page, '.ppl-one h3')).includes('Kai Lane'), 4000));
+    // An Add that landed with its answer lost, then the phone (its clock a day ahead) changed that person: the retry
+    // is refused and brings the newer copy; the next try is newer still and saves (Codex on #87, r2).
+    let lost = true;
+    o.slowPush = 0; o.lose = () => { const was = lost; lost = false; return was; };
+    await page.click('[data-add-person]');
+    await page.fill('[data-form] [name="name"]', 'Ana Ruiz');
+    await page.click('[data-form] button[type="submit"]');
+    await until(async () => (await vis(page, '[data-problem]')).join() === 'That couldn’t be saved. Check your connection and try again.');
+    const landed = [...o.book.values()].find((r) => r.data.name === 'Ana Ruiz');
+    o.book.set(landed.id, Object.assign({}, landed, { changed_at: 'zz', updated_at: landed.updated_at + 86400000, data: Object.assign({}, landed.data, { updatedAt: landed.updated_at + 86400000, note: 'From the phone' }) }));
+    await page.click('[data-form] button[type="submit"]');
+    ok('the retry after a newer copy from the phone: refused, and says so', await until(async () => (await vis(page, '[data-problem]')).join() === 'Inspyx couldn’t keep that. Check it and try again.'));
+    await page.click('[data-form] button[type="submit"]');
+    ok('and the next try is newer than that copy, and saves', await until(async () => !(await page.isVisible('[data-dialog]'))) && o.book.get(landed.id).updated_at > landed.updated_at + 86400000, String(o.book.get(landed.id).updated_at - landed.updated_at));
+    await ctx.close();
+    // The book can't be read: never "no one here yet".
+    down = true;
+    const r = await open(browser, { server: server(), path: 'people', bookDown: () => down });
+    await r.page.waitForTimeout(600);
+    ok('the People book can\'t be read: it says it couldn\'t load, never "no one here yet"', (await vis(r.page, '[data-state]')).join() === 'Couldn\'t load your inspections. Check your connection; this page keeps trying.' && (await vis(r.page, '[data-live]')).join() === 'Can\'t reach Inspyx right now. Trying again.', JSON.stringify([await vis(r.page, '[data-state]'), await vis(r.page, '[data-live]')]));
+    await r.ctx.close();
+  });
+
   await group('people: no one yet', async () => {
     const s = server(); s.insp(A, '12 Oak St', '12 Oak St', { created_at: ny('2026-11-01T10:00:00') });
     const { page, ctx } = await open(browser, { server: s, path: 'people' });
-    ok('people: with no one on any inspection, it says so', (await vis(page, '[data-state]')).join() === 'No one here yet. The people on your inspections show up here once your phone has synced.' && (await vis(page, '.ppl-group')).length === 0);
+    ok('people: with no one on any inspection, it says so', (await vis(page, '[data-state]')).join() === 'No one here yet. Add a person, or they show up here from your inspections once your phone has synced.' && (await vis(page, '.ppl-group')).length === 0);
     await ctx.close();
   });
 
