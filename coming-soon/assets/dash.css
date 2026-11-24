@@ -45,7 +45,10 @@
   .dash-more summary::-webkit-details-marker{display:none}
   .dash-more[open] summary{color:var(--navy)}
   .dash-more ul{position:absolute; left:10px; right:10px; bottom:calc(var(--dash-bar) + env(safe-area-inset-bottom, 0px) + 8px); display:grid; gap:2px; padding:8px;
-    border-radius:18px; background:#FFFFFF; box-shadow:0 18px 50px rgba(15,32,60,.22), 0 0 0 1px rgba(15,32,60,.06)}
+    border-radius:18px; background:#FFFFFF; box-shadow:0 18px 50px rgba(15,32,60,.22), 0 0 0 1px rgba(15,32,60,.06);
+    /* A short screen (a phone on its side) scrolls the sheet, so every page stays in reach (Codex on #85). */
+    max-height:calc(100vh - var(--dash-bar) - env(safe-area-inset-bottom, 0px) - 24px);
+    max-height:calc(100dvh - var(--dash-bar) - env(safe-area-inset-bottom, 0px) - 24px); overflow-y:auto; overscroll-behavior:contain}
   .dash-more ul a{flex-direction:row; justify-content:flex-start; gap:14px; height:auto; min-height:48px; padding:0 14px; border-radius:12px; font-size:16px}
   .dash-more ul a[aria-current="page"]{background:rgba(2,132,199,.1); color:var(--navy)}
 }

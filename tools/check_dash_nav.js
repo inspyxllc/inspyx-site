@@ -103,6 +103,17 @@ async function open(browser, path, w) {
     ok('phone: an item there opens its page', await page.waitForURL(/\/agreements$/).then(() => true, () => false));
     await ctx.close();
   }
+  // A phone on its side (568 x 320): the sheet fits the screen and scrolls, so its first item can be reached (Codex on #85).
+  {
+    const { ctx, page } = await open(browser, 'payments', 568);
+    await page.setViewportSize({ width: 568, height: 320 });
+    await page.click('.dash-more summary');
+    const fit = await page.evaluate(() => { const ul = document.querySelector('.dash-more ul'); const r = ul.getBoundingClientRect(); return { top: r.top, scroll: ul.scrollHeight > ul.clientHeight }; });
+    await page.evaluate(() => document.querySelector('.dash-more ul a[href="/booking"]').scrollIntoView({ block: 'nearest' }));
+    const first = await page.evaluate(() => { const r = document.querySelector('.dash-more ul a[href="/booking"]').getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight; });
+    ok('phone on its side: More fits the screen, scrolls, and its first page can be reached', fit.top >= 0 && first, JSON.stringify(fit));
+    await ctx.close();
+  }
   // Every page with the bar closes More on Escape or a tap elsewhere (Codex on #85: Account and Templates didn't).
   for (const name of Object.keys(PAGES)) {
     const { ctx, page } = await open(browser, name, 390);
