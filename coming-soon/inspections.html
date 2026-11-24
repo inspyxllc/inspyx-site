@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="/assets/inspections.css">
 <script src="/assets/auth.js"></script>
 <script src="/assets/page.js" defer></script>
+<script src="/assets/agreement-fill.js" defer></script>
 <script src="/assets/inspections.js" defer></script>
 </head>
 <body class="has-dash">
@@ -64,6 +65,34 @@
 <span data-save="saving" hidden>Saving…</span>
 <span data-save="failed" hidden>Couldn't save. Trying again.</span>
 </p>
+<section class="insp-agr" data-agr hidden aria-live="polite">
+<div data-agr-state="outdated" hidden>
+<h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3 3 3-3"/></svg>The signed agreement is out of date</h2>
+<p class="insp-agr-hint">Your client signed it before these changed. Send them the updated agreement to sign; the one they signed is kept.</p>
+<ul class="insp-agr-changes" data-agr-changes></ul>
+<p class="insp-agr-fee" data-agr-needsfee hidden>Set the price on your phone first, then send the updated agreement.</p>
+<button type="button" class="insp-agr-send" data-agr-send>Send the updated agreement</button>
+<div class="insp-agr-ask" data-agr-ask hidden role="group" aria-label="Send the updated agreement?">
+<p><strong>Send the updated agreement?</strong> Your client gets an email with a link to sign it again, with these changes.</p>
+<button type="button" class="insp-agr-go" data-agr-go>Send</button><button type="button" class="insp-agr-no" data-agr-no>Not now</button>
+</div>
+<figure class="agr-how" aria-label="How it works, in three steps">
+<div class="agr-how-stage" aria-hidden="true">
+<div class="agr-how-scene agr-how-a"><span class="agr-how-title">Out of date</span><span class="agr-how-change">Price: $425.00 → $475.00</span><em class="agr-how-btn">Send the updated agreement</em></div>
+<div class="agr-how-scene agr-how-b"><span class="agr-how-mail"><b>Ana Diaz</b><i>Please sign the updated agreement</i></span></div>
+<div class="agr-how-scene agr-how-c"><span class="agr-how-wait">Updated agreement sent. Waiting for the client to sign it.</span></div>
+<span class="agr-how-finger"></span>
+</div>
+<figcaption class="agr-how-steps">
+<span class="agr-how-step" data-n="1">See what changed since your client signed</span>
+<span class="agr-how-step" data-n="2">Tap Send: they get an email to sign it again</span>
+<span class="agr-how-step" data-n="3">It waits here until they sign</span>
+</figcaption>
+</figure>
+</div>
+<p class="insp-agr-wait" data-agr-state="updateSent" hidden>Updated agreement sent. Waiting for the client to sign it.</p>
+<p class="insp-agr-said" data-agr-said hidden></p>
+</section>
 <section class="insp-people" data-people hidden>
 <h2>People</h2>
 <p class="insp-people-hint">See this inspection exactly as each of them sees it. Opens in a new tab; nothing is counted or sent.</p>
@@ -88,7 +117,7 @@
 </main>
 
 <template data-t="person"><li><span class="insp-who"><strong data-v="name"></strong><span data-v="role"></span></span><a class="insp-look" data-look target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span data-v="look"></span></a></li></template>
-<div data-words hidden><span data-w="client">Client</span><span data-w="buyer_agent">Buyer’s agent</span><span data-w="listing_agent">Listing agent</span><span data-w="look-client">Client view</span><span data-w="look-agent">Agent view</span><span data-w="noname">No name yet</span></div>
+<div data-words hidden><span data-w="client">Client</span><span data-w="buyer_agent">Buyer’s agent</span><span data-w="listing_agent">Listing agent</span><span data-w="look-client">Client view</span><span data-w="look-agent">Agent view</span><span data-w="noname">No name yet</span><span data-w="agr-clientName">Client</span><span data-w="agr-clientFirstName">Client’s first name</span><span data-w="agr-clientEmail">Client’s email</span><span data-w="agr-propertyAddress">Address</span><span data-w="agr-street">Street</span><span data-w="agr-city">City</span><span data-w="agr-state">State</span><span data-w="agr-zip">ZIP code</span><span data-w="agr-fee">Price</span><span data-w="agr-services">Services</span><span data-w="agr-feeLines">Price lines</span><span data-w="agr-none">(none)</span><span data-w="agr-sending">Sending…</span><span data-w="agr-sent">Sent. Your client will get an email to sign it.</span><span data-w="agr-held">Made. Its email waits: client emails are off in your settings.</span><span data-w="agr-no_address">Made, but your client has no email. Add one, or have them sign on your phone.</span><span data-w="agr-email_failed">Made. The email didn’t go yet; it’s tried again shortly.</span><span data-w="agr-refused">This agreement was already updated. Reload the page.</span><span data-w="agr-no_agreement">You have no agreement to send. Add one in Agreements, then try again.</span><span data-w="agr-details">Your client’s email doesn’t look right. Fix it, then try again.</span><span data-w="agr-failed">That didn’t go through. Try again.</span></div>
 
 <template data-t="row"><li><a href="#"><strong data-v="title"></strong><span data-v="address"></span><time data-v="day"></time></a></li></template>
 

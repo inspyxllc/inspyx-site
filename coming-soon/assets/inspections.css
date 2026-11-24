@@ -92,3 +92,47 @@
 /* New inspection (2026-11-23, job 4): beside the title. */
 .insp-head{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; justify-content:space-between}
 .insp-new{display:inline-flex; align-items:center; min-height:44px; padding:0 18px; border-radius:999px; text-decoration:none; font:600 15px var(--font)}
+/* Agreements outdated (2026-11-24, his Spectora list item 10): the agreement the client signed no longer says what is
+   true, in the "needs you" amber the app uses (never the green that reads as done). */
+.insp-agr{margin-top:22px; padding:18px; border-radius:20px; background:#FBF0D9; box-shadow:inset 0 0 0 1px rgba(138,90,0,.30)}
+.insp-agr[hidden], .insp-agr [hidden]{display:none}
+.insp-agr h2{display:flex; align-items:center; gap:9px; font-size:18px; color:#8A5A00; margin-bottom:4px}
+.insp-agr h2 svg{width:22px; height:22px; flex:none; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+.insp-agr-hint{font-size:14px; color:var(--ink-soft); margin-bottom:12px}
+.insp-agr-changes{list-style:none; padding:0; margin:0 0 14px; display:grid; gap:6px}
+.insp-agr-changes li{padding:9px 12px; border-radius:12px; background:#FFFFFF; font-size:15px; color:var(--ink); box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); overflow-wrap:anywhere}
+.insp-agr-changes strong{font-weight:600} .insp-agr-changes s{color:var(--ink-faint)} .insp-agr-changes b{font-weight:700}
+.insp-agr-fee{font-size:14px; color:#8A5A00; font-weight:600}
+.insp-agr-send, .insp-agr-go{min-height:44px; padding:0 20px; border:0; border-radius:999px; background:var(--navy); color:#FFFFFF; font:600 15px var(--font); cursor:pointer; box-shadow:0 6px 16px rgba(31,78,121,.25)}
+.insp-agr-send:disabled{opacity:.5; cursor:default}
+.insp-agr-send:focus-visible, .insp-agr-go:focus-visible, .insp-agr-no:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.insp-agr-ask{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px; border-radius:14px; background:#FFFFFF; box-shadow:0 6px 16px rgba(138,90,0,.15)}
+.insp-agr-ask p{flex:1 1 260px; font-size:14.5px; color:var(--ink)}
+.insp-agr-no{min-height:44px; padding:0 16px; border:0; border-radius:999px; background:transparent; color:var(--navy); font:600 15px var(--font); cursor:pointer}
+.insp-agr-wait, .insp-agr-said{font-size:15px; color:var(--ink)}
+.insp-agr-said{margin-top:10px; font-weight:600}
+/* Its how-to: what changed, Send, the client's email, then it waits. 9 s, looping; still on the result with less
+   motion. */
+.agr-how{display:grid; grid-template-columns:minmax(0, 260px) 1fr; gap:14px 22px; align-items:center; margin:16px 0 0; padding:14px; border-radius:16px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(138,90,0,.15)}
+.agr-how-stage{position:relative; height:150px; width:100%; max-width:260px}
+.agr-how-scene{position:absolute; inset:0; display:grid; gap:7px; align-content:start; padding:10px; border-radius:12px; background:#FDF7EA; font-size:12px; opacity:0; overflow:hidden}
+.agr-how-a{animation:look-a 9s infinite} .agr-how-b{animation:look-b 9s infinite} .agr-how-c{animation:look-c 9s infinite}
+.agr-how-title{font-weight:700; color:#8A5A00}
+.agr-how-change{padding:6px 8px; border-radius:8px; background:#FFFFFF; color:var(--ink); box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.agr-how-btn{justify-self:start; font-style:normal; padding:6px 11px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-weight:600; font-size:11px; animation:look-press 9s infinite}
+.agr-how-mail{display:grid; gap:2px; margin-top:20px; padding:10px; border-radius:10px; background:#FFFFFF; box-shadow:0 6px 16px rgba(31,78,121,.12)}
+.agr-how-mail b{font-size:12.5px; color:var(--ink)} .agr-how-mail i{font-style:normal; font-size:11px; color:var(--ink-soft)}
+.agr-how-wait{margin-top:24px; padding:10px; border-radius:10px; background:#FFFFFF; color:var(--ink); font-size:12px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); animation:look-rise 9s infinite}
+.agr-how-finger{position:absolute; z-index:2; width:24px; height:24px; border-radius:50%; background:rgba(31,78,121,.38); border:2px solid rgba(31,78,121,.8); box-shadow:0 2px 8px rgba(31,78,121,.3); animation:agr-finger 9s infinite}
+.agr-how-steps{display:grid; gap:9px; counter-reset:step}
+.agr-how-step{display:flex; gap:11px; align-items:center; font-size:15px; color:var(--ink-faint); animation:look-s1 9s infinite}
+.agr-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:26px; height:26px; border-radius:50%; background:#FFFFFF; color:#8A5A00; font-weight:700; box-shadow:inset 0 0 0 1px rgba(138,90,0,.35)}
+.agr-how-step[data-n="2"]{animation-name:look-s2} .agr-how-step[data-n="3"]{animation-name:look-s3}
+@keyframes agr-finger{0%{left:70%; top:90%; opacity:1} 14%,24%{left:70px; top:66px; opacity:1} 30%{left:70px; top:66px; opacity:0} 100%{left:70%; top:90%; opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .agr-how *, .agr-how-step{animation:none !important}
+  .agr-how-finger, .agr-how-a, .agr-how-b{display:none}
+  .agr-how-c{opacity:1}
+  .agr-how-step{color:var(--ink)}
+}
+@media (max-width: 760px){ .agr-how{grid-template-columns:1fr} }

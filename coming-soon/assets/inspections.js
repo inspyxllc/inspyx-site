@@ -224,6 +224,7 @@
       if (el.value !== want) el.value = want;
     });
     renderPeople(id);
+    renderAgreement(id);
     var started = val('inspection', id, 'inspection_at'), line = $('[data-started]');
     line.hidden = !(typeof started === 'number' && isFinite(started));
     if (!line.hidden) { var t = line.querySelector('[data-v="started"]'); t.textContent = DAY.format(new Date(started)) + ', ' + CLOCK.format(new Date(started)); t.setAttribute('datetime', new Date(started).toISOString()); }
@@ -294,6 +295,157 @@
     });
   }
 
+  /* ---- Agreements outdated (2026-11-24, his Spectora list item 10): whether the agreement the client signed still
+     says what is true today, and "Send the updated agreement". The signings, what their blanks were filled with
+     (signing_details), the fee and the bookings come from the business sync, read only (as calendar.js); the
+     inspection's own fields come from this page's inspection sync. The rulebook is agreement-fill.js, the phone's
+     agreement_outdated.dart in JS. ---- */
+  var Fill = window.InspyxFill;
+  var BIZ = { signings: true, signing_details: true, inspection_fees: true, bookings: true };
+  var biz = Object.create(null), bizPoint = null, bizPulling = null;
+  function pullBusiness() {
+    if (bizPulling) return bizPulling;
+    var loop = function () {
+      return auth.ask('sync', { push: [], after: bizPoint, limit: 500 }, DEADLINE).then(function (r) {
+        if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) return null;
+        r.json.rows.forEach(function (row) {
+          if (!row || !BIZ[row.kind] || typeof row.id !== 'string') return;
+          var k = row.kind + '/' + row.id, held = biz[k];
+          if (!held || row.updated_at >= held.updated_at) biz[k] = row;
+        });
+        if (r.json.next) bizPoint = r.json.next;
+        return r.json.more ? loop() : null;
+      });
+    };
+    bizPulling = loop().then(function () { bizPulling = null; renderOne(); }, function () { bizPulling = null; });
+    return bizPulling;
+  }
+  function bizData(kind) {
+    return Object.keys(biz).filter(function (k) { return k.indexOf(kind + '/') === 0; }).map(function (k) { return biz[k]; })
+      .filter(function (r) { return r.deleted_at == null && r.data && typeof r.data === 'object'; }).map(function (r) { return r.data; });
+  }
+  var json = function (v, empty) { try { var o = JSON.parse(v); return o && typeof o === 'object' ? o : empty; } catch (e) { return empty; } };
+
+  /* The inspection's fee as the phone reads it (InspectionFeeStore.feeFor): its newest row, unless that one is deleted. */
+  function feeOf(id) {
+    var rows = Object.keys(biz).filter(function (k) { return k.indexOf('inspection_fees/') === 0; }).map(function (k) { return biz[k]; })
+      .filter(function (r) { return r.data && r.data.inspectionId === id; });
+    rows.sort(function (a, b) { return (b.data.updatedAt || 0) - (a.data.updatedAt || 0) || (a.id < b.id ? 1 : -1); });
+    var r = rows[0], f = r && r.data;
+    if (!f || r.deleted_at != null || f.deletedAt != null || typeof f.totalCents !== 'number') return null;
+    var lines = json(f.linesJson, []);
+    if (!Array.isArray(lines)) return null;
+    return { lines: lines.filter(function (l) { return l && typeof l.name === 'string' && typeof l.cents === 'number'; }),
+      totalCents: f.totalCents, byHand: Object.keys(json(f.selectionJson, {})).length === 0 };
+  }
+
+  /* What the inspection puts into the blanks today, as the phone's _agreementFacts. */
+  function factsOf(id) {
+    var clients = parts('person', function (p) { return owner['person/' + p] === id && val('person', p, 'role') === 'client'; }).sort(byPosition('person'));
+    var first = function (field) { for (var i = 0; i < clients.length; i++) { var v = Fill.dartTrim(text(val('person', clients[i], field))); if (v) return v; } return ''; };
+    var fee = feeOf(id);
+    var st = Fill.dartTrim(text(val('inspection', id, 'state')));
+    return {
+      clientNames: clients.map(function (p) { return text(val('person', p, 'name')); }),
+      clientPhone: first('phone'), clientEmail: first('email'),
+      street: text(val('inspection', id, 'address')), city: text(val('inspection', id, 'city')),
+      state: /^[A-Za-z]{2}$/.test(st) ? st.toUpperCase() : st, zip: text(val('inspection', id, 'zip_code')),
+      inspectionDate: null, today: '', feeCents: fee ? fee.totalCents : null,
+      services: !fee || fee.byHand ? [] : fee.lines.filter(function (l) { return l.kind !== 'discount' && l.kind !== 'tax'; }).map(function (l) { return l.name; }),
+      feeLines: fee ? fee.lines.map(function (l) { return { name: l.name, cents: l.cents }; }) : [],
+      inspectorName: '', company: '', licenseNumber: '', companyPhone: '', fee: fee
+    };
+  }
+
+  /* The inspection's signings: by the id the server copied onto them, or through its booking. */
+  function signingsOf(id) {
+    var booked = bizData('bookings').filter(function (b) { return b.inspectionId === id; }).map(function (b) { return b.id; });
+    return bizData('signings').filter(function (s) { return s.inspectionId === id || booked.indexOf(s.bookingId) >= 0; });
+  }
+
+  var agrSaid = null;     // {id, words}: what the last send said, for that inspection
+  var agrAsking = null;   // the inspection whose "Send?" is open
+  var agrBusy = false;
+  function renderAgreement(id) {
+    var box = $('[data-agr]');
+    if (!Fill) { box.hidden = true; return; }
+    var signings = signingsOf(id), details = Object.create(null);
+    bizData('signing_details').forEach(function (d) { details[d.id] = d; });
+    var facts = factsOf(id);
+    var st = Fill.standing(signings, details, facts);
+    var said = $('[data-agr-said]');
+    said.hidden = !(agrSaid && agrSaid.id === id);
+    if (!said.hidden) said.textContent = agrSaid.words;
+    box.hidden = st.kind === 'holds' && said.hidden;
+    show('data-agr-state', st.kind);
+    if (st.kind !== 'outdated') return;
+    box.setAttribute('data-signing', st.signing.id);
+    var list = $('[data-agr-changes]'), shape = JSON.stringify(st.changes);
+    if (list.getAttribute('data-shape') !== shape) {
+      list.setAttribute('data-shape', shape);
+      list.textContent = '';
+      var shown = function (v) { return Fill.dartTrim(v) === '' ? word('agr-none') : Fill.dartTrim(v).replace(/\n/g, '; '); };
+      st.changes.forEach(function (c) {
+        var li = document.createElement('li');
+        var name = document.createElement('strong'); name.textContent = word('agr-' + c.blank) + ':';
+        var was = document.createElement('s'); was.textContent = shown(c.was);
+        var now = document.createElement('b'); now.textContent = shown(c.now);
+        li.setAttribute('data-blank', c.blank);
+        li.append(name, ' ', was, ' → ', now);
+        list.appendChild(li);
+      });
+    }
+    var needsFee = st.changes.some(function (c) { return (c.blank === 'fee' || c.blank === 'feeLines') && Fill.dartTrim(c.now) === ''; });
+    $('[data-agr-needsfee]').hidden = !needsFee;
+    var send = $('[data-agr-send]');
+    send.hidden = needsFee || agrAsking === id;
+    send.disabled = agrBusy;
+    $('[data-agr-ask]').hidden = needsFee || agrAsking !== id;
+  }
+
+  /* The booking function's request, as the phone's agreementUpdateBody: the same facts the banner compared. */
+  function updateBody(signingId, f) {
+    var orNull = function (v) { v = Fill.dartTrim(v || ''); return v === '' ? null : v; };
+    var KIND = { service: 'service', addOn: 'add_on', discount: 'discount', tax: 'tax' };
+    return {
+      action: 'agreement_update', signing_id: signingId,
+      details: {
+        client: { name: orNull(Fill.valueOf('clientName', f)), email: orNull(f.clientEmail), phone: orNull(f.clientPhone) },
+        property: { street: orNull(f.street), unit: null, city: orNull(f.city), state: orNull(f.state), zip: orNull(f.zip) }
+      },
+      lines: f.fee ? f.fee.lines.filter(function (l) { return Fill.dartTrim(l.name) !== ''; }).map(function (l) {
+        return { kind: f.fee.byHand ? 'by_hand' : (KIND[l.kind] || 'service'), name: Fill.dartTrim(l.name), cents: l.cents };
+      }) : [],
+      totalCents: f.fee ? f.fee.totalCents : 0
+    };
+  }
+  /* The answer, as the phone's agreementUpdateOutcome. */
+  function outcome(r) {
+    var j = r && r.json, err = j && j.error;
+    if (r && r.status === 200 && j && j.state === 'sent') {
+      return j.email === 'queued' || j.email === 'already' || j.email === undefined || j.email === null ? 'sent'
+        : j.email === 'held' ? 'held' : j.email === 'no_address' ? 'no_address' : 'email_failed';
+    }
+    if (r && r.status === 409 && err === 'agreement') return 'no_agreement';
+    if (r && (r.status === 409 || (r.status === 404 && err === 'signing'))) return 'refused';
+    if (r && r.status === 400 && err === 'details') return 'details';
+    return 'failed';
+  }
+  $('[data-agr-send]').addEventListener('click', function () { agrAsking = chosen(); renderOne(); var go = $('[data-agr-go]'); if (go) go.focus(); });
+  $('[data-agr-no]').addEventListener('click', function () { agrAsking = null; renderOne(); });
+  $('[data-agr-go]').addEventListener('click', function () {
+    var id = chosen(), signing = $('[data-agr]').getAttribute('data-signing');
+    if (!id || !signing || agrBusy) return;
+    agrAsking = null; agrBusy = true;
+    agrSaid = { id: id, words: word('agr-sending') }; renderOne();
+    auth.ask('booking', updateBody(signing, factsOf(id)), DEADLINE).then(outcome, function () { return 'failed'; }).then(function (o) {
+      agrBusy = false;
+      agrSaid = { id: id, words: word('agr-' + o) };
+      renderOne();
+      pullBusiness();
+    });
+  });
+
   function render() { renderList(); renderOne(); }
 
   var listening = false;
@@ -302,7 +454,7 @@
   window.addEventListener('hashchange', function () { shape = null; render(); });
   var finding = null;
   $('[data-find]').addEventListener('input', function () { clearTimeout(finding); finding = setTimeout(renderList, 120); });
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') sync(); });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } });
   setInterval(function () { if (document.visibilityState === 'visible') sync(); }, FALLBACK);
 
   if (!auth.who()) { window.location.replace('/signin'); return; }
@@ -313,4 +465,5 @@
     sync();
   });
   sync();
+  pullBusiness();
 })();
