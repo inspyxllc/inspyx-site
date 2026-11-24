@@ -117,6 +117,9 @@
     });
     bookings().forEach(function (b) {
       if (typeof b.inspectionId === 'string' && here[b.inspectionId]) return;
+      // Its inspection was made and then deleted on the phone: gone, never "on your phone at its next sync" (follow-up
+      // 3, Codex on #86).
+      if (typeof b.inspectionId === 'string' && data.val('inspection', b.inspectionId, '_del') === true) return;
       if (b.startsAt < from || b.startsAt >= to) return;
       var p = b.property && typeof b.property === 'object' ? b.property : {};
       var street = [text(p.street).trim(), text(p.unit).trim()].filter(Boolean).join(', ');
