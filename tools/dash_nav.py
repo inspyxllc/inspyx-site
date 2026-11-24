@@ -37,7 +37,7 @@ def nav(here):
 
 PAGES = {'today': 'today', 'inspections': 'inspections', 'calendar': 'calendar', 'prices': 'prices', 'booking': 'booking',
          'emails': 'emails', 'payments': 'payments', 'agreements': 'agreements', 'people': 'people', 'account': 'account',
-         'numbers': None, 'reports': None, 'templates': None, 'profile': None}
+         'numbers': None, 'reports': None, 'templates': None, 'profile': None, 'new': 'inspections'}
 NAV_HREFS = {h for _, h, _, _ in ITEMS}
 for page, here in PAGES.items():
     p = page + '.html'; s = open(p).read()

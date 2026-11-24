@@ -33,10 +33,12 @@
 <main class="cal" data-cal hidden>
 <div class="cal-head">
 <h1 data-month>Your calendar</h1>
+<nav class="cal-views" aria-label="Show"><a data-view="day" href="/calendar">Day</a><a data-view="week" href="/calendar">Week</a><a data-view="month" href="/calendar">Month</a></nav>
+<a class="btn small cal-new" href="/new">New inspection</a>
 <p class="cal-nav">
-<button class="btn quiet small" type="button" data-go="-1" aria-label="Previous month">‹</button>
-<button class="btn quiet small" type="button" data-go="0">This month</button>
-<button class="btn quiet small" type="button" data-go="1" aria-label="Next month">›</button>
+<button class="btn quiet small" type="button" data-go="-1"><span class="cal-sr" data-step="month">Previous month</span><span class="cal-sr" data-step="week" hidden>Previous week</span><span class="cal-sr" data-step="day" hidden>Previous day</span><span aria-hidden="true">‹</span></button>
+<button class="btn quiet small" type="button" data-go="0"><span data-step="month">This month</span><span data-step="week" hidden>This week</span><span data-step="day" hidden>Today</span></button>
+<button class="btn quiet small" type="button" data-go="1"><span class="cal-sr" data-step="month">Next month</span><span class="cal-sr" data-step="week" hidden>Next week</span><span class="cal-sr" data-step="day" hidden>Next day</span><span aria-hidden="true">›</span></button>
 </p>
 </div>
 <p class="cal-live" role="status">
@@ -49,9 +51,12 @@
 <p data-state="empty" hidden>No inspections here yet. They show up here once your phone has synced.</p>
 <p data-state="failed" hidden>Couldn't load your inspections. Check your connection; this page keeps trying.</p>
 <p data-state="none" hidden>Nothing on your calendar this month.</p>
+<p data-state="none-week" hidden>Nothing on your calendar this week.</p>
+<p data-state="none-day" hidden>Nothing on your calendar this day.</p>
 </div>
-<ol class="cal-days" data-days aria-label="Days of the month"></ol>
-<p class="cal-note">Each inspection sits on the day it started, or else the day it's booked for, as on your phone. Open one to work on it.</p>
+<ol class="cal-days" data-days aria-label="Days"></ol>
+<div class="cal-grid" data-grid hidden></div>
+<p class="cal-note">Each inspection sits on the day it started, or else the day it's booked for, as on your phone. In a day or a week it shows at its start time. Open one to work on it.</p>
 </main>
 <noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
 
@@ -59,5 +64,13 @@
 <template data-t="pad"><li class="cal-pad" aria-hidden="true"></li></template>
 <template data-t="day"><li class="cal-day"><h2 class="cal-date"><span class="cal-dname" data-v="dname"></span> <span class="cal-num" data-v="num"></span></h2><ul class="cal-jobs"></ul></li></template>
 <template data-t="job"><li><a href="#"><time data-v="time"></time><strong data-v="title"></strong><span data-v="address"></span></a></li></template>
+<template data-t="booked"><li class="cal-booked"><div><time data-v="time"></time><strong data-v="title"></strong><span data-v="address"></span><em>Booked: on your phone at its next sync</em></div></li></template>
+<template data-t="grid-head"><ol class="cal-ghead" aria-hidden="false"></ol></template>
+<template data-t="grid-day"><li class="cal-gday"><a href="#"><span data-v="dname"></span> <span class="cal-num" data-v="num"></span></a></li></template>
+<template data-t="grid-untimed"><ol class="cal-guntimed" aria-label="No set time"></ol></template>
+<template data-t="grid-untimed-day"><li><ul class="cal-jobs"></ul></li></template>
+<template data-t="grid-body"><div class="cal-gbody"><ol class="cal-hours" data-hours aria-hidden="true"></ol></div></template>
+<template data-t="hour"><li></li></template>
+<template data-t="grid-col"><ol class="cal-gcol"></ol></template>
 </body>
 </html>
