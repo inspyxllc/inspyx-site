@@ -61,7 +61,7 @@ async function open(browser, o) {
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); if (v === null) localStorage.removeItem('inspyx.signin'); else localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, store);
   const page = await ctx.newPage();
   page.setDefaultTimeout(8000);
-  const s = o.server, errs = [], away = [], calls = [], sockets = [];
+  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
   await page.routeWebSocket(/realtime\/v1\/websocket/, (ws) => {
@@ -78,6 +78,17 @@ async function open(browser, o) {
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url();
     if (o.onAuth && u.startsWith(SERVER + '/auth/v1/token')) { const a = o.onAuth(); return route.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a.json) }); }
+    // The business sync, read only (Agreements outdated): the rows o.biz() holds now; and the booking function.
+    if (u.startsWith(SERVER + '/functions/v1/sync')) {
+      const b = JSON.parse(req.postData() || '{}'); bizCalls.push({ headers: req.headers(), body: b });
+      const rows = o.biz ? o.biz() : [];
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows, next: rows.length, more: false }) });
+    }
+    if (u.startsWith(SERVER + '/functions/v1/booking') && o.booking) {
+      const b = JSON.parse(req.postData() || '{}'); bookCalls.push({ headers: req.headers(), body: b });
+      const a = o.booking(b);
+      return route.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a.json) });
+    }
     if (!u.startsWith(SERVER + SYNC)) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
     calls.push({ headers: req.headers(), body });
@@ -91,7 +102,7 @@ async function open(browser, o) {
   const res = await page.goto(url + 'inspections' + (o.hash || ''), { waitUntil: 'load' });
   await page.waitForTimeout(500);
   const ping = () => sockets[sockets.length - 1].ws.send(JSON.stringify({ topic: 'realtime:insp:' + ME, event: 'broadcast', ref: null, payload: { type: 'broadcast', event: 'changed', payload: { seq: s.seq } } }));
-  return { ctx, page, errs, away, calls, sockets, res, ping };
+  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls };
 }
 
 const vis = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.hidden && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel);
@@ -134,6 +145,107 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await ctx.close();
     });
   }
+
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('agreement out of date, ' + label, async () => {
+      const s = server(); seed(s);
+      const P = '6f1c2a3b-0000-4000-8000-0000000000d1', S1 = '5e000000-0000-4000-8000-000000000001', S2 = '5e000000-0000-4000-8000-000000000002';
+      const BK = 'b0000000-0000-4000-8000-000000000001';
+      s.phone('person', P, 'role', 'client'); s.phone('person', P, 'name', 'Ana Diaz'); s.phone('person', P, 'email', 'ana@example.com'); s.phone('person', P, 'position', 0);
+      const row = (kind, data, at) => ({ kind, id: data.id, updated_at: at, deleted_at: null, data });
+      const fee = row('inspection_fees', { id: 'fee1', inspectionId: INSP, selectionJson: '{"services":["svc"]}', totalCents: 47500, updatedAt: 5, deletedAt: null,
+        linesJson: JSON.stringify([{ kind: 'service', id: 'svc', name: 'Home inspection', cents: 45000, minutes: 180 }, { kind: 'tax', id: 't', name: 'Sales tax', cents: 2500, minutes: 0 }]) }, 5);
+      const signed = row('signings', { id: S1, inspectionId: INSP, bookingId: BK, status: 'signed', sentAt: 1, signerName: 'Ana Diaz', deletedAt: null }, 3);
+      let sent = false;
+      const details = () => row('signing_details', { id: S1, signingId: S1, bookingId: BK, inspectionId: INSP, supersededBy: sent ? S2 : null,
+        filled: { clientName: 'Ana Diaz', propertyAddress: '12 Oak St, Miami', fee: '$425.00', services: 'Home inspection' } }, sent ? 9 : 4);
+      const biz = () => [fee, signed, details()].concat(sent ? [row('signings', { id: S2, inspectionId: INSP, bookingId: BK, status: 'sent', sentAt: 8, deletedAt: null }, 9)] : []);
+      const { page, ctx, errs, away, bizCalls, bookCalls } = await open(browser, { server: s, w, hash: '#' + INSP, biz,
+        booking: (b) => { sent = true; return { status: 200, json: { state: 'sent', signing_id: S2, email: 'queued' } }; } });
+      ok(label + ': the business sync is read only, as the signed-in inspector', bizCalls.length >= 1 && bizCalls.every((c) => c.headers.authorization === 'Bearer test-access-1' && Array.isArray(c.body.push) && c.body.push.length === 0) && away.length === 0 && errs.length === 0, errs.concat(away).join(' | '));
+      ok(label + ': the banner names only what changed: the price, old and new (the tax isn\'t a service, the address holds)',
+        await until(async () => same(await vis(page, '[data-agr-changes] li'), ['Price: $425.00 → $475.00'])), JSON.stringify(await vis(page, '[data-agr-changes] li')));
+      const shot = async (name) => { if (process.env.SHOTS) { await page.waitForTimeout(400); await page.locator('[data-agr]').screenshot({ path: require('path').join(process.env.SHOTS, label + '-' + name + '.png') }); } };
+      await page.locator('[data-agr]').scrollIntoViewIfNeeded();
+      await shot('1-banner');
+      ok(label + ': the old value is struck out', await page.evaluate(() => { const x = document.querySelector('[data-agr-changes] s'); return !!x && x.textContent === '$425.00'; }));
+      await page.click('[data-agr-send]');
+      await shot('2-ask');
+      ok(label + ': Send asks first, and nothing is sent yet', (await vis(page, '[data-agr-ask]')).length === 1 && bookCalls.length === 0 && (await vis(page, '[data-agr-send]')).length === 0);
+      await page.click('[data-agr-no]');
+      ok(label + ': Not now sends nothing', bookCalls.length === 0 && (await vis(page, '[data-agr-send]')).length === 1);
+      await page.click('[data-agr-send]'); await page.click('[data-agr-go]');
+      await until(async () => bookCalls.length === 1);
+      const b = (bookCalls[0] || {}).body || {};
+      ok(label + ': Send asks the booking function once, for the signed one, with today\'s client, house and price',
+        bookCalls.length === 1 && bookCalls[0].headers.authorization === 'Bearer test-access-1' && same(b, {
+          action: 'agreement_update', signing_id: S1,
+          details: { client: { name: 'Ana Diaz', email: 'ana@example.com', phone: null }, property: { street: '12 Oak St, Miami', unit: null, city: null, state: null, zip: null } },
+          lines: [{ kind: 'service', name: 'Home inspection', cents: 45000 }, { kind: 'tax', name: 'Sales tax', cents: 2500 }], totalCents: 47500 }), JSON.stringify(b));
+      ok(label + ': says it went, then the banner gives way to the update waiting', await until(async () =>
+        (await vis(page, '[data-agr-said]')).join() === 'Sent. Your client will get an email to sign it.' &&
+        (await vis(page, '[data-agr-state="updateSent"]')).join() === 'Updated agreement sent. Waiting for the client to sign it.' &&
+        (await vis(page, '[data-agr-changes] li')).length === 0), JSON.stringify([await vis(page, '[data-agr-said]'), await vis(page, '[data-agr-state]')]));
+      await shot('3-sent');
+      ok(label + ': nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      await ctx.close();
+    });
+  }
+
+  await group('agreement out of date: an email never queued promises no retry (the app\'s words, Codex on app #725)', async () => {
+    const s = server(); seed(s);
+    const P = '6f1c2a3b-0000-4000-8000-0000000000d1', S1 = '5e000000-0000-4000-8000-000000000001';
+    s.phone('person', P, 'role', 'client'); s.phone('person', P, 'name', 'Ana Diaz'); s.phone('person', P, 'position', 0);
+    const rows = [
+      { kind: 'inspection_fees', id: 'fee1', updated_at: 5, deleted_at: null, data: { id: 'fee1', inspectionId: INSP, selectionJson: '{"services":["svc"]}', totalCents: 47500, updatedAt: 5, deletedAt: null, linesJson: JSON.stringify([{ kind: 'service', id: 'svc', name: 'Home inspection', cents: 47500, minutes: 180 }]) } },
+      { kind: 'signings', id: S1, updated_at: 3, deleted_at: null, data: { id: S1, inspectionId: INSP, bookingId: 'b', status: 'signed', sentAt: 1, deletedAt: null } },
+      { kind: 'signing_details', id: S1, updated_at: 4, deleted_at: null, data: { id: S1, signingId: S1, inspectionId: INSP, bookingId: 'b', supersededBy: null, filled: { fee: '$425.00' } } }];
+    const { page, ctx } = await open(browser, { server: s, hash: '#' + INSP, biz: () => rows, booking: () => ({ status: 200, json: { state: 'sent', signing_id: 'x', email: 'failed' } }) });
+    await until(async () => (await vis(page, '[data-agr-send]')).length === 1);
+    await page.click('[data-agr-send]'); await page.click('[data-agr-go]');
+    ok('email failed: it says so and the way on, never a retry that nothing does', await until(async () => (await vis(page, '[data-agr-said]')).join() === 'Made, but its email didn’t go. Cancel the request and send it again.'), JSON.stringify(await vis(page, '[data-agr-said]')));
+    await ctx.close();
+  });
+
+  await group('agreement out of date: an open tab hears a change made elsewhere (Codex on #89)', async () => {
+    const s = server(); seed(s);
+    const S1 = '5e000000-0000-4000-8000-000000000001';
+    let cents = 47500;
+    const biz = () => [
+      { kind: 'inspection_fees', id: 'fee1', updated_at: cents === 47500 ? 5 : 6, deleted_at: null, data: { id: 'fee1', inspectionId: INSP, selectionJson: '{"services":["svc"]}', totalCents: cents, updatedAt: cents === 47500 ? 5 : 6, deletedAt: null, linesJson: JSON.stringify([{ kind: 'service', id: 'svc', name: 'Home inspection', cents, minutes: 180 }]) } },
+      { kind: 'signings', id: S1, updated_at: 3, deleted_at: null, data: { id: S1, inspectionId: INSP, bookingId: 'b', status: 'signed', sentAt: 1, deletedAt: null } },
+      { kind: 'signing_details', id: S1, updated_at: 4, deleted_at: null, data: { id: S1, signingId: S1, inspectionId: INSP, bookingId: 'b', supersededBy: null, filled: { fee: '$425.00' } } }];
+    const { page, ctx, ping } = await open(browser, { server: s, hash: '#' + INSP, biz });
+    ok('a change elsewhere: the banner shows the price as it stands', await until(async () => same(await vis(page, '[data-agr-changes] li'), ['Price: $425.00 → $475.00'])));
+    cents = 42500;   // the inspector set the price back on the phone
+    ping();
+    ok('a change elsewhere: heard without a reload or a tab switch; the banner goes', await until(async () => (await vis(page, '[data-agr]')).length === 0), JSON.stringify(await vis(page, '[data-agr-changes] li')));
+    await ctx.close();
+  });
+
+  await group('agreement out of date: no price on record, no Send (an update would carry zero; Codex on #89)', async () => {
+    const s = server(); seed(s);
+    const P = '6f1c2a3b-0000-4000-8000-0000000000d1', S1 = '5e000000-0000-4000-8000-000000000001';
+    s.phone('person', P, 'role', 'client'); s.phone('person', P, 'name', 'Bo Lee'); s.phone('person', P, 'position', 0);
+    const rows = [
+      { kind: 'signings', id: S1, updated_at: 3, deleted_at: null, data: { id: S1, inspectionId: INSP, bookingId: 'b', status: 'signed', sentAt: 1, deletedAt: null } },
+      { kind: 'signing_details', id: S1, updated_at: 4, deleted_at: null, data: { id: S1, signingId: S1, inspectionId: INSP, bookingId: 'b', supersededBy: null, filled: { clientName: 'Ana Diaz' } } }];
+    const { page, ctx, bookCalls } = await open(browser, { server: s, hash: '#' + INSP, biz: () => rows, booking: () => ({ status: 200, json: { state: 'sent' } }) });
+    ok('no price: the change is named, Send isn\'t offered, it says to set the price', await until(async () => same(await vis(page, '[data-agr-changes] li'), ['Client: Ana Diaz → Bo Lee'])) &&
+      (await vis(page, '[data-agr-send]')).length === 0 && (await vis(page, '[data-agr-needsfee]')).length === 1 && bookCalls.length === 0);
+    await ctx.close();
+  });
+
+  await group('agreement out of date: nothing to say when it holds, or with no snapshot', async () => {
+    const s = server(); seed(s);
+    const S1 = '5e000000-0000-4000-8000-000000000001';
+    const rows = [{ kind: 'signings', id: S1, updated_at: 3, deleted_at: null, data: { id: S1, inspectionId: INSP, bookingId: 'b', status: 'signed', sentAt: 1, deletedAt: null } }];
+    const { page, ctx, bizCalls } = await open(browser, { server: s, hash: '#' + INSP, biz: () => rows });
+    await until(async () => bizCalls.length >= 1);
+    await page.waitForTimeout(300);
+    ok('holds: no banner for a signing with no snapshot', (await vis(page, '[data-agr]')).length === 0);
+    await ctx.close();
+  });
 
   await group('editing on the web', async () => {
     const s = server(); seed(s);
