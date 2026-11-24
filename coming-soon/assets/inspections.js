@@ -251,6 +251,7 @@
     renderPeople(id);
     renderAgreement(id);
     chapterChoices(id);
+    renderSearch(id);
     var started = val('inspection', id, 'inspection_at'), line = $('[data-started]');
     line.hidden = !(typeof started === 'number' && isFinite(started));
     if (!line.hidden) { var t = line.querySelector('[data-v="started"]'); t.textContent = DAY.format(new Date(started)) + ', ' + CLOCK.format(new Date(started)); t.setAttribute('datetime', new Date(started).toISOString()); }
@@ -631,12 +632,88 @@
     sel.value = keep;
   }
 
+  /* ---- whole-report search (2026-11-24, his list item 12, piece B): every stop, item, finding and note of the
+     inspection on show, searched here in the browser (nothing is sent); case and accents set aside. A match names
+     where it is and goes straight to its box. ---- */
+  var SEARCH_SHOWN = 50;
+  var SEARCHED = { section: ['name'], item: ['label', 'note', 'ni_note'],
+    finding: ['finding_title', 'location', 'note', 'finding_implication', 'finding_recommendation', 'finding_recommended_trade'] };
+  var fold = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
+  function searchMatches(inspection, query) {
+    var q = fold(query).trim();
+    if (q.length < 2) return [];
+    var out = [];
+    stopsOf(inspection).forEach(function (s) {
+      var stopName = text(val('section', s, 'name')).trim() || word('unnamed');
+      var look = function (entity, kind, id, where) {
+        SEARCHED[kind].forEach(function (field) {
+          var v = text(val(entity, id, field));
+          var at = fold(v).indexOf(q);
+          if (at >= 0) out.push({ key: key(entity, id, field), field: field, where: where, value: v, at: at, len: q.length });
+        });
+      };
+      look('section', 'section', s, [stopName]);
+      topItemsOf(s).forEach(function (i) {
+        var itemName = text(val('item', i, 'label')).trim() || word('unnamed');
+        look('item', 'item', i, [stopName, itemName]);
+        findingsUnder(i).forEach(function (f) {
+          look('item', 'finding', f, [stopName, itemName, text(val('item', f, 'finding_title')).trim() || word('unnamed')]);
+        });
+      });
+    });
+    return out;
+  }
+  function snippet(m) {
+    // The words around the match: what folding found is the same length in the original (one letter for one).
+    var from = Math.max(0, m.at - 40), to = Math.min(m.value.length, m.at + m.len + 60);
+    var frag = document.createDocumentFragment();
+    if (from > 0) frag.appendChild(document.createTextNode('…'));
+    frag.appendChild(document.createTextNode(m.value.slice(from, m.at)));
+    var mark = document.createElement('mark'); mark.textContent = m.value.slice(m.at, m.at + m.len); frag.appendChild(mark);
+    frag.appendChild(document.createTextNode(m.value.slice(m.at + m.len, to)));
+    if (to < m.value.length) frag.appendChild(document.createTextNode('…'));
+    return frag;
+  }
+  function goTo(k) {
+    var box = main.querySelector('[data-key="' + k + '"]');
+    if (!box) return;
+    box.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    box.focus({ preventScroll: true });
+    box.classList.remove('is-found'); void box.offsetWidth; box.classList.add('is-found');
+  }
+  function renderSearch(inspection) {
+    var box = $('[data-search]'), list = $('[data-search-results]'), count = $('[data-search-count]');
+    var q = box.value, found = searchMatches(inspection, q);
+    $('[data-search-how]').hidden = q.trim().length >= 2;
+    var shape = JSON.stringify([inspection, q, found.map(function (m) { return [m.key, m.value]; })]);
+    if (list.getAttribute('data-shape') === shape) return;
+    list.setAttribute('data-shape', shape);
+    list.textContent = '';
+    if (q.trim().length < 2) { count.textContent = ''; return; }
+    count.textContent = found.length === 0 ? word('search-none')
+      : (found.length === 1 ? word('search-one') : word('search-many').replace('{n}', found.length)) +
+        (found.length > SEARCH_SHOWN ? ' ' + word('search-more').replace('{n}', SEARCH_SHOWN) : '');
+    found.slice(0, SEARCH_SHOWN).forEach(function (m) {
+      var li = document.createElement('li');
+      var a = document.createElement('button');
+      a.type = 'button'; a.className = 'insp-search-hit'; a.setAttribute('data-search-go', m.key);
+      var where = document.createElement('span'); where.className = 'insp-search-where';
+      where.textContent = m.where.join(' › ') + ' · ' + word('f-' + m.field);
+      var what = document.createElement('span'); what.className = 'insp-search-what'; what.appendChild(snippet(m));
+      a.appendChild(where); a.appendChild(what);
+      a.addEventListener('click', function () { goTo(m.key); });
+      li.appendChild(a); list.appendChild(li);
+    });
+  }
+
   function render() { renderList(); renderOne(); }
 
   var listening = false;
   function showLive(which) { show('data-live', which); }
 
   window.addEventListener('hashchange', function () { shape = null; render(); });
+  var searching = null;
+  $('[data-search]').addEventListener('input', function () { clearTimeout(searching); searching = setTimeout(function () { var id = chosen(); if (id) renderSearch(id); }, 120); });
   addForm($('[data-addstop]'), function (name) { var id = chosen(); if (id) addStop(id, name, $('[data-addstop-chapter]').value || null); });
   var finding = null;
   $('[data-find]').addEventListener('input', function () { clearTimeout(finding); finding = setTimeout(renderList, 120); });

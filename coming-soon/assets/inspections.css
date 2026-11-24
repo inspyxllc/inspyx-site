@@ -187,3 +187,43 @@
   .st-how-step{color:var(--ink)}
 }
 @media (max-width: 760px){ .st-how{grid-template-columns:1fr} }
+/* Whole-report search (2026-11-24, his list item 12, piece B). */
+.insp-search{margin:0 0 18px; padding:14px; border-radius:16px; background:#F7F9FC; box-shadow:inset 0 0 0 1px rgba(31,78,121,.10)}
+.insp-search-l{display:grid; gap:6px; font-size:14px; font-weight:600; color:var(--ink)}
+.insp-search-l input{font:16px var(--font); padding:11px 14px; border:1px solid rgba(31,78,121,.25); border-radius:12px; background:#FFFFFF; color:var(--ink)}
+.insp-search-n{margin:8px 0 0; font-size:13.5px; color:var(--ink-soft)}
+.insp-search-n:empty{display:none}
+.insp-search-r{list-style:none; padding:0; margin:8px 0 0; display:grid; gap:6px; max-height:360px; overflow:auto}
+.insp-search-r:empty{display:none}
+.insp-search-hit{display:grid; gap:2px; width:100%; text-align:left; padding:9px 12px; border:0; border-radius:12px; background:#FFFFFF; cursor:pointer;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); font:15px var(--font); color:var(--ink)}
+.insp-search-hit:hover{box-shadow:inset 0 0 0 1px rgba(31,78,121,.3)}
+.insp-search-hit:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.insp-search-where{font-size:12.5px; font-weight:600; color:var(--navy)}
+.insp-search-what{overflow-wrap:anywhere}
+.insp-search-what mark, .se-how mark{background:#FDE68A; color:inherit; border-radius:3px; padding:0 1px}
+.is-found{animation:insp-found 1.6s ease-out}
+@keyframes insp-found{0%,40%{box-shadow:0 0 0 4px #FDE68A} 100%{box-shadow:0 0 0 0 rgba(253,230,138,0)}}
+.se-how{display:grid; grid-template-columns:minmax(0, 240px) 1fr; gap:12px 20px; align-items:center; margin:12px 0 0; padding:10px; border-radius:14px; background:#FFFFFF}
+.se-how[hidden]{display:none}
+.se-how-stage{position:relative; height:110px; width:100%; max-width:240px}
+.se-how-scene{position:absolute; inset:0; display:grid; gap:6px; align-content:start; padding:8px; border-radius:10px; background:#F7F9FC; font-size:11.5px; opacity:0; overflow:hidden}
+.se-how-a{animation:look-a 9s infinite} .se-how-b{animation:look-b 9s infinite} .se-how-c{animation:look-c 9s infinite}
+.se-how-box{padding:6px 9px; border-radius:8px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.se-how-box i{display:inline-block; width:1px; height:11px; margin-left:1px; background:var(--ink); vertical-align:middle}
+.se-how-hit{display:grid; padding:5px 8px; border-radius:8px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)} .se-how-hit b{font-size:10px; color:var(--navy)}
+.se-how-field{margin-top:22px; padding:8px 9px; border-radius:8px; background:#FFFFFF; box-shadow:0 0 0 3px #FDE68A}
+.se-how-finger{position:absolute; z-index:2; width:20px; height:20px; border-radius:50%; background:rgba(31,78,121,.35); border:2px solid rgba(31,78,121,.8); animation:se-finger 9s infinite}
+.se-how-steps{display:grid; gap:7px; counter-reset:step}
+.se-how-step{display:flex; gap:9px; align-items:center; font-size:14px; color:var(--ink-faint); animation:look-s1 9s infinite}
+.se-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:24px; height:24px; border-radius:50%; background:#FFFFFF; color:var(--navy); font-weight:700; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.se-how-step[data-n="2"]{animation-name:look-s2} .se-how-step[data-n="3"]{animation-name:look-s3}
+@keyframes se-finger{0%,40%{left:80%; top:90%; opacity:0} 50%,60%{left:110px; top:40px; opacity:1} 64%,100%{left:110px; top:40px; opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .se-how *, .se-how-step{animation:none !important}
+  .se-how-finger, .se-how-a, .se-how-b{display:none}
+  .se-how-c{opacity:1}
+  .se-how-step{color:var(--ink)}
+  .is-found{animation:none; box-shadow:0 0 0 4px #FDE68A}
+}
+@media (max-width: 760px){ .se-how{grid-template-columns:1fr} }

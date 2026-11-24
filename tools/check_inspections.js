@@ -343,6 +343,39 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('whole-report search, ' + label, async () => {
+      const s = server(); seed(s);
+      s.phone('item', FIND, 'finding_implication', 'Water can get behind the fascia and rot the façade.');
+      const { page, ctx, errs, away, calls } = await open(browser, { server: s, w, hash: '#' + INSP });
+      await page.waitForSelector('[data-search]');
+      ok(label + ': its how-to shows until two letters are typed', await page.locator('[data-search-how]').isVisible() && (await page.locator('.se-how-step').count()) === 3);
+      const sent = calls.length;
+      await page.locator('[data-search]').fill('gutter');
+      const hits = async () => page.locator('[data-search-go]').evaluateAll((els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+      // A finding's name is searched once, as its title (its label holds the same words).
+      ok(label + ': every stop, item and finding is searched; each match names where it is and which box', await until(async () => (await hits()).length === 2) &&
+        JSON.stringify(await hits()) === JSON.stringify(['Roof › Gutters · ItemGutters', 'Roof › Gutters › Gutter pulling away · FindingGutter pulling away']),
+        JSON.stringify(await hits()));
+      ok(label + ': the count says how many', (await page.locator('[data-search-count]').textContent()) === '2 matches');
+      ok(label + ': the match is marked', (await page.locator('[data-search-results] mark').first().textContent()) === 'Gutter');
+      await page.locator('[data-search]').fill('FACADE');
+      ok(label + ': case and accents set aside; the words around it shown', await until(async () => (await hits()).length === 1) &&
+        /What it means/.test((await hits())[0]) && (await page.locator('[data-search-results] mark').textContent()) === 'façade');
+      await page.locator('[data-search-go]').first().click();
+      const k = '[data-key="item/' + FIND + '.finding_implication"]';
+      ok(label + ': a match goes straight to its box', await until(async () => await page.evaluate((sel) => document.activeElement === document.querySelector(sel), k)) &&
+        await page.locator(k).evaluate((e) => e.classList.contains('is-found')));
+      await page.locator('[data-search]').fill('chimney');
+      ok(label + ': nothing matches: it says so', await until(async () => (await page.locator('[data-search-count]').textContent()) === 'Nothing in this report matches.'));
+      ok(label + ': nothing was sent for the search', calls.slice(sent).every((c) => (c.body.push || []).length === 0));
+      if (process.env.SHOTS) { await page.locator('[data-search]').fill('gutter'); await page.waitForTimeout(400); await page.locator('[data-search-box]').screenshot({ path: require('path').join(process.env.SHOTS, 'search-' + label + '.png') }); }
+      ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
+      await ctx.close();
+    });
+  }
+
   await group('editing on the web', async () => {
     const s = server(); seed(s);
     const { page, ctx, calls } = await open(browser, { server: s, hash: '#' + INSP });
