@@ -208,6 +208,21 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     });
   }
 
+  await group('agreement out of date: an email never queued promises no retry (the app\'s words, Codex on app #725)', async () => {
+    const s = server(); seed(s);
+    const P = '6f1c2a3b-0000-4000-8000-0000000000d1', S1 = '5e000000-0000-4000-8000-000000000001';
+    s.phone('person', P, 'role', 'client'); s.phone('person', P, 'name', 'Ana Diaz'); s.phone('person', P, 'position', 0);
+    const rows = [
+      { kind: 'inspection_fees', id: 'fee1', updated_at: 5, deleted_at: null, data: { id: 'fee1', inspectionId: INSP, selectionJson: '{"services":["svc"]}', totalCents: 47500, updatedAt: 5, deletedAt: null, linesJson: JSON.stringify([{ kind: 'service', id: 'svc', name: 'Home inspection', cents: 47500, minutes: 180 }]) } },
+      { kind: 'signings', id: S1, updated_at: 3, deleted_at: null, data: { id: S1, inspectionId: INSP, bookingId: 'b', status: 'signed', sentAt: 1, deletedAt: null } },
+      { kind: 'signing_details', id: S1, updated_at: 4, deleted_at: null, data: { id: S1, signingId: S1, inspectionId: INSP, bookingId: 'b', supersededBy: null, filled: { fee: '$425.00' } } }];
+    const { page, ctx } = await open(browser, { server: s, hash: '#' + INSP, biz: () => rows, booking: () => ({ status: 200, json: { state: 'sent', signing_id: 'x', email: 'failed' } }) });
+    await until(async () => (await vis(page, '[data-agr-send]')).length === 1);
+    await page.click('[data-agr-send]'); await page.click('[data-agr-go]');
+    ok('email failed: it says so and the way on, never a retry that nothing does', await until(async () => (await vis(page, '[data-agr-said]')).join() === 'Made, but its email didn’t go. Cancel the request and send it again.'), JSON.stringify(await vis(page, '[data-agr-said]')));
+    await ctx.close();
+  });
+
   await group('agreement out of date: an open tab hears a change made elsewhere (Codex on #89)', async () => {
     const s = server(); seed(s);
     const S1 = '5e000000-0000-4000-8000-000000000001';
