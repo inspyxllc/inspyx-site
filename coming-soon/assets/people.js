@@ -78,9 +78,13 @@
   var last = { live: 'connecting', loaded: false };
   function draw(state) {
     if (state) last = state;
-    show('data-live', last.live === 'failed' ? 'offline' : last.live);
-    if (!last.loaded) {
-      show('data-state', last.live === 'failed' ? 'failed' : 'loading');
+    // Both readers: the inspections and the People book. Either one not loaded, or failing, is never shown as an
+    // empty or current list (Codex on #87).
+    var bookLoaded = !book || book.loaded(), bookFailing = !!book && book.failing();
+    var down = last.live === 'failed' || bookFailing;
+    show('data-live', down ? 'offline' : bookLoaded ? last.live : 'connecting');
+    if (!last.loaded || !bookLoaded) {
+      show('data-state', down ? 'failed' : 'loading');
       all('[data-role]').forEach(function (s) { s.hidden = true; });
       return;
     }
@@ -126,7 +130,12 @@
   var problem = function (which) { [].slice.call(form.querySelectorAll('[data-problem]')).forEach(function (p) { p.hidden = p.getAttribute('data-problem') !== which; }); };
   var said = function (which) { all('[data-say]').forEach(function (p) { p.hidden = p.getAttribute('data-say') !== which; }); };
   $('[data-add-person]').hidden = !book;
+  // While an Add waits on its answer the dialog stays open and can't be reopened as another person's, so its answer
+  // always lands on its own draft and he sees it (Codex on #87).
+  var pending = false;
+  dialog.addEventListener('cancel', function (e) { if (pending) e.preventDefault(); });
   $('[data-add-person]').addEventListener('click', function () {
+    if (pending) return;
     form.reset();
     problem('');
     said('');
@@ -134,16 +143,16 @@
     dialog.showModal();
     form.elements.name.focus();
   });
-  form.querySelector('[data-close]').addEventListener('click', function () { dialog.close(); });
+  form.querySelector('[data-close]').addEventListener('click', function () { if (!pending) dialog.close(); });
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var p = book.personOf(form);
     problem(p.problem || '');
     if (p.problem) return;
-    var go = form.querySelector('button[type="submit"]');
-    go.disabled = true;
+    var go = form.querySelector('button[type="submit"]'), close = form.querySelector('[data-close]');
+    go.disabled = true; close.disabled = true; pending = true;
     book.add(p, draft).then(function (outcome) {
-      go.disabled = false;
+      go.disabled = false; close.disabled = false; pending = false;
       if (outcome === 'saved') { dialog.close(); said('saved'); draw(); return; }
       problem(outcome);
     });

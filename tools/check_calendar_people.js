@@ -112,11 +112,17 @@ async function open(browser, o) {
       bookingCalls.push(b);
       // The People book (job 7): a pushed person is kept newest-wins; o.lose() drops the answer of one that landed.
       const book = o.book || (o.book = new Map());
-      for (const r of b.push || []) if (r.kind === 'inspector_contacts') { const h = book.get(r.id); if (!h || r.updated_at > h.updated_at) book.set(r.id, Object.assign({}, r, { changed_at: 'b' })); }
+      // o.bookDown(): the sync function fails; o.notApplied(): a pushed person is answered "not applied" (the server
+      // holds a newer copy) and not kept; o.slowPush: ms before a push is answered (Codex on #87).
+      if (o.bookDown && o.bookDown()) return route.fulfill({ status: 503, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"error":"database"}' });
+      if ((b.push || []).length && o.slowPush) await new Promise((r) => setTimeout(r, o.slowPush));
+      const refused = (b.push || []).length && o.notApplied && o.notApplied();
+      if (!refused) for (const r of b.push || []) if (r.kind === 'inspector_contacts') { const h = book.get(r.id); if (!h || r.updated_at > h.updated_at) book.set(r.id, Object.assign({}, r, { changed_at: 'b' })); }
       if ((b.push || []).length && o.lose && o.lose()) return route.abort('failed');
+      const applied = (b.push || []).map((r) => ({ kind: r.kind, id: r.id, applied: !refused }));
       const list = [...(o.bookings || []), ...book.values()].filter(() => !b.after);
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
-        body: JSON.stringify({ applied: [], skipped: [], rows: list, next: list.length ? { at: 'z', kind: 'bookings', id: 'z' } : b.after || null, more: false }) });
+        body: JSON.stringify({ applied, skipped: [], rows: list, next: list.length ? { at: 'z', kind: 'bookings', id: 'z' } : b.after || null, more: false }) });
     }
     if (!u.startsWith(SERVER + SYNC)) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
@@ -384,6 +390,36 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     await page.click('[data-add-person]');
     if (SHOTS) await page.screenshot({ path: SHOTS + '/57-people-add.png' });
     await ctx.close();
+  });
+
+  await group('people: the book\'s answers (Codex on #87)', async () => {
+    const s = server(); seed(s);
+    let refuse = true, down = false;
+    const o = { server: s, path: 'people', book: new Map(), notApplied: () => refuse, bookDown: () => down, slowPush: 0 };
+    const { page, ctx } = await open(browser, o);
+    await until(async () => (await vis(page, '.ppl-one h3')).length > 0);
+    // Not applied: the server holds a newer copy. Never "saved".
+    await page.click('[data-add-person]');
+    await page.fill('[data-form] [name="name"]', 'Kai Lane');
+    await page.click('[data-form] button[type="submit"]');
+    ok('a person the server didn\'t apply: not saved, it says so, the dialog stays, and the person isn\'t shown',
+      await until(async () => (await vis(page, '[data-problem]')).join() === 'Inspyx couldn’t keep that. Check it and try again.') &&
+      await page.isVisible('[data-dialog]') && !(await vis(page, '.ppl-one h3')).includes('Kai Lane') && (await vis(page, '[data-say]')).length === 0);
+    // A slow Add: the dialog can't be closed or reopened for another person until it is answered.
+    refuse = false; o.slowPush = 1200;
+    await page.fill('[data-form] [name="name"]', 'Kai Lane');
+    await page.click('[data-form] button[type="submit"]');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+    ok('while an Add waits: Escape and Cancel don\'t close it', await page.isVisible('[data-dialog]') && await page.isDisabled('[data-form] [data-close]'));
+    ok('and it lands on its own draft: saved, closed, shown', await until(async () => !(await page.isVisible('[data-dialog]')) && (await vis(page, '.ppl-one h3')).includes('Kai Lane'), 4000));
+    await ctx.close();
+    // The book can't be read: never "no one here yet".
+    down = true;
+    const r = await open(browser, { server: server(), path: 'people', bookDown: () => down });
+    await r.page.waitForTimeout(600);
+    ok('the People book can\'t be read: it says it couldn\'t load, never "no one here yet"', (await vis(r.page, '[data-state]')).join() === 'Couldn\'t load your inspections. Check your connection; this page keeps trying.' && (await vis(r.page, '[data-live]')).join() === 'Can\'t reach Inspyx right now. Trying again.', JSON.stringify([await vis(r.page, '[data-state]'), await vis(r.page, '[data-live]')]));
+    await r.ctx.close();
   });
 
   await group('people: no one yet', async () => {

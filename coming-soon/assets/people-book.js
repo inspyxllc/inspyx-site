@@ -88,7 +88,10 @@
     var row = { kind: KIND, id: draft.id, updated_at: at, deleted_at: null, data: data };
     return exchange([row]).then(function (answer) {
       if (!answer) return 'failed';
-      var kept = !(answer.skipped || []).some(function (s) { return s.kind === KIND && s.id === draft.id; });
+      var mine = function (s) { return s.kind === KIND && s.id === draft.id; };
+      // Kept only if the server applied it: a row skipped, or one it didn't apply because it holds a newer copy (the
+      // phone changed it after an answer here was lost), is not saved (Codex on #87; agreements.js does the same).
+      var kept = !(answer.skipped || []).some(mine) && !(answer.applied || []).some(function (a) { return a.applied === false && mine(a); });
       if (kept) take(row);
       return (answer.more ? pull() : Promise.resolve()).then(function () { tell(); return kept ? 'saved' : 'refused'; });
     }, function () { return 'failed'; });
