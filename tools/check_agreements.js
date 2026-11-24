@@ -75,16 +75,6 @@ async function open(browser, o) {
   const s = o.server, errs = [], away = [], calls = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
-  // The starter, put back into the page as the draft file says (only when a group asks for it).
-  if (s && s.starter) {
-    await page.route((u) => u.href === HOME + '/agreements' || u.href === HOME + '/agreements.html', async (route) => {
-      const res = await route.fetch();
-      const draft = require('fs').readFileSync(require('path').join(__dirname, 'starter_agreement_draft.html'), 'utf8');
-      const tpl = draft.slice(draft.indexOf('<template data-t="starter">'));
-      const html = (await res.text()).replace('<template data-t="words">', tpl + '\n<template data-t="words">');
-      await route.fulfill({ response: res, body: html });
-    });
-  }
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url();
     if (!u.startsWith(SERVER + SYNC)) { away.push(u); return route.abort(); }
@@ -150,10 +140,7 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
 
   await group('nothing yet', async () => {
     const { page, ctx } = await open(browser, { server: server() });
-    ok('with no agreements, it says what to do, and offers to add one; no starter while it waits on his word', (await vis(page, '[data-empty] p')).join() === 'No agreements yet. Add the one your clients sign before an inspection: paste it in, and put its blanks where the words change.' && (await vis(page, '[data-starter-open]')).length === 0 && (await vis(page, '[data-add="agreement"]')).join() === 'Add an agreement');
-    await page.click('[data-add="agreement"]');
-    ok('nor in a new agreement', (await vis(page, F + ' [data-starter]')).length === 0);
-    ok('and the page holds no starter words at all', (await page.content()).indexOf('Home Inspection Agreement') < 0);
+    ok('with no agreements, it says what to do, and offers the starter and to add one', (await vis(page, '[data-empty] p')).join() === 'No agreements yet. Start from Inspyx’s draft starter agreement and have your attorney review it, or write your own.' && (await vis(page, '[data-starter-open]')).join() === 'Start from the draft starter agreement' && (await vis(page, '[data-add="agreement"]')).join() === 'Add an agreement');
     await ctx.close();
   });
 
@@ -359,9 +346,7 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
   });
 
   await group('the starter, the blanks and the preview (job 7, W14)', async () => {
-    // The starter waits on his word (tools/starter_agreement_draft.html): served here with it put back.
     const s = server();
-    s.starter = true;
     s.put(s.row('inspector_profile', { id: 'profile', ownerAccountId: ME, inspectorName: 'Pat Rivera', licenseNumber: '', companyName: 'Rivera Inspections', updatedAt: T, deletedAt: null }));
     const { page, ctx, calls } = await open(browser, { server: s });
     if (SHOTS) await page.screenshot({ path: SHOTS + '/52-agreements-empty.png' });
@@ -395,7 +380,7 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
   await group('the how-to', async () => {
     const s = server(); seed(s);
     const { page, ctx } = await open(browser, { server: s });
-    ok('a how-to at the top, three steps', (await vis(page, '.agr-how-step')).join(' | ') === 'Add your agreement, and paste its words in | Tap a blank where the words change with each inspection | Preview what your client reads and signs');
+    ok('a how-to at the top, three steps', (await vis(page, '.agr-how-step')).join(' | ') === 'Start from our draft starter agreement, or write your own | Tap a blank where the words change with each inspection | Preview what your client reads and signs');
     ok('it moves', await page.evaluate(() => document.getAnimations().filter((a) => a.effect && a.effect.target && a.effect.target.closest('.agr-how')).length >= 8));
     await page.emulateMedia({ reducedMotion: 'reduce' });
     ok('with motion turned down, it stands still on the result', await page.evaluate(() => getComputedStyle(document.querySelector('.agr-how-c')).opacity === '1' && getComputedStyle(document.querySelector('.agr-how-finger')).display === 'none'));
