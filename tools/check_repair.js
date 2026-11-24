@@ -250,6 +250,23 @@ const shot = async (page, sel, name) => {
     await ctx.close();
   });
 
+  await group('an edit after Share takes the shared link away (it is of the older sheet) (Codex on #91, r3)', async () => {
+    const s = server();
+    const { page, ctx } = await open(browser, { server: s });
+    await until(async () => (await page.locator('[data-rr-add]').count()) > 0);
+    await page.locator('[data-rr-add="C1.1"]').click();
+    await page.locator('[data-rr-open]').click();
+    await page.locator('[data-rr-item="C1.1"] [data-rr-ask="credit"]').click();
+    await page.locator('[data-rr-amount="C1.1"]').fill('400');
+    await page.locator('[data-rr-share]').click();
+    await until(async () => await page.locator('[data-rr-done]').isVisible());
+    await page.locator('[data-rr-amount="C1.1"]').fill('450');
+    ok('edited after sharing: the old link is gone at once', (await page.locator('[data-rr-done]').count()) === 0);
+    await page.waitForTimeout(1200);
+    ok('and stays gone once the new amount is saved', (await page.locator('[data-rr-done]').count()) === 0 && JSON.stringify(s.saves[s.saves.length - 1].items).includes('"cents":45000'));
+    await ctx.close();
+  });
+
   await group('a page older than the report: it says so, and saves nothing', async () => {
     const s = server();
     const { page, ctx } = await open(browser, { server: s });

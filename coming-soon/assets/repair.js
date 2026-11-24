@@ -62,6 +62,9 @@
 
   var state = null;   // { key, version, role, findings: {id: f}, items: {id: {ask, cents, note}}, order: [ids], note, total, shares }
   var timer = null, saving = null, dirty = false, problem = null;
+  /* Counts edits: a shared link shows only while nothing changed since it was made, so the document sent is the sheet
+     on the screen (Codex on inspyx-site #91, r3). */
+  var edits = 0;
 
   function el(tag, props, kids) {
     var e = doc.createElement(tag);
@@ -233,6 +236,10 @@
   /* ---- saving: what is on the page, a moment after it changes; never an amount that isn't one ---- */
   function changed(repaint) {
     dirty = true; problem = problem === WORDS.changed ? problem : null;
+    edits++;
+    // A link shared before this edit is of the document as it was: it goes; Share makes one of the sheet as it is.
+    var done = sheet && sheet.querySelector('[data-rr-done]');
+    if (done) done.parentNode.removeChild(done);
     paintCards(); paintBar();
     if (repaint) paintSheet(); else refreshTotals();
     clearTimeout(timer);
@@ -295,12 +302,14 @@
   /* ---- share: what was saved, frozen; its link to send ---- */
   function shareNow() {
     clearTimeout(timer);
+    var at = edits;
     // Everything on the page is kept before it is frozen: a save on the wire, and any edit after it.
     var ready = dirty || saving ? save() : Promise.resolve(true);
     Promise.resolve(ready).then(function (ok) {
       if (ok === false) return;
       return ask({ repair: 'share' }).then(function (r) {
         if (r.status !== 200 || r.json.state !== 'shared' || !/^[A-Za-z0-9_-]{22}$/.test(r.json.key)) return fail(r);
+        if (edits !== at) return;   // edited while it was being shared: that link is of an older sheet
         var link = DOC_BASE + r.json.key;
         var copy = el('button', { class: 'rr-copy', type: 'button', 'data-rr-copy': true, on: { click: function () {
           var done = function () { copy.textContent = WORDS.copied; };
