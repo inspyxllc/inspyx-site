@@ -275,7 +275,7 @@
   var word = function (w) { var el = document.querySelector('[data-words] [data-w="' + w + '"]'); return el ? el.textContent : ''; };
   function renderPeople(id) {
     var box = $('[data-people]'), list = $('[data-people-list]');
-    var people = parts('person', function (p) { return owner['person/' + p] === id && Object.hasOwn(ROLES, val('person', p, 'role')); }).sort(byPosition('person'));
+    var people = parts('person', function (p) { return owner['person/' + p] === id && Object.prototype.hasOwnProperty.call(ROLES, val('person', p, 'role')); }).sort(byPosition('person'));
     var next = JSON.stringify(people.map(function (p) { return [p, val('person', p, 'role'), text(val('person', p, 'name'))]; }));
     box.hidden = people.length === 0;
     if (list.getAttribute('data-shape') === id + next) return;
