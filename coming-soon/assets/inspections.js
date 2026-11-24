@@ -207,6 +207,7 @@
             var line = finding.querySelector('[data-photos]');
             line.hidden = photos === 0;
             line.querySelector('[data-v="photos"]').textContent = String(photos);
+            wireAI(finding, f, i, s);
             fol.appendChild(finding);
           });
           ol.appendChild(item);
@@ -448,6 +449,70 @@
     });
   });
 
+  /* ---- Edit with AI (2026-11-24, his decision after the Spectora walk; the relay's contract EDIT_WITH_AI.md v1):
+     Spex's version of one finding's details, shown beside the inspector's with Keep or Discard. Nothing changes
+     without Keep, and Keep only fills the Details box, which then saves as typing does. The button shows only when the
+     relay says this inspector may use it ("edit": true); asking is a hello alone, never billed. The sign-in stays in
+     auth.js (InspyxAuth.editFinding). ---- */
+  var RELAY = 'wss://chat---spex-relay-yu5bdad2fa-uc.a.run.app/';
+  var aiOpen = null;   // null: not known yet; true or false once the relay answered
+  function checkAI() {
+    if (aiOpen !== null || typeof auth.editFinding !== 'function') return;
+    aiOpen = false;
+    auth.editFinding(null, RELAY).then(function (a) {
+      aiOpen = !!(a && a.admitted);
+      all('[data-ai]').forEach(function (el) { el.hidden = !aiOpen; });
+    }, function () { aiOpen = null; });   // unreachable: asked again on the next visit
+  }
+  var cut = function (v, n) { v = Fill ? Fill.dartTrim(text(v)) : text(v).trim(); return v.length > n ? v.slice(0, n) : v; };
+  function wireAI(el, finding, item, stop) {
+    var box = el.querySelector('[data-ai]'), details = el.querySelector('[data-details]');
+    var q = function (sel) { return box.querySelector(sel); };
+    box.hidden = aiOpen !== true;
+    var shown = function (which) {
+      q('[data-ai-actions]').hidden = which !== 'actions';
+      q('[data-ai-working]').hidden = which !== 'working';
+      q('[data-ai-version]').hidden = which !== 'version';
+      q('[data-ai-error]').hidden = which !== 'error';
+      q('[data-ai-open]').setAttribute('aria-expanded', which === 'actions' ? 'true' : 'false');
+      q('[data-ai-open]').disabled = which === 'working';
+      details.disabled = which === 'working';   // no half-applied text while Spex works
+    };
+    q('[data-ai-open]').addEventListener('click', function () { shown(q('[data-ai-actions]').hidden ? 'actions' : 'none'); });
+    all('[data-ai-action]', box).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var title = el.querySelector('[data-field="finding_title"]');
+        var request = { action: b.getAttribute('data-ai-action'),
+          title: cut(title ? title.value : val('item', finding, 'finding_title'), 200), text: cut(details.value, 4000) };
+        var itemName = cut(val('item', item, 'label'), 100), stopName = cut(val('section', stop, 'name'), 100);
+        if (itemName) request.item = itemName;
+        if (stopName) request.stop = stopName;
+        var asked = details.value;
+        shown('working');
+        auth.editFinding(request, RELAY).then(function (a) {
+          if (a && typeof a.text === 'string') {
+            if (details.value !== asked) { shown('none'); return; }   // the details changed meanwhile: nothing to offer
+            q('[data-ai-text]').textContent = a.text;
+            box.setAttribute('data-for', asked);
+            return shown('version');
+          }
+          q('[data-ai-error]').textContent = a && typeof a.error === 'string' && a.error ? a.error : word('ai-unreachable');
+          shown('error');
+        }, function () { q('[data-ai-error]').textContent = word('ai-unreachable'); shown('error'); });
+      });
+    });
+    q('[data-ai-keep]').addEventListener('click', function () {
+      // Only over the words Spex was given: details changed since are never overwritten.
+      if (details.value !== box.getAttribute('data-for')) { shown('none'); return; }
+      details.value = q('[data-ai-text]').textContent;
+      shown('none');
+      details.dispatchEvent(new Event('input', { bubbles: true }));
+      details.dispatchEvent(new Event('blur'));
+      details.focus();
+    });
+    q('[data-ai-discard]').addEventListener('click', function () { shown('none'); });
+  }
+
   function render() { renderList(); renderOne(); }
 
   var listening = false;
@@ -471,4 +536,5 @@
   });
   sync();
   pullBusiness();
+  checkAI();
 })();

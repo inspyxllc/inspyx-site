@@ -23,6 +23,7 @@ const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + 
 const INSP = '6f1c2a3b-0000-4000-8000-000000000001', SEC = '6f1c2a3b-0000-4000-8000-0000000000b1';
 const ITEM = '6f1c2a3b-0000-4000-8000-0000000000a1', FIND = '6f1c2a3b-0000-4000-8000-0000000000a2';
 const OTHER = '6f1c2a3b-0000-4000-8000-000000000002';
+const PROTO = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'chat_protocol_edit.json'), 'utf8'));
 
 /* The server, with schema.sql's rules. */
 function server() {
@@ -61,7 +62,7 @@ async function open(browser, o) {
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); if (v === null) localStorage.removeItem('inspyx.signin'); else localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, store);
   const page = await ctx.newPage();
   page.setDefaultTimeout(8000);
-  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [];
+  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [], relay = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
   await page.routeWebSocket(/realtime\/v1\/websocket/, (ws) => {
@@ -72,6 +73,21 @@ async function open(browser, o) {
       if (m.event === 'phx_join') {
         me.joins.push(m);
         ws.send(JSON.stringify({ topic: m.topic, event: 'phx_reply', ref: m.ref, payload: { status: o.refuseJoin ? 'error' : 'ok', response: o.refuseJoin === 'auth' ? { reason: 'Unauthorized: token has expired' } : {} } }));
+      }
+    });
+  });
+  // Spex's relay (Edit with AI): a stand-in. A hello is denied unless o.edit says otherwise; o.edit(request) answers
+  // an edit request with { text } or { error, code } (or null: no answer). Every message is kept in relay[].
+  await page.routeWebSocket(/spex-relay/, (ws) => {
+    ws.onMessage((data) => {
+      const m = JSON.parse(String(data)); relay.push(m);
+      if (m.hello) {
+        ws.send(JSON.stringify(o.edit ? Object.assign({}, PROTO.admitted, { relay: Object.assign({}, PROTO.admitted.relay, { edit: o.editOff ? false : true }) }) : PROTO.denied));
+        return;
+      }
+      if (m.chat && m.chat.edit && o.edit) {
+        const answer = o.edit(m.chat.edit);
+        if (answer) setTimeout(() => ws.send(JSON.stringify({ relay: { status: 'chat', id: m.chat.id, result: answer.text !== undefined ? { edit: { text: answer.text } } : answer } })), o.editDelay || 50);
       }
     });
   });
@@ -102,7 +118,7 @@ async function open(browser, o) {
   const res = await page.goto(url + 'inspections' + (o.hash || ''), { waitUntil: 'load' });
   await page.waitForTimeout(500);
   const ping = () => sockets[sockets.length - 1].ws.send(JSON.stringify({ topic: 'realtime:insp:' + ME, event: 'broadcast', ref: null, payload: { type: 'broadcast', event: 'changed', payload: { seq: s.seq } } }));
-  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls };
+  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls, relay };
 }
 
 const vis = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.hidden && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel);
@@ -128,7 +144,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const c = calls[0] || { headers: {}, body: {} };
       ok(label + ': opens with no errors, asks only the sync function, as the signed-in inspector, from the start', errs.length === 0 && away.length === 0 && c.headers.authorization === 'Bearer test-access-1' && /^web-[0-9a-f]{18}$/.test(c.body.device) && c.body.after === null, errs.concat(away).join(' | '));
       const csp = res.headers()['content-security-policy'] || '';
-      ok(label + ': served with the signed-in pages\' rule, plus the live socket to Inspyx\'s server and nothing else', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
+      ok(label + ': served with the signed-in pages\' rule, plus the live socket to Inspyx\'s server and Spex\'s relay socket (Edit with AI), nothing else', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/chat---spex-relay-yu5bdad2fa-uc\.a\.run\.app;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
       const list = await vis(page, '[data-list="items"] li');
       ok(label + ': lists both inspections, the newest first, with their addresses', list.length === 2 && /^9 Elm Ave/.test(list[0]) && /^12 Oak St.*Miami/.test(list[1]), JSON.stringify(list));
       ok(label + ': shows the inspection\'s title and address in their boxes', await boxValue(page, 'inspection', INSP, 'title') === '12 Oak St' && await boxValue(page, 'inspection', INSP, 'address') === '12 Oak St, Miami');
@@ -230,6 +246,68 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await page.waitForTimeout(300);
     ok('holds: no banner for a signing with no snapshot', (await vis(page, '[data-agr]')).length === 0);
     await ctx.close();
+  });
+
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('Edit with AI, ' + label, async () => {
+      const s = server(); seed(s);
+      s.phone('item', FIND, 'note', 'outlet by sink has no gfci');
+      let answer = { text: 'The outlet beside the kitchen sink has no GFCI protection. A qualified licensed electrician should evaluate and correct this.' };
+      const asked = [];
+      const { page, ctx, errs, away, relay, calls } = await open(browser, { server: s, w, hash: '#' + INSP, edit: (r) => { asked.push(r); return answer; }, editDelay: 300 });
+      const k = '[data-key="item/' + FIND + '.note"]';
+      const finding = page.locator('.insp-finding').first();
+      ok(label + ': the finding shows its details; Edit with AI is offered once the relay says so', await until(async () => (await finding.locator('[data-ai-open]').isVisible())) && await boxValue(page, 'item', FIND, 'note') === 'outlet by sink has no gfci', errs.concat(away).join(' | '));
+      const hello = relay.find((m) => m.hello) || {};
+      ok(label + ': the hello is Spex Chat\'s, signed in as the inspector', !!hello.hello && hello.hello.mode === 'chat' && hello.hello.access_token === 'test-access-1' && hello.hello.client === 'inspyx-web');
+      const shotAI = async (name) => { if (process.env.SHOTS) { await page.waitForTimeout(500); await finding.screenshot({ path: require('path').join(process.env.SHOTS, 'ai-' + label + '-' + name + '.png') }); } };
+      await finding.locator('[data-ai-open]').click();
+      await shotAI('1-actions');
+      ok(label + ': it opens the four actions, with the how-to', same(await finding.locator('[data-ai-action]').allTextContents(), ['Make it clearer', 'Make it shorter', 'Add a recommendation', 'Fix grammar']) && await finding.locator('.ai-how').isVisible());
+      await finding.locator('[data-ai-action="recommend"]').click();
+      ok(label + ': while Spex works, the details can\'t be edited', await page.locator(k).isDisabled() && await finding.locator('[data-ai-working]').isVisible());
+      await until(async () => await finding.locator('[data-ai-version]').isVisible());
+      const req = asked[0] || {};
+      ok(label + ': the request is the contract\'s: the action, the title, the details, the item and the stop',
+        same(Object.keys(req).sort(), Object.keys(PROTO.edit_request.chat.edit).sort()) && req.action === 'recommend' && req.title === 'Gutter pulling away' && req.text === 'outlet by sink has no gfci' && req.item === 'Gutters' && req.stop === 'Roof', JSON.stringify(req));
+      await shotAI('2-version');
+      ok(label + ': Spex\'s version shows beside the inspector\'s; nothing changed yet',
+        (await finding.locator('[data-ai-text]').textContent()) === answer.text && await page.locator(k).inputValue() === 'outlet by sink has no gfci' && s.value('item', FIND, 'note') === 'outlet by sink has no gfci' && !(await page.locator(k).isDisabled()));
+      await finding.locator('[data-ai-discard]').click();
+      await page.waitForTimeout(900);
+      ok(label + ': Discard changes nothing', await page.locator(k).inputValue() === 'outlet by sink has no gfci' && s.value('item', FIND, 'note') === 'outlet by sink has no gfci' && !(await finding.locator('[data-ai-version]').isVisible()));
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="clearer"]').click();
+      await until(async () => await finding.locator('[data-ai-version]').isVisible());
+      await finding.locator('[data-ai-keep]').click();
+      ok(label + ': Keep puts Spex\'s version in Details, and it saves as typing does', await page.locator(k).inputValue() === answer.text &&
+        await until(async () => s.value('item', FIND, 'note') === answer.text), String(s.value('item', FIND, 'note')).slice(0, 60));
+      await shotAI('3-kept');
+      answer = PROTO.edit_refused.relay.result;
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="shorter"]').click();
+      ok(label + ': a refusal shows its sentence as given; the details untouched', await until(async () => (await finding.locator('[data-ai-error]').textContent()) === answer.error) && await page.locator(k).inputValue() === PROTO.edit_result.relay.result.edit.text);
+      await shotAI('4-refused');
+      // Typed over while Spex worked: its version is never offered over the new words.
+      answer = { text: 'Something else.' };
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="grammar"]').click();
+      await page.waitForTimeout(80);
+      await page.evaluate((sel) => { const t = document.querySelector(sel); t.disabled = false; t.value = 'typed meanwhile'; }, k);
+      await page.waitForTimeout(600);
+      ok(label + ': details changed while Spex worked: its version isn\'t offered', !(await finding.locator('[data-ai-version]').isVisible()) && await page.locator(k).inputValue() === 'typed meanwhile');
+      ok(label + ': no errors, nothing else leaves the site', errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
+      ok(label + ': nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      await ctx.close();
+    });
+  }
+
+  await group('Edit with AI: no button when the relay denies, or has no "edit"', async () => {
+    for (const o of [{}, { edit: () => null, editOff: true }]) {
+      const s = server(); seed(s);
+      const { page, ctx, relay } = await open(browser, Object.assign({ server: s, hash: '#' + INSP }, o));
+      await until(async () => relay.some((m) => m.hello));
+      await page.waitForTimeout(300);
+      ok('no button: ' + (o.editOff ? 'a relay without edit' : 'a denial'), (await page.locator('[data-ai-open]').evaluateAll((els) => els.filter((e) => e.offsetParent !== null).length)) === 0 && !relay.some((m) => m.chat));
+      await ctx.close();
+    }
   });
 
   await group('editing on the web', async () => {
