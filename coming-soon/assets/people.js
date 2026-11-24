@@ -3,12 +3,13 @@
    clients, buyer's agents and listing agents per inspection), grouped by role, each with their inspections.
    One person across many inspections shows once in a role: the same email, else the same phone number (its last ten
    digits), else the same name. The name, email and phone shown are the ones on the most recent of those inspections.
-   Read only; a change on the phone shows here within seconds.
+   Read only; a change on the phone shows here within seconds. With them, everyone kept in People (the People book,
+   people-book.js, job 7): one person in both shows once, with the company the book keeps; a person can be added.
    This file says no words. The page holds every sentence. */
 (function () {
   'use strict';
   var main = document.querySelector('[data-ppl]');
-  var data = window.InspyxInspections, auth = window.InspyxAuth;
+  var data = window.InspyxInspections, auth = window.InspyxAuth, book = window.InspyxPeopleBook;
   if (!main || !data || !auth) return;
 
   var $ = function (sel) { return main.querySelector(sel); };
@@ -38,7 +39,7 @@
       var k = role + '|' + (email ? 'e:' + email.toLowerCase() : phone ? 'p:' + digits(phone).slice(-10) : 'n:' + folded(name));
       var w = data.when(inspection), at = w ? w.at : 0;
       var one = by[k];
-      if (!one) { one = by[k] = { name: name, email: email, phone: phone, at: -1, jobs: [] }; groups[role].push(one); }
+      if (!one) { one = by[k] = { name: name, email: email, phone: phone, company: '', at: -1, jobs: [] }; groups[role].push(one); }
       if (at > one.at) {
         one.at = at; one.name = name;
         if (email) one.email = email;
@@ -48,6 +49,16 @@
         if (!one.phone) one.phone = phone;
       }
       if (!one.jobs.some(function (j) { return j.id === inspection; })) one.jobs.push({ id: inspection, at: at });
+    });
+    // The People book: the same person kept there shows once, with the company it keeps.
+    (book ? book.people() : []).forEach(function (p) {
+      var email = EMAIL.test(p.email) ? p.email : '', phone = digits(p.phone).length >= 7 ? p.phone : '';
+      var k = p.role + '|' + (email ? 'e:' + email.toLowerCase() : phone ? 'p:' + digits(phone).slice(-10) : 'n:' + folded(p.name));
+      var one = by[k];
+      if (!one) { one = by[k] = { name: p.name, email: email, phone: phone, company: p.company, at: -1, jobs: [] }; groups[p.role].push(one); return; }
+      if (!one.email) one.email = email;
+      if (!one.phone) one.phone = phone;
+      if (p.company) one.company = p.company;
     });
     ROLES.forEach(function (role) {
       groups[role].sort(function (a, b) { return a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || b.at - a.at; });
@@ -84,6 +95,9 @@
       them.forEach(function (one) {
         var li = tpl('person');
         li.querySelector('[data-v="name"]').textContent = one.name;
+        var company = li.querySelector('[data-v="company"]');
+        company.hidden = !one.company;
+        company.textContent = one.company || '';
         var email = li.querySelector('[data-v="email"]'), phone = li.querySelector('[data-v="phone"]');
         email.hidden = !one.email;
         if (one.email) { email.href = 'mailto:' + one.email; email.textContent = one.email; }
@@ -107,8 +121,37 @@
   var typing = null;
   $('[data-find]').addEventListener('input', function () { clearTimeout(typing); typing = setTimeout(draw, 120); });
 
+  // ---- adding a person (job 7, W19) -------------------------------------------------------------------------------
+  var dialog = document.querySelector('[data-dialog]'), form = document.querySelector('[data-form]'), draft = null;
+  var problem = function (which) { [].slice.call(form.querySelectorAll('[data-problem]')).forEach(function (p) { p.hidden = p.getAttribute('data-problem') !== which; }); };
+  var said = function (which) { all('[data-say]').forEach(function (p) { p.hidden = p.getAttribute('data-say') !== which; }); };
+  $('[data-add-person]').hidden = !book;
+  $('[data-add-person]').addEventListener('click', function () {
+    form.reset();
+    problem('');
+    said('');
+    draft = book.newDraft();
+    dialog.showModal();
+    form.elements.name.focus();
+  });
+  form.querySelector('[data-close]').addEventListener('click', function () { dialog.close(); });
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var p = book.personOf(form);
+    problem(p.problem || '');
+    if (p.problem) return;
+    var go = form.querySelector('button[type="submit"]');
+    go.disabled = true;
+    book.add(p, draft).then(function (outcome) {
+      go.disabled = false;
+      if (outcome === 'saved') { dialog.close(); said('saved'); draw(); return; }
+      problem(outcome);
+    });
+  });
+
   if (!auth.who()) { window.location.replace('/signin'); return; }
   main.hidden = false;
   draw();
   data.start(draw);
+  if (book) book.start(function () { draw(); });
 })();

@@ -16,6 +16,7 @@
 <script src="/assets/auth.js"></script>
 <script src="/assets/page.js" defer></script>
 <script src="/assets/insp-read.js" defer></script>
+<script src="/assets/people-book.js" defer></script>
 <script src="/assets/people.js" defer></script>
 </head>
 <body class="has-dash">
@@ -32,7 +33,11 @@
 
 <main class="ppl" data-ppl hidden>
 <h1>People</h1>
-<p class="ppl-lede">Everyone on your inspections: your clients and the agents you work with, each with their inspections.</p>
+<div class="ppl-top">
+<p class="ppl-lede">Your clients and the agents you work with: everyone on your inspections and everyone you’ve kept in People, each with their inspections.</p>
+<button class="btn" type="button" data-add-person>Add a person</button>
+</div>
+<div class="say" role="status"><p data-say="saved" hidden>Saved. It’s in People on your phone too, at its next sync.</p></div>
 <p class="ppl-live" role="status">
 <span data-live="connecting">Connecting…</span>
 <span data-live="live" hidden>Live: a change on your phone shows here within seconds.</span>
@@ -41,7 +46,7 @@
 <label class="ppl-find">Find someone <input type="search" data-find autocomplete="off" spellcheck="false" placeholder="Name, email or phone"></label>
 <div class="ppl-state" role="status">
 <p data-state="loading">Loading your inspections…</p>
-<p data-state="empty" hidden>No one here yet. The people on your inspections show up here once your phone has synced.</p>
+<p data-state="empty" hidden>No one here yet. Add a person, or they show up here from your inspections once your phone has synced.</p>
 <p data-state="failed" hidden>Couldn't load your inspections. Check your connection; this page keeps trying.</p>
 <p data-state="nomatch" hidden>No one matches that.</p>
 </div>
@@ -51,7 +56,36 @@
 </main>
 <noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
 
-<template data-t="person"><li class="ppl-one"><h3 data-v="name"></h3><p class="ppl-reach"><a data-v="email" hidden></a><a data-v="phone" hidden></a></p><ul class="ppl-jobs"></ul></li></template>
+<dialog class="ppl-dialog" data-dialog aria-labelledby="ppl-add-title">
+<form method="dialog" data-form novalidate>
+<h2 id="ppl-add-title">Add a person</h2>
+<label>They are <select name="role"><option value="client">A client</option><option value="buyer_agent">A buyer’s agent</option><option value="listing_agent">A listing agent</option></select></label>
+<label>Name <input type="text" name="name" autocomplete="off"></label>
+<div class="ppl-two">
+<label>Phone <input type="tel" name="phone" autocomplete="off"></label>
+<label>Email <input type="email" name="email" autocomplete="off"></label>
+</div>
+<label>Company <input type="text" name="company" autocomplete="off"></label>
+<label>Note <textarea name="note" rows="3"></textarea></label>
+<div class="ppl-problems" role="alert">
+<p data-problem="name" hidden>Write their name.</p>
+<p data-problem="name_long" hidden>A name can be at most 200 characters.</p>
+<p data-problem="phone_long" hidden>A phone number can be at most 100 characters.</p>
+<p data-problem="email_long" hidden>An email can be at most 254 characters.</p>
+<p data-problem="company_long" hidden>A company can be at most 200 characters.</p>
+<p data-problem="note_long" hidden>A note can be at most 10,000 characters.</p>
+<p data-problem="role" hidden>Pick who they are.</p>
+<p data-problem="failed" hidden>That couldn’t be saved. Check your connection and try again.</p>
+<p data-problem="refused" hidden>Inspyx couldn’t keep that. Check it and try again.</p>
+</div>
+<div class="ppl-actions">
+<button class="btn" type="submit">Save</button>
+<button class="btn quiet" type="button" data-close>Cancel</button>
+</div>
+</form>
+</dialog>
+
+<template data-t="person"><li class="ppl-one"><h3 data-v="name"></h3><p class="ppl-company" data-v="company" hidden></p><p class="ppl-reach"><a data-v="email" hidden></a><a data-v="phone" hidden></a></p><ul class="ppl-jobs"></ul></li></template>
 <template data-t="job"><li><a href="#"><strong data-v="title"></strong><span data-v="day"></span></a></li></template>
 </body>
 </html>
