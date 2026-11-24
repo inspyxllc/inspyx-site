@@ -117,10 +117,16 @@ async function open(browser, o) {
       if (o.bookDown && o.bookDown()) return route.fulfill({ status: 503, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"error":"database"}' });
       if ((b.push || []).length && o.slowPush) await new Promise((r) => setTimeout(r, o.slowPush));
       const refused = (b.push || []).length && o.notApplied && o.notApplied();
-      if (!refused) for (const r of b.push || []) if (r.kind === 'inspector_contacts') { const h = book.get(r.id); if (!h || r.updated_at > h.updated_at) book.set(r.id, Object.assign({}, r, { changed_at: 'b' })); }
+      // Newest wins, as the server: an older push than the held copy is answered "not applied".
+      const applied = (b.push || []).map((r) => {
+        if (refused || r.kind !== 'inspector_contacts') return { kind: r.kind, id: r.id, applied: !refused };
+        const h = book.get(r.id), newer = !h || r.updated_at > h.updated_at;
+        if (newer) book.set(r.id, Object.assign({}, r, { changed_at: 'b' }));
+        return { kind: r.kind, id: r.id, applied: newer };
+      });
       if ((b.push || []).length && o.lose && o.lose()) return route.abort('failed');
-      const applied = (b.push || []).map((r) => ({ kind: r.kind, id: r.id, applied: !refused }));
-      const list = [...(o.bookings || []), ...book.values()].filter(() => !b.after);
+      // Rows changed after the page's point (a row marked changed_at 'zz' is newer than any point the page holds).
+      const list = [...(o.bookings || []), ...book.values()].filter((r) => !b.after || String(r.changed_at || '') > String(b.after.at || ''));
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
         body: JSON.stringify({ applied, skipped: [], rows: list, next: list.length ? { at: 'z', kind: 'bookings', id: 'z' } : b.after || null, more: false }) });
     }
@@ -413,6 +419,20 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     await page.waitForTimeout(150);
     ok('while an Add waits: Escape and Cancel don\'t close it', await page.isVisible('[data-dialog]') && await page.isDisabled('[data-form] [data-close]'));
     ok('and it lands on its own draft: saved, closed, shown', await until(async () => !(await page.isVisible('[data-dialog]')) && (await vis(page, '.ppl-one h3')).includes('Kai Lane'), 4000));
+    // An Add that landed with its answer lost, then the phone (its clock a day ahead) changed that person: the retry
+    // is refused and brings the newer copy; the next try is newer still and saves (Codex on #87, r2).
+    let lost = true;
+    o.slowPush = 0; o.lose = () => { const was = lost; lost = false; return was; };
+    await page.click('[data-add-person]');
+    await page.fill('[data-form] [name="name"]', 'Ana Ruiz');
+    await page.click('[data-form] button[type="submit"]');
+    await until(async () => (await vis(page, '[data-problem]')).join() === 'That couldn’t be saved. Check your connection and try again.');
+    const landed = [...o.book.values()].find((r) => r.data.name === 'Ana Ruiz');
+    o.book.set(landed.id, Object.assign({}, landed, { changed_at: 'zz', updated_at: landed.updated_at + 86400000, data: Object.assign({}, landed.data, { updatedAt: landed.updated_at + 86400000, note: 'From the phone' }) }));
+    await page.click('[data-form] button[type="submit"]');
+    ok('the retry after a newer copy from the phone: refused, and says so', await until(async () => (await vis(page, '[data-problem]')).join() === 'Inspyx couldn’t keep that. Check it and try again.'));
+    await page.click('[data-form] button[type="submit"]');
+    ok('and the next try is newer than that copy, and saves', await until(async () => !(await page.isVisible('[data-dialog]'))) && o.book.get(landed.id).updated_at > landed.updated_at + 86400000, String(o.book.get(landed.id).updated_at - landed.updated_at));
     await ctx.close();
     // The book can't be read: never "no one here yet".
     down = true;

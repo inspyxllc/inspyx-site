@@ -81,7 +81,10 @@
   function add(p, draft) {
     var now = Date.now();
     if (!draft.at) draft.at = now;
-    var at = Math.max(now, draft.last ? draft.last + 1 : 0);
+    // Past the newest copy held too: after a refusal for a newer copy (the phone's clock ahead of this one), the next
+    // try is newer still, so "try again" can save (Codex on #87, r2; agreements.js does the same).
+    var held = rows[draft.id];
+    var at = Math.max(now, draft.last ? draft.last + 1 : 0, held ? held.updated_at + 1 : 0);
     draft.last = at;
     var data = { id: draft.id, ownerAccountId: me, role: p.role, name: p.name, phone: p.phone, email: p.email, company: p.company, note: p.note,
       lastUsedAt: at, createdAt: draft.at, updatedAt: at, deletedAt: null };
