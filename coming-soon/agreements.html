@@ -34,13 +34,13 @@
 <p class="agr-lede">The agreements your clients sign before an inspection: the same list as on your phone.</p>
 <figure class="agr-how" aria-label="How it works, in three steps">
 <div class="agr-how-stage" aria-hidden="true">
-<div class="agr-how-scene agr-how-a"><span class="agr-how-btn">Add an agreement</span><span class="agr-how-line"></span><span class="agr-how-line short"></span><span class="agr-how-line"></span></div>
+<div class="agr-how-scene agr-how-a"><span class="agr-how-btn">Start from the draft starter agreement</span><span class="agr-how-line"></span><span class="agr-how-line short"></span><span class="agr-how-line"></span></div>
 <div class="agr-how-scene agr-how-b"><span class="agr-how-text">The fee is <b class="agr-how-blank">[Fee]</b><i class="agr-how-caret"></i></span><span class="agr-how-chips"><em>+ Client name</em><em class="agr-how-pick">+ Fee</em><em>+ Your name</em></span></div>
-<div class="agr-how-scene agr-how-c"><span class="agr-how-paper"><strong>Your agreement</strong><span>For <mark>Jordan Smith</mark>, the fee is <mark>$425.00</mark>.</span><span class="agr-how-sign">Signed by Jordan Smith</span></span></div>
+<div class="agr-how-scene agr-how-c"><span class="agr-how-paper"><strong>Home Inspection Agreement</strong><span>For <mark>Jordan Smith</mark>, the fee is <mark>$425.00</mark>.</span><span class="agr-how-sign">Signed by Jordan Smith</span></span></div>
 <span class="agr-how-finger"></span>
 </div>
 <figcaption class="agr-how-steps">
-<span class="agr-how-step" data-n="1">Add your agreement, and paste its words in</span>
+<span class="agr-how-step" data-n="1">Start from our draft starter agreement, or write your own</span>
 <span class="agr-how-step" data-n="2">Tap a blank where the words change with each inspection</span>
 <span class="agr-how-step" data-n="3">Preview what your client reads and signs</span>
 </figcaption>
@@ -64,9 +64,8 @@
 <section class="agr-group" data-group="agreements" hidden>
 <div class="agr-head"><h2>Your agreements</h2><button class="btn small" type="button" data-add="agreement">Add an agreement</button></div>
 <div class="agr-empty" data-empty hidden>
-<p data-only-starter hidden>No agreements yet. Start from Inspyx’s starter agreement and make it yours, or write your own.</p>
-<p data-no-starter>No agreements yet. Add the one your clients sign before an inspection: paste it in, and put its blanks where the words change.</p>
-<button class="btn" type="button" data-starter-open hidden>Start from the starter agreement</button>
+<p>No agreements yet. Start from Inspyx’s draft starter agreement and have your attorney review it, or write your own.</p>
+<button class="btn" type="button" data-starter-open>Start from the draft starter agreement</button>
 </div>
 <ol class="agr-list" data-list></ol>
 </section>
@@ -78,7 +77,7 @@
 <form method="dialog" data-form novalidate>
 <h2 id="agr-title"><span data-title="new">New agreement</span><span data-title="edit" hidden>Agreement</span></h2>
 <label>Name <input type="text" name="name" autocomplete="off"></label>
-<button class="btn small quiet agr-starter" type="button" data-starter hidden>Start from the starter agreement</button>
+<button class="btn small quiet agr-starter" type="button" data-starter hidden>Start from the draft starter agreement</button>
 <div class="agr-tabs" role="tablist">
 <button type="button" role="tab" data-tab="write" aria-selected="true">Write</button>
 <button type="button" role="tab" data-tab="preview" aria-selected="false">Preview what your client signs</button>
@@ -121,6 +120,28 @@
 
 <template data-t="agreement"><li class="agr-card"><div class="agr-what"><strong data-v="name"></strong><span data-v="line"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></li></template>
 
+<!-- The starter agreement (job 7): Moises's pick "A" on 2026-11-24 (decisions register section 12): offered as a
+     draft, with "have your attorney review it". Inspyx never claims an agreement meets a state's rules; the dialog
+     says to have an attorney read it. -->
+<template data-t="starter">
+<div><span data-s="name">Home inspection agreement</span><span data-s="words">Home Inspection Agreement
+
+This agreement is between [Your company] (the Inspector), represented by [Your name], license [License number], and [Client name] (the Client), for the inspection of [Property address] on [Inspection date].
+
+1. The inspection. The Inspector will do a visual, non-invasive inspection of the readily accessible systems and parts of the home as they are on the day of the inspection, and will give the Client a written report of what was seen.
+
+2. What it is not. The inspection is not a guarantee, a warranty or an insurance policy. It does not look behind walls, under floors or anywhere not readily accessible, and does not move furniture, stored things or finished surfaces. It is not a code, engineering, mold, pest, radon or environmental inspection unless the Client buys that as its own service.
+
+3. The fee. The Client agrees to pay [Fee] for the inspection. The report is released once the fee is paid.
+
+4. The report. The report is for the Client. The Inspector shares it with others only with the Client's permission, except where the law requires.
+
+5. If something seems missed. The Client agrees to tell the Inspector in writing and to let the Inspector look again before any repair is made, except in an emergency.
+
+6. The whole agreement. This is the whole agreement between the Client and the Inspector. If a part of it can't be enforced, the rest still applies.
+
+Signed by the Client on [Today's date].</span></div>
+</template>
 
 <template data-t="words">
 <span data-w="sample-client">Jordan Smith</span>
