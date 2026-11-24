@@ -9,7 +9,8 @@
   if (!auth) return;
   var DEADLINE = 20000, KIND = 'inspector_contacts';
   var ROLES = ['client', 'buyer_agent', 'listing_agent'];
-  // contact_rules.ts's caps, in characters.
+  // The page's own limits, in characters (the sync's rules take any length the phone holds; these keep a typed
+  // person tidy).
   var CAPS = { name: 200, phone: 100, email: 254, company: 200, note: 10000 };
 
   var me = null, rows = Object.create(null), point = null, loaded = false, failing = false, listeners = [];
