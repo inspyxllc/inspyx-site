@@ -107,6 +107,22 @@
     sync();
   }
 
+  /* Several fields at once, as one change (2026-11-24, his list item 12): a new part's fields travel together, so the
+     phone makes it whole (inspection_sync_apply.dart makes a stop or an item only when its required fields have all
+     come), and a move's two positions or a delete's parts land together. */
+  function editAll(inspection, writes) {
+    if (!writes.length) return;
+    anyEdits = true;
+    var at = Date.now() + offset;
+    writes.forEach(function (x) {
+      outbox = outbox.filter(function (o) { return !(o.entity === x.entity && o.id === x.id && o.field === x.field); });
+      outbox.push({ inspection: inspection, entity: x.entity, id: x.id, field: x.field, value: x.value, at: at });
+      take({ inspection: inspection, entity: x.entity, id: x.id, field: x.field, value: x.value, at: at, device: me });
+    });
+    show('data-save', 'saving');
+    sync();
+  }
+
   // ---- what shows ----------------------------------------------------------------------------------------------
 
   function parts(entity, where) {
@@ -195,14 +211,21 @@
       stops.forEach(function (s) {
         var stop = tpl('stop');
         bind(stop.querySelector('h2'), 'section', s, id);   // its name box only: the items below are bound as items
+        tools(stop.querySelector('.insp-stop-head'), id, 'section', s, stops);
+        addForm(stop.querySelector('[data-additem]'), function (name) { addItem(id, s, name); });
         var ol = stop.querySelector('.insp-items');
-        itemsOf(s).forEach(function (i) {
+        var items = itemsOf(s);
+        items.forEach(function (i) {
           var item = tpl('item');
           bind(item, 'item', i, id);
+          tools(item.querySelector('.insp-item-head'), id, 'item', i, items);
+          addForm(item.querySelector('[data-addfinding]'), function (name) { addFinding(id, i, name); });
           var fol = item.querySelector('.insp-findings');
-          findingsOf(i).forEach(function (f) {
+          var findings = findingsOf(i);
+          findings.forEach(function (f) {
             var finding = tpl('finding');
             bind(finding, 'item', f, id);
+            tools(finding.querySelector('.insp-finding-head'), id, 'item', f, findings);
             var photos = parts('photo', function (p) { return val('photo', p, 'item_id') === f; }).length;
             var line = finding.querySelector('[data-photos]');
             line.hidden = photos === 0;
@@ -221,10 +244,13 @@
       if (dirty[k]) return;
       var f = fields[k], v = f ? f.value : null;
       var want = el.getAttribute('data-kind') === 'time' ? (typeof v === 'number' && isFinite(v) ? toBox(v) : '') : v === null || v === undefined ? '' : String(v);
+      // An item made here has no status until it is set: the phone's own start, "Not started" (2026-11-24, item 12).
+      if (want === '' && el.getAttribute('data-field') === 'status') want = 'untouched';
       if (el.value !== want) el.value = want;
     });
     renderPeople(id);
     renderAgreement(id);
+    chapterChoices(id);
     var started = val('inspection', id, 'inspection_at'), line = $('[data-started]');
     line.hidden = !(typeof started === 'number' && isFinite(started));
     if (!line.hidden) { var t = line.querySelector('[data-v="started"]'); t.textContent = DAY.format(new Date(started)) + ', ' + CLOCK.format(new Date(started)); t.setAttribute('datetime', new Date(started).toISOString()); }
@@ -448,12 +474,148 @@
     });
   });
 
+  /* ---- the report's structure (2026-11-24, his list item 12): add, move and delete stops, items and findings, as
+     the phone does. Each new part is named as the phone names one (a version-4 id) and made with the fields the phone
+     makes it with; a delete is final, here and on the phone, so it asks first and says what goes. ---- */
+  var newId = function () { return crypto.randomUUID(); };
+  function nextPosition(entity, ids) {
+    var most = -1;
+    ids.forEach(function (x) { var p = val(entity, x, 'position'); if (typeof p === 'number' && p > most) most = p; });
+    return Math.floor(most) + 1;
+  }
+  function stopsOf(inspection) { return parts('section', function (s) { return owner['section/' + s] === inspection; }).sort(byPosition('section')); }
+  function topItemsOf(stop) { return parts('item', function (i) { return val('item', i, 'section_id') === stop && !val('item', i, 'parent_item_id'); }).sort(byPosition('item')); }
+  function findingsUnder(item) { return parts('item', function (f) { return val('item', f, 'parent_item_id') === item; }).sort(byPosition('item')); }
+  function addStop(inspection, name, chapterFrom) {
+    var id = newId(), chapter = chapterFrom ? val('section', chapterFrom, 'report_section_id') : null;
+    editAll(inspection, [
+      { entity: 'section', id: id, field: 'name', value: name },
+      { entity: 'section', id: id, field: 'position', value: nextPosition('section', stopsOf(inspection)) },
+      // Both arrive with it, even as null: its chapter can't be set after it is made (the phone's own rule). Null:
+      // its own chapter, which the phone gives it, as it does a stop it makes itself.
+      { entity: 'section', id: id, field: 'report_section_id', value: typeof chapter === 'string' ? chapter : null },
+      { entity: 'section', id: id, field: 'template_section_ref', value: null }
+    ]);
+    return id;
+  }
+  function addItem(inspection, stop, label) {
+    var id = newId();
+    editAll(inspection, [
+      { entity: 'item', id: id, field: 'section_id', value: stop },
+      { entity: 'item', id: id, field: 'parent_item_id', value: null },
+      { entity: 'item', id: id, field: 'label', value: label },
+      { entity: 'item', id: id, field: 'position', value: nextPosition('item', topItemsOf(stop)) }
+    ]);
+    return id;
+  }
+  function addFinding(inspection, item, title) {
+    var id = newId();
+    editAll(inspection, [
+      { entity: 'item', id: id, field: 'section_id', value: val('item', item, 'section_id') },
+      { entity: 'item', id: id, field: 'parent_item_id', value: item },
+      { entity: 'item', id: id, field: 'label', value: title },
+      { entity: 'item', id: id, field: 'position', value: nextPosition('item', findingsUnder(item)) },
+      { entity: 'item', id: id, field: 'finding_title', value: title }
+    ]);
+    return id;
+  }
+  /* Up or down among its own: the two swap places (both positions, as one change). */
+  function move(inspection, entity, id, siblings, dir) {
+    var at = siblings.indexOf(id), to = at + (dir === 'up' ? -1 : 1);
+    if (at < 0 || to < 0 || to >= siblings.length) return;
+    var other = siblings[to];
+    var mine = val(entity, id, 'position'), theirs = val(entity, other, 'position');
+    if (typeof mine !== 'number' || typeof theirs !== 'number' || mine === theirs) { mine = at; theirs = to; }
+    editAll(inspection, [
+      { entity: entity, id: id, field: 'position', value: theirs },
+      { entity: entity, id: other, field: 'position', value: mine }
+    ]);
+  }
+  /* What a delete takes: the part, and everything under it, with how many items, findings and photos. */
+  function underneath(entity, id) {
+    var items = [], findings = [];
+    if (entity === 'section') {
+      topItemsOf(id).forEach(function (i) { items.push(i); findingsUnder(i).forEach(function (f) { findings.push(f); }); });
+    } else if (!val('item', id, 'parent_item_id')) {
+      findingsUnder(id).forEach(function (f) { findings.push(f); });
+    }
+    var owners = {}; [id].concat(items, findings).forEach(function (x) { owners[x] = true; });
+    var photos = parts('photo', function (p) { return owners[val('photo', p, 'item_id')] === true; }).length;
+    return { items: items, findings: findings, photos: photos };
+  }
+  var fill = function (w, v) { return word(w).replace('{name}', v).replace('{n}', v); };
+  function deleteWords(entity, id) {
+    var u = underneath(entity, id);
+    var kind = entity === 'section' ? 'del-stop' : (val('item', id, 'parent_item_id') ? 'del-finding' : 'del-item');
+    var name = text(val(entity, id, entity === 'section' ? 'name' : (kind === 'del-finding' ? 'finding_title' : 'label'))).trim() || word('unnamed');
+    var counts = [];
+    if (u.items.length) counts.push(u.items.length === 1 ? word('n-item') : fill('n-items', u.items.length));
+    if (u.findings.length) counts.push(u.findings.length === 1 ? word('n-finding') : fill('n-findings', u.findings.length));
+    if (u.photos) counts.push(u.photos === 1 ? word('n-photo') : fill('n-photos', u.photos));
+    var tail = counts.length === 0 ? '' : word('del-with') + (counts.length === 1 ? counts[0] : counts.slice(0, -1).join(', ') + word('and') + counts[counts.length - 1]);
+    return fill(kind, name) + tail + '?';
+  }
+  function askDelete(inspection, entity, id) {
+    var d = $('[data-confirm]');
+    $('[data-confirm-text]').textContent = deleteWords(entity, id);
+    var go = $('[data-confirm-go]'), no = $('[data-confirm-no]');
+    var done = function (yes) {
+      go.onclick = no.onclick = null;
+      if (d.open) d.close();
+      if (!yes) return;
+      var u = underneath(entity, id);
+      // Everything under it goes as well, so no device keeps a part whose stop or item is gone.
+      editAll(inspection, u.findings.concat(u.items).map(function (x) { return { entity: 'item', id: x, field: '_del', value: true }; })
+        .concat([{ entity: entity, id: id, field: '_del', value: true }]));
+      render();
+    };
+    go.onclick = function () { done(true); };
+    no.onclick = function () { done(false); };
+    d.onclose = function () { go.onclick = no.onclick = null; };
+    if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
+    no.focus();
+  }
+  /* The tools on a stop, an item or a finding: its moves (off at the ends) and its delete. */
+  function tools(el, inspection, entity, id, siblings) {
+    var at = siblings.indexOf(id);
+    var up = el.querySelector('[data-move="up"]'), down = el.querySelector('[data-move="down"]'), del = el.querySelector('[data-delete]');
+    up.disabled = at <= 0; down.disabled = at === siblings.length - 1;
+    up.addEventListener('click', function () { move(inspection, entity, id, siblings, 'up'); render(); });
+    down.addEventListener('click', function () { move(inspection, entity, id, siblings, 'down'); render(); });
+    del.addEventListener('click', function () { askDelete(inspection, entity, id); });
+  }
+  function addForm(form, onName) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var box = form.querySelector('input[name="name"]'), name = box.value.trim();
+      if (!name) { box.focus(); return; }
+      onName(name);
+      box.value = '';
+      render();
+    });
+  }
+  /* The new stop's chapter: its own, or the chapter of a stop already in the report. */
+  function chapterChoices(inspection) {
+    var sel = $('[data-addstop-chapter]'), want = JSON.stringify(stopsOf(inspection).map(function (s) { return [s, text(val('section', s, 'name'))]; }));
+    if (sel.getAttribute('data-shape') === want) return;
+    sel.setAttribute('data-shape', want);
+    var keep = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    stopsOf(inspection).forEach(function (s) {
+      if (typeof val('section', s, 'report_section_id') !== 'string') return;
+      var o = document.createElement('option'); o.value = s; o.textContent = word('chapter-of') + (text(val('section', s, 'name')).trim() || word('unnamed'));
+      sel.appendChild(o);
+    });
+    sel.value = keep;
+  }
+
   function render() { renderList(); renderOne(); }
 
   var listening = false;
   function showLive(which) { show('data-live', which); }
 
   window.addEventListener('hashchange', function () { shape = null; render(); });
+  addForm($('[data-addstop]'), function (name) { var id = chosen(); if (id) addStop(id, name, $('[data-addstop-chapter]').value || null); });
   var finding = null;
   $('[data-find]').addEventListener('input', function () { clearTimeout(finding); finding = setTimeout(renderList, 120); });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } });
