@@ -524,11 +524,18 @@
     var at = siblings.indexOf(id), to = at + (dir === 'up' ? -1 : 1);
     if (at < 0 || to < 0 || to >= siblings.length) return;
     var other = siblings[to];
-    var mine = val(entity, id, 'position'), theirs = val(entity, other, 'position');
-    if (typeof mine !== 'number' || typeof theirs !== 'number' || mine === theirs) { mine = at; theirs = to; }
+    var positions = siblings.map(function (x) { return val(entity, x, 'position'); });
+    var tied = positions.some(function (p, i) { return typeof p !== 'number' || positions.indexOf(p) !== i; });
+    if (tied) {
+      // Two sharing a place (made at once on two devices), or one with none: every one is numbered again in the
+      // order shown, the two swapped, so nothing else moves (Codex on inspyx-site #92).
+      var order = siblings.slice(); order[at] = other; order[to] = id;
+      editAll(inspection, order.map(function (x, i) { return { entity: entity, id: x, field: 'position', value: i }; }));
+      return;
+    }
     editAll(inspection, [
-      { entity: entity, id: id, field: 'position', value: theirs },
-      { entity: entity, id: other, field: 'position', value: mine }
+      { entity: entity, id: id, field: 'position', value: positions[to] },
+      { entity: entity, id: other, field: 'position', value: positions[at] }
     ]);
   }
   /* What a delete takes: the part, and everything under it, with how many items, findings and photos. */

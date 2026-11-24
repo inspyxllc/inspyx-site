@@ -325,6 +325,24 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     });
   }
 
+  await group('the report\'s structure: a move among items that share a place keeps the others where they are (Codex on #92)', async () => {
+    const s = server(); seed(s);
+    // Three items at the same position (made at once on two devices), shown in id order.
+    const B = '6f1c2a3b-0000-4000-8000-0000000000a5', C = '6f1c2a3b-0000-4000-8000-0000000000a6';
+    for (const [id, label] of [[B, 'Bbb'], [C, 'Ccc']]) {
+      s.phone('item', id, 'section_id', SEC); s.phone('item', id, 'label', label); s.phone('item', id, 'position', 0);
+    }
+    const { page, ctx } = await open(browser, { server: s, hash: '#' + INSP });
+    const labels = async () => page.locator('.insp-label').evaluateAll((els) => els.map((e) => e.value));
+    await until(async () => (await labels()).length === 3);
+    const before = await labels();
+    await page.locator('.insp-item').first().locator('.insp-item-head [data-move="down"]').click();
+    await until(async () => JSON.stringify(await labels()) !== JSON.stringify(before));
+    const after = await labels();
+    ok('tied places: Down swaps the first two and leaves the third', JSON.stringify(after) === JSON.stringify([before[1], before[0], before[2]]), JSON.stringify([before, after]));
+    await ctx.close();
+  });
+
   await group('editing on the web', async () => {
     const s = server(); seed(s);
     const { page, ctx, calls } = await open(browser, { server: s, hash: '#' + INSP });
