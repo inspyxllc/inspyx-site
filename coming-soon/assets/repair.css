@@ -44,7 +44,9 @@ html.has-rr body{padding-bottom:84px}
 .rr-asks button[aria-checked="true"]{background:var(--rr-navy); color:#FFFFFF; box-shadow:none}
 .rr-amount, .rr-note, .rr-whole{display:grid; gap:4px; font-size:13.5px; color:var(--rr-muted)}
 .rr-amount input, .rr-note input, .rr-whole textarea{font:16px var(--rr-font); color:var(--rr-ink); padding:9px 11px; border:1px solid var(--rr-line); border-radius:10px; background:#FFFFFF}
-.rr-amount input{max-width:200px}
+.rr-money{position:relative; display:block; max-width:200px}
+.rr-cur{position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--rr-ink); font:600 16px var(--rr-font); pointer-events:none}
+.rr-amount input{width:100%; box-sizing:border-box; padding-left:26px}
 .rr-amount.is-bad input{border-color:#B3261E}
 .rr-amount em{font-style:normal; color:#B3261E}
 .rr-remove{justify-self:start; border:0; background:none; color:#9B2C2C; font:600 13.5px var(--rr-font); cursor:pointer; padding:4px 0}

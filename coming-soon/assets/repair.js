@@ -25,6 +25,7 @@
     intro: 'For each finding, ask for a repair, a replacement, or a credit. Your inspector doesn’t see this.',
     asks: { repair: 'Repair', replace: 'Replace', credit: 'Credit' },
     amount: 'Credit amount',
+    inDollars: 'in dollars',
     itemNote: 'Note (optional)',
     remove: 'Remove',
     note: 'A note for the whole request (optional)',
@@ -174,8 +175,13 @@
         var bad = it.amount !== '' && centsOf(it.amount) === null;
         amount = el('label', { class: 'rr-amount' + (bad ? ' is-bad' : '') }, [
           el('span', { text: WORDS.amount }),
-          el('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: it.amount, 'data-rr-amount': id, 'aria-invalid': bad ? 'true' : 'false',
-            on: { input: function (e) { it.amount = e.target.value; it.cents = centsOf(it.amount); changed(false); } } }),
+          // Dollars, said in the box: a fixed "$" the person never types (as the price forms show it).
+          el('span', { class: 'rr-money' }, [
+            el('span', { class: 'rr-cur', 'aria-hidden': 'true', text: '$' }),
+            el('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: it.amount, 'data-rr-amount': id, 'aria-invalid': bad ? 'true' : 'false',
+              'aria-label': WORDS.amount + ' ' + WORDS.inDollars,
+              on: { input: function (e) { it.amount = e.target.value; it.cents = centsOf(it.amount); changed(false); } } })
+          ]),
           bad ? el('em', { text: WORDS.badAmount }) : null
         ]);
       }
@@ -238,7 +244,7 @@
       var it = state.items[inp.getAttribute('data-rr-amount')]; if (!it) return;
       var bad = it.amount !== '' && it.cents === null;
       inp.setAttribute('aria-invalid', bad ? 'true' : 'false');
-      inp.parentNode.classList.toggle('is-bad', bad);
+      inp.closest('.rr-amount').classList.toggle('is-bad', bad);
     });
   }
   function save() {

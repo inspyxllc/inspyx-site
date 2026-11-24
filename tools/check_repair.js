@@ -110,15 +110,17 @@ const shot = async (page, sel, name) => {
       const item = page.locator('[data-rr-item="C1.1"]');
       await item.locator('[data-rr-ask="credit"]').click();
       await page.locator('[data-rr-amount="C1.1"]').fill('1,250');
-      await page.locator('[data-rr-note="C1.1"]').fill('Roofer quote attached');
+      await page.locator('[data-rr-note="C1.1"]').fill('Per roofer’s quote');
       ok(label + ': a credit\'s amount adds to the total at once', (await page.locator('[data-rr-total] strong').textContent()) === '$1,250.00');
+      ok(label + ': the amount box says dollars: a "$" the person never types', (await page.locator('[data-rr-item="C1.1"] .rr-cur').textContent()) === '$' &&
+        (await page.locator('[data-rr-amount="C1.1"]').inputValue()) === '1,250');
       ok(label + ': the sheet has its how-to, in three steps', await page.locator('.rr-how').isVisible() && (await page.locator('.rr-how-step').count()) === 3);
       ok(label + ': the sheet says the inspector doesn\'t price or approve', /doesn’t price repairs or approve credits/.test(await page.locator('[data-rr-sheet]').textContent()));
-      await until(async () => s.saves.length > 0 && JSON.stringify(s.saves[s.saves.length - 1]).includes('Roofer quote attached'), 4000);
+      await until(async () => s.saves.length > 0 && JSON.stringify(s.saves[s.saves.length - 1]).includes('Per roofer’s quote'), 4000);
       const last = s.saves[s.saves.length - 1] || {};
       ok(label + ': it saves what is on the page, with the report\'s version, a moment after a change',
         last.version === SAMPLE.published_at && JSON.stringify(last.items) === JSON.stringify([
-          { finding: 'C1.1', ask: 'credit', note: 'Roofer quote attached', cents: 125000 }, { finding: 'C2.1', ask: 'repair', note: '' }]), JSON.stringify(last.items));
+          { finding: 'C1.1', ask: 'credit', note: 'Per roofer’s quote', cents: 125000 }, { finding: 'C2.1', ask: 'repair', note: '' }]), JSON.stringify(last.items));
       await shot(page, '[data-rr-sheet]', label + '-2-sheet');
 
       // An amount that isn't one: never saved, Share waits.
