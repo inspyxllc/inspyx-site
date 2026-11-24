@@ -64,10 +64,18 @@
 <span data-save="saving" hidden>Saving…</span>
 <span data-save="failed" hidden>Couldn't save. Trying again.</span>
 </p>
+<section class="insp-people" data-people hidden>
+<h2>People</h2>
+<p class="insp-people-hint">See this inspection exactly as each of them sees it. Opens in a new tab; nothing is counted or sent.</p>
+<ul class="insp-people-list" data-people-list></ul>
+</section>
 <div data-stops></div>
 </div>
 </section>
 </main>
+
+<template data-t="person"><li><span class="insp-who"><strong data-v="name"></strong><span data-v="role"></span></span><a class="insp-look" data-look target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span data-v="look"></span></a></li></template>
+<div data-words hidden><span data-w="client">Client</span><span data-w="buyer_agent">Buyer’s agent</span><span data-w="listing_agent">Listing agent</span><span data-w="look-client">Client view</span><span data-w="look-agent">Agent view</span><span data-w="noname">No name yet</span></div>
 
 <template data-t="row"><li><a href="#"><strong data-v="title"></strong><span data-v="address"></span><time data-v="day"></time></a></li></template>
 

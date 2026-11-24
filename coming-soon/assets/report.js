@@ -22,6 +22,9 @@
      (the agent page, 2026-11-15: CFG.ask = {url, body}, its own function asked with the page's key and the
      report's link id; the client's key is never on that page). */
   var CFG = window.INSPYX_REPORT || {};
+  /* Client View / Agent View (2026-11-24): the look page (look.js) has the answer already, asked once with its
+     one-time ticket, and hands it over: CFG.answer, with CFG.look. Then this page asks nothing, its Pay button goes
+     nowhere, and "Try again" opens the look again (the page makes a new ticket). */
 
   /* Where a report comes from: the report function, given the key in a request's body. */
   var API = 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/report';
@@ -34,7 +37,7 @@
   var KEY_PATTERN = /^[A-Za-z0-9_-]{22}$/;
   var KEPT_KEY = 'inspyx.report.key';
   var linkKey = (function () {
-    if (CFG.sample || CFG.ask) return null;
+    if (CFG.sample || CFG.ask || CFG.answer) return null;
     var mark = (location.hash || '').replace(/^#/, '');
     var inPath = /^\/r\/([A-Za-z0-9_-]{22})\/?$/.exec(location.pathname);
     var key = KEY_PATTERN.test(mark) ? mark : (inPath ? inPath[1] : null);
@@ -1254,7 +1257,9 @@
             h('span', { class: 'lk-lockmark', 'aria-hidden': 'true' }, icon('lock')),
             h('h1', { class: 'lk-t' }, WORDS.locked)
           ),
-          pay ? h('a', { class: 'btn btn-wide lk-pay', href: pay, rel: 'noopener', 'data-pay': true }, payWords(answer.due_cents)) : null,
+          // A look shows the button as the client sees it, and it goes nowhere: nothing is paid from a look.
+          pay && CFG.look ? h('span', { class: 'btn btn-wide lk-pay', 'aria-disabled': 'true', 'data-pay': true }, payWords(answer.due_cents))
+            : pay ? h('a', { class: 'btn btn-wide lk-pay', href: pay, rel: 'noopener', 'data-pay': true }, payWords(answer.due_cents)) : null,
           h('p', { class: 'lk-m' }, WORDS.lockedMore)
         )
       )
@@ -1296,6 +1301,7 @@
   }
 
   function retry() {
+    if (CFG.look) return h('p', null, h('button', { class: 'btn', type: 'button', on: { click: function () { location.reload(); } } }, WORDS.again));
     return h('p', null, h('button', { class: 'btn', type: 'button', on: { click: function () { show(h('p', { class: 'state state-wait', role: 'status' }, WORDS.wait)); load(); } } }, WORDS.again));
   }
 
@@ -1351,5 +1357,5 @@
     };
   }
 
-  load();
+  if (CFG.answer) render(CFG.answer); else load();
 })();
