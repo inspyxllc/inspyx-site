@@ -167,7 +167,7 @@
     form.elements.words.value = d ? d.body : '';
     form.elements.signs.checked = false;
     tab('write');
-    $('[data-starter]', form).hidden = !!d;
+    $('[data-starter]', form).hidden = !!d || !starter;
     $('[data-only="choose"]', form).hidden = !d || signs;
     $('[data-only="signs"]', form).hidden = !d || !signs;
     $('[data-delete]', form).hidden = !d;
@@ -245,7 +245,12 @@
 
   // ---- the starter, the blanks and the preview (job 7, W14) --------------------------------------------------------
 
-  var starter = document.querySelector('template[data-t="starter"]').content;
+  // The starter is offered only while the page holds it (it waits on Moises's word: tools/starter_agreement_draft.html).
+  var starterTpl = document.querySelector('template[data-t="starter"]');
+  var starter = starterTpl ? starterTpl.content : null;
+  all('[data-starter-open]').forEach(function (b) { b.hidden = !starter; });
+  all('[data-only-starter]').forEach(function (p) { p.hidden = !starter; });
+  all('[data-no-starter]').forEach(function (p) { p.hidden = !!starter; });
   // The starter's name and words in the dialog: only for a new one, and never over words he has typed.
   function useStarter() {
     var w = form.elements.words;
