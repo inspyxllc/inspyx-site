@@ -274,8 +274,11 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     await page.fill(F + ' input[name="name"]', 'Mold agreement');
     await page.fill(F + ' textarea[name="words"]', 'The client hires the inspector for mold.');
     await page.click(F + ' button[type="submit"]');
+    // Read what went up only once the list shows it: read at the click, the push may not have left yet (the
+    // check was flaky, ~1 run in 3, 2026-11-23).
+    const shown = await until(async () => (await names(page)).includes('Mold agreement'));
     const mold = pushed(calls).filter((r) => r.kind === 'legal_documents' && r.data.title === 'Mold agreement');
-    ok('a new agreement opened after it gets an id of its own', await until(async () => (await names(page)).includes('Mold agreement')) && mold.length === 1 && mold[0].id !== sent[0].id);
+    ok('a new agreement opened after it gets an id of its own', shown && mold.length === 1 && mold[0].id !== sent[0].id, JSON.stringify(mold.map((r) => r.id)));
     await ctx.close();
   });
 
