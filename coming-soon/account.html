@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/assets/page.css">
 <link rel="stylesheet" href="/assets/app.css">
 <link rel="stylesheet" href="/assets/dash.css">
+<link rel="stylesheet" href="/assets/account.css">
 <script src="/assets/auth.js"></script>
 <script src="/assets/account.js" defer></script>
 </head>
@@ -27,22 +28,56 @@
 <details class="dash-more"><summary aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></summary><ul><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul></details>
 </nav>
 
-<main class="doc account" data-account hidden>
-<section class="title">
+<main class="acct account" data-account hidden>
 <h1>Account</h1>
-<p class="who">Signed in as <strong data-email></strong></p>
-<div class="links">
-<a class="btn" href="/today">What needs you</a>
-<a class="btn" href="/numbers">Your numbers</a>
-<a class="btn" href="/reports">Reports sent</a>
-<a class="btn" href="/plan">Your plan</a>
-<button class="btn quiet" type="button" data-signout>Sign out</button>
-</div>
-</section>
+<p class="acct-lede">Your sign-in, your business in one place, and your plan.</p>
 <div class="say" role="status">
 <p data-say="network" hidden>Inspyx could not reach the sign-in server. Check your connection and try again.</p>
 <p data-say="server" hidden>The sign-in server refused the request. Try again later.</p>
 </div>
+
+<section class="acct-card" aria-labelledby="acct-signin">
+<h2 id="acct-signin">Sign-in</h2>
+<p class="who">Signed in as <strong data-email></strong></p>
+<form class="acct-password" data-password novalidate>
+<h3>Change your password</h3>
+<label>New password <input type="password" name="password" autocomplete="new-password" minlength="8"></label>
+<label>The same again <input type="password" name="again" autocomplete="new-password"></label>
+<div class="acct-say" role="status">
+<p data-psay="saved" hidden>Saved. Use it the next time you sign in, here or on your phone.</p>
+<p data-psay="short" hidden>Use at least 8 characters.</p>
+<p data-psay="differ" hidden>The two don’t match. Type the same password twice.</p>
+<p data-psay="weak" hidden>Inspyx won’t take that password. Try a longer one, or one you haven’t used before.</p>
+<p data-psay="network" hidden>Inspyx couldn’t be reached. Check your connection and try again.</p>
+<p data-psay="server" hidden>That didn’t go through. Try again in a minute.</p>
+<p data-psay="rejected" hidden>Your sign-in has ended. <a href="/signin">Sign in again</a>, then change it.</p>
+</div>
+<button class="btn" type="submit">Save the new password</button>
+</form>
+<button class="btn quiet" type="button" data-signout>Sign out</button>
+</section>
+
+<section class="acct-card" aria-labelledby="acct-business">
+<h2 id="acct-business">Your business</h2>
+<p class="acct-help">Everything your phone uses, set up here too.</p>
+<ul class="acct-links">
+<li><a href="/profile"><strong>Your company</strong><span>Name, license, logo and signature on your reports</span></a></li>
+<li><a href="/prices"><strong>Prices</strong><span>Your services, add-ons and price changes</span></a></li>
+<li><a href="/agreements"><strong>Agreements</strong><span>What your clients sign</span></a></li>
+<li><a href="/booking"><strong>Booking</strong><span>Your booking page and hours</span></a></li>
+<li><a href="/emails"><strong>Emails</strong><span>The emails and texts Inspyx sends for you</span></a></li>
+<li><a href="/payments"><strong>Payments</strong><span>How your clients pay you</span></a></li>
+</ul>
+</section>
+
+<section class="acct-card" aria-labelledby="acct-plan">
+<h2 id="acct-plan">Your plan and your account</h2>
+<ul class="acct-links">
+<li><a href="/plan"><strong>Your plan</strong><span>What you pay, when, and how to change it</span></a></li>
+</ul>
+<h3>Deleting your account</h3>
+<p class="acct-help">On your phone: More → Account → Delete your account. Your sign-in stops working, your records on Inspyx are removed, and your plan ends: the unused days you’ve paid for are refunded to your card. It can’t be undone.</p>
+</section>
 </main>
 <noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
 

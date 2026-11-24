@@ -16,6 +16,7 @@ const SYNC = '/functions/v1/sync';
 const ME = '11111111-1111-4111-8111-111111111111';
 const HOUR = 3600000, PHONE = 390, WIDE = 1280;
 const kept = () => JSON.stringify({ access: 'test-access-1', renew: 'test-renew-1', ends: Date.now() + HOUR, id: ME, email: 'pat@example.com' });
+const SHOTS = process.env.SHOTS || '';
 let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
 const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
@@ -139,7 +140,7 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
 
   await group('nothing yet', async () => {
     const { page, ctx } = await open(browser, { server: server() });
-    ok('with no agreements, it says what to do, and offers to add one', (await vis(page, '[data-empty]')).join() === 'No agreements yet. Add the one your clients sign before an inspection.' && (await vis(page, '[data-add="agreement"]')).join() === 'Add an agreement');
+    ok('with no agreements, it says what to do, and offers the starter and to add one', (await vis(page, '[data-empty] p')).join() === 'No agreements yet. Start from Inspyx’s starter agreement and make it yours, or write your own.' && (await vis(page, '[data-starter-open]')).join() === 'Start from the starter agreement' && (await vis(page, '[data-add="agreement"]')).join() === 'Add an agreement');
     await ctx.close();
   });
 
@@ -148,7 +149,7 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     const { page, ctx, calls } = await open(browser, { server: s });
     await page.click('[data-add="agreement"]');
     ok('the form opens empty, as New agreement, with no delete and no choosing', (await vis(page, F + ' h2')).join() === 'New agreement' && !(await page.locator(F + ' [data-delete]').isVisible()) && !(await page.locator(F + ' [data-only="choose"]').isVisible()));
-    ok('it says what clients read, the blanks the phone fills, and to have an attorney read it', (await vis(page, F + ' .agr-help')).length === 3 && (await vis(page, F + ' .agr-help'))[1].includes('[Client name] [Property address] [Inspection date] [Fee] [Your name] [Your company] [License number] [Today\'s date]'));
+    ok('it says what clients read, offers the blanks the phone fills as buttons, and to have an attorney read it', (await vis(page, F + ' .agr-help')).length === 3 && (await vis(page, F + ' [data-blank]')).join('|') === 'Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today\'s date' && (await vis(page, F + ' .agr-help'))[2].includes('attorney'));
     const before = calls.length;
     const problem = async () => (await vis(page, F + ' [data-problem]')).join();
     await page.click(F + ' button[type="submit"]');
@@ -339,6 +340,49 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     const b = await wide.page.locator('[data-dialog]').boundingBox();
     ok('on a desk too: the dialog is centred, never in a corner', !!b && b.x > 100 && Math.abs(b.x - (WIDE - b.x - b.width)) <= 1 && b.y >= 8, JSON.stringify(b));
     await wide.ctx.close();
+  });
+
+  await group('the starter, the blanks and the preview (job 7, W14)', async () => {
+    const s = server();
+    s.put(s.row('inspector_profile', { id: 'profile', ownerAccountId: ME, inspectorName: 'Pat Rivera', licenseNumber: '', companyName: 'Rivera Inspections', updatedAt: T, deletedAt: null }));
+    const { page, ctx, calls } = await open(browser, { server: s });
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/52-agreements-empty.png' });
+    await page.click('[data-starter-open]');
+    ok('the starter opens in a new agreement, named, shown as the client reads it', (await page.inputValue(F + ' input[name="name"]')) === 'Home inspection agreement' && (await page.inputValue(F + ' textarea[name="words"]')).startsWith('Home Inspection Agreement') && await page.isVisible(F + ' [data-paper]'));
+    const fills = await page.$$eval(F + ' [data-paper] mark', (ms) => ms.map((m) => m.getAttribute('data-fill') + ':' + m.textContent));
+    ok('his own blanks from his profile, the client\'s as a sample, and a missing one marked', fills.includes('yours:Rivera Inspections') && fills.includes('yours:Pat Rivera') && fills.includes('missing:your license number') && fills.includes('sample:Jordan Smith') && fills.includes('sample:$425.00') && fills.includes('sample:12 Palm Way, Tampa, FL 33609'), JSON.stringify(fills));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/53-agreements-preview.png' });
+    ok('no blank is left as brackets, and it ends with the client\'s signature line', !(await page.textContent(F + ' [data-paper]')).includes('[') && (await vis(page, F + ' .agr-sign')).join() === 'Signed by Jordan Smith');
+    await page.click(F + ' [data-tab="write"]');
+    await page.fill(F + ' textarea[name="words"]', 'Fee: . Thanks.');
+    await page.$eval(F + ' textarea[name="words"]', (t) => t.setSelectionRange(5, 5));
+    await page.click(F + ' [data-blank="[Fee]"]');
+    if (SHOTS) { await page.click(F + ' [data-tab="write"]'); await page.screenshot({ path: SHOTS + '/54-agreements-blanks.png' }); }
+    ok('a blank tapped goes where he is typing', (await page.inputValue(F + ' textarea[name="words"]')) === 'Fee: [Fee]. Thanks.');
+    await page.click(F + ' [data-tab="preview"]');
+    ok('the preview follows what he wrote', (await page.textContent(F + ' [data-paper] p')) === 'Fee: $425.00. Thanks.');
+    page.once('dialog', (d) => d.accept());
+    await page.click(F + ' [data-starter]');
+    ok('the starter over words he typed: asked first, then put in', (await page.inputValue(F + ' textarea[name="words"]')).startsWith('Home Inspection Agreement'));
+    const before = calls.length;
+    await page.click(F + ' button[type="submit"]');
+    ok('saved as his own agreement, the first: clients sign it', await until(async () => (await names(page)).includes('Home inspection agreement')));
+    const sent = pushed(calls.slice(before));
+    const doc = sent.find((r) => r.kind === 'legal_documents');
+    ok('the row is the starter\'s words, blanks and all, and it is the one clients sign', !!doc && doc.data.body.includes('[Client name]') && doc.data.body.includes('Signed by the Client on [Today\'s date].') && sent.some((r) => r.kind === 'legal_default' && r.data.agreementId === doc.id));
+    ok('the profile was only read: nothing of it sent', !sent.some((r) => r.kind === 'inspector_profile'));
+    await ctx.close();
+  });
+
+  await group('the how-to', async () => {
+    const s = server(); seed(s);
+    const { page, ctx } = await open(browser, { server: s });
+    ok('a how-to at the top, three steps', (await vis(page, '.agr-how-step')).join(' | ') === 'Start from the starter agreement, or write your own | Tap a blank where the words change with each inspection | Preview what your client reads and signs');
+    ok('it moves', await page.evaluate(() => document.getAnimations().filter((a) => a.effect && a.effect.target && a.effect.target.closest('.agr-how')).length >= 8));
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    ok('with motion turned down, it stands still on the result', await page.evaluate(() => getComputedStyle(document.querySelector('.agr-how-c')).opacity === '1' && getComputedStyle(document.querySelector('.agr-how-finger')).display === 'none'));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/55-agreements-howto.png' });
+    await ctx.close();
   });
 
   await group('the page says no words', async () => {

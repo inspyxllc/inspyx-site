@@ -1,4 +1,5 @@
-/* The page a signed-in inspector lands on. It says no words of its own: it shows who is signed in and signs them out. */
+/* The page a signed-in inspector lands on. It says no words of its own: it shows who is signed in, changes the
+   password (job 7, W20: auth.js's setPassword, the same as a Google account's first password) and signs out. */
 (function () {
   'use strict';
   var main = document.querySelector('[data-account]');
@@ -21,6 +22,26 @@
     show(s);
     var kind = why && why.kind;
     say(kind === 'network' ? 'network' : kind === 'server' || kind === 'malformed' ? 'server' : '');
+  });
+
+  // A new password: at least 8 characters, typed twice, the server's word final. Nothing of it is kept or shown.
+  var pw = main.querySelector('[data-password]');
+  var pwSay = function (kind) { [].slice.call(pw.querySelectorAll('[data-psay]')).forEach(function (p) { p.hidden = p.getAttribute('data-psay') !== kind; }); };
+  pw.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var a = pw.elements.password.value, b = pw.elements.again.value;
+    if (Array.from(a).length < 8) { pwSay('short'); return; }
+    if (a !== b) { pwSay('differ'); return; }
+    var go = pw.querySelector('button[type="submit"]');
+    go.disabled = true;
+    pwSay('');
+    window.InspyxAuth.setPassword(a).then(function () {
+      pw.reset();
+      pwSay('saved');
+    }, function (why) {
+      var kind = why && why.kind;
+      pwSay(kind === 'weak' || kind === 'network' || kind === 'rejected' ? kind : 'server');
+    }).then(function () { go.disabled = false; });
   });
 
   out.addEventListener('click', function () {
