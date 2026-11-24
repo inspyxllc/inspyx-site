@@ -31,6 +31,8 @@ function rows(o) {
     row('inspection_templates', { id: 'inspector.my-home', name: 'My home template' }),
   ];
   if (!o.noAgreement) out.push(row('legal_default', { id: 'signs', documentId: 'doc-1' }));
+  // A foundation he typed on the phone (not one of the four), with its own fee (Codex on #86, r3).
+  if (o.customFoundation) out.push(row('price_modifiers', { id: 'm3', serviceId: 'home', basis: 'foundation', mode: 'ranges', tiersJson: JSON.stringify({ tiers: [{ values: ['Slab on grade', 'basement'], fee_cents: 5000, minutes: 30 }] }), position: 1 }));
   if (o.email !== undefined) out.push(row('automation_settings', { id: 'automation', messages: { booking_confirmed: { on: o.email, when: 'now', to: ['client', 'buyer_agent'] } } }));
   return out;
 }
@@ -166,6 +168,17 @@ async function fillBasics(page) {
     const made = asks.filter((a) => !a.check);
     ok('the next Book books what he saw: the condo', made.length === 1 && made[0].serviceIds[0] === 'condo', JSON.stringify(made.map((a) => a.serviceIds)));
     ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
+  await group('a foundation he typed on the phone can be picked, and is what the price is asked for (Codex on #86, r3)', async () => {
+    const { page, ctx, asks } = await open(browser, { customFoundation: true });
+    await until(async () => (await page.$('[data-ask="foundation"]')) !== null);
+    const options = await page.evaluate(() => [...document.querySelectorAll('[data-ask="foundation"] option')].map((o) => o.value));
+    ok('the four, then his own once (letter case aside, "basement" is the Basement already there)', JSON.stringify(options) === JSON.stringify(['', 'Slab', 'Crawlspace', 'Basement', 'Pier and beam', 'Slab on grade']), JSON.stringify(options));
+    await page.selectOption('[data-ask="foundation"]', 'Slab on grade');
+    await page.dispatchEvent('[data-ask="foundation"]', 'change');
+    ok('and the price is asked with it', await until(() => asks.some((a) => a.check && a.facts && a.facts.foundation === 'Slab on grade')));
     await ctx.close();
   });
 

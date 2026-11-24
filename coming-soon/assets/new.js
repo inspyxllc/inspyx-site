@@ -166,7 +166,21 @@
       var lab = document.createElement('label'), el;
       if (k === 'foundation') {
         el = document.createElement('select');
-        [['', words('foundation-pick')], ['Slab'], ['Crawlspace'], ['Basement'], ['Pier and beam']].forEach(function (o) {
+        var choices = [['', words('foundation-pick')], ['Slab'], ['Crawlspace'], ['Basement'], ['Pier and beam']];
+        // And any other foundation the chosen services' price changes hold (typed on the phone or a booking page), so
+        // its fee and time can be picked here too (Codex on #86, r3: money).
+        var seen = choices.map(function (c) { return c[0].trim().toLowerCase(); });
+        standing('price_modifiers').filter(function (m) { return ids.indexOf(m.serviceId) >= 0 && m.basis === 'foundation'; }).forEach(function (m) {
+          var json = null;
+          try { json = JSON.parse(m.tiersJson); } catch (e) { json = null; }
+          (json && Array.isArray(json.tiers) ? json.tiers : []).forEach(function (t) {
+            (t && Array.isArray(t.values) ? t.values : []).forEach(function (v) {
+              var name = typeof v === 'string' ? v.trim() : '';
+              if (name && seen.indexOf(name.toLowerCase()) < 0) { seen.push(name.toLowerCase()); choices.push([name, name]); }
+            });
+          });
+        });
+        choices.forEach(function (o) {
           var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1] || words('f-' + o[0]); el.appendChild(op);
         });
         lab.appendChild(document.createTextNode(words('foundation') + ' '));
