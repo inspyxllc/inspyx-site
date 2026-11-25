@@ -235,6 +235,8 @@
             var line = finding.querySelector('[data-photos]');
             line.hidden = photos === 0;
             line.querySelector('[data-v="photos"]').textContent = String(photos);
+            line.querySelector('[data-v="photos-word"]').textContent = word(photos === 1 ? 'photo-one' : 'photo-many');
+            wireAI(finding, f, i, s);
             fol.appendChild(finding);
           });
           ol.appendChild(item);
@@ -257,6 +259,7 @@
     renderFlags(id);
     renderAgreement(id);
     chapterChoices(id);
+    renderSearch(id);
     var started = val('inspection', id, 'inspection_at'), line = $('[data-started]');
     line.hidden = !(typeof started === 'number' && isFinite(started));
     if (!line.hidden) { var t = line.querySelector('[data-v="started"]'); t.textContent = DAY.format(new Date(started)) + ', ' + CLOCK.format(new Date(started)); t.setAttribute('datetime', new Date(started).toISOString()); }
@@ -360,6 +363,8 @@
      fingerprint or "updated since sent". The server deletes a flag with its item or inspection. ---- */
   var FLAG = 'item_flags', ITEM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
   var flagOnly = false, flagTrouble = false;
+  /* While a flag's changes are on the wire: how many, and the copy to go back to (the last one the server has). */
+  var flagWire = {};
   function flagged(id) {
     var r = biz[FLAG + '/' + id];
     return !!(r && r.deleted_at == null && r.data && r.data.deletedAt == null);
@@ -377,11 +382,16 @@
     var data = { id: id, ownerAccountId: who.id, inspectionId: inspection,
       flaggedAt: on ? at : (before && before.data && before.data.flaggedAt) || at, updatedAt: at, deletedAt: on ? null : at };
     var row = { kind: FLAG, id: id, updated_at: at, deleted_at: data.deletedAt, data: data };
+    var wire = flagWire[k] = flagWire[k] || { n: 0, sure: before };
+    wire.n++;
     biz[k] = row;
     flagTrouble = false;
     renderOne();
+    var settled = function () { wire.n--; if (wire.n === 0 && flagWire[k] === wire) delete flagWire[k]; };
+    // Back to what the server has, never to a tap before this one that it didn't keep either.
     var undo = function () {
-      if (biz[k] === row) { if (before) biz[k] = before; else delete biz[k]; }
+      settled();
+      if (biz[k] === row) { if (wire.sure) biz[k] = wire.sure; else delete biz[k]; }
       flagTrouble = true;
       renderOne();
     };
@@ -393,7 +403,11 @@
         !(r.json.applied || []).some(function (a) { return a.applied === false && mine(a); });
       r.json.rows.forEach(takeBiz);
       if (r.json.next) bizPoint = r.json.next;
-      if (!kept) undo(); else renderOne();
+      if (!kept) undo(); else {
+        if (!wire.sure || row.updated_at >= wire.sure.updated_at) wire.sure = row;
+        settled();
+        renderOne();
+      }
       if (r.json.more) pullBusiness();
     }, undo);
   }
@@ -426,7 +440,6 @@
       sec.hidden = flagOnly && !all('[data-flag-item]', sec).some(function (li) { return !li.hidden; });
     });
   }
-  var findingsUnder = function (i) { return parts('item', function (f) { return val('item', f, 'parent_item_id') === i; }); };
   function flagButton(el, inspection, id) {
     if (!el) return;
     if (!ITEM_ID.test(id)) { el.hidden = true; return; }
@@ -562,6 +575,77 @@
     });
   });
 
+  /* ---- Edit with AI (2026-11-24, his decision after the Spectora walk; the relay's contract EDIT_WITH_AI.md v1):
+     Spex's version of one finding's details, shown beside the inspector's with Keep or Discard. Nothing changes
+     without Keep, and Keep only fills the Details box, which then saves as typing does. The button shows only when the
+     relay says this inspector may use it ("edit": true); asking is a hello alone, never billed. The sign-in stays in
+     auth.js (InspyxAuth.editFinding). ---- */
+  var RELAY = 'wss://chat---spex-relay-yu5bdad2fa-uc.a.run.app/';
+  var AI_MAX_TEXT = 4000;   // the contract's max_text_chars
+  var aiOpen = null;   // null: not known yet; true or false once the relay answered
+  function checkAI() {
+    if (aiOpen !== null || typeof auth.editFinding !== 'function') return;
+    aiOpen = false;
+    auth.editFinding(null, RELAY).then(function (a) {
+      aiOpen = !!(a && a.admitted);
+      all('[data-ai]').forEach(function (el) { el.hidden = !aiOpen; });
+    }, function () { aiOpen = null; });   // unreachable: asked again on the next visit
+  }
+  var cut = function (v, n) { v = Fill ? Fill.dartTrim(text(v)) : text(v).trim(); return v.length > n ? v.slice(0, n) : v; };
+  function wireAI(el, finding, item, stop) {
+    var box = el.querySelector('[data-ai]'), details = el.querySelector('[data-details]');
+    var q = function (sel) { return box.querySelector(sel); };
+    box.hidden = aiOpen !== true;
+    var shown = function (which) {
+      q('[data-ai-actions]').hidden = which !== 'actions';
+      q('[data-ai-working]').hidden = which !== 'working';
+      q('[data-ai-version]').hidden = which !== 'version';
+      q('[data-ai-error]').hidden = which !== 'error';
+      q('[data-ai-open]').setAttribute('aria-expanded', which === 'actions' ? 'true' : 'false');
+      q('[data-ai-open]').disabled = which === 'working';
+      details.disabled = which === 'working';   // no half-applied text while Spex works
+    };
+    q('[data-ai-open]').addEventListener('click', function () { shown(q('[data-ai-actions]').hidden ? 'actions' : 'none'); });
+    all('[data-ai-action]', box).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var title = el.querySelector('[data-field="finding_title"]');
+        // The details are never cut: Keep replaces them whole, so a cut would delete what was past the limit
+        // (Codex on #90). Over the relay's limit, Spex isn't asked. The title, item and stop are only context.
+        var words = Fill ? Fill.dartTrim(details.value) : details.value.trim();
+        if (words.length > AI_MAX_TEXT) {
+          q('[data-ai-error]').textContent = word('ai-too-long');
+          return shown('error');
+        }
+        var request = { action: b.getAttribute('data-ai-action'),
+          title: cut(title ? title.value : val('item', finding, 'finding_title'), 200), text: words };
+        var itemName = cut(val('item', item, 'label'), 100), stopName = cut(val('section', stop, 'name'), 100);
+        if (itemName) request.item = itemName;
+        if (stopName) request.stop = stopName;
+        var asked = details.value;
+        shown('working');
+        auth.editFinding(request, RELAY).then(function (a) {
+          if (a && typeof a.text === 'string') {
+            if (details.value !== asked) { shown('none'); return; }   // the details changed meanwhile: nothing to offer
+            q('[data-ai-text]').textContent = a.text;
+            box.setAttribute('data-for', asked);
+            return shown('version');
+          }
+          q('[data-ai-error]').textContent = a && typeof a.error === 'string' && a.error ? a.error : word('ai-unreachable');
+          shown('error');
+        }, function () { q('[data-ai-error]').textContent = word('ai-unreachable'); shown('error'); });
+      });
+    });
+    q('[data-ai-keep]').addEventListener('click', function () {
+      // Only over the words Spex was given: details changed since are never overwritten.
+      if (details.value !== box.getAttribute('data-for')) { shown('none'); return; }
+      details.value = q('[data-ai-text]').textContent;
+      shown('none');
+      details.dispatchEvent(new Event('input', { bubbles: true }));
+      details.dispatchEvent(new Event('blur'));
+      details.focus();
+    });
+    q('[data-ai-discard]').addEventListener('click', function () { shown('none'); });
+  }
   /* ---- the report's structure (2026-11-24, his list item 12): add, move and delete stops, items and findings, as
      the phone does. Each new part is named as the phone names one (a version-4 id) and made with the fields the phone
      makes it with; a delete is final, here and on the phone, so it asks first and says what goes. ---- */
@@ -699,6 +783,7 @@
       e.preventDefault();
       var box = form.querySelector('input[name="name"]'), name = box.value.trim();
       if (!name) { box.focus(); return; }
+      flagOnly = false;   // what was just added is never hidden by the flag filter
       onName(name);
       box.value = '';
       render();
@@ -719,12 +804,102 @@
     sel.value = keep;
   }
 
+  /* ---- whole-report search (2026-11-24, his list item 12, piece B): every stop, item, finding and note of the
+     inspection on show, searched here in the browser (nothing is sent); case and accents set aside. A match names
+     where it is and goes straight to its box. ---- */
+  var SEARCH_SHOWN = 50;
+  var SEARCHED = { section: ['name'], item: ['label', 'note', 'ni_note'],
+    finding: ['finding_title', 'location', 'note', 'finding_implication', 'finding_recommendation', 'finding_recommended_trade'] };
+  var fold = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
+  /* Where q is in v, in v's own letters: folding can make a letter shorter (an accent on its own) or longer, so each
+     folded letter remembers the one it came from. */
+  function findIn(v, q) {
+    var folded = '', from = [], to = [], i = 0;
+    Array.from(v).forEach(function (ch) {
+      var f = fold(ch);
+      if (f === '' && to.length) to[to.length - 1] = i + ch.length;   // a lone accent belongs to the letter before it
+      for (var n = 0; n < f.length; n++) { from.push(i); to.push(i + ch.length); }
+      folded += f; i += ch.length;
+    });
+    var at = folded.indexOf(q);
+    return at < 0 ? null : { at: from[at], len: to[at + q.length - 1] - from[at] };
+  }
+  function searchMatches(inspection, query) {
+    var q = fold(query).trim();
+    if (q.length < 2) return [];
+    var out = [];
+    stopsOf(inspection).forEach(function (s) {
+      var stopName = text(val('section', s, 'name')).trim() || word('unnamed');
+      var look = function (entity, kind, id, where) {
+        SEARCHED[kind].forEach(function (field) {
+          var v = text(val(entity, id, field));
+          var m = findIn(v, q);
+          if (m) out.push({ key: key(entity, id, field), field: field, where: where, value: v, at: m.at, len: m.len });
+        });
+      };
+      look('section', 'section', s, [stopName]);
+      topItemsOf(s).forEach(function (i) {
+        var itemName = text(val('item', i, 'label')).trim() || word('unnamed');
+        look('item', 'item', i, [stopName, itemName]);
+        findingsUnder(i).forEach(function (f) {
+          look('item', 'finding', f, [stopName, itemName, text(val('item', f, 'finding_title')).trim() || word('unnamed')]);
+        });
+      });
+    });
+    return out;
+  }
+  function snippet(m) {
+    // The words around the match, in the original's own letters (findIn).
+    var from = Math.max(0, m.at - 40), to = Math.min(m.value.length, m.at + m.len + 60);
+    var frag = document.createDocumentFragment();
+    if (from > 0) frag.appendChild(document.createTextNode('…'));
+    frag.appendChild(document.createTextNode(m.value.slice(from, m.at)));
+    var mark = document.createElement('mark'); mark.textContent = m.value.slice(m.at, m.at + m.len); frag.appendChild(mark);
+    frag.appendChild(document.createTextNode(m.value.slice(m.at + m.len, to)));
+    if (to < m.value.length) frag.appendChild(document.createTextNode('…'));
+    return frag;
+  }
+  function goTo(k) {
+    var box = main.querySelector('[data-key="' + k + '"]');
+    if (!box) return;
+    if (flagOnly && box.closest('[hidden]')) { flagOnly = false; renderOne(); }   // a match is never behind the flag filter
+    box.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    box.focus({ preventScroll: true });
+    box.classList.remove('is-found'); void box.offsetWidth; box.classList.add('is-found');
+  }
+  function renderSearch(inspection) {
+    var box = $('[data-search]'), list = $('[data-search-results]'), count = $('[data-search-count]');
+    var q = box.value, found = searchMatches(inspection, q);
+    $('[data-search-how]').hidden = q.trim().length >= 2;
+    var shape = JSON.stringify([inspection, q, found.map(function (m) { return [m.key, m.value, m.where]; })]);
+    if (list.getAttribute('data-shape') === shape) return;
+    list.setAttribute('data-shape', shape);
+    list.textContent = '';
+    if (q.trim().length < 2) { count.textContent = ''; return; }
+    count.textContent = found.length === 0 ? word('search-none')
+      : (found.length === 1 ? word('search-one') : word('search-many').replace('{n}', found.length)) +
+        (found.length > SEARCH_SHOWN ? ' ' + word('search-more').replace('{n}', SEARCH_SHOWN) : '');
+    found.slice(0, SEARCH_SHOWN).forEach(function (m) {
+      var li = document.createElement('li');
+      var a = document.createElement('button');
+      a.type = 'button'; a.className = 'insp-search-hit'; a.setAttribute('data-search-go', m.key);
+      var where = document.createElement('span'); where.className = 'insp-search-where';
+      where.textContent = m.where.join(' › ') + ' · ' + word('f-' + m.field);
+      var what = document.createElement('span'); what.className = 'insp-search-what'; what.appendChild(snippet(m));
+      a.appendChild(where); a.appendChild(what);
+      a.addEventListener('click', function () { goTo(m.key); });
+      li.appendChild(a); list.appendChild(li);
+    });
+  }
+
   function render() { renderList(); renderOne(); }
 
   var listening = false;
   function showLive(which) { show('data-live', which); }
 
   window.addEventListener('hashchange', function () { shape = null; flagOnly = false; flagTrouble = false; render(); });
+  var searching = null;
+  $('[data-search]').addEventListener('input', function () { clearTimeout(searching); searching = setTimeout(function () { var id = chosen(); if (id) renderSearch(id); }, 120); });
   addForm($('[data-addstop]'), function (name) { var id = chosen(); if (id) addStop(id, name, $('[data-addstop-chapter]').value || null); });
   $('[data-flagfilter]').addEventListener('click', function () { flagOnly = !flagOnly; renderOne(); });
   var finding = null;
@@ -744,5 +919,6 @@
   });
   sync();
   pullBusiness();
+  checkAI();
   pullPublished();
 })();

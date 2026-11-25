@@ -23,6 +23,7 @@ const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + 
 const INSP = '6f1c2a3b-0000-4000-8000-000000000001', SEC = '6f1c2a3b-0000-4000-8000-0000000000b1';
 const ITEM = '6f1c2a3b-0000-4000-8000-0000000000a1', FIND = '6f1c2a3b-0000-4000-8000-0000000000a2';
 const OTHER = '6f1c2a3b-0000-4000-8000-000000000002';
+const PROTO = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'chat_protocol_edit.json'), 'utf8'));
 
 /* The server, with schema.sql's rules. */
 function server() {
@@ -61,7 +62,7 @@ async function open(browser, o) {
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); if (v === null) localStorage.removeItem('inspyx.signin'); else localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, store);
   const page = await ctx.newPage();
   page.setDefaultTimeout(8000);
-  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [];
+  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [], relay = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
   await page.routeWebSocket(/realtime\/v1\/websocket/, (ws) => {
@@ -72,6 +73,21 @@ async function open(browser, o) {
       if (m.event === 'phx_join') {
         me.joins.push(m);
         ws.send(JSON.stringify({ topic: m.topic, event: 'phx_reply', ref: m.ref, payload: { status: o.refuseJoin ? 'error' : 'ok', response: o.refuseJoin === 'auth' ? { reason: 'Unauthorized: token has expired' } : {} } }));
+      }
+    });
+  });
+  // Spex's relay (Edit with AI): a stand-in. A hello is denied unless o.edit says otherwise; o.edit(request) answers
+  // an edit request with { text } or { error, code } (or null: no answer). Every message is kept in relay[].
+  await page.routeWebSocket(/spex-relay/, (ws) => {
+    ws.onMessage((data) => {
+      const m = JSON.parse(String(data)); relay.push(m);
+      if (m.hello) {
+        ws.send(JSON.stringify(o.edit ? Object.assign({}, PROTO.admitted, { relay: Object.assign({}, PROTO.admitted.relay, { edit: o.editOff ? false : true }) }) : PROTO.denied));
+        return;
+      }
+      if (m.chat && m.chat.edit && o.edit) {
+        const answer = o.edit(m.chat.edit);
+        if (answer) setTimeout(() => ws.send(JSON.stringify({ relay: { status: 'chat', id: m.chat.id, result: answer.text !== undefined ? { edit: { text: answer.text } } : answer } })), o.editDelay || 50);
       }
     });
   });
@@ -109,7 +125,7 @@ async function open(browser, o) {
   const res = await page.goto(url + 'inspections' + (o.hash || ''), { waitUntil: 'load' });
   await page.waitForTimeout(500);
   const ping = () => sockets[sockets.length - 1].ws.send(JSON.stringify({ topic: 'realtime:insp:' + ME, event: 'broadcast', ref: null, payload: { type: 'broadcast', event: 'changed', payload: { seq: s.seq } } }));
-  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls };
+  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls, relay };
 }
 
 const vis = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.hidden && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel);
@@ -135,7 +151,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const c = calls[0] || { headers: {}, body: {} };
       ok(label + ': opens with no errors, asks only the sync function, as the signed-in inspector, from the start', errs.length === 0 && away.length === 0 && c.headers.authorization === 'Bearer test-access-1' && /^web-[0-9a-f]{18}$/.test(c.body.device) && c.body.after === null, errs.concat(away).join(' | '));
       const csp = res.headers()['content-security-policy'] || '';
-      ok(label + ': served with the signed-in pages\' rule, plus the live socket to Inspyx\'s server and nothing else', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
+      ok(label + ': served with the signed-in pages\' rule, plus the live socket to Inspyx\'s server and Spex\'s relay socket (Edit with AI), nothing else', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/chat---spex-relay-yu5bdad2fa-uc\.a\.run\.app;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
       const list = await vis(page, '[data-list="items"] li');
       ok(label + ': lists both inspections, the newest first, with their addresses', list.length === 2 && /^9 Elm Ave/.test(list[0]) && /^12 Oak St.*Miami/.test(list[1]), JSON.stringify(list));
       ok(label + ': shows the inspection\'s title and address in their boxes', await boxValue(page, 'inspection', INSP, 'title') === '12 Oak St' && await boxValue(page, 'inspection', INSP, 'address') === '12 Oak St, Miami');
@@ -143,7 +159,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
         await boxValue(page, 'section', SEC, 'name') === 'Roof' && await boxValue(page, 'item', ITEM, 'label') === 'Gutters' &&
         await boxValue(page, 'item', ITEM, 'note') === 'Loose at the corner' && await boxValue(page, 'item', ITEM, 'status') === 'inspected_deficiency' &&
         await boxValue(page, 'item', FIND, 'finding_title') === 'Gutter pulling away' && await boxValue(page, 'item', FIND, 'severity') === 'MD');
-      ok(label + ': counts the finding\'s photos on the phone', (await vis(page, '[data-photos]')).join() === '1 photos on your phone');
+      ok(label + ': counts the finding\'s photos on the phone, one photo in the singular', (await vis(page, '[data-photos]')).join() === '1 photo on your phone');
       ok(label + ': joins its own private topic with the sign-in, and says it is live',
         sockets.length === 1 && sockets[0].joins[0] && sockets[0].joins[0].topic === 'realtime:insp:' + ME && sockets[0].joins[0].payload.access_token === 'test-access-1' && sockets[0].joins[0].payload.config.private === true &&
         (await vis(page, '[data-live]')).join().startsWith('Live'), JSON.stringify(sockets.map((x) => x.joins.map((j) => j.topic))));
@@ -255,6 +271,69 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
   });
 
   for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('Edit with AI, ' + label, async () => {
+      const s = server(); seed(s);
+      // The app example's own finding (finding_edit_example.dart): Spex's version keeps every fact, adds none.
+      // Written after the seed (a later time: the server keeps the first of two at the same moment).
+      const later = (entity, id, field, value) => s.push('phone-aaaaaaaaaaaaaaaaaa', { inspection: INSP, entity, id, field, value, at: Date.now() + 1000 });
+      later('section', SEC, 'name', 'Kitchen'); later('item', ITEM, 'label', 'Kitchen outlets');
+      later('item', FIND, 'finding_title', 'Missing GFCI protection');
+      s.phone('item', FIND, 'note', 'outlet by kitchen sink not gfci protected');
+      const ROUGH = 'outlet by kitchen sink not gfci protected';
+      let answer = { text: 'The electrical outlet by the kitchen sink does not have ground fault circuit interrupter (GFCI) protection.' };
+      const asked = [];
+      const { page, ctx, errs, away, relay, calls } = await open(browser, { server: s, w, hash: '#' + INSP, edit: (r) => { asked.push(r); return answer; }, editDelay: 300 });
+      const k = '[data-key="item/' + FIND + '.note"]';
+      const finding = page.locator('.insp-finding').first();
+      ok(label + ': the finding shows its details; Edit with AI is offered once the relay says so', await until(async () => (await finding.locator('[data-ai-open]').isVisible())) && await boxValue(page, 'item', FIND, 'note') === ROUGH, errs.concat(away).join(' | '));
+      const hello = relay.find((m) => m.hello) || {};
+      ok(label + ': the hello is Spex Chat\'s, signed in as the inspector', !!hello.hello && hello.hello.mode === 'chat' && hello.hello.access_token === 'test-access-1' && hello.hello.client === 'inspyx-web');
+      const shotAI = async (name) => { if (process.env.SHOTS) { await page.waitForTimeout(500); await finding.screenshot({ path: require('path').join(process.env.SHOTS, 'ai-' + label + '-' + name + '.png') }); } };
+      await finding.locator('[data-ai-open]').click();
+      await shotAI('1-actions');
+      ok(label + ': it opens the four actions, with the how-to', same(await finding.locator('[data-ai-action]').allTextContents(), ['Make it clearer', 'Make it shorter', 'Add a recommendation', 'Fix grammar']) && await finding.locator('.ai-how').isVisible());
+      await finding.locator('[data-ai-action="recommend"]').click();
+      ok(label + ': while Spex works, the details can\'t be edited', await page.locator(k).isDisabled() && await finding.locator('[data-ai-working]').isVisible());
+      await until(async () => await finding.locator('[data-ai-version]').isVisible());
+      const req = asked[0] || {};
+      ok(label + ': the request is the contract\'s: the action, the title, the details, the item and the stop',
+        same(Object.keys(req).sort(), Object.keys(PROTO.edit_request.chat.edit).sort()) && req.action === 'recommend' && req.title === 'Missing GFCI protection' && req.text === ROUGH && req.item === 'Kitchen outlets' && req.stop === 'Kitchen', JSON.stringify(req));
+      await shotAI('2-version');
+      ok(label + ': Spex\'s version shows beside the inspector\'s; nothing changed yet',
+        (await finding.locator('[data-ai-text]').textContent()) === answer.text && await page.locator(k).inputValue() === ROUGH && s.value('item', FIND, 'note') === ROUGH && !(await page.locator(k).isDisabled()));
+      await finding.locator('[data-ai-discard]').click();
+      await page.waitForTimeout(900);
+      ok(label + ': Discard changes nothing', await page.locator(k).inputValue() === ROUGH && s.value('item', FIND, 'note') === ROUGH && !(await finding.locator('[data-ai-version]').isVisible()));
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="clearer"]').click();
+      await until(async () => await finding.locator('[data-ai-version]').isVisible());
+      await finding.locator('[data-ai-keep]').click();
+      ok(label + ': Keep puts Spex\'s version in Details, and it saves as typing does', await page.locator(k).inputValue() === answer.text &&
+        await until(async () => s.value('item', FIND, 'note') === answer.text), String(s.value('item', FIND, 'note')).slice(0, 60));
+      await shotAI('3-kept');
+      const kept = answer.text;
+      answer = PROTO.edit_refused.relay.result;
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="shorter"]').click();
+      ok(label + ': a refusal shows its sentence as given; the details untouched', await until(async () => (await finding.locator('[data-ai-error]').textContent()) === answer.error) && await page.locator(k).inputValue() === kept);
+      await shotAI('4-refused');
+      // Typed over while Spex worked: its version is never offered over the new words.
+      answer = { text: 'Something else.' };
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="grammar"]').click();
+      await page.waitForTimeout(80);
+      await page.evaluate((sel) => { const t = document.querySelector(sel); t.disabled = false; t.value = 'typed meanwhile'; }, k);
+      await page.waitForTimeout(600);
+      ok(label + ': details changed while Spex worked: its version isn\'t offered', !(await finding.locator('[data-ai-version]').isVisible()) && await page.locator(k).inputValue() === 'typed meanwhile');
+      // Over the relay's limit: never cut and sent (Keep would delete the rest; Codex on #90): Spex isn't asked.
+      const long = 'x'.repeat(PROTO.edit.max_text_chars) + ' the last observation';
+      await page.evaluate(([sel, v]) => { const t = document.querySelector(sel); t.disabled = false; t.value = v; }, [k, long]);
+      const before = asked.length;
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="grammar"]').click();
+      await page.waitForTimeout(400);
+      ok(label + ': details over the limit: Spex isn\'t asked, it says so, the details are whole', asked.length === before &&
+        /longer than Spex can edit/.test(await finding.locator('[data-ai-error]').textContent()) && await page.locator(k).inputValue() === long);
+      ok(label + ': no errors, nothing else leaves the site', errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
+      ok(label + ': nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      await ctx.close();
+    });
     await group('the report\'s structure, ' + label, async () => {
       const s = server(); seed(s);
       s.phone('section', SEC, 'report_section_id', 'C1');
@@ -327,6 +406,16 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     });
   }
 
+  await group('Edit with AI: no button when the relay denies, or has no "edit"', async () => {
+    for (const o of [{}, { edit: () => null, editOff: true }]) {
+      const s = server(); seed(s);
+      const { page, ctx, relay } = await open(browser, Object.assign({ server: s, hash: '#' + INSP }, o));
+      await until(async () => relay.some((m) => m.hello));
+      await page.waitForTimeout(300);
+      ok('no button: ' + (o.editOff ? 'a relay without edit' : 'a denial'), (await page.locator('[data-ai-open]').evaluateAll((els) => els.filter((e) => e.offsetParent !== null).length)) === 0 && !relay.some((m) => m.chat));
+      await ctx.close();
+    }
+  });
   await group('the report\'s structure: a move among items that share a place keeps the others where they are (Codex on #92)', async () => {
     const s = server(); seed(s);
     // Three items at the same position (made at once on two devices), shown in id order.
@@ -357,7 +446,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const skipped = [], applied = [];
       for (const r of b.push || []) {
         pushed.push(r);
-        if (refuse || r.kind !== 'item_flags' || problem(r.data)) { skipped.push({ kind: r.kind, id: r.id, reason: 'flag:shape' }); continue; }
+        if ((typeof refuse === 'function' ? refuse(r) : refuse) || r.kind !== 'item_flags' || problem(r.data)) { skipped.push({ kind: r.kind, id: r.id, reason: 'flag:shape' }); continue; }
         const h = held.get(r.id);
         if (h && h.row.updated_at >= r.updated_at) { applied.push({ kind: r.kind, id: r.id, applied: false }); continue; }
         held.set(r.id, { row: r, seq: ++seq }); applied.push({ kind: r.kind, id: r.id, applied: true });
@@ -427,15 +516,96 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await until(async () => f.pushed.length === 4);
       ok(label + ': nothing flagged: the filter lets go and every item shows', await until(async () => (await filter.getAttribute('aria-pressed')) === 'false' && (await shown()).length === 3));
 
+      // The filter never hides what was asked for: a search match, or what was just added.
+      const back = f.pushed.length;
+      await flagOf(ITEM).click(); await until(async () => f.pushed.length === back + 1);
+      await filter.click();
+      await until(async () => (await filter.getAttribute('aria-pressed')) === 'true');
+      await page.locator('[data-search]').fill('windows');
+      await until(async () => (await page.locator('[data-search-go]').count()) > 0);
+      await page.locator('[data-search-go]').first().click();
+      ok(label + ': a search match behind the filter is shown, in its box', await until(async () => (await filter.getAttribute('aria-pressed')) === 'false' &&
+        await page.evaluate(() => document.activeElement && document.activeElement.value === 'Windows')));
+      await page.locator('[data-search]').fill('');
+      await filter.click();
+      await page.locator('[data-addstop] input[name="name"]').fill('Attic');
+      await page.locator('[data-addstop] button[type="submit"]').click();
+      ok(label + ': a stop added under the filter is shown', await until(async () => (await filter.getAttribute('aria-pressed')) === 'false' &&
+        await page.locator('.insp-stop').last().isVisible()));
+      await flagOf(ITEM).click(); await until(async () => f.pushed.length === back + 2);
       // Its how-to.
       ok(label + ': its how-to, in three steps', await page.locator('.fl-how').isVisible() && (await page.locator('.fl-how .st-how-step').count()) === 3);
-      if (process.env.SHOTS) { await flagOf(ITEM).click(); await until(async () => f.pushed.length === 5); await page.waitForTimeout(200);
+      if (process.env.SHOTS) { await flagOf(ITEM).click(); await until(async () => f.pushed.length === back + 3); await page.waitForTimeout(200);
         await page.locator('.insp-one').screenshot({ path: require('path').join(process.env.SHOTS, 'flag-' + label + '.png') }); }
       ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
       await ctx.close();
     });
   }
+
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('whole-report search, ' + label, async () => {
+      const s = server(); seed(s);
+      s.phone('item', FIND, 'finding_implication', 'Water can get behind the fascia and rot the façade.');
+      const { page, ctx, errs, away, calls } = await open(browser, { server: s, w, hash: '#' + INSP });
+      await page.waitForSelector('[data-search]');
+      ok(label + ': its how-to shows until two letters are typed', await page.locator('[data-search-how]').isVisible() && (await page.locator('.se-how-step').count()) === 3);
+      const sent = calls.length;
+      await page.locator('[data-search]').fill('gutter');
+      const hits = async () => page.locator('[data-search-go]').evaluateAll((els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+      // A finding's name is searched once, as its title (its label holds the same words).
+      ok(label + ': every stop, item and finding is searched; each match names where it is and which box', await until(async () => (await hits()).length === 2) &&
+        JSON.stringify(await hits()) === JSON.stringify(['Roof › Gutters · ItemGutters', 'Roof › Gutters › Gutter pulling away · FindingGutter pulling away']),
+        JSON.stringify(await hits()));
+      ok(label + ': the count says how many', (await page.locator('[data-search-count]').textContent()) === '2 matches');
+      ok(label + ': the match is marked', (await page.locator('[data-search-results] mark').first().textContent()) === 'Gutter');
+      await page.locator('[data-search]').fill('FACADE');
+      ok(label + ': case and accents set aside; the words around it shown', await until(async () => (await hits()).length === 1) &&
+        /What it means/.test((await hits())[0]) && (await page.locator('[data-search-results] mark').textContent()) === 'façade');
+      await page.locator('[data-search-go]').first().click();
+      const k = '[data-key="item/' + FIND + '.finding_implication"]';
+      ok(label + ': a match goes straight to its box', await until(async () => await page.evaluate((sel) => document.activeElement === document.querySelector(sel), k)) &&
+        await page.locator(k).evaluate((e) => e.classList.contains('is-found')));
+      // A phone can keep an accent as a letter of its own (fac + cedilla + ade): the mark is still the word itself.
+      s.phone('item', ITEM, 'note', 'Cafe\u0301 side: re\u0301sume\u0301 boards \u0130n place, soffit loose', 99);
+      await page.reload(); await page.waitForSelector('[data-search]');
+      await page.locator('[data-search]').fill('soffit');
+      ok(label + ': letters kept as two never shift the mark', await until(async () => (await page.locator('[data-search-results] mark').count()) > 0 &&
+        (await page.locator('[data-search-results] mark').allTextContents()).includes('soffit')), (await page.locator('[data-search-results] mark').allTextContents()).join());
+      await page.locator('[data-search]').fill('resume');
+      ok(label + ': and a word with them is marked whole', await until(async () => (await page.locator('[data-search-results] mark').allTextContents()).map((t) => t.normalize('NFC')).includes('r\u00e9sum\u00e9')),
+        (await page.locator('[data-search-results] mark').allTextContents()).join());
+      await page.locator('[data-search]').fill('chimney');
+      ok(label + ': nothing matches: it says so', await until(async () => (await page.locator('[data-search-count]').textContent()) === 'Nothing in this report matches.'));
+      ok(label + ': nothing was sent for the search', calls.slice(sent).every((c) => (c.body.push || []).length === 0));
+      await page.locator('[data-search]').fill('soffit');
+      await until(async () => (await page.locator('.insp-search-where').count()) > 0);
+      const named = async () => (await page.locator('.insp-search-where').first().textContent());
+      const wasNamed = await named();
+      await page.locator('.insp-stop [data-key$="/name"], .insp-stop [data-field="name"]').first().fill('Renamed stop');
+      ok(label + ': a renamed stop shows its new name in the results (Codex on #93)', await until(async () => /^Renamed stop/.test(await named())), wasNamed + ' -> ' + await named());
+      if (process.env.SHOTS) { await page.locator('[data-search]').fill('gutter'); await page.waitForTimeout(400); await page.locator('[data-search-box]').screenshot({ path: require('path').join(process.env.SHOTS, 'search-' + label + '.png') }); }
+      ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
+      await ctx.close();
+    });
+  }
+
+  await group('findings keep their own order in what lists them', async () => {
+    const s = server(); seed(s);
+    // Made in one order (their ids), placed in the other (their positions).
+    ['6f1c2a3b-0000-4000-8000-0000000000e1', '6f1c2a3b-0000-4000-8000-0000000000e2'].forEach((id, n) => {
+      s.phone('item', id, 'section_id', SEC); s.phone('item', id, 'parent_item_id', ITEM); s.phone('item', id, 'label', 'Zinc ' + (n + 1));
+      s.phone('item', id, 'finding_title', 'Zinc ' + (n + 1)); s.phone('item', id, 'position', 20 - n);
+    });
+    const { page, ctx } = await open(browser, { server: s, hash: '#' + INSP });
+    await page.waitForSelector('[data-search]');
+    await page.locator('[data-search]').fill('zinc');
+    await until(async () => (await page.locator('[data-search-results] mark').count()) === 2);
+    const order = await page.locator('.insp-search-what').allTextContents();
+    ok('the search lists findings in their order', order.map((t) => t.trim()).join() === 'Zinc 2,Zinc 1', order.join());
+    await ctx.close();
+  });
 
   await group('flag for later: refused, from the phone, and on a deleted item', async () => {
     const s = server(); seed(s);
@@ -449,22 +619,52 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     ok('refused: the flag goes back off, and the page says it didn\u2019t save', await until(async () => (await flagOf(ITEM).getAttribute('aria-pressed')) === 'false' &&
       await page.locator('[data-flagtrouble]').isVisible()));
     ok('refused: nothing is counted', (await page.locator('[data-flagfilter]').textContent()).trim() === 'Flagged (0)');
+    // Two taps at once, neither kept: back to what the server has (off), never to the first tap.
+    await flagOf(ITEM).evaluate((el) => { el.click(); el.click(); });
+    await until(async () => f.pushed.length === 3);
+    await page.waitForTimeout(400);
+    ok('two quick taps, both refused: off, as the server has it', (await flagOf(ITEM).getAttribute('aria-pressed')) === 'false' &&
+      (await page.locator('[data-flagfilter]').textContent()).trim() === 'Flagged (0)' && await page.locator('[data-flagtrouble]').isVisible());
     f.refuse = false;
     await flagOf(ITEM).click();
     ok('the next try saves, and the line goes', await until(async () => (await flagOf(ITEM).getAttribute('aria-pressed')) === 'true' && !(await page.locator('[data-flagtrouble]').isVisible())));
+
+    // Two taps at once, the first kept (off) and the second refused (on): off, what the server has.
+    await until(async () => f.held.has(ITEM) && f.held.get(ITEM).row.deleted_at === null);
+    await page.waitForTimeout(500);   // and its answer is in
+    f.refuse = (r) => r.deleted_at === null;
+    const was = f.pushed.length;
+    await flagOf(ITEM).evaluate((el) => { el.click(); el.click(); });
+    await until(async () => f.pushed.length === was + 2 && await page.locator('[data-flagtrouble]').isVisible());
+    await page.waitForTimeout(400);
+    ok('two quick taps, only the first kept: as the first left it', (await flagOf(ITEM).getAttribute('aria-pressed')) === 'false' && f.held.get(ITEM).row.deleted_at !== null);
+    f.refuse = false;
+    await flagOf(ITEM).click();
+    await until(async () => f.held.get(ITEM).row.deleted_at === null);
 
     // Set on the phone: heard at the next ping, without a reload.
     f.elsewhere(FIND, true, Date.now() + 1000);
     ping();
     ok('a flag set on the phone shows here, without a reload', await until(async () => (await flagOf(FIND).getAttribute('aria-pressed')) === 'true' &&
       (await page.locator('[data-flagfilter]').textContent()).trim() === 'Flagged (2)'));
+    // Set by a phone whose clock is ahead: cleared here all the same, later than its own time.
+    const ahead = Date.now() + 60000;
+    f.elsewhere(FIND, true, ahead);
+    ping();
+    await page.waitForTimeout(500);
+    await flagOf(FIND).click();
+    ok('a flag set by a phone whose clock is ahead can be cleared here', await until(async () => f.held.get(FIND).row.deleted_at !== null) &&
+      f.held.get(FIND).row.updated_at > ahead && (await flagOf(FIND).getAttribute('aria-pressed')) === 'false');
+    f.elsewhere(FIND, true, ahead + 1000);
+    ping();
+    await until(async () => (await flagOf(FIND).getAttribute('aria-pressed')) === 'true');
     // Cleared on the phone: goes.
-    f.elsewhere(FIND, false, Date.now() + 2000);
+    f.elsewhere(FIND, false, ahead + 2000);
     ping();
     ok('a flag cleared on the phone goes here', await until(async () => (await flagOf(FIND).getAttribute('aria-pressed')) === 'false'));
 
     // A flag held for an item deleted on the phone is never counted (the server deletes it too).
-    f.elsewhere(FIND, true, Date.now() + 3000);
+    f.elsewhere(FIND, true, ahead + 3000);
     s.phone('item', FIND, '_del', true);
     ping();
     ok('a deleted finding\u2019s flag is not counted', await until(async () => (await page.locator('[data-flag="' + FIND + '"]').count()) === 0 &&
@@ -595,7 +795,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     s.phone('item', NEWF, 'section_id', SEC); s.phone('item', NEWF, 'parent_item_id', ITEM); s.phone('item', NEWF, 'label', 'Downspout loose'); s.phone('item', NEWF, 'position', 1); s.phone('item', NEWF, 'finding_title', 'Downspout loose');
     ping();
     ok('a finding made on the phone appears under its item', await until(async () => await boxValue(page, 'item', NEWF, 'finding_title') === 'Downspout loose'));
-    ok('a photo counts only on its own finding', same(await vis(page, '[data-photos]'), ['1 photos on your phone']), JSON.stringify(await vis(page, '[data-photos]')));
+    ok('a photo counts only on its own finding', same(await vis(page, '[data-photos]'), ['1 photo on your phone']), JSON.stringify(await vis(page, '[data-photos]')));
     s.phone('item', FIND, '_del', true);
     ping();
     ok('a finding deleted on the phone goes', await until(async () => await boxValue(page, 'item', FIND, 'finding_title') === null));

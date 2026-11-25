@@ -293,6 +293,55 @@
     });
   }
 
+  /* Edit with AI (2026-11-24, his decision after the Spectora walk; the relay's contract EDIT_WITH_AI.md v1): one
+     finding's details sent to Spex on the Spex Chat connection, signed in inside this file as ask is (the page never
+     holds the token). [request]: { action, title, text, item?, stop? }; with no action, only asks whether Edit with
+     AI is open to this inspector (a hello alone is never billed). Answers:
+       { admitted: true }                   (no action) the relay says "edit": true;
+       { unavailable: true }                no sign-in, a denial, or a relay without "edit";
+       { text: "..." }                      Spex's version of the details;
+       { error: "<sentence>", code: "..." } a refusal, to show as given.
+     It rejects when the relay can't be reached or doesn't answer in time. One socket per call, closed after. */
+  var EDIT_WAIT = 90000;
+  function editFinding(request, url) {
+    if (typeof root.WebSocket !== 'function' || !/^wss:\/\//.test(String(url || ''))) return Promise.resolve({ unavailable: true });
+    return current().then(function (s) {
+      if (!s) return { unavailable: true };
+      return new Promise(function (resolve, reject) {
+        var ws, done = false, id = 'e' + Date.now().toString(36);
+        var timer = setTimeout(function () { finish(null, new Error('timeout')); }, EDIT_WAIT);
+        function finish(answer, err) {
+          if (done) return; done = true; clearTimeout(timer);
+          try { ws.onclose = ws.onerror = ws.onmessage = null; ws.close(); } catch (e) { /* already gone */ }
+          if (err) reject(err); else resolve(answer);
+        }
+        try { ws = new root.WebSocket(url); } catch (e) { clearTimeout(timer); reject(e); return; }
+        var say = function (m) { try { ws.send(JSON.stringify(m)); } catch (e) { finish(null, e); } };
+        ws.onopen = function () { say({ hello: { access_token: s.access, client: 'inspyx-web', mode: 'chat' } }); };
+        ws.onmessage = function (ev) {
+          var m = null;
+          try { m = JSON.parse(ev.data); } catch (e) { return; }
+          var r = m && m.relay;
+          if (!r || typeof r !== 'object') return;
+          if (r.status === 'denied') return finish({ unavailable: true });
+          if (r.status === 'admitted') {
+            if (r.edit !== true) return finish({ unavailable: true });
+            if (!request || !request.action) return finish({ admitted: true });
+            return say({ chat: { id: id, edit: request } });
+          }
+          if (r.status === 'chat' && r.id === id) {
+            var res = r.result || {};
+            if (res.edit && typeof res.edit.text === 'string') return finish({ text: res.edit.text });
+            if (typeof res.error === 'string') return finish({ error: res.error, code: typeof res.code === 'string' ? res.code : '' });
+            return finish(null, new Error('answer'));
+          }
+        };
+        ws.onerror = function () { finish(null, new Error('unreachable')); };
+        ws.onclose = function () { finish(null, new Error('closed')); };
+      });
+    });
+  }
+
   /* Hearing "something changed" (inspection sync, 2026-11-14): the server's pings for the signed-in inspector's
      own inspections, on their private Realtime topic insp:<their id>. The sign-in goes to the server inside this
      file, as in ask: the page gives a function to call on each ping, and gets back a way to stop. Only the
@@ -547,7 +596,7 @@
     });
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, templateFile: templateFile, convertTemplate: convertTemplate, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, linkRequest: linkRequest, linkKey: linkKey, linkTake: linkTake, linkVerify: linkVerify, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword, choices: choices, choose: choose };
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, templateFile: templateFile, convertTemplate: convertTemplate, editFinding: editFinding, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, linkRequest: linkRequest, linkKey: linkKey, linkTake: linkTake, linkVerify: linkVerify, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword, choices: choices, choose: choose };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the dashboard (/today, since 2026-11-15). It asks three times:
