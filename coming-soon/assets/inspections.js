@@ -771,7 +771,7 @@
     var box = $('[data-search]'), list = $('[data-search-results]'), count = $('[data-search-count]');
     var q = box.value, found = searchMatches(inspection, q);
     $('[data-search-how]').hidden = q.trim().length >= 2;
-    var shape = JSON.stringify([inspection, q, found.map(function (m) { return [m.key, m.value]; })]);
+    var shape = JSON.stringify([inspection, q, found.map(function (m) { return [m.key, m.value, m.where]; })]);
     if (list.getAttribute('data-shape') === shape) return;
     list.setAttribute('data-shape', shape);
     list.textContent = '';

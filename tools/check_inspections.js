@@ -467,6 +467,12 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await page.locator('[data-search]').fill('chimney');
       ok(label + ': nothing matches: it says so', await until(async () => (await page.locator('[data-search-count]').textContent()) === 'Nothing in this report matches.'));
       ok(label + ': nothing was sent for the search', calls.slice(sent).every((c) => (c.body.push || []).length === 0));
+      await page.locator('[data-search]').fill('soffit');
+      await until(async () => (await page.locator('.insp-search-where').count()) > 0);
+      const named = async () => (await page.locator('.insp-search-where').first().textContent());
+      const wasNamed = await named();
+      await page.locator('.insp-stop [data-key$="/name"], .insp-stop [data-field="name"]').first().fill('Renamed stop');
+      ok(label + ': a renamed stop shows its new name in the results (Codex on #93)', await until(async () => /^Renamed stop/.test(await named())), wasNamed + ' -> ' + await named());
       if (process.env.SHOTS) { await page.locator('[data-search]').fill('gutter'); await page.waitForTimeout(400); await page.locator('[data-search-box]').screenshot({ path: require('path').join(process.env.SHOTS, 'search-' + label + '.png') }); }
       ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
