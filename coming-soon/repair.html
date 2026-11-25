@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Repair request</title>
+<!-- A repair request a client or an agent shared (inspyx.com/repair#<key>): read-only, sent by them, never by Inspyx.
+     Search engines are asked to leave it alone, and the address is never passed on to another site. -->
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="stylesheet" href="/assets/repair.css">
+</head>
+<body class="rd">
+<main id="doc" aria-busy="true">
+  <p class="rd-state" data-rd-state="wait" role="status">Opening the repair request…</p>
+  <p class="rd-state" data-rd-state="gone" hidden>This repair request isn’t available. Ask the person who sent it for a new link.</p>
+  <p class="rd-state" data-rd-state="failed" hidden>It couldn’t be opened just now. <button type="button" data-rd-again>Try again</button></p>
+  <article class="rd-sheet" data-rd-sheet hidden>
+    <header class="rd-h">
+      <p class="rd-kicker">Repair request</p>
+      <h1 data-rd-v="address"></h1>
+      <p class="rd-sub"><span data-rd-v="locality"></span><span data-rd-v="inspected"></span></p>
+      <p class="rd-by" data-rd-v="by"></p>
+      <button type="button" class="rd-print" data-rd-print>Save as PDF</button>
+    </header>
+    <table class="rd-table">
+      <thead><tr><th scope="col">Finding</th><th scope="col">Asks for</th><th scope="col" class="rd-num">Credit</th></tr></thead>
+      <tbody data-rd-items></tbody>
+      <tfoot><tr><th scope="row" colspan="2">Total credit requested</th><td class="rd-num" data-rd-v="total"></td></tr></tfoot>
+    </table>
+    <section class="rd-note" data-rd-note hidden><h2>Note</h2><p data-rd-v="note"></p></section>
+    <p class="rd-disc">These are the amounts being asked for. The inspector doesn’t price repairs or approve credits.</p>
+    <footer class="rd-f"><span data-rd-v="footer"></span> Amounts are requests, not estimates.</footer>
+  </article>
+  <div data-rd-words hidden>
+    <span data-w="repair">Repair</span><span data-w="replace">Replace</span><span data-w="credit">Credit</span>
+    <span data-w="by-client">Prepared by the client from the inspection report by </span>
+    <span data-w="by-agent">Prepared by the buyer’s agent from the inspection report by </span>
+    <span data-w="report">Report </span><span data-w="inspected">Inspected </span><span data-w="none">—</span>
+  </div>
+</main>
+<script src="/assets/repair-doc.js" defer></script>
+</body>
+</html>
