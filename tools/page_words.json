@@ -133,7 +133,7 @@
  "terms": {
   "words": [
    "h1: Terms of Service",
-   "p: Last updated: November 22, 2026",
+   "p: Last updated: November 25, 2026",
    "h2: 1. Who we are, and what these terms cover",
    "p: Inspyx is made by INSPYX LLC, a Florida company in Miami Gardens, Florida (\"Inspyx\", \"we\", \"us\"). These terms cover the Inspyx app, Spex (its voice companion), the reports, templates and agreements you make with it, and our website. Together, they're \"the service\".",
    "p: By creating an account or using the service, you agree to these terms and to our Privacy Policy. Questions: support@inspyx.com or (888) 772-2919.",
@@ -180,7 +180,7 @@
    "li: Inspyx measures your times (time on site, time to the report) on your phone. Sharing them with us is your choice. We name you or quote you only with your written OK.",
    "li: You're welcome to send us ideas and problem reports. We may use them freely, with nothing owed.",
    "h2: 9. Other companies' services",
-   "p: Inspyx works with services from other companies, including Apple, Google, Stripe, Supabase, Sentry, RentCast, the U.S. Census Bureau, the National Weather Service and NOAA. Their own terms may also apply to you. We aren't responsible for their services, and they can change.",
+   "p: Inspyx works with services from other companies, including Apple, Google, Stripe, Supabase, RentCast, the U.S. Census Bureau, the National Weather Service and NOAA. Their own terms may also apply to you. We aren't responsible for their services, and they can change.",
    "h2: 10. Apple",
    "p: The app is licensed to you, not sold. These terms are between you and Inspyx, not Apple, and Apple isn't responsible for the app or its support. Apple's standard license terms for apps also apply. Where they conflict with these terms, these terms govern, as far as Apple allows.",
    "h2: 11. No guarantees",
@@ -245,7 +245,7 @@
  "privacy": {
   "words": [
    "h1: Privacy Policy",
-   "p: Last updated: November 24, 2026",
+   "p: Last updated: November 25, 2026",
    "h2: Who we are",
    "p: Inspyx is made by INSPYX LLC, Miami Gardens, Florida. Questions about privacy: support@inspyx.com or (888) 772-2919.",
    "h2: Who this covers",
@@ -262,7 +262,7 @@
    "li: Emails you forward. If you forward a client's email to your Inspyx address (your-name@book.inspyx.com), we keep its sender, subject and words for 90 days so Spex can draft your reply. Attachments aren't kept. Amazon holds the email itself only until we've kept its words, and never longer than 7 days. Spex only drafts: nothing is sent until you tap Send.",
    "li: Spex, the voice companion. While Spex is on, what you say, and any photo you show Spex, goes through our server to Google's Gemini service, so Spex can understand and answer. Our server keeps a usage record for each session (your account, how long it ran, and what it cost us), not the audio or the words. The captions stay on your phone. Spex listens only while it's on, and you can turn it off at any time.",
    "li: Property lookups. When you choose an address, our server sends it to public-record, weather and map services to fill in the inspection: RentCast (property facts), the U.S. Census Bureau's address service, the National Weather Service, NOAA and the Aviation Weather Center (the weather when you start), and Google (Street View and the view from above). Address suggestions while you type come from Apple Maps, through your iPhone.",
-   "li: Crash reports. If the app breaks, a report of where and why goes to Sentry, our crash-reporting service. Names and inspection content are left out. You can turn this off: ☰ → Settings → Send crash reports.",
+   "li: Crash reports. If the app breaks, a report of where and why goes to Inspyx's own server, hosted by Supabase. We leave out your name, and remove email addresses and phone numbers. You can turn this off: ☰ → Settings → Send crash reports.",
    "li: Your plan. Billing runs through Stripe. Stripe receives your email address and card; we never see or store card numbers. We keep your plan's status, dates and price.",
    "li: Your numbers. Inspyx works out how long each inspection took (time on site, time to the report) on your iPhone. Nothing leaves your phone unless you export it.",
    "li: Our website and phone line. If you apply for the pilot on our website (the form is a Google form) or call our phone line, we keep your name, contact details and what you tell us, so we can answer you. If you join the waitlist on our website, we keep your email address, the two answers you tap, and which page and which ad or link brought you, so we can write to you when the pilot opens. Our phone line is answered by Mia, an AI receptionist, through a service called Retell. Our website uses no cookies and no ad trackers.",
