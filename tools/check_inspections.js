@@ -23,6 +23,7 @@ const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + 
 const INSP = '6f1c2a3b-0000-4000-8000-000000000001', SEC = '6f1c2a3b-0000-4000-8000-0000000000b1';
 const ITEM = '6f1c2a3b-0000-4000-8000-0000000000a1', FIND = '6f1c2a3b-0000-4000-8000-0000000000a2';
 const OTHER = '6f1c2a3b-0000-4000-8000-000000000002';
+const PROTO = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'chat_protocol_edit.json'), 'utf8'));
 
 /* The server, with schema.sql's rules. */
 function server() {
@@ -61,7 +62,7 @@ async function open(browser, o) {
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); if (v === null) localStorage.removeItem('inspyx.signin'); else localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, store);
   const page = await ctx.newPage();
   page.setDefaultTimeout(8000);
-  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [];
+  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [], relay = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
   await page.routeWebSocket(/realtime\/v1\/websocket/, (ws) => {
@@ -75,6 +76,21 @@ async function open(browser, o) {
       }
     });
   });
+  // Spex's relay (Edit with AI): a stand-in. A hello is denied unless o.edit says otherwise; o.edit(request) answers
+  // an edit request with { text } or { error, code } (or null: no answer). Every message is kept in relay[].
+  await page.routeWebSocket(/spex-relay/, (ws) => {
+    ws.onMessage((data) => {
+      const m = JSON.parse(String(data)); relay.push(m);
+      if (m.hello) {
+        ws.send(JSON.stringify(o.edit ? Object.assign({}, PROTO.admitted, { relay: Object.assign({}, PROTO.admitted.relay, { edit: o.editOff ? false : true }) }) : PROTO.denied));
+        return;
+      }
+      if (m.chat && m.chat.edit && o.edit) {
+        const answer = o.edit(m.chat.edit);
+        if (answer) setTimeout(() => ws.send(JSON.stringify({ relay: { status: 'chat', id: m.chat.id, result: answer.text !== undefined ? { edit: { text: answer.text } } : answer } })), o.editDelay || 50);
+      }
+    });
+  });
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url();
     if (o.onAuth && u.startsWith(SERVER + '/auth/v1/token')) { const a = o.onAuth(); return route.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a.json) }); }
@@ -83,6 +99,11 @@ async function open(browser, o) {
       const b = JSON.parse(req.postData() || '{}'); bizCalls.push({ headers: req.headers(), body: b });
       const rows = o.biz ? o.biz() : [];
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows, next: rows.length, more: false }) });
+    }
+    // The reports-sent function (which inspections have a published report): o.published lists them.
+    if (u.startsWith(SERVER + '/functions/v1/reports-sent')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+        body: JSON.stringify({ reports: (o.published || []).map((id) => ({ inspection_id: id, published_at: 1, locked: false, links: [], emails: [] })), as_of: new Date().toISOString() }) });
     }
     if (u.startsWith(SERVER + '/functions/v1/booking') && o.booking) {
       const b = JSON.parse(req.postData() || '{}'); bookCalls.push({ headers: req.headers(), body: b });
@@ -102,7 +123,7 @@ async function open(browser, o) {
   const res = await page.goto(url + 'inspections' + (o.hash || ''), { waitUntil: 'load' });
   await page.waitForTimeout(500);
   const ping = () => sockets[sockets.length - 1].ws.send(JSON.stringify({ topic: 'realtime:insp:' + ME, event: 'broadcast', ref: null, payload: { type: 'broadcast', event: 'changed', payload: { seq: s.seq } } }));
-  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls };
+  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls, relay };
 }
 
 const vis = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.hidden && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel);
@@ -128,7 +149,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const c = calls[0] || { headers: {}, body: {} };
       ok(label + ': opens with no errors, asks only the sync function, as the signed-in inspector, from the start', errs.length === 0 && away.length === 0 && c.headers.authorization === 'Bearer test-access-1' && /^web-[0-9a-f]{18}$/.test(c.body.device) && c.body.after === null, errs.concat(away).join(' | '));
       const csp = res.headers()['content-security-policy'] || '';
-      ok(label + ': served with the signed-in pages\' rule, plus the live socket to Inspyx\'s server and nothing else', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
+      ok(label + ': served with the signed-in pages\' rule, plus the live socket to Inspyx\'s server and Spex\'s relay socket (Edit with AI), nothing else', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/chat---spex-relay-yu5bdad2fa-uc\.a\.run\.app;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
       const list = await vis(page, '[data-list="items"] li');
       ok(label + ': lists both inspections, the newest first, with their addresses', list.length === 2 && /^9 Elm Ave/.test(list[0]) && /^12 Oak St.*Miami/.test(list[1]), JSON.stringify(list));
       ok(label + ': shows the inspection\'s title and address in their boxes', await boxValue(page, 'inspection', INSP, 'title') === '12 Oak St' && await boxValue(page, 'inspection', INSP, 'address') === '12 Oak St, Miami');
@@ -136,7 +157,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
         await boxValue(page, 'section', SEC, 'name') === 'Roof' && await boxValue(page, 'item', ITEM, 'label') === 'Gutters' &&
         await boxValue(page, 'item', ITEM, 'note') === 'Loose at the corner' && await boxValue(page, 'item', ITEM, 'status') === 'inspected_deficiency' &&
         await boxValue(page, 'item', FIND, 'finding_title') === 'Gutter pulling away' && await boxValue(page, 'item', FIND, 'severity') === 'MD');
-      ok(label + ': counts the finding\'s photos on the phone', (await vis(page, '[data-photos]')).join() === '1 photos on your phone');
+      ok(label + ': counts the finding\'s photos on the phone, one photo in the singular', (await vis(page, '[data-photos]')).join() === '1 photo on your phone');
       ok(label + ': joins its own private topic with the sign-in, and says it is live',
         sockets.length === 1 && sockets[0].joins[0] && sockets[0].joins[0].topic === 'realtime:insp:' + ME && sockets[0].joins[0].payload.access_token === 'test-access-1' && sockets[0].joins[0].payload.config.private === true &&
         (await vis(page, '[data-live]')).join().startsWith('Live'), JSON.stringify(sockets.map((x) => x.joins.map((j) => j.topic))));
@@ -247,6 +268,170 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('Edit with AI, ' + label, async () => {
+      const s = server(); seed(s);
+      // The app example's own finding (finding_edit_example.dart): Spex's version keeps every fact, adds none.
+      // Written after the seed (a later time: the server keeps the first of two at the same moment).
+      const later = (entity, id, field, value) => s.push('phone-aaaaaaaaaaaaaaaaaa', { inspection: INSP, entity, id, field, value, at: Date.now() + 1000 });
+      later('section', SEC, 'name', 'Kitchen'); later('item', ITEM, 'label', 'Kitchen outlets');
+      later('item', FIND, 'finding_title', 'Missing GFCI protection');
+      s.phone('item', FIND, 'note', 'outlet by kitchen sink not gfci protected');
+      const ROUGH = 'outlet by kitchen sink not gfci protected';
+      let answer = { text: 'The electrical outlet by the kitchen sink does not have ground fault circuit interrupter (GFCI) protection.' };
+      const asked = [];
+      const { page, ctx, errs, away, relay, calls } = await open(browser, { server: s, w, hash: '#' + INSP, edit: (r) => { asked.push(r); return answer; }, editDelay: 300 });
+      const k = '[data-key="item/' + FIND + '.note"]';
+      const finding = page.locator('.insp-finding').first();
+      ok(label + ': the finding shows its details; Edit with AI is offered once the relay says so', await until(async () => (await finding.locator('[data-ai-open]').isVisible())) && await boxValue(page, 'item', FIND, 'note') === ROUGH, errs.concat(away).join(' | '));
+      const hello = relay.find((m) => m.hello) || {};
+      ok(label + ': the hello is Spex Chat\'s, signed in as the inspector', !!hello.hello && hello.hello.mode === 'chat' && hello.hello.access_token === 'test-access-1' && hello.hello.client === 'inspyx-web');
+      const shotAI = async (name) => { if (process.env.SHOTS) { await page.waitForTimeout(500); await finding.screenshot({ path: require('path').join(process.env.SHOTS, 'ai-' + label + '-' + name + '.png') }); } };
+      await finding.locator('[data-ai-open]').click();
+      await shotAI('1-actions');
+      ok(label + ': it opens the four actions, with the how-to', same(await finding.locator('[data-ai-action]').allTextContents(), ['Make it clearer', 'Make it shorter', 'Add a recommendation', 'Fix grammar']) && await finding.locator('.ai-how').isVisible());
+      await finding.locator('[data-ai-action="recommend"]').click();
+      ok(label + ': while Spex works, the details can\'t be edited', await page.locator(k).isDisabled() && await finding.locator('[data-ai-working]').isVisible());
+      await until(async () => await finding.locator('[data-ai-version]').isVisible());
+      const req = asked[0] || {};
+      ok(label + ': the request is the contract\'s: the action, the title, the details, the item and the stop',
+        same(Object.keys(req).sort(), Object.keys(PROTO.edit_request.chat.edit).sort()) && req.action === 'recommend' && req.title === 'Missing GFCI protection' && req.text === ROUGH && req.item === 'Kitchen outlets' && req.stop === 'Kitchen', JSON.stringify(req));
+      await shotAI('2-version');
+      ok(label + ': Spex\'s version shows beside the inspector\'s; nothing changed yet',
+        (await finding.locator('[data-ai-text]').textContent()) === answer.text && await page.locator(k).inputValue() === ROUGH && s.value('item', FIND, 'note') === ROUGH && !(await page.locator(k).isDisabled()));
+      await finding.locator('[data-ai-discard]').click();
+      await page.waitForTimeout(900);
+      ok(label + ': Discard changes nothing', await page.locator(k).inputValue() === ROUGH && s.value('item', FIND, 'note') === ROUGH && !(await finding.locator('[data-ai-version]').isVisible()));
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="clearer"]').click();
+      await until(async () => await finding.locator('[data-ai-version]').isVisible());
+      await finding.locator('[data-ai-keep]').click();
+      ok(label + ': Keep puts Spex\'s version in Details, and it saves as typing does', await page.locator(k).inputValue() === answer.text &&
+        await until(async () => s.value('item', FIND, 'note') === answer.text), String(s.value('item', FIND, 'note')).slice(0, 60));
+      await shotAI('3-kept');
+      const kept = answer.text;
+      answer = PROTO.edit_refused.relay.result;
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="shorter"]').click();
+      ok(label + ': a refusal shows its sentence as given; the details untouched', await until(async () => (await finding.locator('[data-ai-error]').textContent()) === answer.error) && await page.locator(k).inputValue() === kept);
+      await shotAI('4-refused');
+      // Typed over while Spex worked: its version is never offered over the new words.
+      answer = { text: 'Something else.' };
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="grammar"]').click();
+      await page.waitForTimeout(80);
+      await page.evaluate((sel) => { const t = document.querySelector(sel); t.disabled = false; t.value = 'typed meanwhile'; }, k);
+      await page.waitForTimeout(600);
+      ok(label + ': details changed while Spex worked: its version isn\'t offered', !(await finding.locator('[data-ai-version]').isVisible()) && await page.locator(k).inputValue() === 'typed meanwhile');
+      // Over the relay's limit: never cut and sent (Keep would delete the rest; Codex on #90): Spex isn't asked.
+      const long = 'x'.repeat(PROTO.edit.max_text_chars) + ' the last observation';
+      await page.evaluate(([sel, v]) => { const t = document.querySelector(sel); t.disabled = false; t.value = v; }, [k, long]);
+      const before = asked.length;
+      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="grammar"]').click();
+      await page.waitForTimeout(400);
+      ok(label + ': details over the limit: Spex isn\'t asked, it says so, the details are whole', asked.length === before &&
+        /longer than Spex can edit/.test(await finding.locator('[data-ai-error]').textContent()) && await page.locator(k).inputValue() === long);
+      ok(label + ': no errors, nothing else leaves the site', errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
+      ok(label + ': nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      await ctx.close();
+    });
+    await group('the report\'s structure, ' + label, async () => {
+      const s = server(); seed(s);
+      s.phone('section', SEC, 'report_section_id', 'C1');
+      const { page, ctx, errs, away } = await open(browser, { server: s, w, hash: '#' + INSP, published: label === 'phone' ? [INSP] : [] });
+      const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+      const partBy = (field, value) => { for (const h of s.held.values()) if (h.field === field && h.value === value) return h.id; return null; };
+      const fieldsOf = (id) => { const o = {}; for (const h of s.held.values()) if (h.id === id) o[h.field] = { value: h.value, at: h.at }; return o; };
+      await page.waitForSelector('[data-additem]');
+
+      // An item, a finding and a stop, each made whole in one change, as the phone makes one.
+      await page.locator('[data-additem] input').first().fill('Downspouts');
+      await page.locator('[data-additem] button').first().click();
+      await until(async () => partBy('label', 'Downspouts') !== null);
+      const item = partBy('label', 'Downspouts'), fi = fieldsOf(item);
+      ok(label + ': add item: a version-4 id, its stop, no parent, after the last, all at one time', V4.test(item) &&
+        fi.section_id.value === SEC && fi.parent_item_id.value === null && fi.position.value === 1 &&
+        new Set(Object.values(fi).map((x) => x.at)).size === 1, JSON.stringify(fi));
+      await page.locator('[data-addfinding] input').first().fill('Loose bracket');
+      await page.locator('[data-addfinding] button').first().click();
+      await until(async () => partBy('finding_title', 'Loose bracket') !== null);
+      const f = fieldsOf(partBy('finding_title', 'Loose bracket'));
+      ok(label + ': add finding: under its item, in its stop, after the finding there', f.parent_item_id.value === ITEM && f.section_id.value === SEC &&
+        f.position.value === 1 && f.label.value === 'Loose bracket', JSON.stringify(f));
+      await page.locator('[data-addstop] input[name="name"]').fill('Garage');
+      await page.locator('[data-addstop-chapter]').selectOption(SEC);
+      await page.locator('[data-addstop] button').click();
+      await until(async () => partBy('name', 'Garage') !== null);
+      const st = fieldsOf(partBy('name', 'Garage'));
+      ok(label + ': add stop: in the chosen stop\'s chapter; its template null; both sent', st.report_section_id.value === 'C1' && 'template_section_ref' in st &&
+        st.template_section_ref.value === null && st.position.value === 1, JSON.stringify(st));
+      ok(label + ': a new item shows "Not started", as the phone starts one', (await page.locator('[data-key="item/' + item + '.status"]').inputValue()) === 'untouched');
+      ok(label + ': the new parts show on the page', (await page.locator('.insp-stop').count()) === 2 &&
+        await until(async () => (await page.locator('.insp-label').evaluateAll((els) => els.map((e) => e.value))).includes('Downspouts')));
+
+      // Moves: the two swap places; the ends are off.
+      const gutters = page.locator('.insp-item').first().locator('.insp-item-head');
+      ok(label + ': the first item can\'t go up', await gutters.locator('[data-move="up"]').isDisabled());
+      await gutters.locator('[data-move="down"]').click();
+      await until(async () => s.value('item', ITEM, 'position') === 1 && s.value('item', item, 'position') === 0);
+      ok(label + ': down: the two items swap places', s.value('item', ITEM, 'position') === 1 && s.value('item', item, 'position') === 0);
+
+      // Delete: asks first, says what goes; "Keep it" keeps it; Delete takes it and everything under it.
+      await page.locator('.insp-stop').first().locator('.insp-stop-head [data-delete]').click();
+      const asked = await page.locator('[data-confirm-text]').textContent();
+      ok(label + ': delete asks first, naming what goes', asked === 'Delete the stop “Roof”, with 2 items, 2 findings and 1 photo?', asked);
+      if (label === 'phone') ok(label + ': a published report: the question says the client’s copy stays until the next publish',
+        await until(async () => await page.locator('[data-confirm-published]').isVisible()));
+      ok(label + ': the question sits in the middle of the screen', await page.evaluate(() => { const r = document.querySelector('[data-confirm]').getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 4; }));
+      if (process.env.SHOTS) { await page.waitForTimeout(300); await page.screenshot({ path: require('path').join(process.env.SHOTS, 'structure-confirm-' + label + '.png') }); }
+      await page.locator('[data-confirm-no]').click();
+      ok(label + ': Keep it: nothing is deleted', s.value('section', SEC, '_del') === undefined && !(await page.locator('[data-confirm]').isVisible()));
+      // Return on the question keeps everything: Keep it has the focus, never Delete.
+      await page.locator('.insp-stop').first().locator('.insp-stop-head [data-delete]').click();
+      ok(label + ': the question opens on Keep it', await page.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-confirm-no')));
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(300);
+      ok(label + ': Return keeps it', s.value('section', SEC, '_del') === undefined && !(await page.locator('[data-confirm]').isVisible()));
+      if (label === 'wide') ok(label + ': no report out: no word of one', !(await page.locator('[data-confirm-published]').isVisible()));
+      await page.locator('.insp-stop').first().locator('.insp-stop-head [data-delete]').click();
+      await page.locator('[data-confirm-go]').click();
+      await until(async () => s.value('section', SEC, '_del') === true);
+      ok(label + ': Delete: the stop, its items and their findings go, together', s.value('section', SEC, '_del') === true && s.value('item', ITEM, '_del') === true &&
+        s.value('item', FIND, '_del') === true && s.value('item', item, '_del') === true && s.value('item', partBy('finding_title', 'Loose bracket'), '_del') === true);
+      ok(label + ': and it is gone from the page', await until(async () => (await page.locator('.insp-stop').count()) === 1));
+      ok(label + ': its how-to, in three steps', await page.locator('.st-how').isVisible() && (await page.locator('.st-how-step').count()) === 3);
+      if (process.env.SHOTS) await page.locator('.insp-one').screenshot({ path: require('path').join(process.env.SHOTS, 'structure-' + label + '.png') });
+      ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
+      await ctx.close();
+    });
+  }
+
+  await group('Edit with AI: no button when the relay denies, or has no "edit"', async () => {
+    for (const o of [{}, { edit: () => null, editOff: true }]) {
+      const s = server(); seed(s);
+      const { page, ctx, relay } = await open(browser, Object.assign({ server: s, hash: '#' + INSP }, o));
+      await until(async () => relay.some((m) => m.hello));
+      await page.waitForTimeout(300);
+      ok('no button: ' + (o.editOff ? 'a relay without edit' : 'a denial'), (await page.locator('[data-ai-open]').evaluateAll((els) => els.filter((e) => e.offsetParent !== null).length)) === 0 && !relay.some((m) => m.chat));
+      await ctx.close();
+    }
+  });
+  await group('the report\'s structure: a move among items that share a place keeps the others where they are (Codex on #92)', async () => {
+    const s = server(); seed(s);
+    // Three items at the same position (made at once on two devices), shown in id order.
+    const B = '6f1c2a3b-0000-4000-8000-0000000000a5', C = '6f1c2a3b-0000-4000-8000-0000000000a6';
+    for (const [id, label] of [[B, 'Bbb'], [C, 'Ccc']]) {
+      s.phone('item', id, 'section_id', SEC); s.phone('item', id, 'label', label); s.phone('item', id, 'position', 0);
+    }
+    const { page, ctx } = await open(browser, { server: s, hash: '#' + INSP });
+    const labels = async () => page.locator('.insp-label').evaluateAll((els) => els.map((e) => e.value));
+    await until(async () => (await labels()).length === 3);
+    const before = await labels();
+    await page.locator('.insp-item').first().locator('.insp-item-head [data-move="down"]').click();
+    await until(async () => JSON.stringify(await labels()) !== JSON.stringify(before));
+    const after = await labels();
+    ok('tied places: Down swaps the first two and leaves the third', JSON.stringify(after) === JSON.stringify([before[1], before[0], before[2]]), JSON.stringify([before, after]));
+    await ctx.close();
+  });
+
   await group('editing on the web', async () => {
     const s = server(); seed(s);
     const { page, ctx, calls } = await open(browser, { server: s, hash: '#' + INSP });
@@ -328,7 +513,9 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     // Mark the very box being typed in: a page rebuilt under it would hand over a new box (the text can even
     // survive that, since a removed box is "left", but the caret jumps and keystrokes in between are lost).
     await page.evaluate((k) => { document.querySelector(k).dataset.mark = 'same'; }, labelKey);
-    await box.click(); await box.press('End'); await box.pressSequentially(' (front)', { delay: 10 });
+    // The caret at the end, said outright: End doesn't move it on a Mac, and a click lands mid-word in a narrower box.
+    await box.click(); await page.evaluate((k) => { const e = document.querySelector(k); e.setSelectionRange(e.value.length, e.value.length); }, labelKey);
+    await box.pressSequentially(' (front)', { delay: 10 });
     await page.waitForTimeout(1500);   // past the pause: the name is sent while the box still has the caret
     ok('rename: a name being typed survives its own save: the same box, still with the caret (the page is not rebuilt under it)',
       (await box.inputValue()) === 'Gutters and downspouts (front)' && await page.evaluate((k) => document.querySelector(k).dataset.mark === 'same' && document.activeElement === document.querySelector(k), labelKey) &&
@@ -368,7 +555,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     s.phone('item', NEWF, 'section_id', SEC); s.phone('item', NEWF, 'parent_item_id', ITEM); s.phone('item', NEWF, 'label', 'Downspout loose'); s.phone('item', NEWF, 'position', 1); s.phone('item', NEWF, 'finding_title', 'Downspout loose');
     ping();
     ok('a finding made on the phone appears under its item', await until(async () => await boxValue(page, 'item', NEWF, 'finding_title') === 'Downspout loose'));
-    ok('a photo counts only on its own finding', same(await vis(page, '[data-photos]'), ['1 photos on your phone']), JSON.stringify(await vis(page, '[data-photos]')));
+    ok('a photo counts only on its own finding', same(await vis(page, '[data-photos]'), ['1 photo on your phone']), JSON.stringify(await vis(page, '[data-photos]')));
     s.phone('item', FIND, '_del', true);
     ping();
     ok('a finding deleted on the phone goes', await until(async () => await boxValue(page, 'item', FIND, 'finding_title') === null));

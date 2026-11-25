@@ -27,7 +27,10 @@ ok('the rule catches no other address', !no.some(applies), no.filter(applies).jo
 const wss = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']));
 // The calendar and people pages (2026-11-16) read the same live inspections, so they share that rule.
 const live = ['/inspections', '/calendar', '/people'];
-ok('the inspections, calendar and people pages have the rule, with the live socket', live.every((p) => applies(p) && wss(p)), live.filter((p) => !applies(p) || !wss(p)).join(' '));
+// /inspections also opens Spex's relay socket (Edit with AI, 2026-11-24): its own rule, the live one plus that socket.
+const wssAI = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/chat---spex-relay-yu5bdad2fa-uc\.a\.run\.app;/.test(r.headers['Content-Security-Policy']));
+ok('the inspections, calendar and people pages have the rule, with the live socket', live.every((p) => applies(p) && (wss(p) || (p === '/inspections' && wssAI(p)))), live.filter((p) => !applies(p) || !(wss(p) || (p === '/inspections' && wssAI(p)))).join(' '));
+ok('Spex\'s relay socket: /inspections only, of the live pages, under one rule', wssAI('/inspections') && !wssAI('/calendar') && !wssAI('/people') && ruled.filter((r) => new RegExp(r.src).test('/inspections')).length === 1);
 ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/prices', '/agreements', '/profile', '/', '/inspections/x', '/inspection', '/calendar/x', '/people/x', '/calendars', '/peoples'].some(wss));
 ok('the live pages\' rule catches nothing else', !['/inspection', '/inspections/x', '/myinspections', '/assets/inspections.js', '/calendar/x', '/mycalendar', '/assets/calendar.js', '/people/x', '/person', '/assets/people.js', '/assets/insp-read.js'].some(applies));
 // Your company's pictures (2026-11-16, phase 2c): /profile shows the photo, logo and signature from copies held in
