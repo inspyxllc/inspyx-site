@@ -188,3 +188,54 @@
   .ai-how-step{color:var(--ink)}
 }
 @media (max-width: 760px){ .ai-how{grid-template-columns:1fr} }
+/* The report's structure (2026-11-24, his list item 12): move and delete on each stop, item and finding; add forms. */
+.insp-stop-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.insp-stop-head h2{flex:1 1 240px; margin:0}
+.insp-finding-head{display:flex; justify-content:flex-end; margin-bottom:4px}
+.insp-tools{display:inline-flex; align-items:center; gap:4px; flex:none}
+.insp-tool{min-width:36px; min-height:36px; padding:0 10px; border:0; border-radius:10px; background:#FFFFFF; color:var(--navy);
+  font:600 14px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(31,78,121,.22)}
+.insp-tool:disabled{opacity:.35; cursor:default}
+.insp-tool:focus-visible, .insp-add button:focus-visible, .insp-confirm button:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.insp-del{color:#9B2C2C; box-shadow:inset 0 0 0 1px rgba(155,44,44,.3)}
+.insp-add{display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; margin:10px 0 4px}
+.insp-add label{flex:1 1 220px; display:grid; gap:4px; font-size:13.5px; color:var(--ink-soft)}
+.insp-add input, .insp-add select{font:16px var(--font); padding:9px 11px; border:1px dashed rgba(31,78,121,.35); border-radius:10px; background:#FFFFFF; color:var(--ink)}
+.insp-add button{min-height:42px; padding:0 16px; border:0; border-radius:999px; background:var(--navy); color:#FFFFFF; font:600 14.5px var(--font); cursor:pointer}
+.insp-addstop{margin-top:22px; padding:14px; border-radius:16px; background:#F7F9FC; box-shadow:inset 0 0 0 1px rgba(31,78,121,.10)}
+.insp-confirm{margin:auto; max-width:min(460px, calc(100vw - 32px)); padding:20px; border:0; border-radius:18px; box-shadow:0 24px 60px rgba(15,34,56,.35); font:15px/1.45 var(--font); color:var(--ink)}
+.insp-confirm::backdrop{background:rgba(15,34,56,.45)}
+.insp-confirm-t{font-weight:700; font-size:16px; margin:0 0 6px}
+.insp-confirm-n{margin:0 0 14px; color:var(--ink-soft); font-size:14px}
+.insp-confirm-b{display:flex; gap:10px; flex-wrap:wrap}
+.insp-confirm-b button{min-height:44px; padding:0 18px; border:0; border-radius:999px; font:600 15px var(--font); cursor:pointer; background:#F1F3F6; color:var(--ink)}
+.insp-confirm-b .insp-confirm-go{background:#9B2C2C; color:#FFFFFF}
+/* Its how-to: an item added, two moved, a delete that asks first. 9 s, looping; still with less motion. */
+.st-how{display:grid; grid-template-columns:minmax(0, 260px) 1fr; gap:14px 22px; align-items:center; margin:22px 0 0; padding:14px; border-radius:16px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(31,78,121,.08)}
+.st-how-stage{position:relative; height:130px; width:100%; max-width:260px}
+.st-how-scene{position:absolute; inset:0; display:grid; gap:7px; align-content:start; padding:10px; border-radius:12px; background:#F7F9FC; font-size:12px; opacity:0; overflow:hidden}
+.st-how-a{animation:look-a 9s infinite} .st-how-b{animation:look-b 9s infinite} .st-how-c{animation:look-c 9s infinite}
+.st-how-row{display:flex; justify-content:space-between; padding:6px 9px; border-radius:9px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(0,0,0,.07); color:var(--ink)}
+.st-how-row b{color:var(--navy); letter-spacing:.1em}
+.st-how-row.lift{animation:st-lift 9s infinite}
+.st-how-new{display:flex; gap:6px; align-items:center}
+.st-how-new i{flex:1; font-style:normal; padding:5px 8px; border-radius:8px; border:1px dashed rgba(31,78,121,.35); background:#FFFFFF}
+.st-how-new em{font-style:normal; padding:5px 10px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-weight:600; animation:look-press 9s infinite}
+.st-how-ask{display:grid; gap:8px; margin-top:8px; padding:10px; border-radius:10px; background:#FFFFFF; box-shadow:0 6px 16px rgba(15,34,56,.15)}
+.st-how-ask strong{font-size:11.5px} .st-how-ask span{display:flex; gap:6px}
+.st-how-ask em, .st-how-ask i{font-style:normal; padding:3px 10px; border-radius:999px; font-weight:600}
+.st-how-ask em{background:#9B2C2C; color:#FFFFFF} .st-how-ask i{background:#F1F3F6}
+.st-how-finger{position:absolute; z-index:2; width:22px; height:22px; border-radius:50%; background:rgba(31,78,121,.38); border:2px solid rgba(31,78,121,.8); animation:st-finger 9s infinite}
+.st-how-steps{display:grid; gap:9px; counter-reset:step}
+.st-how-step{display:flex; gap:11px; align-items:center; font-size:15px; color:var(--ink-faint); animation:look-s1 9s infinite}
+.st-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:26px; height:26px; border-radius:50%; background:#FFFFFF; color:var(--navy); font-weight:700; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.st-how-step[data-n="2"]{animation-name:look-s2} .st-how-step[data-n="3"]{animation-name:look-s3}
+@keyframes st-lift{0%,40%{transform:none} 50%,63%{transform:translateY(-36px)} 66%,100%{transform:none}}
+@keyframes st-finger{0%{left:75%; top:90%; opacity:1} 14%,24%{left:205px; top:46px; opacity:1} 30%{opacity:0} 40%,52%{left:225px; top:46px; opacity:1} 58%,100%{left:225px; top:46px; opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .st-how *, .st-how-step{animation:none !important}
+  .st-how-finger, .st-how-a, .st-how-b{display:none}
+  .st-how-c{opacity:1}
+  .st-how-step{color:var(--ink)}
+}
+@media (max-width: 760px){ .st-how{grid-template-columns:1fr} }

@@ -112,19 +112,44 @@
 <ul class="insp-people-list" data-people-list></ul>
 </section>
 <div data-stops></div>
+<figure class="st-how" aria-label="How it works, in three steps">
+<div class="st-how-stage" aria-hidden="true">
+<div class="st-how-scene st-how-a"><span class="st-how-row">Gutters</span><span class="st-how-new"><i>Downspouts</i><em>Add item</em></span></div>
+<div class="st-how-scene st-how-b"><span class="st-how-row"><span>Gutters</span><b>↑ ↓</b></span><span class="st-how-row lift"><span>Downspouts</span><b>↑ ↓</b></span></div>
+<div class="st-how-scene st-how-c"><span class="st-how-ask"><strong>Delete the stop “Roof”, with 2 items and 1 photo?</strong><span><em>Delete</em><i>Keep it</i></span></span></div>
+<span class="st-how-finger"></span>
+</div>
+<figcaption class="st-how-steps">
+<span class="st-how-step" data-n="1">Add a stop, an item or a finding: it shows on your phone too</span>
+<span class="st-how-step" data-n="2">Move anything up or down with the arrows</span>
+<span class="st-how-step" data-n="3">Delete asks first and says what goes with it</span>
+</figcaption>
+</figure>
+<form class="insp-add insp-addstop" data-addstop>
+<label>New stop <input type="text" name="name" maxlength="120" autocomplete="off" placeholder="Garage" required></label>
+<label>In the report <select name="chapter" data-addstop-chapter><option value="">Its own chapter</option></select></label>
+<button type="submit">Add stop</button>
+</form>
+<dialog class="insp-confirm" data-confirm aria-labelledby="insp-confirm-t">
+<p id="insp-confirm-t" class="insp-confirm-t" data-confirm-text></p>
+<p class="insp-confirm-n">This can’t be undone, here or on your phone.</p>
+<p class="insp-confirm-n" data-confirm-published hidden>The report your client has stays as it is until you publish again.</p>
+<div class="insp-confirm-b"><button type="button" class="insp-confirm-go" data-confirm-go>Delete</button><button type="button" data-confirm-no autofocus>Keep it</button></div>
+</dialog>
 </div>
 </section>
 </main>
 
 <template data-t="person"><li><span class="insp-who"><strong data-v="name"></strong><span data-v="role"></span></span><a class="insp-look" data-look target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span data-v="look"></span></a></li></template>
-<div data-words hidden><span data-w="client">Client</span><span data-w="buyer_agent">Buyer’s agent</span><span data-w="listing_agent">Listing agent</span><span data-w="look-client">Client view</span><span data-w="look-agent">Agent view</span><span data-w="noname">No name yet</span><span data-w="agr-clientName">Client</span><span data-w="agr-clientFirstName">Client’s first name</span><span data-w="agr-clientEmail">Client’s email</span><span data-w="agr-propertyAddress">Address</span><span data-w="agr-street">Street</span><span data-w="agr-city">City</span><span data-w="agr-state">State</span><span data-w="agr-zip">ZIP code</span><span data-w="agr-fee">Price</span><span data-w="agr-services">Services</span><span data-w="agr-feeLines">Price lines</span><span data-w="agr-none">(none)</span><span data-w="agr-sending">Sending…</span><span data-w="agr-sent">Sent. Your client will get an email to sign it.</span><span data-w="agr-held">Made. Its email waits: client emails are off in your settings.</span><span data-w="agr-no_address">Made, but your client has no email. Add one, or have them sign on your phone.</span><span data-w="agr-email_failed">Made, but its email didn’t go. Cancel the request and send it again.</span><span data-w="agr-refused">This agreement was already updated. Reload the page.</span><span data-w="agr-no_agreement">You have no agreement to send. Add one in Agreements, then try again.</span><span data-w="agr-details">Your client’s email doesn’t look right. Fix it, then try again.</span><span data-w="agr-failed">That didn’t go through. Try again.</span><span data-w="photo-one">photo</span><span data-w="photo-many">photos</span><span data-w="ai-too-long">These details are longer than Spex can edit (4,000 characters). Shorten them, or edit them yourself.</span><span data-w="ai-unreachable">Spex couldn’t be reached. Your details are unchanged. Try again.</span></div>
+<div data-words hidden><span data-w="client">Client</span><span data-w="buyer_agent">Buyer’s agent</span><span data-w="listing_agent">Listing agent</span><span data-w="look-client">Client view</span><span data-w="look-agent">Agent view</span><span data-w="noname">No name yet</span><span data-w="chapter-of">In the chapter of </span><span data-w="del-stop">Delete the stop “{name}”</span><span data-w="del-item">Delete the item “{name}”</span><span data-w="del-finding">Delete the finding “{name}”</span><span data-w="del-with">, with </span><span data-w="n-item">1 item</span><span data-w="n-items">{n} items</span><span data-w="n-finding">1 finding</span><span data-w="n-findings">{n} findings</span><span data-w="n-photo">1 photo</span><span data-w="n-photos">{n} photos</span><span data-w="and"> and </span><span data-w="unnamed">this one</span><span data-w="agr-clientName">Client</span><span data-w="agr-clientFirstName">Client’s first name</span><span data-w="agr-clientEmail">Client’s email</span><span data-w="agr-propertyAddress">Address</span><span data-w="agr-street">Street</span><span data-w="agr-city">City</span><span data-w="agr-state">State</span><span data-w="agr-zip">ZIP code</span><span data-w="agr-fee">Price</span><span data-w="agr-services">Services</span><span data-w="agr-feeLines">Price lines</span><span data-w="agr-none">(none)</span><span data-w="agr-sending">Sending…</span><span data-w="agr-sent">Sent. Your client will get an email to sign it.</span><span data-w="agr-held">Made. Its email waits: client emails are off in your settings.</span><span data-w="agr-no_address">Made, but your client has no email. Add one, or have them sign on your phone.</span><span data-w="agr-email_failed">Made, but its email didn’t go. Cancel the request and send it again.</span><span data-w="agr-refused">This agreement was already updated. Reload the page.</span><span data-w="agr-no_agreement">You have no agreement to send. Add one in Agreements, then try again.</span><span data-w="agr-details">Your client’s email doesn’t look right. Fix it, then try again.</span><span data-w="agr-failed">That didn’t go through. Try again.</span><span data-w="photo-one">photo</span><span data-w="photo-many">photos</span><span data-w="ai-too-long">These details are longer than Spex can edit (4,000 characters). Shorten them, or edit them yourself.</span><span data-w="ai-unreachable">Spex couldn’t be reached. Your details are unchanged. Try again.</span></div>
 
 <template data-t="row"><li><a href="#"><strong data-v="title"></strong><span data-v="address"></span><time data-v="day"></time></a></li></template>
 
 <template data-t="stop">
 <section class="insp-stop">
-<h2><input class="insp-name" type="text" data-field="name" data-required aria-label="Stop name" autocomplete="off"></h2>
+<div class="insp-stop-head"><h2><input class="insp-name" type="text" data-field="name" data-required aria-label="Stop name" autocomplete="off"></h2><span class="insp-tools"><button type="button" class="insp-tool" data-move="up" aria-label="Move this stop up">↑</button><button type="button" class="insp-tool" data-move="down" aria-label="Move this stop down">↓</button><button type="button" class="insp-tool insp-del" data-delete aria-label="Delete this stop">Delete</button></span></div>
 <ol class="insp-items"></ol>
+<form class="insp-add" data-additem><label>New item <input type="text" name="name" maxlength="120" autocomplete="off" placeholder="Gutters" required></label><button type="submit">Add item</button></form>
 </section>
 </template>
 
@@ -141,15 +166,18 @@
 <option value="not_present">Not present</option>
 </select>
 </label>
+<span class="insp-tools"><button type="button" class="insp-tool" data-move="up" aria-label="Move this item up">↑</button><button type="button" class="insp-tool" data-move="down" aria-label="Move this item down">↓</button><button type="button" class="insp-tool insp-del" data-delete aria-label="Delete this item">Delete</button></span>
 </div>
 <label>Note <textarea rows="2" data-field="note"></textarea></label>
 <label data-ni hidden>Why it wasn't inspected <textarea rows="2" data-field="ni_note"></textarea></label>
 <ol class="insp-findings"></ol>
+<form class="insp-add" data-addfinding><label>New finding <input type="text" name="name" maxlength="200" autocomplete="off" placeholder="What did you find?" required></label><button type="submit">Add finding</button></form>
 </li>
 </template>
 
 <template data-t="finding">
 <li class="insp-finding">
+<div class="insp-finding-head"><span class="insp-tools"><button type="button" class="insp-tool" data-move="up" aria-label="Move this finding up">↑</button><button type="button" class="insp-tool" data-move="down" aria-label="Move this finding down">↓</button><button type="button" class="insp-tool insp-del" data-delete aria-label="Delete this finding">Delete</button></span></div>
 <label>Finding <input type="text" data-field="finding_title" autocomplete="off"></label>
 <label>Severity
 <select data-field="severity">

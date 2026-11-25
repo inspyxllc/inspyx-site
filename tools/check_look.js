@@ -77,6 +77,10 @@ async function open(browser, o) {
       if (!Array.isArray(body.push) || body.push.length !== 0) { away.push(u + ' (a push)'); return route.abort(); }
       return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ rows: [], next: null, more: false }) });
     }
+    // Which inspections have a published report (the inspections page's delete question): none here.
+    if (u === SERVER + '/functions/v1/reports-sent') {
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ reports: [], as_of: new Date().toISOString() }) });
+    }
     if (u !== REPORT) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
     const h = req.headers();

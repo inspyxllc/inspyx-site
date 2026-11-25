@@ -100,6 +100,11 @@ async function open(browser, o) {
       const rows = o.biz ? o.biz() : [];
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows, next: rows.length, more: false }) });
     }
+    // The reports-sent function (which inspections have a published report): o.published lists them.
+    if (u.startsWith(SERVER + '/functions/v1/reports-sent')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+        body: JSON.stringify({ reports: (o.published || []).map((id) => ({ inspection_id: id, published_at: 1, locked: false, links: [], emails: [] })), as_of: new Date().toISOString() }) });
+    }
     if (u.startsWith(SERVER + '/functions/v1/booking') && o.booking) {
       const b = JSON.parse(req.postData() || '{}'); bookCalls.push({ headers: req.headers(), body: b });
       const a = o.booking(b);
@@ -327,6 +332,76 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       ok(label + ': nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
       await ctx.close();
     });
+    await group('the report\'s structure, ' + label, async () => {
+      const s = server(); seed(s);
+      s.phone('section', SEC, 'report_section_id', 'C1');
+      const { page, ctx, errs, away } = await open(browser, { server: s, w, hash: '#' + INSP, published: label === 'phone' ? [INSP] : [] });
+      const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+      const partBy = (field, value) => { for (const h of s.held.values()) if (h.field === field && h.value === value) return h.id; return null; };
+      const fieldsOf = (id) => { const o = {}; for (const h of s.held.values()) if (h.id === id) o[h.field] = { value: h.value, at: h.at }; return o; };
+      await page.waitForSelector('[data-additem]');
+
+      // An item, a finding and a stop, each made whole in one change, as the phone makes one.
+      await page.locator('[data-additem] input').first().fill('Downspouts');
+      await page.locator('[data-additem] button').first().click();
+      await until(async () => partBy('label', 'Downspouts') !== null);
+      const item = partBy('label', 'Downspouts'), fi = fieldsOf(item);
+      ok(label + ': add item: a version-4 id, its stop, no parent, after the last, all at one time', V4.test(item) &&
+        fi.section_id.value === SEC && fi.parent_item_id.value === null && fi.position.value === 1 &&
+        new Set(Object.values(fi).map((x) => x.at)).size === 1, JSON.stringify(fi));
+      await page.locator('[data-addfinding] input').first().fill('Loose bracket');
+      await page.locator('[data-addfinding] button').first().click();
+      await until(async () => partBy('finding_title', 'Loose bracket') !== null);
+      const f = fieldsOf(partBy('finding_title', 'Loose bracket'));
+      ok(label + ': add finding: under its item, in its stop, after the finding there', f.parent_item_id.value === ITEM && f.section_id.value === SEC &&
+        f.position.value === 1 && f.label.value === 'Loose bracket', JSON.stringify(f));
+      await page.locator('[data-addstop] input[name="name"]').fill('Garage');
+      await page.locator('[data-addstop-chapter]').selectOption(SEC);
+      await page.locator('[data-addstop] button').click();
+      await until(async () => partBy('name', 'Garage') !== null);
+      const st = fieldsOf(partBy('name', 'Garage'));
+      ok(label + ': add stop: in the chosen stop\'s chapter; its template null; both sent', st.report_section_id.value === 'C1' && 'template_section_ref' in st &&
+        st.template_section_ref.value === null && st.position.value === 1, JSON.stringify(st));
+      ok(label + ': a new item shows "Not started", as the phone starts one', (await page.locator('[data-key="item/' + item + '.status"]').inputValue()) === 'untouched');
+      ok(label + ': the new parts show on the page', (await page.locator('.insp-stop').count()) === 2 &&
+        await until(async () => (await page.locator('.insp-label').evaluateAll((els) => els.map((e) => e.value))).includes('Downspouts')));
+
+      // Moves: the two swap places; the ends are off.
+      const gutters = page.locator('.insp-item').first().locator('.insp-item-head');
+      ok(label + ': the first item can\'t go up', await gutters.locator('[data-move="up"]').isDisabled());
+      await gutters.locator('[data-move="down"]').click();
+      await until(async () => s.value('item', ITEM, 'position') === 1 && s.value('item', item, 'position') === 0);
+      ok(label + ': down: the two items swap places', s.value('item', ITEM, 'position') === 1 && s.value('item', item, 'position') === 0);
+
+      // Delete: asks first, says what goes; "Keep it" keeps it; Delete takes it and everything under it.
+      await page.locator('.insp-stop').first().locator('.insp-stop-head [data-delete]').click();
+      const asked = await page.locator('[data-confirm-text]').textContent();
+      ok(label + ': delete asks first, naming what goes', asked === 'Delete the stop “Roof”, with 2 items, 2 findings and 1 photo?', asked);
+      if (label === 'phone') ok(label + ': a published report: the question says the client’s copy stays until the next publish',
+        await until(async () => await page.locator('[data-confirm-published]').isVisible()));
+      ok(label + ': the question sits in the middle of the screen', await page.evaluate(() => { const r = document.querySelector('[data-confirm]').getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 4; }));
+      if (process.env.SHOTS) { await page.waitForTimeout(300); await page.screenshot({ path: require('path').join(process.env.SHOTS, 'structure-confirm-' + label + '.png') }); }
+      await page.locator('[data-confirm-no]').click();
+      ok(label + ': Keep it: nothing is deleted', s.value('section', SEC, '_del') === undefined && !(await page.locator('[data-confirm]').isVisible()));
+      // Return on the question keeps everything: Keep it has the focus, never Delete.
+      await page.locator('.insp-stop').first().locator('.insp-stop-head [data-delete]').click();
+      ok(label + ': the question opens on Keep it', await page.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-confirm-no')));
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(300);
+      ok(label + ': Return keeps it', s.value('section', SEC, '_del') === undefined && !(await page.locator('[data-confirm]').isVisible()));
+      if (label === 'wide') ok(label + ': no report out: no word of one', !(await page.locator('[data-confirm-published]').isVisible()));
+      await page.locator('.insp-stop').first().locator('.insp-stop-head [data-delete]').click();
+      await page.locator('[data-confirm-go]').click();
+      await until(async () => s.value('section', SEC, '_del') === true);
+      ok(label + ': Delete: the stop, its items and their findings go, together', s.value('section', SEC, '_del') === true && s.value('item', ITEM, '_del') === true &&
+        s.value('item', FIND, '_del') === true && s.value('item', item, '_del') === true && s.value('item', partBy('finding_title', 'Loose bracket'), '_del') === true);
+      ok(label + ': and it is gone from the page', await until(async () => (await page.locator('.insp-stop').count()) === 1));
+      ok(label + ': its how-to, in three steps', await page.locator('.st-how').isVisible() && (await page.locator('.st-how-step').count()) === 3);
+      if (process.env.SHOTS) await page.locator('.insp-one').screenshot({ path: require('path').join(process.env.SHOTS, 'structure-' + label + '.png') });
+      ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
+      await ctx.close();
+    });
   }
 
   await group('Edit with AI: no button when the relay denies, or has no "edit"', async () => {
@@ -338,6 +413,23 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       ok('no button: ' + (o.editOff ? 'a relay without edit' : 'a denial'), (await page.locator('[data-ai-open]').evaluateAll((els) => els.filter((e) => e.offsetParent !== null).length)) === 0 && !relay.some((m) => m.chat));
       await ctx.close();
     }
+  });
+  await group('the report\'s structure: a move among items that share a place keeps the others where they are (Codex on #92)', async () => {
+    const s = server(); seed(s);
+    // Three items at the same position (made at once on two devices), shown in id order.
+    const B = '6f1c2a3b-0000-4000-8000-0000000000a5', C = '6f1c2a3b-0000-4000-8000-0000000000a6';
+    for (const [id, label] of [[B, 'Bbb'], [C, 'Ccc']]) {
+      s.phone('item', id, 'section_id', SEC); s.phone('item', id, 'label', label); s.phone('item', id, 'position', 0);
+    }
+    const { page, ctx } = await open(browser, { server: s, hash: '#' + INSP });
+    const labels = async () => page.locator('.insp-label').evaluateAll((els) => els.map((e) => e.value));
+    await until(async () => (await labels()).length === 3);
+    const before = await labels();
+    await page.locator('.insp-item').first().locator('.insp-item-head [data-move="down"]').click();
+    await until(async () => JSON.stringify(await labels()) !== JSON.stringify(before));
+    const after = await labels();
+    ok('tied places: Down swaps the first two and leaves the third', JSON.stringify(after) === JSON.stringify([before[1], before[0], before[2]]), JSON.stringify([before, after]));
+    await ctx.close();
   });
 
   await group('editing on the web', async () => {
@@ -421,7 +513,9 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     // Mark the very box being typed in: a page rebuilt under it would hand over a new box (the text can even
     // survive that, since a removed box is "left", but the caret jumps and keystrokes in between are lost).
     await page.evaluate((k) => { document.querySelector(k).dataset.mark = 'same'; }, labelKey);
-    await box.click(); await box.press('End'); await box.pressSequentially(' (front)', { delay: 10 });
+    // The caret at the end, said outright: End doesn't move it on a Mac, and a click lands mid-word in a narrower box.
+    await box.click(); await page.evaluate((k) => { const e = document.querySelector(k); e.setSelectionRange(e.value.length, e.value.length); }, labelKey);
+    await box.pressSequentially(' (front)', { delay: 10 });
     await page.waitForTimeout(1500);   // past the pause: the name is sent while the box still has the caret
     ok('rename: a name being typed survives its own save: the same box, still with the caret (the page is not rebuilt under it)',
       (await box.inputValue()) === 'Gutters and downspouts (front)' && await page.evaluate((k) => document.querySelector(k).dataset.mark === 'same' && document.activeElement === document.querySelector(k), labelKey) &&
