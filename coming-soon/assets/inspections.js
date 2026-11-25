@@ -712,6 +712,19 @@
   var SEARCHED = { section: ['name'], item: ['label', 'note', 'ni_note'],
     finding: ['finding_title', 'location', 'note', 'finding_implication', 'finding_recommendation', 'finding_recommended_trade'] };
   var fold = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
+  /* Where q is in v, in v's own letters: folding can make a letter shorter (an accent on its own) or longer, so each
+     folded letter remembers the one it came from. */
+  function findIn(v, q) {
+    var folded = '', from = [], to = [], i = 0;
+    Array.from(v).forEach(function (ch) {
+      var f = fold(ch);
+      if (f === '' && to.length) to[to.length - 1] = i + ch.length;   // a lone accent belongs to the letter before it
+      for (var n = 0; n < f.length; n++) { from.push(i); to.push(i + ch.length); }
+      folded += f; i += ch.length;
+    });
+    var at = folded.indexOf(q);
+    return at < 0 ? null : { at: from[at], len: to[at + q.length - 1] - from[at] };
+  }
   function searchMatches(inspection, query) {
     var q = fold(query).trim();
     if (q.length < 2) return [];
@@ -721,8 +734,8 @@
       var look = function (entity, kind, id, where) {
         SEARCHED[kind].forEach(function (field) {
           var v = text(val(entity, id, field));
-          var at = fold(v).indexOf(q);
-          if (at >= 0) out.push({ key: key(entity, id, field), field: field, where: where, value: v, at: at, len: q.length });
+          var m = findIn(v, q);
+          if (m) out.push({ key: key(entity, id, field), field: field, where: where, value: v, at: m.at, len: m.len });
         });
       };
       look('section', 'section', s, [stopName]);
@@ -737,7 +750,7 @@
     return out;
   }
   function snippet(m) {
-    // The words around the match: what folding found is the same length in the original (one letter for one).
+    // The words around the match, in the original's own letters (findIn).
     var from = Math.max(0, m.at - 40), to = Math.min(m.value.length, m.at + m.len + 60);
     var frag = document.createDocumentFragment();
     if (from > 0) frag.appendChild(document.createTextNode('…'));

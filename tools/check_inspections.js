@@ -455,6 +455,15 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const k = '[data-key="item/' + FIND + '.finding_implication"]';
       ok(label + ': a match goes straight to its box', await until(async () => await page.evaluate((sel) => document.activeElement === document.querySelector(sel), k)) &&
         await page.locator(k).evaluate((e) => e.classList.contains('is-found')));
+      // A phone can keep an accent as a letter of its own (fac + cedilla + ade): the mark is still the word itself.
+      s.phone('item', ITEM, 'note', 'Cafe\u0301 side: re\u0301sume\u0301 boards \u0130n place, soffit loose', 99);
+      await page.reload(); await page.waitForSelector('[data-search]');
+      await page.locator('[data-search]').fill('soffit');
+      ok(label + ': letters kept as two never shift the mark', await until(async () => (await page.locator('[data-search-results] mark').count()) > 0 &&
+        (await page.locator('[data-search-results] mark').allTextContents()).includes('soffit')), (await page.locator('[data-search-results] mark').allTextContents()).join());
+      await page.locator('[data-search]').fill('resume');
+      ok(label + ': and a word with them is marked whole', await until(async () => (await page.locator('[data-search-results] mark').allTextContents()).map((t) => t.normalize('NFC')).includes('r\u00e9sum\u00e9')),
+        (await page.locator('[data-search-results] mark').allTextContents()).join());
       await page.locator('[data-search]').fill('chimney');
       ok(label + ': nothing matches: it says so', await until(async () => (await page.locator('[data-search-count]').textContent()) === 'Nothing in this report matches.'));
       ok(label + ': nothing was sent for the search', calls.slice(sent).every((c) => (c.body.push || []).length === 0));
