@@ -80,7 +80,8 @@
      clocks skip an hour), which would otherwise turn into another hour unseen (Codex on #86). */
   function when() {
     var d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.day.value), t = /^(\d{2}):(\d{2})$/.exec(f.time.value);
-    if (!d || !t) return null;
+    // A year still being typed (0002, 0020…) is no date yet; JavaScript would also read its first 100 years as the 1900s.
+    if (!d || !t || +d[1] < 2000) return null;
     var at = instant(+d[1], +d[2], +d[3], +t[1], +t[2], zone()), p = {};
     new Intl.DateTimeFormat('en-US', { timeZone: zone(), hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })
       .formatToParts(new Date(at)).forEach(function (x) { p[x.type] = +x.value; });
