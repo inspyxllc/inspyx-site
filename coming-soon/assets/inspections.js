@@ -353,7 +353,10 @@
   }
   function takeBiz(row) {
     if (!row || !BIZ[row.kind] || typeof row.id !== 'string') return;
-    var k = row.kind + '/' + row.id, held = biz[k];
+    var k = row.kind + '/' + row.id, held = biz[k], wire = flagWire[k];
+    // What the server has, even when a tap still on its way is newer and shown: what that tap goes back to if it isn't
+    // kept (Codex on inspyx-site #95). The feed sends a row once.
+    if (wire && (!wire.sure || row.updated_at >= wire.sure.updated_at)) wire.sure = row;
     if (!held || row.updated_at >= held.updated_at) biz[k] = row;
   }
 

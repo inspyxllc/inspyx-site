@@ -98,7 +98,7 @@ async function open(browser, o) {
     if (u.startsWith(SERVER + '/functions/v1/sync')) {
       const b = JSON.parse(req.postData() || '{}'); bizCalls.push({ headers: req.headers(), body: b });
       // A stand-in that takes pushes too (flags): it answers as the sync function does.
-      if (o.bizServer) return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(o.bizServer(b)) });
+      if (o.bizServer) return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(await o.bizServer(b)) });
       const rows = o.biz ? o.biz() : [];
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows, next: rows.length, more: false }) });
     }
@@ -442,10 +442,12 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     const FIELDS = ['id', 'ownerAccountId', 'inspectionId', 'flaggedAt', 'updatedAt', 'deletedAt'];
     const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
     const problem = (d) => Object.keys(d).length !== 6 || FIELDS.some((f) => !(f in d)) || !V4.test(d.id) || d.ownerAccountId !== ME ? 'shape' : null;
-    const answer = (b) => {
+    let hold = null;
+    const answer = async (b) => {
       const skipped = [], applied = [];
       for (const r of b.push || []) {
         pushed.push(r);
+        if (hold) await hold;
         if ((typeof refuse === 'function' ? refuse(r) : refuse) || r.kind !== 'item_flags' || problem(r.data)) { skipped.push({ kind: r.kind, id: r.id, reason: 'flag:shape' }); continue; }
         const h = held.get(r.id);
         if (h && h.row.updated_at >= r.updated_at) { applied.push({ kind: r.kind, id: r.id, applied: false }); continue; }
@@ -458,7 +460,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     // A flag set or cleared elsewhere (the phone).
     const elsewhere = (id, on, at) => held.set(id, { seq: ++seq, row: { kind: 'item_flags', id, updated_at: at, deleted_at: on ? null : at,
       data: { id, ownerAccountId: ME, inspectionId: INSP, flaggedAt: at, updatedAt: at, deletedAt: on ? null : at } } });
-    return { answer, pushed, held, elsewhere, set refuse(v) { refuse = v; } };
+    return { answer, pushed, held, elsewhere, set refuse(v) { refuse = v; }, set hold(v) { hold = v; } };
   }
 
   for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
@@ -639,6 +641,22 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await page.waitForTimeout(400);
     ok('two quick taps, only the first kept: as the first left it', (await flagOf(ITEM).getAttribute('aria-pressed')) === 'false' && f.held.get(ITEM).row.deleted_at !== null);
     f.refuse = false;
+    await flagOf(ITEM).click();
+    await until(async () => f.held.get(ITEM).row.deleted_at === null);
+
+    // Cleared on the phone while a clear here is still on its way, which is then refused: off, as the phone left it.
+    await page.waitForTimeout(500);
+    let go; f.hold = new Promise((r) => { go = r; }); f.refuse = true;
+    const n0 = f.pushed.length, base = f.held.get(ITEM).row.updated_at;
+    await flagOf(ITEM).click();
+    await until(async () => f.pushed.length === n0 + 1);
+    f.elsewhere(ITEM, false, base + 1);   // older than the tap here: not shown over it, but it is what the server has
+    ping();
+    await page.waitForTimeout(700);
+    go();
+    ok('a clear on the phone that came while a refused tap was on its way is kept', await until(async () => page.locator('[data-flagtrouble]').isVisible()) &&
+      (await flagOf(ITEM).getAttribute('aria-pressed')) === 'false');
+    f.hold = null; f.refuse = false;
     await flagOf(ITEM).click();
     await until(async () => f.held.get(ITEM).row.deleted_at === null);
 
