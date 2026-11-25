@@ -310,6 +310,7 @@
       return ask({ repair: 'share' }).then(function (r) {
         if (r.status !== 200 || r.json.state !== 'shared' || !/^[A-Za-z0-9_-]{22}$/.test(r.json.key)) return fail(r);
         if (edits !== at) return;   // edited while it was being shared: that link is of an older sheet
+        problem = null;   // an earlier try's error goes with the link
         var link = DOC_BASE + r.json.key;
         var copy = el('button', { class: 'rr-copy', type: 'button', 'data-rr-copy': true, on: { click: function () {
           var done = function () { copy.textContent = WORDS.copied; };
@@ -322,7 +323,7 @@
           el('div', { class: 'rr-done-b' }, [copy, el('a', { class: 'rr-go', href: link, target: '_blank', rel: 'noopener noreferrer' }, [WORDS.open])])
         ]));
       });
-    }, function () { problem = WORDS.failed; paintSheet(); });
+    }).catch(function () { problem = WORDS.failed; paintSheet(); });   // the share itself never arrived, too: it says so
   }
 
   /* ---- start: what this link already holds ---- */

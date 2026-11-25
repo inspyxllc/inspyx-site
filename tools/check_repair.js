@@ -78,6 +78,7 @@ async function open(browser, o) {
       // A slow save is kept when it is answered, as a real one: never before.
       if (body.repair === 'save' && o.server.saveDelay) await new Promise((r) => setTimeout(r, o.server.saveDelay));
       if (body.repair === 'save' && o.server.dropSaves > 0) { o.server.dropSaves--; o.server.saves.push(body); return route.abort('failed'); }
+      if (body.repair === 'share' && o.server.dropShares > 0) { o.server.dropShares--; return route.abort('failed'); }
       const [status, json] = o.server.answer(body);
       return route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(json) });
     }
@@ -225,6 +226,26 @@ const shot = async (page, sel, name) => {
     ok('after a save that never arrived: Share saved again first', g.saves.length === 2 &&
       (Object.values(g.shares)[0] || { items: [] }).items.map((i) => i.title).join() === 'Corroded fitting', String(g.saves.length));
     await c.ctx.close();
+
+    const h = server();
+    h.dropShares = 1;
+    const d = await open(browser, { server: h });
+    await until(async () => (await d.page.locator('[data-rr-add]').count()) > 0);
+    await d.page.locator('[data-rr-add="C2.1"]').click();
+    await until(async () => h.saves.length === 1, 3000);
+    await d.page.locator('[data-rr-open]').click();
+    await d.page.locator('[data-rr-share]').click();   // that share never arrives
+    await until(async () => /\S/.test(await d.page.locator('[data-rr-status]').textContent()) && !/Saved|Saving/.test(await d.page.locator('[data-rr-status]').textContent()), 4000);
+    const said = await d.page.locator('[data-rr-status]').textContent();
+    ok('a share that never arrived: it says so, no link, Share still on', said.trim().length > 0 && !/Saved|Saving/.test(said) &&
+      (await d.page.locator('[data-rr-done]').count()) === 0 && !(await d.page.locator('[data-rr-share]').isDisabled()), said);
+    await d.page.locator('[data-rr-share]').click();
+    await until(async () => Object.keys(h.shares).length === 1, 4000);
+    await until(async () => (await d.page.locator('[data-rr-done]').count()) === 1, 3000);
+    ok('the next Share works, and the error is gone', (await d.page.locator('[data-rr-done]').count()) === 1 &&
+      (await d.page.locator('[data-rr-status]').textContent()) !== said, await d.page.locator('[data-rr-status]').textContent());
+    ok('a share that never arrived: no error on the page', d.errs.length === 0, d.errs.join(' | '));
+    await d.ctx.close();
   });
 
   await group('the sheet is what is shared: Remove takes a finding off it; back to Credit, its amount counts (Codex on #91, r2)', async () => {
