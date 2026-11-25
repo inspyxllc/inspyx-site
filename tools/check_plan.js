@@ -29,7 +29,7 @@ const granted = (n, secs) => ({ access_token: 'test-access-' + n, refresh_token:
 const kept = (n, endsInMs) => JSON.stringify({ access: 'test-access-' + n, renew: 'test-renew-' + n, ends: Date.now() + endsInMs, id: '11111111-1111-4111-8111-111111111111', email: WHO });
 
 // What the billing server says about a plan (statusView in the app's repo, backend/supabase/functions/billing/core.ts).
-const plan = (o) => Object.assign({ status: 'none', has_plan: false, trial_end: null, current_period_end: null, cancel_at_period_end: false, free_month: true, plan_amount: null, plan_interval: null }, o);
+const plan = (o) => Object.assign({ tier: 'founder', status: 'none', has_plan: false, trial_end: null, current_period_end: null, cancel_at_period_end: false, free_month: true, plan_amount: null, plan_interval: null }, o);
 const DEC9 = '2026-12-09T10:00:00+00:00';   // a free month ends at 10:00 UTC, so the date reads the same from UTC to UTC-10
 const FREE = plan({ status: 'trialing', has_plan: true, trial_end: DEC9, current_period_end: DEC9, free_month: false, plan_amount: 5495, plan_interval: 'month' });
 const ACTIVE = plan({ status: 'active', has_plan: true, current_period_end: '2026-12-09T15:52:27+00:00', free_month: false, plan_amount: 5495, plan_interval: 'month' });
@@ -61,18 +61,21 @@ const ATTENTION = 'Your plan needs attention. Open billing to fix it.';
 // 2026-11-14: "Yes, keep it").
 const ENDED = 'Your plan has ended. Start it again anytime: $79.95 a month.';
 const NOT_SET_UP = 'Billing isn\'t set up yet.';
+// No level (sign-up never finished, or a level this page doesn't know): no price, and the way to finish (2026-11-23;
+// draft words, the lead's OK).
+const FINISH = 'Finish signing up to see your plan and its price.';
 const FAILED = 'Couldn\'t check your plan. Check your connection and try again.';
 const PAGE_FAILED = 'Couldn\'t open the page. Try again.';
 const CHECKING = 'Checking your plan…';
 const NAMES = ['span: Founding inspector', 'span: Early inspector', 'span: Inspyx plan'];
 const PLAN_WORDS = ['h1: Your plan', ...NAMES, 'p: You\'re all set.', 'p: No charge was made.', 'p: ' + refundedWords('{amount}'),
   'p: ' + CHECKING, 'p: ' + WAITS, 'p: ' + freeDays('{days}'), 'p: ' + OFFER, 'p: ' + OFFER_EARLY, 'p: ' + OFFER_REGULAR,
-  'p: Free until {date}, then {amount} a {every}.', 'p: Free until {date}.', 'p: In your free month. Then {amount} a {every}.', 'p: In your free month.',
+  'p: Free until {date}, then {amount} a {every}.', 'p: Free until {date}.', 'p: In your free days. Then {amount} a {every}.', 'p: In your free days.',
   'p: Active. Next payment on {date}.', 'p: Active.', 'p: Ends {date}. Nothing more will be charged.', 'p: Ending. Nothing more will be charged.',
-  'p: ' + PROBLEM, 'p: ' + ATTENTION, 'p: ' + ENDED, 'p: ' + NOT_SET_UP, 'p: ' + FAILED,
+  'p: ' + PROBLEM, 'p: ' + ATTENTION, 'p: ' + ENDED, 'p: ' + FINISH, 'p: ' + NOT_SET_UP, 'p: ' + FAILED,
   'p: Free until {date}.', 'p: ' + MONEY_OVER, 'p: ' + MONEY_USED,
   'p: ' + PAGE_FAILED, 'p: ' + NOT_SET_UP, 'p: ' + REFUND_FAILED,
-  'button: Start your plan', 'button: Manage billing', 'button: Update card', 'button: Try again', 'button: ' + MONEY_BACK,
+  'button: Start your plan', 'button: Finish sign-up', 'button: Manage billing', 'button: Update card', 'button: Try again', 'button: ' + MONEY_BACK,
   'p: ' + asked('{amount}', '{last4}'), 'p: ' + asked('{amount}', null), 'button: Refund me', 'button: Keep my plan',
   'p: Signed in as', 'p: Account', ...NAMES];
 const read = () => {
@@ -98,12 +101,12 @@ async function open(browser, where, opts) {
   page.setDefaultTimeout(8000);
   if (o.clock) await page.clock.install();
   if (o.without) await page.route('**/' + o.without, (route) => route.abort());
-  // moneyOn: the page's money-back switch turned on, as a build that turns it on would (the file served with its one
-  // switch flipped; nothing else in it changes).
-  if (o.moneyOn) await page.route('**/assets/plan.js', async (route) => {
-    const r = await route.fetch(), js = await r.text(), on = js.replace('var MONEY_BACK_ON = false;', 'var MONEY_BACK_ON = true;');
-    if (on === js) throw new Error('the money-back switch is not where this check looks for it');
-    return route.fulfill({ response: r, body: on });
+  // money: the page's money-back switch set on (true) or off (false) whatever the file ships with, as a build that
+  // sets it would (the file served with its one switch set; nothing else in it changes).
+  if (o.money !== undefined) await page.route('**/assets/plan.js', async (route) => {
+    const r = await route.fetch(), js = await r.text(), at = /var MONEY_BACK_ON = (true|false);/;
+    if (!at.test(js)) throw new Error('the money-back switch is not where this check looks for it');
+    return route.fulfill({ response: r, body: js.replace(at, 'var MONEY_BACK_ON = ' + (o.money ? 'true' : 'false') + ';') });
   });
   const errs = [], away = [], calls = [], arrived = [];
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR_FAILED|net::ERR_ABORTED/.test(m.text())) errs.push(m.text()); });
@@ -193,14 +196,14 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       ['in the free month, at an older price', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 8495, plan_interval: 'month' }), 'Free until December 9, 2026, then $84.95 a month.', 'Manage billing'],
       ['in the free month, at a price in the thousands', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 109000, plan_interval: 'year' }), 'Free until December 9, 2026, then $1,090 a year.', 'Manage billing'],
       ['in the free month, the price not said', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false }), 'Free until December 9, 2026.', 'Manage billing'],
-      ['in the free month, the date not said', plan({ status: 'trialing', has_plan: true, free_month: false, plan_amount: 5495, plan_interval: 'month' }), 'In your free month. Then $54.95 a month.', 'Manage billing'],
-      ['in the free month, neither said', plan({ status: 'trialing', has_plan: true, free_month: false }), 'In your free month.', 'Manage billing'],
+      ['in the free month, the date not said', plan({ status: 'trialing', has_plan: true, free_month: false, plan_amount: 5495, plan_interval: 'month' }), 'In your free days. Then $54.95 a month.', 'Manage billing'],
+      ['in the free month, neither said', plan({ status: 'trialing', has_plan: true, free_month: false }), 'In your free days.', 'Manage billing'],
       ['a price that is not whole cents is left out, never guessed', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 69.5, plan_interval: 'month' }), 'Free until December 9, 2026.', 'Manage billing'],
       ['a price charged every something else than a month or a year is left out', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 5495, plan_interval: 'week' }), 'Free until December 9, 2026.', 'Manage billing'],
       ['a price below nothing is left out', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: -5495, plan_interval: 'month' }), 'Free until December 9, 2026.', 'Manage billing'],
       ['a price that comes as words is left out', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: '5495', plan_interval: 'month' }), 'Free until December 9, 2026.', 'Manage billing'],
       ['an amount with no "how often" is left out too', plan({ status: 'trialing', has_plan: true, trial_end: DEC9, free_month: false, plan_amount: 5495, plan_interval: null }), 'Free until December 9, 2026.', 'Manage billing'],
-      ['a date that is not a date is left out', plan({ status: 'trialing', has_plan: true, trial_end: 'soon', free_month: false, plan_amount: 5495, plan_interval: 'month' }), 'In your free month. Then $54.95 a month.', 'Manage billing'],
+      ['a date that is not a date is left out', plan({ status: 'trialing', has_plan: true, trial_end: 'soon', free_month: false, plan_amount: 5495, plan_interval: 'month' }), 'In your free days. Then $54.95 a month.', 'Manage billing'],
       ['paid up', ACTIVE, 'Active. Next payment on December 9, 2026.', 'Manage billing'],
       ['paid up, the date not said', plan({ status: 'active', has_plan: true, free_month: false }), 'Active.', 'Manage billing'],
       ['canceled, running to the end of what is paid for', Object.assign({}, ACTIVE, { cancel_at_period_end: true }), 'Ends December 9, 2026. Nothing more will be charged.', 'Manage billing'],
@@ -218,7 +221,10 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       ['everyone after, never started', plan({ tier: 'regular', free_month: false }), OFFER_REGULAR, 'Start your plan'],
       ['the next 100, ended: the regular price', plan({ tier: 'early', status: 'canceled', free_month: false }), ENDED, 'Start your plan'],
       ['the next 100, a first payment never finished', plan({ tier: 'early', status: 'incomplete_expired', free_month: false }), OFFER_EARLY, 'Start your plan'],
-      ['a level this page does not know: the founding offer', plan({ tier: 'gold', free_month: false }), OFFER, 'Start your plan'],
+      // An unknown level never names a price (2026-11-23: no sign-up record showed one account two prices).
+      ['a level this page does not know: no price, and Finish sign-up', plan({ tier: 'gold', free_month: false }), FINISH, 'Finish sign-up'],
+      ['no level (no sign-up record): no price, and Finish sign-up', plan({ tier: null }), FINISH, 'Finish sign-up'],
+      ['no level said at all: no price, and Finish sign-up', plan({ tier: undefined }), FINISH, 'Finish sign-up'],
       ['a word for it this page does not know: the offer, as in the app', plan({ status: 'some_new_word', free_month: false }), OFFER, 'Start your plan'],
     ];
     for (const [label, json, sentence, button] of STANDS) {
@@ -228,10 +234,12 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       await ctx.close();
     }
     // The plan's name, on the page and on the card, follows the level.
-    for (const [tier, name] of [[undefined, 'Founding inspector'], ['founder', 'Founding inspector'], ['early', 'Early inspector'], ['regular', 'Inspyx plan']]) {
-      const { ctx, page, errs } = await open(browser, 'plan', { answers: () => bill(plan(tier ? { tier } : {})), settle: 300 });
+    for (const [tier, name] of [[null, null], ['gold', null], ['founder', 'Founding inspector'], ['early', 'Early inspector'], ['regular', 'Inspyx plan']]) {
+      const { ctx, page, errs } = await open(browser, 'plan', { answers: () => bill(plan({ tier })), settle: 300 });
       const names = await page.evaluate(() => [...document.querySelectorAll('.badge[data-level], .name[data-level]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()));
-      ok('the plan\'s name for ' + (tier || 'a server that says no level') + ' is "' + name + '", on the page and on the card', same(names, [name, name]) && errs.length === 0, JSON.stringify(names));
+      const text = await page.evaluate(() => document.querySelector('main').innerText);
+      ok('the plan\'s name for ' + (tier || 'no level') + (name ? ' is "' + name + '"' : ': none, and no price anywhere') + ', on the page and on the card',
+        (name ? same(names, [name, name]) : names.length === 0 && !/\$\d/.test(text)) && errs.length === 0, JSON.stringify(names));
       await ctx.close();
     }
     // The date is the day on the inspector's own calendar, as in the app. 03:00 in London on the 9th is still the 8th in New York.
@@ -268,25 +276,27 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
   // ---- "Get my money back" (Moises, 2026-11-15): offered within 30 days of a payment, once; asked again in a sheet
   await group('money back', async () => {
     const PAID = Object.assign({}, ACTIVE, { tier: 'founder', money_back: { eligible: true, amount_cents: 5495, until: '2026-12-01T15:52:27+00:00' } });
-    // The switch as it ships: OFF (Inspyx 1, 2026-11-15). Whatever the server says, no button, sheet or line about
-    // money back, and nothing asked about it; the free days still follow the server.
+    // The switch turned off (it shipped off from 2026-11-15 until Moises approved its last sentence on 2026-11-16).
+    // Whatever the server says, no button, sheet or line about money back, and nothing asked about it; the free days
+    // still follow the server.
     for (const [label, json] of [['offered', PAID], ['used', Object.assign({}, ACTIVE, { money_back: { eligible: false, why: 'used' } })], ['too late', Object.assign({}, ACTIVE, { money_back: { eligible: false, why: 'too_late' } })]]) {
-      const { ctx, page, errs, calls } = await open(browser, 'plan', { answers: () => bill(json), settle: 300 });
+      const { ctx, page, errs, calls } = await open(browser, 'plan', { money: false, answers: () => bill(json), settle: 300 });
       const v = await sees(page);
       const shown = await page.evaluate(() => [...document.querySelectorAll('[data-money], [data-sheet] [data-ask], [data-under^="money"], [data-back="refunded"], [data-say="refund"]')].filter((e) => !e.hidden || (e.closest('dialog') && e.closest('dialog').open)).length);
       ok('money back switched off, the server saying ' + label + ': nothing about it shows, and only the plan is asked', shows(v, 'Active. Next payment on December 9, 2026.', 'Manage billing') && v.money === '' && v.under.length === 0 && v.sheet === null && shown === 0 && calls.filter(isBilling).every((c) => action(c) === 'status') && errs.length === 0, JSON.stringify(v) + ' shown ' + shown);
       await ctx.close();
     }
     {
-      const { ctx, page, errs } = await open(browser, 'plan', { answers: () => bill(plan({ tier: 'founder', free_until: DEC9, offer: { monthly_cents: 5495, yearly_cents: 59300, trial_days: 24 } })), settle: 300 });
+      const { ctx, page, errs } = await open(browser, 'plan', { money: false, answers: () => bill(plan({ tier: 'founder', free_until: DEC9, offer: { monthly_cents: 5495, yearly_cents: 59300, trial_days: 24 } })), settle: 300 });
       const v = await sees(page);
       ok('money back switched off: the free days still follow the server', shows(v, freeDays(24), 'Start your plan') && same(v.under, ['Free until December 9, 2026.']) && errs.length === 0, JSON.stringify(v));
       await ctx.close();
     }
     {
-      // The page as served says the switch is off; a check of the file itself, so a build can't turn it on unnoticed.
+      // The page as served says the switch is on (Moises approved its last sentence, "Couldn't finish your refund. Try
+      // again in a minute.", on 2026-11-16); a check of the file itself, so no change turns it off unnoticed.
       const js = fs.readFileSync(path.join(__dirname, '..', 'coming-soon', 'assets', 'plan.js'), 'utf8');
-      ok('money back ships switched off: the page\'s one switch says false', (js.match(/var MONEY_BACK_ON = (true|false);/g) || []).join() === 'var MONEY_BACK_ON = false;');
+      ok('money back ships switched on: the page\'s one switch says true', (js.match(/var MONEY_BACK_ON = (true|false);/g) || []).join() === 'var MONEY_BACK_ON = true;');
     }
 
     const ENDED_USED = plan({ status: 'canceled', free_month: false, tier: 'founder', money_back: { eligible: false, why: 'used' } });
@@ -300,7 +310,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       ['a reason this page does not know says nothing', Object.assign({}, ACTIVE, { money_back: { eligible: false, why: 'gold' } }), '', []],
     ];
     for (const [label, json, button, under] of LINES) {
-      const { ctx, page, errs } = await open(browser, 'plan', { moneyOn: true, answers: () => bill(json), settle: 300 });
+      const { ctx, page, errs } = await open(browser, 'plan', { money: true, answers: () => bill(json), settle: 300 });
       const v = await sees(page);
       ok('money back: ' + label, shows(v, 'Active. Next payment on December 9, 2026.', 'Manage billing') || shows(v, 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing') ? v.money === button && same(v.under, under) && errs.length === 0 : false, JSON.stringify(v));
       await ctx.close();
@@ -316,7 +326,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
         if (a === 'money_back') { refundedYet = true; return bill({ refunded: true, amount_cents: 5495, card_last4: '4242', plan_ended: true }); }
         return { status: 400, json: { error: 'action' } };
       };
-      const { ctx, page, errs, away, calls } = await open(browser, 'plan', { moneyOn: true, answers, settle: 300 });
+      const { ctx, page, errs, away, calls } = await open(browser, 'plan', { money: true, answers, settle: 300 });
       await page.click('[data-money]');
       await page.waitForTimeout(300);
       let v = await sees(page);
@@ -342,7 +352,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
 
     // The quote's and the press's other answers.
     const flow = async (quote, press) => {
-      const r = await open(browser, 'plan', { moneyOn: true, answers: (call) => {
+      const r = await open(browser, 'plan', { money: true, answers: (call) => {
         const a = action(call);
         if (a === 'status') return bill(PAID);
         if (a === 'money_back_quote') return typeof quote === 'function' ? quote() : quote;
@@ -420,7 +430,7 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       const focus = await e.page.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-money'));
       ok('money back: Escape closes the sheet as "Keep my plan" does, and the keyboard is back on the button', ve.sheet === null && ve.money === MONEY_BACK && focus && !e.calls.some((c) => isBilling(c) && action(c) === 'money_back'), JSON.stringify(ve) + ' focus ' + focus);
       await e.ctx.close();
-      const t = await open(browser, 'plan', { moneyOn: true, answers: (call) => (action(call) === 'status' ? bill(PAID) : { wait: 600, status: 200, json: { amount_cents: 5495, card_last4: '4242' } }), settle: 300 });
+      const t = await open(browser, 'plan', { money: true, answers: (call) => (action(call) === 'status' ? bill(PAID) : { wait: 600, status: 200, json: { amount_cents: 5495, card_last4: '4242' } }), settle: 300 });
       await t.page.click('[data-money]');
       await t.page.click('[data-money]', { force: true }).catch(() => null);
       await t.page.waitForTimeout(900);
@@ -535,6 +545,18 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
       ok('a page that cannot be opened because ' + label + ': the page says so and stays as it was', same(v.say, [line]) && same(v.stands, [OFFER_FREE]) && same(v.buttons, ['Start your plan']) && (await at(r.page)) === '/plan' && r.arrived.length === 0, JSON.stringify(v));
       await r.ctx.close();
     }
+    // A start refused for a reason the inspector can act on (2026-11-19): never "Couldn't open the page".
+    const su = await open(browser, 'plan', { stripe: true, answers: (c) => (action(c) === 'status' ? bill(plan({})) : { status: 409, json: { error: 'needs_signup' } }), settle: 300 });
+    await su.page.click('[data-do="start"]');
+    await su.page.waitForURL((u) => u.pathname === '/signup', { timeout: 5000 }).catch(() => {});
+    ok('a start refused because sign-up was never finished goes to sign-up, not "Couldn\'t open the page"', (await at(su.page)) === '/signup' && su.arrived.length === 0 && su.errs.length === 0, await at(su.page));
+    await su.ctx.close();
+    let invited = false;
+    const ni = await open(browser, 'plan', { stripe: true, answers: (c) => (action(c) === 'status' ? bill(invited ? plan({ tier: 'founder', free_waits_for_invite: true, offer: { monthly_cents: 5495, yearly_cents: 59300, trial_days: 30 } }) : plan({})) : (invited = true, { status: 409, json: { error: 'not_invited' } })), settle: 300 });
+    await ni.page.click('[data-do="start"]'); await ni.page.waitForTimeout(600);
+    const nv = await sees(ni.page);
+    ok('a start refused because the app invite is not sent yet: the plan is checked again and says it waits for the invite, with nothing to tap', same(nv.stands, [WAITS]) && nv.say.length === 0 && nv.buttons.length === 0 && (await at(ni.page)) === '/plan' && ni.arrived.length === 0 && ni.errs.length === 0, JSON.stringify(nv));
+    await ni.ctx.close();
     const m = await open(browser, 'plan', { stripe: true, answers: (c, i) => (action(c) === 'status' ? bill(plan({})) : i === 2 ? { status: 502, json: {} } : { wait: 600, status: 200, json: { url: CHECKOUT } }) });
     await m.page.click('[data-do="start"]'); await m.page.waitForTimeout(300);
     const one = (await sees(m.page)).say;
@@ -691,13 +713,15 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
   // ---- getting there and back, and the keys
   await group('getting around', async () => {
     const a = await open(browser, 'account', { answers: () => bill(FREE) });
-    const link = await a.page.evaluate(() => { const l = document.querySelector('.account a[href="/plan"]'); const b = l ? l.getBoundingClientRect() : { height: 0, width: 0 }; const o = document.querySelector('[data-signout]'); return l ? { text: l.textContent.trim(), h: Math.round(b.height), sw: document.documentElement.scrollWidth, out: o.getBoundingClientRect().height, solid: getComputedStyle(l).backgroundColor, quiet: getComputedStyle(o).backgroundColor, next: o.previousElementSibling === l } : null; });
+    const link = await a.page.evaluate(() => { const l = document.querySelector('.account a[href="/plan"]'); const b = l ? l.getBoundingClientRect() : { height: 0, width: 0 }; const o = document.querySelector('[data-signout]'); return l ? { text: (l.querySelector('strong') || l).textContent.trim(), h: Math.round(b.height), sw: document.documentElement.scrollWidth, out: o.getBoundingClientRect().height, quiet: getComputedStyle(o).backgroundColor, signinCard: !!o.closest('section') && !!o.closest('section').querySelector('#acct-signin'), planCard: !!l.closest('section') && !!l.closest('section').querySelector('#acct-plan') } : null; });
     await a.page.click('.account a[href="/plan"]'); await a.page.waitForURL('**/plan'); await a.page.waitForTimeout(400);
     const there = shows(await sees(a.page), 'Free until December 9, 2026, then $54.95 a month.', 'Manage billing');
     await a.page.click('.more a'); await a.page.waitForURL('**/account');
     ok('the account page has a link to the plan page, big enough to tap, and the plan page one back', !!link && link.text === 'Your plan' && link.h >= 44 && link.out >= 44 && link.sw <= PHONE && there && (await at(a.page)) === '/account', JSON.stringify(link));
     // Beside it in the row of buttons: since the dashboard's pages joined that row (2026-11-14), the two may wrap apart on a phone.
-    ok('on the account page the plan is the solid button and signing out the quiet one right after it', !!link && link.solid === 'rgb(0, 0, 0)' && link.quiet === 'rgb(255, 255, 255)' && link.next, JSON.stringify(link));
+    // The account page's design since job 7 (the lead's review, 2026-11-23): the plan is a row of "Your plan and your
+    // account", and Sign out the quiet button of the Sign-in card.
+    ok('on the account page the plan is a row of "Your plan and your account", and signing out the quiet button of the Sign-in card', !!link && link.planCard && link.signinCard && link.quiet === 'rgb(255, 255, 255)', JSON.stringify(link));
     await a.ctx.close();
 
     const k = await open(browser, 'plan', { w: WIDE, h: 900, desktop: true, stripe: true, answers: (c) => (action(c) === 'status' ? bill(plan({})) : { status: 200, json: { url: CHECKOUT } }) });
@@ -736,11 +760,12 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
     const js = code('assets/plan.js');
     ok('the plan page\'s script never holds the sign-in: it reads no storage, is never handed the sign-in, sends no request of its own and names no key', !/localStorage|sessionStorage|\.access|\.renew|\.stored\b|\.current\b|Bearer|Authorization|apikey|fetch\s*\(|XMLHttpRequest|sendBeacon|sb_publishable|supabase/.test(js) && (js.match(/auth\.who\(\)/g) || []).length === 2);
     ok('it says no words: every sentence is in the page', !/[A-Z][a-z]+ [a-z]+ [a-z]+[.!?]['"`]/.test(js) && !/['"`][A-Z][a-z]+ [a-z]+ /.test(js));
-    ok('it sends nobody anywhere but Stripe\'s two pages, the sign-in page, and where the server\'s checked address says', (js.match(/location\.(assign|replace)\(/g) || []).length === 2 && /location\.replace\('\/signin'\)/.test(js) && /location\.assign\(to\.href\)/.test(js) && !/location\.href\s*=|window\.open|\.innerHTML|document\.write|eval\(/.test(js));
+    ok('it sends nobody anywhere but Stripe\'s two pages, the sign-in page, the sign-up page, and where the server\'s checked address says', (js.match(/location\.(assign|replace)\(/g) || []).length === 3 && /location\.replace\('\/signin'\)/.test(js) && /location\.assign\('\/signup'\)/.test(js) && /location\.assign\(to\.href\)/.test(js) && !/location\.href\s*=|window\.open|\.innerHTML|document\.write|eval\(/.test(js));
     ok('the sign-in script asks only Inspyx\'s own server, and a function\'s name can be nothing but plain letters', /var SERVER = 'https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co';/.test(text('assets/auth.js')) && (text('assets/auth.js').match(/https?:\/\//g) || []).length === 1 && /\^\[a-z\]\[a-z-\]\*\$/.test(text('assets/auth.js')));
-    const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => ['/signin', '/account', '/plan', '/reset', '/signup'].every((p) => new RegExp('^' + r.source + '$').test(p)));
+    const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => r.source !== '/(.*)' && ['/signin', '/account', '/plan', '/reset', '/signup'].every((p) => new RegExp('^' + r.source + '$').test(p)));
     const says = (k) => (rule.length === 1 ? (rule[0].headers.find((x) => x.key === k) || {}).value : undefined);
-    // The dashboard's pages (/today, /numbers, /reports, 2026-11-14) share the same rule.
+    // The dashboard's pages (/today, /numbers, /reports, 2026-11-14) share the same rule. The every-page rule (/(.*),
+    // 2026-11-17: nosniff and no frames for the public pages) is not this one and is left out.
     ok('one server rule covers the signed-in pages, the reset page and the sign-up page, and it is the one the plan page was served with', rule.length === 1 && /^\/\((?:[a-z]+\|)*[a-z]+\)$/.test(rule[0].source) && !!planRule && says('Content-Security-Policy') === planRule && says('Cache-Control') === 'no-store', 'rules that cover all five: ' + rule.length);
     const pages = fs.readdirSync(root).filter((f) => f.endsWith('.html') && f !== 'plan.html');
     const linked = pages.filter((f) => /href="\/plan["?#]/.test(text(f)));

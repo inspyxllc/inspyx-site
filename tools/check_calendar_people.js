@@ -90,7 +90,7 @@ async function open(browser, o) {
   const page = await ctx.newPage();
   await page.clock.setFixedTime(NOW);
   page.setDefaultTimeout(8000);
-  const s = o.server, errs = [], away = [], calls = [], sockets = [];
+  const s = o.server, errs = [], away = [], calls = [], sockets = [], bookingCalls = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
   await page.routeWebSocket(/realtime\/v1\/websocket/, (ws) => {
@@ -106,6 +106,30 @@ async function open(browser, o) {
   });
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url();
+    // The calendar reads bookings from the sync function (read only): answered from o.bookings, every push empty.
+    if (u === SERVER + '/functions/v1/sync') {
+      const b = JSON.parse(req.postData() || '{}');
+      bookingCalls.push(b);
+      // The People book (job 7): a pushed person is kept newest-wins; o.lose() drops the answer of one that landed.
+      const book = o.book || (o.book = new Map());
+      // o.bookDown(): the sync function fails; o.notApplied(): a pushed person is answered "not applied" (the server
+      // holds a newer copy) and not kept; o.slowPush: ms before a push is answered (Codex on #87).
+      if (o.bookDown && o.bookDown()) return route.fulfill({ status: 503, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"error":"database"}' });
+      if ((b.push || []).length && o.slowPush) await new Promise((r) => setTimeout(r, o.slowPush));
+      const refused = (b.push || []).length && o.notApplied && o.notApplied();
+      // Newest wins, as the server: an older push than the held copy is answered "not applied".
+      const applied = (b.push || []).map((r) => {
+        if (refused || r.kind !== 'inspector_contacts') return { kind: r.kind, id: r.id, applied: !refused };
+        const h = book.get(r.id), newer = !h || r.updated_at > h.updated_at;
+        if (newer) book.set(r.id, Object.assign({}, r, { changed_at: 'b' }));
+        return { kind: r.kind, id: r.id, applied: newer };
+      });
+      if ((b.push || []).length && o.lose && o.lose()) return route.abort('failed');
+      // Rows changed after the page's point (a row marked changed_at 'zz' is newer than any point the page holds).
+      const list = [...(o.bookings || []), ...book.values()].filter((r) => !b.after || String(r.changed_at || '') > String(b.after.at || ''));
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+        body: JSON.stringify({ applied, skipped: [], rows: list, next: list.length ? { at: 'z', kind: 'bookings', id: 'z' } : b.after || null, more: false }) });
+    }
     if (!u.startsWith(SERVER + SYNC)) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
     calls.push({ headers: req.headers(), body });
@@ -120,7 +144,7 @@ async function open(browser, o) {
   const res = await page.goto(url + o.path + (o.hash || ''), { waitUntil: 'load' });
   await page.waitForTimeout(500);
   const ping = () => sockets[sockets.length - 1].ws.send(JSON.stringify({ topic: 'realtime:insp:' + ME, event: 'broadcast', ref: null, payload: { type: 'broadcast', event: 'changed', payload: { seq: s.seq } } }));
-  return { ctx, page, errs, away, calls, sockets, res, ping };
+  return { ctx, page, errs, away, calls, sockets, res, ping, bookingCalls };
 }
 
 const vis = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.hidden && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel);
@@ -142,6 +166,73 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
       await ctx.close();
     });
   }
+
+  // ---- a week and a day (2026-11-23, job 4) --------------------------------------------------------------------
+  const SHOTS = process.env.SHOTS || '';
+  const blocks = (page, d) => page.evaluate((x) => [...document.querySelectorAll('.cal-gcol[data-date="' + x + '"] .cal-block')].map((b) => ({
+    t: b.querySelector('time').textContent.replace(/\s+/g, ' '), title: b.querySelector('strong').textContent, top: Math.round(b.getBoundingClientRect().top - b.parentElement.getBoundingClientRect().top),
+    lane: b.style.getPropertyValue('--lane'), lanes: b.style.getPropertyValue('--lanes') })), d);
+  await group('the calendar, a week and a day', async () => {
+    const s = server(); seed(s);
+    // Two that meet on the 18th: side by side.
+    s.insp(id('c1'), '5 Overlap Ct', '5 Overlap Ct', { created_at: ny('2026-11-07T10:00:00'), scheduled_at: ny('2026-11-18T09:30:00') });
+    // 12 Oak St was booked for three hours; a booking on the 19th the phone hasn't made an inspection of yet.
+    const brow = (bid, data) => ({ kind: 'bookings', id: bid, updated_at: 1, deleted_at: null, data: Object.assign({ id: bid, status: 'confirmed' }, data) });
+    const bookings = [
+      brow('bk-1', { inspectionId: A, startsAt: ny('2026-11-18T09:00:00'), endsAt: ny('2026-11-18T12:00:00') }),
+      brow('bk-2', { status: 'booked', inspectionId: null, startsAt: ny('2026-11-19T13:00:00'), endsAt: ny('2026-11-19T15:30:00'),
+        property: { street: '88 New Booking Blvd', unit: 'Apt 103', city: 'Miami', state: 'FL' } }),
+      brow('bk-3', { status: 'cancelled', inspectionId: null, startsAt: ny('2026-11-19T08:00:00'), endsAt: ny('2026-11-19T09:00:00'), property: { street: '1 Cancelled Ct' } }),
+    ];
+    const { page, ctx, errs, bookingCalls } = await open(browser, { server: s, path: 'calendar', hash: '#week-2026-11-18', bookings });
+    await page.waitForTimeout(300);
+    ok('week: opens on the week holding that day, Sunday first', (await vis(page, '[data-month]')).join() === 'Nov 15 – Nov 21, 2026' &&
+      same(await page.evaluate(() => [...document.querySelectorAll('.cal-gcol')].map((c) => c.dataset.date)), ['2026-11-15', '2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20', '2026-11-21']));
+    ok('week: Week is on; Day and Month show the same time (today, the 16th, is in it)', await page.getAttribute('[data-view="week"]', 'aria-current') === 'page' &&
+      await page.getAttribute('[data-view="day"]', 'href') === '/calendar#day-2026-11-16' && await page.getAttribute('[data-view="month"]', 'href') === '/calendar#2026-11');
+    const b18 = await blocks(page, '2026-11-18');
+    ok('week: each inspection at its start, a booked one with its end; only those that meet side by side', same(b18.map((b) => b.t + ' ' + b.title + ' ' + b.lane + '/' + b.lanes),
+      ['9:00 AM – 12:00 PM 12 Oak St 0/2', '9:30 AM 5 Overlap Ct 1/2', '3:00 PM 2 Palm Dr 0/1']), JSON.stringify(b18));
+    ok('week: 9 AM sits two hours below 7 AM, the first hour shown; a three-hour booking is three hours tall', b18[0].top === 132 &&
+      await page.evaluate(() => Math.round(document.querySelector('.cal-gcol[data-date="2026-11-18"] .cal-block').getBoundingClientRect().height)) === 196, String(b18[0].top));
+    const b19 = await page.evaluate(() => [...document.querySelectorAll('.cal-gcol[data-date="2026-11-19"] .cal-block')].map((b) => [...b.querySelectorAll('time, strong, em')].map((e) => e.textContent).join(' ').replace(/\s+/g, ' ').trim()));
+    ok('week: a booking not on the phone yet shows, marked; a cancelled one doesn\'t', same(b19, ['1:00 – 3:30 PM 88 New Booking Blvd, Apt 103 Booked: on your phone at its next sync']), JSON.stringify(b19));
+    ok('bookings are only read: every push empty', bookingCalls.length > 0 && bookingCalls.every((b) => Array.isArray(b.push) && b.push.length === 0));
+    ok('week: a started one at its start, on the day it started', same((await blocks(page, '2026-11-20')).map((b) => b.t + ' ' + b.title), ['10:15 AM 9 Elm Ave']));
+    ok('week: today\'s column is marked', await page.getAttribute('.cal-gcol[aria-current="date"]', 'data-date') === '2026-11-16');
+    ok('week: each one opens that inspection', await page.getAttribute('.cal-gcol[data-date="2026-11-18"] .cal-block a', 'href') === '/inspections#' + A);
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/20-calendar-week.png' });
+    await page.click('[data-go="1"]');
+    ok('week: next goes a week on', await until(() => page.evaluate(() => location.hash === '#week-2026-11-22')));
+    await page.click('[data-go="-1"]'); await page.click('[data-go="-1"]');
+    ok('week: back goes a week back', await until(() => page.evaluate(() => location.hash === '#week-2026-11-08')));
+    await page.click('[data-go="0"]');
+    ok('week: This week comes back to this week', await until(() => page.evaluate(() => location.hash === '#week-2026-11-15')));
+    await page.click('.cal-gday a >> text=18');
+    ok('week: a day\'s name opens that day', await until(async () => (await vis(page, '[data-month]')).join() === 'Wednesday, November 18'));
+    ok('day: its inspections in one column', same((await blocks(page, '2026-11-18')).map((b) => b.t), ['9:00 AM – 12:00 PM', '9:30 AM', '3:00 PM']) && await page.evaluate(() => document.querySelectorAll('.cal-gcol').length === 1));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/21-calendar-day.png' });
+    await page.evaluate(() => { location.hash = '#day-2026-11-05'; });
+    ok('day: one with no set time sits in the row above the hours', await until(async () => (await vis(page, '.cal-guntimed strong')).join() === '3 Pine Ct'));
+    await page.evaluate(() => { location.hash = '#day-2026-11-10'; });
+    ok('day: an empty day says so', await until(async () => (await vis(page, '[data-state]')).join() === 'Nothing on your calendar this day.'));
+    await page.evaluate(() => { location.hash = '#day-2026-02-30'; });
+    ok('a day that doesn\'t exist shows this month', await until(async () => (await vis(page, '[data-month]')).join() === 'November 2026'));
+    ok('nothing runs off the side', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+  await group('the calendar, a week on a phone', async () => {
+    const s = server(); seed(s);
+    const { page, ctx, errs } = await open(browser, { server: s, path: 'calendar', hash: '#week-2026-11-18', w: PHONE });
+    ok('phone: a week is the list of its days', !(await page.isVisible('[data-grid]')) && same(await day(page, '2026-11-18'), ['9:00 AM 12 Oak St', '3:00 PM 2 Palm Dr']) &&
+      (await page.evaluate(() => document.querySelectorAll('.cal-days .cal-day').length)) === 7);
+    await page.evaluate(() => { location.hash = '#day-2026-11-18'; });
+    ok('phone: a day is its hours, and fits', await until(() => page.isVisible('.cal-gcol')) && await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/22-calendar-day-phone.png' });
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
 
   // ---- the calendar ------------------------------------------------------------------------------------------
   await group('the calendar, wide', async () => {
@@ -195,10 +286,33 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     await ctx.close();
   });
 
+  await group('the calendar: a booking whose inspection was deleted on the phone (follow-up 3)', async () => {
+    const s = server(); seed(s);   // the seed's inspection E is made, then deleted
+    const bookings = [{ kind: 'bookings', id: 'bk-e', updated_at: 1, deleted_at: null, data: { id: 'bk-e', status: 'confirmed', inspectionId: E,
+      startsAt: ny('2026-11-19T10:00:00'), endsAt: ny('2026-11-19T12:00:00'), property: { street: '7 Deleted Way', city: 'Miami', state: 'FL' } } }];
+    const { page, ctx } = await open(browser, { server: s, path: 'calendar', hash: '#week-2026-11-18', bookings });
+    await page.waitForTimeout(400);
+    ok('its booking is gone too, never "on your phone at its next sync"', (await blocks(page, '2026-11-19')).every((b) => !/7 Deleted Way/.test(b.title)), JSON.stringify(await blocks(page, '2026-11-19')));
+    await page.evaluate(() => { location.hash = '#2026-11'; });
+    await page.waitForTimeout(300);
+    ok('nor on the month', !(await day(page, '2026-11-19')).join().includes('7 Deleted Way'), JSON.stringify(await day(page, '2026-11-19')));
+    await ctx.close();
+  });
+
   await group('the calendar: other states', async () => {
     const empty = server();
     let r = await open(browser, { server: empty, path: 'calendar' });
     ok('calendar: with no inspections synced yet, it says so and shows no grid', (await vis(r.page, '[data-state]')).join() === 'No inspections here yet. They show up here once your phone has synced.' && (await vis(r.page, '[data-days]')).length === 0);
+    await r.ctx.close();
+    // A first booking made on /new, before the phone has synced anything: it shows at once (Codex on #86).
+    const only = [{ kind: 'bookings', id: 'bk-9', updated_at: 1, deleted_at: null, data: { id: 'bk-9', status: 'booked', inspectionId: null,
+      startsAt: ny('2026-11-19T13:00:00'), endsAt: ny('2026-11-19T15:30:00'), property: { street: '88 New Booking Blvd', city: 'Miami', state: 'FL' } } }];
+    r = await open(browser, { server: server(), path: 'calendar', hash: '#week-2026-11-18', bookings: only });
+    await r.page.waitForTimeout(300);
+    ok('calendar: with no inspections but a booking, the week shows the booking, not "no inspections yet"',
+      (await blocks(r.page, '2026-11-19')).map((b) => b.title).join() === '88 New Booking Blvd' && (await vis(r.page, '[data-state]')).length === 0, JSON.stringify(await vis(r.page, '[data-state]')));
+    await r.page.evaluate(() => { location.hash = '#2026-11'; });
+    ok('calendar: and the month shows it too', await until(async () => (await day(r.page, '2026-11-19')).join().includes('88 New Booking Blvd')), JSON.stringify(await day(r.page, '2026-11-19')));
     await r.ctx.close();
     const s = server(); seed(s);
     r = await open(browser, { server: s, path: 'calendar', hash: '#2026-13' });
@@ -252,10 +366,99 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     });
   }
 
+  await group('people: the People book (job 7, W19)', async () => {
+    const s = server(); seed(s);
+    const row = (idv, role, name, more) => ({ kind: 'inspector_contacts', id: idv, updated_at: 1795000000000, deleted_at: null, changed_at: 'a',
+      data: Object.assign({ id: idv, ownerAccountId: ME, role, name, phone: null, email: null, company: null, note: null, lastUsedAt: 1795000000000, createdAt: 1795000000000, updatedAt: 1795000000000, deletedAt: null }, more) });
+    const book = new Map([
+      ['k1', row('k1', 'buyer_agent', 'Rita Gomez', { email: 'rita@example.com', company: 'Coastal Realty' })],
+      ['k2', row('k2', 'client', 'Dana Reyes', { email: 'dana@example.com', company: 'Reyes Family Trust' })],   // on inspections too
+      ['k3', row('k3', 'client', 'Old Friend', { deletedAt: 1795000000001 })],
+    ]);
+    book.get('k3').deleted_at = 1795000000001;
+    let lose = false;
+    const o = { server: s, path: 'people', book, lose: () => lose };
+    const { page, ctx, errs } = await open(browser, o);
+    await until(async () => (await vis(page, '.ppl-one h3')).includes('Rita Gomez'));
+    const names = async () => vis(page, '.ppl-one h3');
+    ok('someone kept in People shows, with the company the book keeps', (await names()).includes('Rita Gomez') && (await vis(page, '.ppl-company')).includes('Coastal Realty'));
+    ok('a person both kept and on inspections shows once, with their inspections and the book\'s company', (await names()).filter((n) => /^Dana Reyes/.test(n)).length === 1 && (await vis(page, '.ppl-company')).includes('Reyes Family Trust'));
+    ok('a deleted one doesn\'t show', !(await names()).includes('Old Friend'));
+    await page.click('[data-add-person]');
+    await page.click('[data-form] button[type="submit"]');
+    ok('Add with no name: says so, sends nothing', (await vis(page, '[data-problem]')).join() === 'Write their name.' && ![...book.keys()].some((k) => !['k1', 'k2', 'k3'].includes(k)));
+    await page.fill('[data-form] [name="name"]', 'n'.repeat(201));
+    await page.click('[data-form] button[type="submit"]');
+    ok('a name of 201 letters: too long, as the rules say', (await vis(page, '[data-problem]')).join() === 'A name can be at most 200 characters.');
+    await page.selectOption('[data-form] [name="role"]', 'listing_agent');
+    await page.fill('[data-form] [name="name"]', '  Mia Chen\u0085 ');
+    await page.fill('[data-form] [name="phone"]', '(786) 555-0144');
+    await page.fill('[data-form] [name="company"]', 'Bayside Homes');
+    lose = true;
+    await page.click('[data-form] button[type="submit"]');
+    ok('the answer lost: it says so, and the dialog stays', await until(async () => (await vis(page, '[data-problem]')).join() === 'That couldn’t be saved. Check your connection and try again.') && await page.isVisible('[data-dialog]'));
+    lose = false;
+    await page.click('[data-form] button[type="submit"]');
+    ok('saved: the dialog closes and it says so', await until(async () => (await vis(page, '[data-say]')).join() === 'Saved. It’s in People on your phone too, at its next sync.') && !(await page.isVisible('[data-dialog]')));
+    const added = [...book.values()].filter((r) => !['k1', 'k2', 'k3'].includes(r.id));
+    const d = added[0] && added[0].data;
+    ok('one person, the same row both tries (one id), trimmed as Dart trims, as the phone keeps it', added.length === 1 && !!d && d.name === 'Mia Chen' && d.role === 'listing_agent' && d.phone === '(786) 555-0144' && d.company === 'Bayside Homes' && d.email === null && d.note === null && d.ownerAccountId === ME && d.deletedAt === null && d.updatedAt === added[0].updated_at && d.lastUsedAt === d.updatedAt && Number.isSafeInteger(d.createdAt) && /^[0-9a-f-]{36}$/.test(added[0].id), JSON.stringify(d));
+    ok('and it shows at once, under listing agents', await until(async () => (await names()).includes('Mia Chen')));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/56-people.png', fullPage: true });
+    await page.click('[data-add-person]');
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/57-people-add.png' });
+    await ctx.close();
+  });
+
+  await group('people: the book\'s answers (Codex on #87)', async () => {
+    const s = server(); seed(s);
+    let refuse = true, down = false;
+    const o = { server: s, path: 'people', book: new Map(), notApplied: () => refuse, bookDown: () => down, slowPush: 0 };
+    const { page, ctx } = await open(browser, o);
+    await until(async () => (await vis(page, '.ppl-one h3')).length > 0);
+    // Not applied: the server holds a newer copy. Never "saved".
+    await page.click('[data-add-person]');
+    await page.fill('[data-form] [name="name"]', 'Kai Lane');
+    await page.click('[data-form] button[type="submit"]');
+    ok('a person the server didn\'t apply: not saved, it says so, the dialog stays, and the person isn\'t shown',
+      await until(async () => (await vis(page, '[data-problem]')).join() === 'Inspyx couldn’t keep that. Check it and try again.') &&
+      await page.isVisible('[data-dialog]') && !(await vis(page, '.ppl-one h3')).includes('Kai Lane') && (await vis(page, '[data-say]')).length === 0);
+    // A slow Add: the dialog can't be closed or reopened for another person until it is answered.
+    refuse = false; o.slowPush = 1200;
+    await page.fill('[data-form] [name="name"]', 'Kai Lane');
+    await page.click('[data-form] button[type="submit"]');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+    ok('while an Add waits: Escape and Cancel don\'t close it', await page.isVisible('[data-dialog]') && await page.isDisabled('[data-form] [data-close]'));
+    ok('and it lands on its own draft: saved, closed, shown', await until(async () => !(await page.isVisible('[data-dialog]')) && (await vis(page, '.ppl-one h3')).includes('Kai Lane'), 4000));
+    // An Add that landed with its answer lost, then the phone (its clock a day ahead) changed that person: the retry
+    // is refused and brings the newer copy; the next try is newer still and saves (Codex on #87, r2).
+    let lost = true;
+    o.slowPush = 0; o.lose = () => { const was = lost; lost = false; return was; };
+    await page.click('[data-add-person]');
+    await page.fill('[data-form] [name="name"]', 'Ana Ruiz');
+    await page.click('[data-form] button[type="submit"]');
+    await until(async () => (await vis(page, '[data-problem]')).join() === 'That couldn’t be saved. Check your connection and try again.');
+    const landed = [...o.book.values()].find((r) => r.data.name === 'Ana Ruiz');
+    o.book.set(landed.id, Object.assign({}, landed, { changed_at: 'zz', updated_at: landed.updated_at + 86400000, data: Object.assign({}, landed.data, { updatedAt: landed.updated_at + 86400000, note: 'From the phone' }) }));
+    await page.click('[data-form] button[type="submit"]');
+    ok('the retry after a newer copy from the phone: refused, and says so', await until(async () => (await vis(page, '[data-problem]')).join() === 'Inspyx couldn’t keep that. Check it and try again.'));
+    await page.click('[data-form] button[type="submit"]');
+    ok('and the next try is newer than that copy, and saves', await until(async () => !(await page.isVisible('[data-dialog]'))) && o.book.get(landed.id).updated_at > landed.updated_at + 86400000, String(o.book.get(landed.id).updated_at - landed.updated_at));
+    await ctx.close();
+    // The book can't be read: never "no one here yet".
+    down = true;
+    const r = await open(browser, { server: server(), path: 'people', bookDown: () => down });
+    await r.page.waitForTimeout(600);
+    ok('the People book can\'t be read: it says it couldn\'t load, never "no one here yet"', (await vis(r.page, '[data-state]')).join() === 'Couldn\'t load your inspections. Check your connection; this page keeps trying.' && (await vis(r.page, '[data-live]')).join() === 'Can\'t reach Inspyx right now. Trying again.', JSON.stringify([await vis(r.page, '[data-state]'), await vis(r.page, '[data-live]')]));
+    await r.ctx.close();
+  });
+
   await group('people: no one yet', async () => {
     const s = server(); s.insp(A, '12 Oak St', '12 Oak St', { created_at: ny('2026-11-01T10:00:00') });
     const { page, ctx } = await open(browser, { server: s, path: 'people' });
-    ok('people: with no one on any inspection, it says so', (await vis(page, '[data-state]')).join() === 'No one here yet. The people on your inspections show up here once your phone has synced.' && (await vis(page, '.ppl-group')).length === 0);
+    ok('people: with no one on any inspection, it says so', (await vis(page, '[data-state]')).join() === 'No one here yet. Add a person, or they show up here from your inspections once your phone has synced.' && (await vis(page, '.ppl-group')).length === 0);
     await ctx.close();
   });
 

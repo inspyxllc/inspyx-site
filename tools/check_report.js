@@ -14,6 +14,7 @@ const playwright = require('playwright');
 const engine = process.env.BROWSER === 'webkit' ? playwright.webkit : playwright.chromium;
 
 const sampleDir = process.argv[2];
+const PROD = process.env.PROD === '1';
 if (!sampleDir) { console.error('usage: node tools/check_report.js <sample folder>'); process.exit(2); }
 const base = process.env.URL || 'http://localhost:4174';
 const sample = JSON.parse(fs.readFileSync(path.join(sampleDir, 'report.json'), 'utf8'));
@@ -78,8 +79,11 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
 
 (async () => {
   const browser = await engine.launch();
-  console.log('engine: ' + engine.name());
+  console.log('engine: ' + engine.name() + (PROD ? ' (PROD=1: the states only, against ' + base + ')' : ''));
 
+  // PROD=1 (2026-11-23, the lead): against the live site there is no /r/sample, so only "the other states" run, the
+  // function's answers faked in the browser (gone, offline, locked with Pay, the brand, a pay page off Inspyx).
+  if (!PROD) {
   // ---- the page loads clean, under the headers the live page gets
   {
     const res = await (await browser.newContext()).request.get(base + '/r/sample');
@@ -673,6 +677,8 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     await ctx.close();
   }
 
+  }
+
   // ---- the other states
   {
     const gone = await open(browser, { answer: () => ({ status: 404, body: { state: 'gone' } }) });
@@ -704,6 +710,23 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
       l.state === 'locked' && l.text.includes(report.cover.address) && l.text.includes('This report opens once the inspection is paid.') && l.pay === base + '/pay/AAAAAAAAAAAAAAAAAAAAAA' && l.findings === 0 && l.pdf === 0, l.text.replace(/\n+/g, ' / ').slice(0, 120));
     await locked.ctx.close();
 
+    for (const [cents, words] of [[42500, 'Pay $425.00'], [123456, 'Pay $1,234.56'], [null, 'Pay now'], [-5, 'Pay now'], [1.5, 'Pay now'], ['425', 'Pay now']]) {
+      const due = await open(browser, { answer: () => ({ body: { state: 'locked', about, pay_url: '/pay/AAAAAAAAAAAAAAAAAAAAAA', due_cents: cents } }) });
+      const said = await due.page.evaluate(() => (document.querySelector('main a[data-pay]') || {}).textContent);
+      ok('the Pay button says what is due (' + JSON.stringify(cents) + ' -> ' + words + ')', said === words, said);
+      await due.ctx.close();
+    }
+
+    // The locked page wears what the email has (2026-11-23): the inspector's color, and what is inside as counts.
+    const branded = await open(browser, { answer: () => ({ body: { state: 'locked', about: { ...about, color: '#0F766E' }, pay_url: '/pay/AAAAAAAAAAAAAAAAAAAAAA', due_cents: 42500, preview: { sections: 14, findings: 28, photos: 64, safety: 4 } } }) });
+    const bl = await branded.page.evaluate(() => ({ brand: getComputedStyle(document.querySelector('.lk-head')).backgroundColor, chips: Array.from(document.querySelectorAll('.lk-chip')).map((e) => e.textContent), sh: document.querySelectorAll('.lk-chip-sh').length }));
+    ok('a locked page: the inspector\'s color, and what is inside as counts', bl.brand === 'rgb(15, 118, 110)' && JSON.stringify(bl.chips) === JSON.stringify(['14 sections', '28 findings', '64 photos', '4 safety concerns']) && bl.sh === 1, JSON.stringify(bl));
+    await branded.ctx.close();
+    const plainLock = await open(browser, { answer: () => ({ body: { state: 'locked', about: { ...about, color: 'red; background:url(x)' }, pay_url: '/pay/AAAAAAAAAAAAAAAAAAAAAA', preview: { sections: 1, findings: 1, photos: 0, safety: 0 } } }) });
+    const pl = await plainLock.page.evaluate(() => ({ brand: getComputedStyle(document.querySelector('.lk-head')).backgroundColor, chips: Array.from(document.querySelectorAll('.lk-chip')).map((e) => e.textContent) }));
+    ok('a color that isn\'t #RRGGBB is never used, and no safety chip when there are none', pl.brand === 'rgb(29, 98, 216)' && JSON.stringify(pl.chips) === JSON.stringify(['1 section', '1 finding', '0 photos']), JSON.stringify(pl));
+    await plainLock.ctx.close();
+
     const badPay = await open(browser, { answer: () => ({ body: { state: 'locked', about, pay_url: 'https://evil.example/pay' } }) });
     ok('a pay page anywhere but Inspyx is not offered', (await badPay.page.evaluate(() => document.querySelectorAll('main a.btn').length)) === 0);
     await badPay.ctx.close();
@@ -722,6 +745,7 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     await b.ctx.close();
   }
 
+  if (!PROD) {
   // ---- a report with nothing wrong, and one with no PDF yet
   {
     const calm = clone(sample);
@@ -877,6 +901,8 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
         && back.h1 === start.h1 && back.rows === start.rows && back.sheets === 1 && back.open === 1 && errs.length === 0,
       JSON.stringify({ start, locked, back, errs }));
     await ctx.close();
+  }
+
   }
 
   await browser.close();

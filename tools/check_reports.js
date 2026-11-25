@@ -107,7 +107,8 @@ const shown = async (page, sel) => (await page.evaluate((q) => [...document.quer
         'Jo Client jo@client.test | Delivered Nov 12', 'Al Agent al@wrong.test | Bounced Nov 12', 'Sam Client sam@client.test | Marked as spam Nov 13',
         'Pat Buyer pat@buyer.test | Sent Nov 12', 'Lee Seller lee@seller.test | Not sent']), JSON.stringify(r[0].emails));
       ok(label + ': an older report with no address, no links and no emails says so plainly', r[1].title === 'A report with no address' && r[1].sub === 'Published Nov 3' && JSON.stringify(r[1].none) === JSON.stringify(['No one has a link to this report yet.', 'This report wasn\'t emailed from Inspyx.']), JSON.stringify(r[1]));
-      ok(label + ': no state line while reports show; the way back', (await shown(page, '.sent-state [data-state]')) === '' && (await shown(page, '.sent-links a')) === 'What needs you | Your numbers | Account');
+      ok(label + ': no state line while reports show; the way back', (await shown(page, '.sent-state [data-state]')) === '' && (await shown(page, '.sent-links a')) === 'Your numbers' &&
+        await page.isVisible('nav.dash a[href="/today"]') && (await page.$('nav.dash [aria-current]')) === null);
       ok(label + ': nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
       await ctx.close();
     });

@@ -22,6 +22,9 @@
      (the agent page, 2026-11-15: CFG.ask = {url, body}, its own function asked with the page's key and the
      report's link id; the client's key is never on that page). */
   var CFG = window.INSPYX_REPORT || {};
+  /* Client View / Agent View (2026-11-24): the look page (look.js) has the answer already, asked once with its
+     one-time ticket, and hands it over: CFG.answer, with CFG.look. Then this page asks nothing, its Pay button goes
+     nowhere, and "Try again" opens the look again (the page makes a new ticket). */
 
   /* Where a report comes from: the report function, given the key in a request's body. */
   var API = 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/report';
@@ -34,7 +37,7 @@
   var KEY_PATTERN = /^[A-Za-z0-9_-]{22}$/;
   var KEPT_KEY = 'inspyx.report.key';
   var linkKey = (function () {
-    if (CFG.sample || CFG.ask) return null;
+    if (CFG.sample || CFG.ask || CFG.answer) return null;
     var mark = (location.hash || '').replace(/^#/, '');
     var inPath = /^\/r\/([A-Za-z0-9_-]{22})\/?$/.exec(location.pathname);
     var key = KEY_PATTERN.test(mark) ? mark : (inPath ? inPath[1] : null);
@@ -83,6 +86,16 @@
     locked: 'This report opens once the inspection is paid.',
     lockedMore: 'Paid another way? Ask your inspector to open it for you.',
     pay: 'Pay now',
+    /* With what is due (the server's due_cents, 2026-11-23): "Pay $425.00". */
+    payAmount: function (dollars) { return 'Pay ' + dollars; },
+    /* The locked page (2026-11-23, the lead's design pass; draft words, no money in them). */
+    lockedEyebrow: 'Inspection report',
+    inside: 'What\u2019s inside',
+    insideSections: function (n) { return n + (n === 1 ? ' section' : ' sections'); },
+    insideFindings: function (n) { return n + (n === 1 ? ' finding' : ' findings'); },
+    insidePhotos: function (n) { return n + (n === 1 ? ' photo' : ' photos'); },
+    insideSafety: function (n) { return n + (n === 1 ? ' safety concern' : ' safety concerns'); },
+    inspectedBy: 'Inspected by',
     sample: 'Sample report',
     pdf: 'PDF',
     pdfLong: 'Download the PDF',
@@ -1161,6 +1174,14 @@
       Object.keys(byId).forEach(function (id) { if (byId[id].number === wanted) wanted = id; });
     }
     if (byId[wanted]) openFinding(wanted, ranked);
+
+    /* The repair request builder (2026-11-24, his list item 11; repair.js): only on a person's own link, never on a
+       sample, a look or the agent page. It is told the key and the report it may build on; nothing else is shared. */
+    if (linkKey && !CFG.look && !CFG.ask && !CFG.sample) {
+      try {
+        doc.dispatchEvent(new CustomEvent('inspyx:report-open', { detail: { key: linkKey, version: answer.published_at, report: report } }));
+      } catch (err) { /* an old browser: no builder, the report stands */ }
+    }
   }
 
   // ---------------------------------------------------------------------------------------- other states
@@ -1194,20 +1215,80 @@
     );
   }
 
+  /* Initials for a name, for a logo or a photo the page wasn't given: "Rivera Inspections" -> "RI". */
+  function initials(name) {
+    var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    return parts.slice(0, 2).map(function (w) { return w.charAt(0).toUpperCase(); }).join('') || '\u2022';
+  }
+
+  /* A whole number from the server, or null. */
+  function count(n) { return typeof n === 'number' && isFinite(n) && n >= 0 && Math.floor(n) === n ? n : null; }
+
+  /* A report that opens once paid (2026-11-23, the lead's design pass: what the email has): the inspector's brand
+     on top, the house and where, who inspected it, what is inside as counts only, then the Pay button. */
+  function lockedPage(answer) {
+    var a = answer.about || {};
+    var pay = ownUrl(answer.pay_url, PAY_ORIGINS);
+    var photo = ownUrl(a.photo), logo = ownUrl(a.logo), face = ownUrl(a.inspector_photo);
+    var brandName = a.company || a.inspector || '';
+    doc.title = a.address || doc.title;
+    var p = answer.preview || {};
+    var chips = [
+      [count(p.sections), WORDS.insideSections, ''],
+      [count(p.findings), WORDS.insideFindings, ''],
+      [count(p.photos), WORDS.insidePhotos, ''],
+      [count(p.safety), WORDS.insideSafety, 'lk-chip-sh']
+    ].filter(function (c) { return c[0] !== null && (c[2] === '' || c[0] > 0); });
+    var main = h('main', { class: 'lk', id: 'report', tabindex: '-1', 'data-state': 'locked' },
+      h('section', { class: 'lk-card' },
+        h('header', { class: 'lk-head' },
+          logo ? h('img', { class: 'lk-logo', alt: '', src: logo }) : h('span', { class: 'lk-logo lk-initials', 'aria-hidden': 'true' }, initials(brandName)),
+          brandName ? h('p', { class: 'lk-brand' }, brandName) : null
+        ),
+        photo ? h('img', { class: 'lk-house', alt: 'The property', src: photo }) : null,
+        h('div', { class: 'lk-body' },
+          h('p', { class: 'lk-eyebrow' }, WORDS.lockedEyebrow),
+          a.address ? h('p', { class: 'lk-addr' }, a.address) : null,
+          a.locality ? h('p', { class: 'lk-sub' }, a.locality) : null,
+          a.inspector || a.inspected ? h('div', { class: 'lk-who' },
+            face ? h('img', { class: 'lk-face', alt: '', src: face }) : h('span', { class: 'lk-face lk-initials', 'aria-hidden': 'true' }, initials(a.inspector || brandName)),
+            h('p', null,
+              a.inspector ? h('span', { class: 'lk-who-name' }, WORDS.inspectedBy + ' ' + a.inspector) : null,
+              a.inspected ? h('span', { class: 'lk-sub' }, a.inspected) : null
+            )
+          ) : null,
+          chips.length > 0 ? h('div', { class: 'lk-inside' },
+            h('p', { class: 'lk-inside-t' }, WORDS.inside),
+            h('ul', { class: 'lk-chips' }, chips.map(function (c) { return h('li', { class: 'lk-chip ' + c[2] }, c[1](c[0])); }))
+          ) : null,
+          h('div', { class: 'lk-lock' },
+            h('span', { class: 'lk-lockmark', 'aria-hidden': 'true' }, icon('lock')),
+            h('h1', { class: 'lk-t' }, WORDS.locked)
+          ),
+          // A look shows the button as the client sees it, and it goes nowhere: nothing is paid from a look.
+          pay && CFG.look ? h('span', { class: 'btn btn-wide lk-pay', 'aria-disabled': 'true', 'data-pay': true }, payWords(answer.due_cents))
+            : pay ? h('a', { class: 'btn btn-wide lk-pay', href: pay, rel: 'noopener', 'data-pay': true }, payWords(answer.due_cents)) : null,
+          h('p', { class: 'lk-m' }, WORDS.lockedMore)
+        )
+      )
+    );
+    // The inspector's brand color, as their emails wear it; only a plain #RRGGBB, set through the style object
+    // (the page's Content-Security-Policy allows no style written in the markup).
+    if (typeof a.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(a.color)) main.style.setProperty('--brand', a.color);
+    return main;
+  }
+
+  /* The Pay button's words: the amount when the server says a whole number of cents above zero, else "Pay now". */
+  function payWords(cents) {
+    if (typeof cents !== 'number' || !isFinite(cents) || cents <= 0 || Math.floor(cents) !== cents) return WORDS.pay;
+    var dollars = '$' + (cents / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return WORDS.payAmount(dollars);
+  }
+
   function render(answer) {
     if (!answer || typeof answer !== 'object') return show(message('failed', retry()));
     if (answer.state === 'gone') return show(message('gone'));
-    if (answer.state === 'locked') {
-      var pay = ownUrl(answer.pay_url, PAY_ORIGINS);
-      doc.title = (answer.about && answer.about.address) || doc.title;
-      return show(h('main', { class: 'state state-locked', id: 'report', tabindex: '-1', 'data-state': 'locked' },
-        about(answer.about),
-        h('p', { class: 'lockmark', 'aria-hidden': 'true' }, icon('lock')),
-        h('h1', { class: 'state-t' }, WORDS.locked),
-        pay ? h('p', { class: 'state-act' }, h('a', { class: 'btn btn-wide', href: pay, rel: 'noopener' }, WORDS.pay)) : null,
-        h('p', { class: 'state-m' }, WORDS.lockedMore)
-      ));
-    }
+    if (answer.state === 'locked') return show(lockedPage(answer));
     if (answer.state === 'open' && answer.report && answer.report.view === VIEW) {
       try { return renderOpen(answer); } catch (err) {
         // A report this page can't lay out still gets its PDF, below.
@@ -1228,6 +1309,7 @@
   }
 
   function retry() {
+    if (CFG.look) return h('p', null, h('button', { class: 'btn', type: 'button', on: { click: function () { location.reload(); } } }, WORDS.again));
     return h('p', null, h('button', { class: 'btn', type: 'button', on: { click: function () { show(h('p', { class: 'state state-wait', role: 'status' }, WORDS.wait)); load(); } } }, WORDS.again));
   }
 
@@ -1283,5 +1365,5 @@
     };
   }
 
-  load();
+  if (CFG.answer) render(CFG.answer); else load();
 })();

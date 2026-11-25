@@ -68,7 +68,9 @@ async function open(browser, name, opts) {
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('request', (r) => { const u = r.url(); if (!u.startsWith(home) && !u.startsWith('data:') && !u.startsWith('blob:')) away.push(u); });
   await page.goto(url + name, { waitUntil: 'load' });
-  await page.addStyleTag({ content: 'html{scroll-behavior:auto !important}' });
+  // Scrolls jump, never glide, while checking. Set on the element itself, never as an added <style>: these pages'
+  // security rule (vercel.json, 2026-11-17) allows only the site's own style sheets, and refuses an added one.
+  await page.evaluate(() => document.documentElement.style.setProperty('scroll-behavior', 'auto', 'important'));
   await page.waitForTimeout(400);
   return { ctx, page, errs, away };
 }

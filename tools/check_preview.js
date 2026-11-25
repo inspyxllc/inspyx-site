@@ -95,9 +95,9 @@ const ready = (frame) => frame.waitForFunction(() => !document.getElementById('a
     await page.waitForFunction(() => document.querySelector('[data-state="locked"]'), null, { timeout: 4000 });
     await page.waitForTimeout(400);
     const url0 = page.url();
-    await page.click('.state-locked a.btn');
+    await page.click('[data-state="locked"] a[data-pay]');
     await page.waitForTimeout(300);
-    const pay = await page.evaluate(() => ({ note: document.getElementById('pv-note').textContent, hidden: document.getElementById('pv-note').hidden, photo: (document.querySelector('.about-ph') || {}).naturalWidth || 0 }));
+    const pay = await page.evaluate(() => ({ note: document.getElementById('pv-note').textContent, hidden: document.getElementById('pv-note').hidden, photo: (document.querySelector('.lk-house') || {}).naturalWidth || 0 }));
     ok('"It isn\'t paid yet" shows the locked page; Pay now explains itself and goes nowhere', page.url() === url0 && /pay page/.test(pay.note) && !pay.hidden && pay.photo > 0, JSON.stringify(pay));
     await page.click('.pv-b[data-show="plain"]');
     await page.waitForFunction(() => document.querySelector('[data-state="plain"]'), null, { timeout: 4000 });

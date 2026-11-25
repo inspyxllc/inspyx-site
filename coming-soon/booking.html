@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Booking page</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/dash.css">
+<link rel="stylesheet" href="/assets/booking.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/booking.js" defer></script>
+</head>
+<body class="has-dash">
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z"></path><path d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" stroke="#0284C7" stroke-width="19"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+<nav class="dash" aria-label="Your dashboard">
+<ul class="dash-items"><li><a href="/today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 6.5 4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5l-1.5-6.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5Z"/></svg><span class="dash-l">What needs you</span><span class="dash-s">To do</span></a></li><li><a href="/inspections"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m9 13 2 2 4-4"/></svg><span class="dash-l">Inspections</span></a></li><li><a href="/calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="dash-l">Calendar</span></a></li><li><a href="/prices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"/><circle cx="8" cy="8" r="1.5"/></svg><span class="dash-l">Prices</span></a></li><li><a href="/booking" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul>
+<details class="dash-more"><summary aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></summary><ul><li><a href="/booking" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul></details>
+</nav>
+
+<main class="bkg" data-bkg hidden>
+<h1>Booking page</h1>
+<p class="bkg-lede">Clients book you online: they see your services and prices, pick an open time, and sign your agreement. The same page as on your phone.</p>
+
+<figure class="bkg-how" aria-label="How it works, in three steps">
+<div class="bkg-how-stage" aria-hidden="true">
+<div class="bkg-how-card">
+<p class="bkg-how-url">inspyx.com/book/<b>rivera</b></p>
+<div class="bkg-how-switch"><span></span></div>
+<ul class="bkg-how-days"><li>Mon</li><li>Tue</li><li>Wed</li><li>Thu</li><li>Fri</li></ul>
+<p class="bkg-how-copy">Copy link</p>
+</div>
+<span class="bkg-how-finger"></span>
+</div>
+<figcaption class="bkg-how-steps">
+<span class="bkg-how-step" data-n="1">Turn your page on</span>
+<span class="bkg-how-step" data-n="2">Pick the days and hours you work</span>
+<span class="bkg-how-step" data-n="3">Share your link: clients book themselves</span>
+</figcaption>
+</figure>
+
+<p class="bkg-live" role="status">
+<span data-live="connecting">Connecting…</span>
+<span data-live="live" hidden>In step with your phone: a change on either shows on the other within a few minutes.</span>
+<span data-live="offline" hidden>Can't reach Inspyx right now. Trying again.</span>
+</p>
+<div class="bkg-state" role="status">
+<p data-state="loading">Loading your booking page…</p>
+<p data-state="failed" hidden>Your booking page couldn’t be read. Check your connection; this page keeps trying.</p>
+</div>
+<p class="bkg-warn" data-warn="no-services" hidden>Your page shows once you sell something: <a href="/prices">add a service on Prices</a>.</p>
+
+<form class="bkg-form" data-form hidden novalidate>
+<section class="bkg-card">
+<div class="bkg-row">
+<h2>Your page</h2>
+<label class="bkg-switch"><input type="checkbox" data-f="on"><span class="bkg-switch-ui" aria-hidden="true"></span><span class="bkg-switch-text"><span data-on-text="on" hidden>On: clients can book you</span><span data-on-text="off">Off: nobody can book you online</span></span></label>
+</div>
+<label class="bkg-field">Its address
+<span class="bkg-addr"><span class="bkg-addr-host">inspyx.com/book/</span><input type="text" data-f="slug" inputmode="url" autocapitalize="none" autocomplete="off" spellcheck="false" maxlength="40" aria-describedby="bkg-slug-help"></span>
+<small id="bkg-slug-help">3 to 40 letters, numbers and dashes. Yours alone.</small>
+</label>
+<p class="bkg-slug-say" role="status">
+<span data-slug="checking" hidden>Checking…</span>
+<span data-slug="free" hidden>That address is yours to take.</span>
+<span data-slug="taken" hidden>Another inspector has that address. Try another.</span>
+<span data-slug="form" hidden>Use 3 to 40 lower-case letters, numbers and single dashes, starting and ending with a letter or number.</span>
+<span data-slug="reserved" hidden>That address is kept for Inspyx. Try another.</span>
+</p>
+<div class="bkg-link" data-link hidden>
+<a data-link-a href="#" target="_blank" rel="noopener"></a>
+<button class="btn small" type="button" data-copy>Copy link</button>
+<span class="bkg-copied" data-copied hidden role="status">Copied.</span>
+</div>
+</section>
+
+<section class="bkg-card">
+<h2>Hours you can be booked</h2>
+<label class="bkg-field bkg-tz">Time zone
+<select data-f="timeZone">
+<option value="America/New_York">Eastern</option>
+<option value="America/Detroit">Eastern (Michigan)</option>
+<option value="America/Indiana/Indianapolis">Eastern (Indiana)</option>
+<option value="America/Kentucky/Louisville">Eastern (Kentucky)</option>
+<option value="America/Chicago">Central</option>
+<option value="America/Denver">Mountain</option>
+<option value="America/Boise">Mountain (Idaho)</option>
+<option value="America/Phoenix">Arizona</option>
+<option value="America/Los_Angeles">Pacific</option>
+<option value="America/Anchorage">Alaska</option>
+<option value="Pacific/Honolulu">Hawaii</option>
+<option value="America/Puerto_Rico">Puerto Rico</option>
+</select>
+</label>
+<ol class="bkg-days" data-days></ol>
+</section>
+
+<section class="bkg-card">
+<h2>Limits</h2>
+<div class="bkg-limits">
+<label class="bkg-field">Inspections a day, at most<input type="number" data-f="maxPerDay" min="1" max="20" step="1"></label>
+<label class="bkg-field">Notice you need, in hours<input type="number" data-f="minNoticeHours" min="0" max="168" step="1"></label>
+<label class="bkg-field">How far ahead, in days<input type="number" data-f="daysAhead" min="1" max="120" step="1"></label>
+<label class="bkg-field">Time between inspections, in minutes<input type="number" data-f="gapMinutes" min="0" max="240" step="5"></label>
+</div>
+</section>
+
+<div class="bkg-problems" role="alert" data-problems hidden></div>
+<div class="bkg-actions">
+<button class="btn" type="submit" data-save>Save</button>
+<div class="say" role="status">
+<p data-say="saved" hidden>Saved.</p>
+<p data-say="failed" hidden>That couldn’t be saved. Check your connection and try again.</p>
+<p data-say="refused" hidden>Inspyx couldn’t keep that change. Check it and try again.</p>
+<p data-say="taken" hidden>Another inspector has that address. Try another.</p>
+</div>
+</div>
+</form>
+
+</main>
+
+<template data-t="day">
+<li class="bkg-day">
+<label class="bkg-day-open"><input type="checkbox" data-open><span data-day-name></span></label>
+<div class="bkg-spans" data-spans></div>
+<p class="bkg-day-closed" data-closed>Closed</p>
+<button class="link" type="button" data-add-span>Add hours</button>
+</li>
+</template>
+<template data-t="span">
+<div class="bkg-span">
+<select data-from aria-label="From"></select>
+<span class="bkg-to" aria-hidden="true">to</span>
+<select data-to aria-label="To"></select>
+<button class="link bkg-remove" type="button" data-remove aria-label="Remove these hours">Remove</button>
+</div>
+</template>
+<template data-t="words">
+<div>
+<span data-w="day-1">Monday</span><span data-w="day-2">Tuesday</span><span data-w="day-3">Wednesday</span><span data-w="day-4">Thursday</span><span data-w="day-5">Friday</span><span data-w="day-6">Saturday</span><span data-w="day-7">Sunday</span>
+<span data-w="am">AM</span><span data-w="pm">PM</span>
+<span data-w="p-slug">Give your page an address first.</span>
+<span data-w="p-overlap">Hours on one day can't overlap.</span>
+<span data-w="p-order">Each span of hours must end after it starts.</span>
+<span data-w="p-limits">Check the limits: each has its lowest and highest.</span>
+<span data-w="p-spans">That's too many spans of hours for one week (28 at most).</span>
+</div>
+</template>
+</body>
+</html>

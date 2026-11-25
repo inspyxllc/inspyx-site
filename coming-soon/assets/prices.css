@@ -1,0 +1,126 @@
+/* Prices (2026-11-16): calm and plain like the inspections page. Cards for services and codes; one dialog to edit. */
+.prc{display:block; max-width:960px; margin:0 auto; padding:28px var(--gr) 64px var(--gl)}
+.prc h1{font-size:34px; margin-bottom:8px}
+.prc-lede{font-size:17px; line-height:1.45; color:var(--ink-soft)}
+.prc-live{margin:8px 0 16px; font-size:14px; color:var(--ink-faint)}
+.prc-state p{font-size:18px; line-height:1.45; color:var(--ink-soft)}
+.prc .say p{margin:10px 0; font-size:15px}
+.prc-group{margin-top:28px}
+.prc-group[hidden]{display:none}
+.prc-head{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between; margin-bottom:12px}
+.prc-head h2{font-size:22px}
+.prc .btn.small, .prc-dialog .btn.small{min-height:44px; padding:0 18px; border:0; font:600 15px var(--font); cursor:pointer}
+.prc .btn.small:disabled, .prc-dialog .btn.small:disabled{opacity:.5; cursor:default}
+.prc-empty{font-size:16px; line-height:1.45; color:var(--ink-soft)}
+.prc-list{list-style:none; padding:0; margin:0; display:grid; gap:12px}
+.prc-card{display:grid; gap:10px; padding:16px; border-radius:18px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.prc-row{display:flex; gap:12px; align-items:flex-start; justify-content:space-between}
+.prc-what{display:grid; gap:3px; min-width:0}
+.prc-what strong{font-size:17px; color:var(--ink); overflow-wrap:anywhere}
+.prc-what span{font-size:14.5px; color:var(--ink-soft); overflow-wrap:anywhere}
+.prc-desc:empty{display:none}
+.prc-sub{display:grid; gap:6px; padding-top:8px; border-top:1px solid var(--line)}
+.prc-sub[hidden]{display:none}
+.prc-sub h3{font-size:14px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em}
+.prc-addons, .prc-changes{list-style:none; padding:0; margin:0; display:grid; gap:4px}
+.prc-addon{display:grid; gap:0; padding:8px 10px; border-radius:10px; background:#F5F5F7}
+.prc-addon-row{display:flex; gap:12px; align-items:center; justify-content:space-between}
+.prc-addon .prc-changes{padding-left:12px}
+.prc-addon .prc-changes:empty{display:none}
+.prc .prc-addon-change{min-height:32px; font-size:14px}
+.prc-addon .prc-what{display:flex; flex-wrap:wrap; gap:2px 10px}
+.prc-addon .prc-what span:first-child{color:var(--ink); font-weight:600}
+.prc-changes li{font-size:14.5px; color:var(--ink-soft); overflow-wrap:anywhere}
+.prc-note{font-size:13.5px; color:var(--ink-faint)}
+.prc .link, .prc-dialog .link{min-height:44px; padding:0; border:0; background:none; color:var(--navy); font:600 15px var(--font); cursor:pointer; justify-self:start}
+.prc-links{display:flex; flex-wrap:wrap; gap:4px 22px; margin-top:28px; font-size:14.5px}
+.prc-links a{display:inline-flex; align-items:center; min-height:44px}
+
+/* margin:auto puts back what page.css's reset (*{margin:0}) takes from a dialog: centred, like /plan's .sheet. */
+.prc-dialog{width:min(560px, calc(100vw - 32px)); max-height:calc(100vh - 32px); margin:auto; padding:0; border:0; border-radius:20px; background:var(--card); color:var(--ink); box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.prc-dialog::backdrop{background:rgba(29,29,31,.35)}
+.prc-dialog form{display:grid; gap:14px; padding:22px}
+.prc-dialog h2{font-size:21px}
+.prc-dialog label{display:grid; gap:6px; font-size:13.5px; color:var(--ink-soft)}
+.prc-dialog label[hidden]{display:none}
+.prc-dialog small{font-size:12.5px; color:var(--ink-faint)}
+.prc-dialog input[type="text"], .prc-dialog input[type="date"], .prc-dialog textarea{width:100%; min-height:44px; padding:10px 12px; border:1px solid #C9C9D0; border-radius:12px; background:#FFFFFF; color:var(--ink); font:400 16px var(--font)}
+.prc-dialog textarea{resize:vertical}
+.prc-dialog fieldset{display:grid; gap:4px; margin:0; padding:0; border:0}
+.prc-dialog legend{margin-bottom:4px; font-size:13.5px; color:var(--ink-soft)}
+.prc-dialog .tick{display:flex; gap:10px; align-items:center; min-height:40px; font-size:15.5px; color:var(--ink)}
+.prc-dialog .tick input{width:20px; height:20px; margin:0}
+.prc-pair{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.prc-dialog .prc-tax{gap:8px}
+.prc-dialog .prc-tax[hidden]{display:none}
+.prc-problems p{font-size:14.5px; color:#8C1D18}
+.prc-actions{display:flex; flex-wrap:wrap; gap:10px}
+.prc-dialog .danger{color:#8C1D18}
+/* Price changes and questions (2026-11-23): one row per range or line, each with its fee and hours. */
+.prc-changes .prc-change{display:flex; gap:12px; align-items:center; justify-content:space-between}
+.prc-changes .prc-change .link{min-height:36px; flex:none}
+.prc-dialog select{width:100%; min-height:44px; padding:10px 12px; border:1px solid #C9C9D0; border-radius:12px; background:#FFFFFF; color:var(--ink); font:400 16px var(--font)}
+.prc-change-dialog{width:min(680px, calc(100vw - 32px))}
+.prc-dialog [data-c-only][hidden], .prc-dialog [data-c-help][hidden], .prc-dialog [data-c-noq][hidden]{display:none}
+.prc-dialog [data-c-only]{display:grid; gap:8px}
+.prc-dialog div[data-c-edits]{display:grid; gap:14px}
+.prc-dialog [data-c-edits][hidden]{display:none !important}
+.prc-tiers-head, .prc-tier{display:grid; grid-template-columns:1fr 1fr 1fr 0.8fr 64px; gap:8px; align-items:center}
+.prc-tiers-head{font-size:12.5px; font-weight:600; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em}
+.prc-tiers{list-style:none; padding:0; margin:0; display:grid; gap:8px}
+.prc-line, .prc-lines-head{grid-template-columns:2fr 1fr 0.8fr 64px}
+.prc-vals{display:flex; flex-wrap:wrap; gap:0 14px; min-width:0}
+.prc-vals strong{font-size:16px; color:var(--ink)}
+.prc-vals .tick{min-height:36px; font-size:15px}
+.prc-tier .link{min-height:36px}
+.prc-tier .link[hidden]{display:none}
+.prc-per{grid-template-columns:repeat(4, 1fr)}
+.prc-per small{grid-column:1 / -1}
+.prc-dialog [data-c-problem]{font-size:14.5px; color:#8C1D18}
+/* The how-to (his rule 11-22): a finger adds a square-feet price change, and the quote goes up. 12 s, looping. */
+.prc-how{display:grid; grid-template-columns:minmax(0, 300px) 1fr; gap:18px 28px; align-items:center; margin:0 0 16px; padding:18px; border-radius:22px; background:linear-gradient(135deg, #EEF4FF, #F7F2FF)}
+.prc-how-stage{position:relative; height:190px}
+.prc-how-scene{position:absolute; inset:10px; display:grid; gap:8px; align-content:start; padding:14px; border-radius:16px; background:#fff; box-shadow:0 10px 30px rgba(31,78,121,.12); font-size:13px; color:var(--ink-soft); opacity:0}
+.prc-how-scene b{font-size:15px; color:var(--ink)}
+.prc-how-scene em{justify-self:start; font-style:normal; font-weight:600; color:var(--navy)}
+.prc-how-a{animation:prc-a 12s infinite} .prc-how-b{animation:prc-b 12s infinite} .prc-how-c{animation:prc-c 12s infinite; align-content:center; justify-items:center; text-align:center}
+.prc-how-a em{margin-top:22px}
+.prc-how-sel{padding:6px 10px; border-radius:8px; box-shadow:inset 0 0 0 1px #C9C9D0; color:var(--ink)}
+.prc-how-row{display:flex; justify-content:space-between; padding:6px 10px; border-radius:8px; background:#F2F2F7; opacity:0}
+.prc-how-row i{font-style:normal}
+.prc-how-r1{animation:prc-r1 12s infinite} .prc-how-r2{animation:prc-r2 12s infinite}
+.prc-how-save{padding:5px 12px; border-radius:10px; background:#1D1D1F; color:#fff !important; animation:prc-save 12s infinite}
+.prc-how-c b{font-size:24px} .prc-how-c s{color:var(--ink-faint); font-weight:400} .prc-how-c ins{text-decoration:none; color:#17924F}
+.prc-how-finger{position:absolute; width:26px; height:26px; border-radius:50%; background:rgba(31,78,121,.28); border:2px solid rgba(31,78,121,.55); animation:prc-finger 12s infinite}
+.prc-how-steps{display:grid; gap:10px; counter-reset:step}
+.prc-how-step{display:flex; gap:12px; align-items:center; font-size:16px; color:var(--ink-faint); animation:prc-step1 12s infinite}
+.prc-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:28px; height:28px; border-radius:50%; background:#fff; color:var(--navy); font-weight:700; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.prc-how-step[data-n="2"]{animation-name:prc-step2} .prc-how-step[data-n="3"]{animation-name:prc-step3}
+@keyframes prc-a{0%,22%{opacity:1} 25%,100%{opacity:0}}
+@keyframes prc-b{0%,22%{opacity:0} 25%,64%{opacity:1} 67%,100%{opacity:0}}
+@keyframes prc-c{0%,64%{opacity:0; transform:scale(.96)} 68%,96%{opacity:1; transform:none} 100%{opacity:0}}
+@keyframes prc-r1{0%,33%{opacity:0} 36%,100%{opacity:1}}
+@keyframes prc-r2{0%,45%{opacity:0} 48%,100%{opacity:1}}
+@keyframes prc-save{0%,58%{transform:none} 61%{transform:scale(.92)} 64%,100%{transform:none}}
+@keyframes prc-finger{0%{left:75%; top:80%; opacity:1} 10%,20%{left:40px; top:108px} 28%,38%{left:200px; top:68px} 42%,52%{left:200px; top:108px} 57%,63%{left:30px; top:146px; opacity:1} 68%,100%{left:75%; top:80%; opacity:0}}
+@keyframes prc-step1{0%,23%{color:var(--ink); font-weight:600} 25%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes prc-step2{0%,23%{color:var(--ink-faint); font-weight:400} 25%,64%{color:var(--ink); font-weight:600} 67%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes prc-step3{0%,64%{color:var(--ink-faint); font-weight:400} 67%,100%{color:var(--ink); font-weight:600}}
+@media (prefers-reduced-motion: reduce){
+  .prc-how *, .prc-how-step{animation:none !important}
+  .prc-how-finger, .prc-how-a, .prc-how-b{display:none}
+  .prc-how-c{opacity:1}
+  .prc-how-step{color:var(--ink)}
+}
+@media (max-width: 760px){
+  .prc-how{grid-template-columns:1fr}
+  .prc{padding-top:20px; padding-bottom:48px}
+  .prc h1{font-size:28px}
+  .prc-pair{grid-template-columns:1fr}
+  .prc-tiers-head, .prc-tier{grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px}
+  .prc-tiers-head span:last-child{display:none}
+  .prc-tier input[type="text"]{padding:10px 8px}
+  .prc-tier .link{grid-column:1 / -1; justify-self:end; min-height:28px; margin-top:-4px; font-size:14px}
+  .prc-line, .prc-lines-head{grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 0.8fr)}
+  .prc-per{grid-template-columns:1fr 1fr}
+}

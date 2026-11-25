@@ -308,7 +308,7 @@ async function open(browser, opts) {
       seen.push(a.t);
       if (!/^solid 3px/.test(a.o)) ring = false;
     }
-    const want = ['Skip to content', 'Inspyx, home', 'Pricing', 'Sign in', 'Join the waitlist', 'Join the waitlist', 'Fewer inspections a week', 'More inspections a week', 'Fewer hours per report', 'More hours per report', 'Fewer calls to voicemail', 'More calls to voicemail', 'Lower average fee', 'Higher average fee', 'Join the waitlist', 'email', 'Solo inspector', 'Team owner', 'Agent', 'Investor', 'Spectora', 'Another app', 'Nothing yet', 'Join the waitlist', 'Pricing', 'About', 'Support', 'Sign in', 'Terms', 'Privacy', 'Cancellation and refunds', 'support@inspyx.com', '(888) 772-2919'];
+    const want = ['Skip to content', 'Inspyx, home', 'Pricing', 'Sign in', 'Join the waitlist', 'Join the waitlist', 'Try Spex now Talk to the app, ', 'Fewer inspections a week', 'More inspections a week', 'Fewer hours per report', 'More hours per report', 'Fewer calls to voicemail', 'More calls to voicemail', 'Lower average fee', 'Higher average fee', 'Join the waitlist', 'email', 'Solo inspector', 'Team owner', 'Agent', 'Investor', 'Spectora', 'Another app', 'Nothing yet', 'Join the waitlist', 'Pricing', 'About', 'Support', 'Sign in', 'Terms', 'Privacy', 'Cancellation and refunds', 'support@inspyx.com', '(888) 772-2919'];
     const norm = seen.map((t) => (t === '' ? 'email' : t));
     ok('Tab reaches every control in page order (' + seen.length + ' stops)', JSON.stringify(norm) === JSON.stringify(want), norm.join(' > '));
     ok('each stop shows a focus ring', ring);

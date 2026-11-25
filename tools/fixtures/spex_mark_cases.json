@@ -1,0 +1,281 @@
+{
+ "about": "The voice mark gate's table (the lead's call, 2026-11-23, option A): each case is what the inspector said, and whether a mark word was said in it. A mark goes only when one was (never on a photo alone, a bare \"rate it\" or a silent turn); which mark is Spex's to pick, and it always says it back, with Undo on screen. The app (spexMarkWordSaid, spex_mark_table_test) and the website demo (try-app.js markWordSaid, check_try) run this same table.",
+ "cases": [
+  {
+   "heard": "Rate this item satisfactory.",
+   "said": true
+  },
+  {
+   "heard": "Mark it inspected.",
+   "said": true
+  },
+  {
+   "heard": "Mark it not inspected.",
+   "said": true
+  },
+  {
+   "heard": "Not present.",
+   "said": true
+  },
+  {
+   "heard": "There's no garage door here, mark it not present.",
+   "said": true
+  },
+  {
+   "heard": "Rate it.",
+   "said": false
+  },
+  {
+   "heard": "Pull up the photo.",
+   "said": false
+  },
+  {
+   "heard": "Looks fine to me.",
+   "said": true
+  },
+  {
+   "heard": "Couldn't get to it, it's blocked.",
+   "said": true
+  },
+  {
+   "heard": "No access to the attic.",
+   "said": true
+  },
+  {
+   "heard": "No issues here, mark it inspected.",
+   "said": true
+  },
+  {
+   "heard": "No access; mark it not inspected.",
+   "said": true
+  },
+  {
+   "heard": "Not present. Actually no, mark it inspected.",
+   "said": true
+  },
+  {
+   "heard": "Inspected. No wait, not present.",
+   "said": true
+  },
+  {
+   "heard": "Mark it not present, sorry, inspected.",
+   "said": true
+  },
+  {
+   "heard": "Inspected, not present.",
+   "said": true
+  },
+  {
+   "heard": "Um, uh, it's, you know, fine.",
+   "said": true
+  },
+  {
+   "heard": "Okay, mark that one okay.",
+   "said": true
+  },
+  {
+   "heard": "Couldn't inspect it. Actually it's fine.",
+   "said": true
+  },
+  {
+   "heard": "It's good. Hmm, no, I couldn't really see it, not inspected.",
+   "said": true
+  },
+  {
+   "heard": "Mark it inspected, no, not inspected.",
+   "said": true
+  },
+  {
+   "heard": "Not inspected, actually yes, inspected.",
+   "said": true
+  },
+  {
+   "heard": "Satisfactory, satisfactory.",
+   "said": true
+  },
+  {
+   "heard": "It's okay I guess.",
+   "said": true
+  },
+  {
+   "heard": "Nothing wrong with it.",
+   "said": true
+  },
+  {
+   "heard": "No problems, all set.",
+   "said": true
+  },
+  {
+   "heard": "Mark the attic inspected and the roof not present.",
+   "said": true
+  },
+  {
+   "heard": "Mark the roof not present and the attic inspected.",
+   "said": true
+  },
+  {
+   "heard": "Mark the attic not present. Actually no, mark it inspected.",
+   "said": true
+  },
+  {
+   "heard": "Mark the attic not present, no wait, the attic is inspected.",
+   "said": true
+  },
+  {
+   "heard": "The garage door, not present.",
+   "said": true
+  },
+  {
+   "heard": "Garage is fine.",
+   "said": true
+  },
+  {
+   "heard": "Windows inspected.",
+   "said": true
+  },
+  {
+   "heard": "The window by the sink is fine.",
+   "said": true
+  },
+  {
+   "heard": "Three windows, all fine.",
+   "said": true
+  },
+  {
+   "heard": "Window 2 not present.",
+   "said": true
+  },
+  {
+   "heard": "Bedroom 2 closet is not present.",
+   "said": true
+  },
+  {
+   "heard": "Mark bedroom 2 inspected and bedroom 3 not present.",
+   "said": true
+  },
+  {
+   "heard": "Mark the attic inspected.",
+   "said": true
+  },
+  {
+   "heard": "That's fine.",
+   "said": true
+  },
+  {
+   "heard": "Mark the attic as passed.",
+   "said": true
+  },
+  {
+   "heard": "There is no fireplace.",
+   "said": true
+  },
+  {
+   "heard": "Fireplace, there isn't one.",
+   "said": true
+  },
+  {
+   "heard": "Skip the crawlspace, it's locked.",
+   "said": true
+  },
+  {
+   "heard": "The crawlspace was locked, so not inspected, and the attic is fine.",
+   "said": true
+  },
+  {
+   "heard": "Water heater: not present. Sorry, I mean inspected.",
+   "said": true
+  },
+  {
+   "heard": "Mark attic inspected and roof not present.",
+   "said": true
+  },
+  {
+   "heard": "The attic has not been checked.",
+   "said": true
+  },
+  {
+   "heard": "Mark the attic not inspected because I could not get a good look.",
+   "said": true
+  },
+  {
+   "heard": "Bedroom 3, not present.",
+   "said": true
+  },
+  {
+   "heard": "It passes.",
+   "said": true
+  },
+  {
+   "heard": "Looks good, mark it.",
+   "said": true
+  },
+  {
+   "heard": "Gutters: none.",
+   "said": true
+  },
+  {
+   "heard": "No fireplace in this one.",
+   "said": true
+  },
+  {
+   "heard": "We couldn't open the panel.",
+   "said": true
+  },
+  {
+   "heard": "Inspected it, all good.",
+   "said": true
+  },
+  {
+   "heard": "Mark the range satisfactory.",
+   "said": true
+  },
+  {
+   "heard": "Mark it.",
+   "said": false
+  },
+  {
+   "heard": "Rate this one.",
+   "said": false
+  },
+  {
+   "heard": "Show me the second photo.",
+   "said": false
+  },
+  {
+   "heard": "Take a photo of the attic.",
+   "said": false
+  },
+  {
+   "heard": "Next photo.",
+   "said": false
+  },
+  {
+   "heard": "No wait.",
+   "said": false
+  },
+  {
+   "heard": "Close the photo.",
+   "said": false
+  },
+  {
+   "heard": "What's the next item?",
+   "said": false
+  },
+  {
+   "heard": "Hmm, let me think about that.",
+   "said": false
+  },
+  {
+   "heard": "Go to the kitchen.",
+   "said": false
+  },
+  {
+   "heard": "Rate the water heater.",
+   "said": false
+  },
+  {
+   "heard": "Bye Spex.",
+   "said": false
+  }
+ ]
+}

@@ -14,20 +14,36 @@
 <script src="/assets/auth.js"></script>
 <script src="/assets/page.js" defer></script>
 <script src="/assets/signin.js" defer></script>
+<script src="/assets/signin-link.js" defer></script>
 </head>
 <body class="app">
 <div class="split">
 <main class="signin">
 <a class="logo" href="/" aria-label="Inspyx, home">
-<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z"></path><path d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" stroke="#0284C7" stroke-width="19"></path></svg>
 <span>INSPYX</span>
 </a>
 <h1>Welcome back.</h1>
 <div class="ways">
 <button class="btn quiet" type="button" data-google data-busy="Opening Google…"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg><span data-word>Continue with Google</span></button>
-<p class="or">or with your email</p>
+<button class="btn quiet" type="button" data-link-open aria-expanded="false" aria-controls="signin-link-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="M4 7l8 6 8-6"></path></svg><span>Email me a sign-in link</span></button>
+<div class="link-panel" id="signin-link-panel" data-link-panel hidden>
+<form class="fields" data-link method="post" action="/signin">
+<label for="link-email">Email</label>
+<input id="link-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="you@yourcompany.com" required>
+<div class="say" role="status">
+<p class="ok" data-say="sent" hidden>If an Inspyx account uses that address, a sign-in link is on its way. Open it on this computer or on your phone. It works once and expires in 1 hour.</p>
+<p data-say="network" hidden>Inspyx could not reach the sign-in server. Check your connection and try again.</p>
+<p data-say="server" hidden>The sign-in server refused the request. Try again later.</p>
+<p class="wait" data-wait hidden>You can send another link in <span data-secs>60</span> seconds.</p>
 </div>
-<form class="fields" data-signin method="post" action="/signin">
+<button class="btn" type="submit" data-busy="Sending…">Send the link</button>
+</form>
+<p class="help"><span class="line">Rather type your password?&nbsp;<a href="/signin" data-link-close>Use your password</a></span></p>
+</div>
+<p class="or" data-password-way>or with your email and password</p>
+</div>
+<form class="fields" data-signin data-password-way method="post" action="/signin">
 <label for="signin-email">Email</label>
 <input id="signin-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="you@yourcompany.com" required>
 <label for="signin-password">Password</label>

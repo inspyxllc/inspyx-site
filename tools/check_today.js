@@ -63,6 +63,10 @@ async function open(browser, o) {
     const req = route.request(), u = req.url();
     const cors = { 'access-control-allow-origin': '*' };
     if (u.startsWith(SERVER + '/auth/v1/token')) { const a = o.onAuth ? o.onAuth() : { status: 400, json: {} }; return route.fulfill({ status: a.status, contentType: 'application/json', headers: cors, body: JSON.stringify(a.json) }); }
+    // The setup checklist's own asks (tools/check_setup.js checks them): nothing set up, and no choice kept.
+    if (u === SERVER + '/functions/v1/sync') return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ rows: [], next: null, more: false }) });
+    if (u === SERVER + '/auth/v1/user' && req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ id: ME, email: 'pat@example.com', user_metadata: {} }) });
+    if (u === SERVER + '/functions/v1/payments') return route.fulfill({ status: 409, contentType: 'application/json', headers: cors, body: JSON.stringify({ error: 'no_account' }) });
     if (u !== NEEDS) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
     s.calls.push({ headers: req.headers(), body });
@@ -113,7 +117,16 @@ const shown = async (page, sel) => (await vis(page, sel)).join(' | ');
       ok(label + ': opens with no errors, asks only the needs function, as the signed-in inspector, for the list', errs.length === 0 && away.length === 0 && c.headers.authorization === 'Bearer test-access-1' && JSON.stringify(c.body) === '{"action":"list"}', errs.concat(away).join(' | '));
       const csp = res.headers()['content-security-policy'] || '';
       ok(label + ': served with the signed-in pages\' rule, and never kept by a cache', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
-      ok(label + ': the title, and who is signed in', (await shown(page, 'h1')) === 'What needs you' && (await shown(page, '.today-who')) === 'Signed in as pat@example.com' && (await shown(page, '.today-links a')) === 'Your numbers | Reports sent | Your inspections | Calendar | People | Account');
+      ok(label + ': the title, and who is signed in', (await shown(page, 'h1')) === 'What needs you' && (await shown(page, '.today-who')) === 'Signed in as pat@example.com' && (await shown(page, '.today-links a')) === 'Your numbers | Reports sent' &&
+        await page.getAttribute('nav.dash a[aria-current="page"]', 'href') === '/today');
+      // Set up your business (2026-11-22): the three setup pages that write the phone's own rows, each a tile.
+      const tiles = await page.$$eval('.setup-tile', (as) => as.map((a) => [a.getAttribute('href'), a.querySelector('strong').textContent, a.getBoundingClientRect().height]));
+      ok(label + ': "Set up your business", with Your company, Prices, Agreements, Booking page, Emails and Card payments, each a link a finger can hit',
+        (await shown(page, '.setup h2')) === 'Set up your business' &&
+        JSON.stringify(tiles.map((t) => [t[0], t[1]])) === JSON.stringify([['/profile', 'Your company'], ['/prices', 'Prices'], ['/agreements', 'Agreements'], ['/booking', 'Booking page'], ['/emails', 'Emails'], ['/payments', 'Card payments']]) &&
+        tiles.every((t) => t[2] >= 44), JSON.stringify(tiles));
+      const below = await page.evaluate(() => document.querySelector('.setup').getBoundingClientRect().top - document.querySelector('[data-items]').getBoundingClientRect().bottom);
+      ok(label + ': the setup sits under the jobs, never between them and the title', below > 0, String(Math.round(below)));
       const r = await rows(page);
       ok(label + ': four jobs, newest first', r.length === 4, JSON.stringify(r));
       ok(label + ': a Mia caller to call back, with what they wanted, the property, the day, and a button that dials them',

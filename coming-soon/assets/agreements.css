@@ -1,0 +1,108 @@
+/* Agreements (2026-11-16): calm and plain like the prices page. One card per agreement; one dialog to edit. */
+.agr{display:block; max-width:960px; margin:0 auto; padding:28px var(--gr) 64px var(--gl)}
+.agr h1{font-size:34px; margin-bottom:8px}
+.agr-lede{font-size:17px; line-height:1.45; color:var(--ink-soft)}
+.agr-live{margin:8px 0 16px; font-size:14px; color:var(--ink-faint)}
+.agr-state p{font-size:18px; line-height:1.45; color:var(--ink-soft)}
+.agr .say p{margin:10px 0; font-size:15px}
+.agr-group{margin-top:28px}
+.agr-group[hidden]{display:none}
+.agr-head{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between; margin-bottom:12px}
+.agr-head h2{font-size:22px}
+.agr .btn.small, .agr-dialog .btn.small{min-height:44px; padding:0 18px; border:0; font:600 15px var(--font); cursor:pointer}
+.agr .btn.small:disabled, .agr-dialog .btn.small:disabled{opacity:.5; cursor:default}
+.agr-empty{font-size:16px; line-height:1.45; color:var(--ink-soft)}
+.agr-list{list-style:none; padding:0; margin:0; display:grid; gap:12px}
+.agr-card{display:flex; gap:12px; align-items:flex-start; justify-content:space-between; padding:16px; border-radius:18px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.agr-what{display:grid; gap:3px; min-width:0}
+.agr-what strong{font-size:17px; color:var(--ink); overflow-wrap:anywhere}
+.agr-what span{font-size:14.5px; color:var(--ink-soft); overflow-wrap:anywhere}
+.agr-links{display:flex; flex-wrap:wrap; gap:4px 22px; margin-top:28px; font-size:14.5px}
+.agr-links a{display:inline-flex; align-items:center; min-height:44px}
+
+/* margin:auto puts back what page.css's reset (*{margin:0}) takes from a dialog: centred, like /plan's .sheet. */
+.agr-dialog{width:min(720px, calc(100vw - 32px)); max-height:calc(100vh - 32px); overflow:auto; margin:auto; padding:0; border:0; border-radius:20px; background:var(--card); color:var(--ink); box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.agr-dialog::backdrop{background:rgba(29,29,31,.35)}
+.agr-dialog form{display:grid; gap:12px; padding:22px}
+.agr-dialog h2{font-size:21px}
+.agr-dialog label{display:grid; gap:6px; font-size:13.5px; color:var(--ink-soft)}
+.agr-dialog label[hidden], .agr-dialog p[hidden]{display:none}
+.agr-dialog input[type="text"], .agr-dialog textarea{width:100%; min-height:44px; padding:10px 12px; border:1px solid #C9C9D0; border-radius:12px; background:#FFFFFF; color:var(--ink); font:400 16px var(--font)}
+.agr-dialog textarea{resize:vertical; min-height:240px; line-height:1.45}
+.agr-help{font-size:13px; line-height:1.4; color:var(--ink-faint); overflow-wrap:anywhere}
+.agr-signs{font-size:15px; color:var(--ink)}
+.agr-dialog .tick{display:flex; gap:10px; align-items:center; min-height:40px; font-size:15.5px; color:var(--ink)}
+.agr-dialog .tick input{width:20px; height:20px; margin:0}
+.agr-problems p{font-size:14.5px; color:#8C1D18}
+.agr-actions{display:flex; flex-wrap:wrap; gap:10px}
+.agr-dialog .danger{color:#8C1D18}
+@media (max-width: 760px){
+  .agr{padding-top:20px; padding-bottom:48px}
+  .agr h1{font-size:28px}
+  /* On a phone the words box leaves room for the buttons; the dialog scrolls for the rest. */
+  .agr-dialog textarea{height:34vh; min-height:160px}
+}
+
+/* Job 7 (W14): the starter, the blanks to tap in, and the agreement as the client reads it. */
+.agr-empty{display:grid; gap:12px; justify-items:start; padding:20px; border-radius:18px; background:linear-gradient(135deg, #EEF4FF, #F7F2FF)}
+.agr-empty p{margin:0; font-size:16px; color:var(--ink-soft)}
+.agr-starter{justify-self:start}
+.agr-tabs{display:flex; gap:4px; padding:4px; border-radius:12px; background:#EEF1F5; width:max-content; max-width:100%}
+.agr-tabs [role="tab"]{min-height:36px; padding:0 14px; border:0; border-radius:9px; background:transparent; color:var(--ink-soft); font:600 14px var(--font); cursor:pointer}
+.agr-tabs [role="tab"][aria-selected="true"]{background:#FFFFFF; color:var(--ink); box-shadow:0 1px 3px rgba(15,32,60,.12)}
+.agr-blanks{display:flex; flex-wrap:wrap; gap:6px}
+.agr-blanks button{min-height:34px; padding:0 12px; border:1px solid rgba(29,98,216,.25); border-radius:999px; background:#EEF3FD; color:#1D62D8; font:600 13.5px var(--font); cursor:pointer}
+.agr-blanks button::before{content:"+ "}
+.agr-paper{max-height:52vh; overflow:auto; padding:22px 24px; border-radius:12px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(15,32,60,.1), 0 10px 26px rgba(15,32,60,.08); font:400 15px/1.6 Georgia, 'Times New Roman', serif; color:#0E1420}
+.agr-paper p{margin:0 0 12px}
+.agr-paper p:first-child{font:700 19px/1.3 var(--font); margin-bottom:16px}
+.agr-sign{margin-top:22px !important; padding-top:26px; border-top:1px solid #0E1420; width:min(320px, 100%); font:400 13px var(--font) !important; color:#4A5362}
+mark.agr-fill{padding:0 3px; border-radius:4px; color:inherit}
+mark.agr-fill[data-fill="yours"]{background:#E3F4EA}
+mark.agr-fill[data-fill="sample"]{background:#E8F0FD}
+mark.agr-fill[data-fill="missing"]{background:#FBF0D9; color:#8A5A00; font-weight:600}
+.agr-empty[hidden], [data-pane][hidden], .agr-starter[hidden]{display:none}
+.agr-blanks{margin-bottom:6px}
+
+/* The how-to (his rule 11-22): a finger starts from the starter, taps a blank, and the client's page shows. 12 s,
+   looping; still on the result with motion turned down. */
+.agr-how{display:grid; grid-template-columns:minmax(0, 300px) 1fr; gap:18px 28px; align-items:center; margin:18px 0 10px; padding:18px; border-radius:22px; background:linear-gradient(135deg, #EEF4FF, #F7F2FF)}
+.agr-how-stage{position:relative; height:180px}
+.agr-how-scene{position:absolute; inset:10px; display:grid; gap:9px; align-content:start; padding:14px; border-radius:16px; background:#fff; box-shadow:0 10px 30px rgba(31,78,121,.12); font-size:13px; opacity:0}
+.agr-how-a{animation:agr-a 12s infinite} .agr-how-b{animation:agr-b 12s infinite} .agr-how-c{animation:agr-c 12s infinite}
+.agr-how-btn{justify-self:start; padding:7px 12px; border-radius:999px; box-shadow:inset 0 0 0 1px #C9C9D0; font-weight:600; color:var(--ink); animation:agr-press 12s infinite}
+.agr-how-line{display:block; height:8px; border-radius:4px; background:#E6E8EC; animation:agr-fillin 12s infinite}
+.agr-how-line.short{width:60%}
+.agr-how-text{display:block; padding:8px 10px; border-radius:8px; box-shadow:inset 0 0 0 1px #C9C9D0; color:var(--ink)}
+.agr-how-blank{font-weight:600; color:#1D62D8; animation:agr-blank 12s infinite}
+.agr-how-caret{display:inline-block; width:1px; height:13px; margin-left:1px; vertical-align:middle; background:var(--navy)}
+.agr-how-chips{display:flex; flex-wrap:wrap; gap:5px}
+.agr-how-chips em{font-style:normal; padding:4px 8px; border-radius:999px; background:#EEF3FD; color:#1D62D8; font-weight:600; font-size:12px}
+.agr-how-pick{animation:agr-pick 12s infinite}
+.agr-how-paper{display:grid; gap:6px; font:400 13px/1.45 Georgia, serif; color:#0E1420}
+.agr-how-paper strong{font:700 14px var(--font)}
+.agr-how-paper mark{padding:0 3px; border-radius:4px; background:#E8F0FD; color:inherit}
+.agr-how-sign{margin-top:10px; padding-top:12px; border-top:1px solid #0E1420; width:70%; font:400 11px var(--font); color:#4A5362}
+.agr-how-finger{position:absolute; z-index:2; width:26px; height:26px; border-radius:50%; background:rgba(31,78,121,.38); border:2px solid rgba(31,78,121,.8); box-shadow:0 2px 8px rgba(31,78,121,.3); animation:agr-finger 12s infinite}
+.agr-how-steps{display:grid; gap:10px; counter-reset:step}
+.agr-how-step{display:flex; gap:12px; align-items:center; font-size:16px; color:var(--ink-faint); animation:agr-s1 12s infinite}
+.agr-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:28px; height:28px; border-radius:50%; background:#fff; color:var(--navy); font-weight:700; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.agr-how-step[data-n="2"]{animation-name:agr-s2} .agr-how-step[data-n="3"]{animation-name:agr-s3}
+@keyframes agr-a{0%,30%{opacity:1} 33%,100%{opacity:0}}
+@keyframes agr-b{0%,30%{opacity:0} 33%,63%{opacity:1} 66%,100%{opacity:0}}
+@keyframes agr-c{0%,63%{opacity:0} 66%,97%{opacity:1} 100%{opacity:0}}
+@keyframes agr-press{0%,12%{transform:none} 14%{transform:scale(.93)} 16%,100%{transform:none}}
+@keyframes agr-fillin{0%,15%{background:#E6E8EC} 18%,100%{background:#C9D3E3}}
+@keyframes agr-pick{0%,44%{background:#EEF3FD; color:#1D62D8} 46%,100%{background:#1D62D8; color:#fff}}
+@keyframes agr-blank{0%,46%{opacity:0} 48%,100%{opacity:1}}
+@keyframes agr-finger{0%{left:70%; top:85%; opacity:1} 8%,16%{left:120px; top:24px; opacity:1} 38%,48%{left:118px; top:64px; opacity:1} 60%,100%{left:70%; top:85%; opacity:0}}
+@keyframes agr-s1{0%,30%{color:var(--ink); font-weight:600} 33%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes agr-s2{0%,30%{color:var(--ink-faint); font-weight:400} 33%,63%{color:var(--ink); font-weight:600} 66%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes agr-s3{0%,63%{color:var(--ink-faint); font-weight:400} 66%,100%{color:var(--ink); font-weight:600}}
+@media (prefers-reduced-motion: reduce){
+  .agr-how *, .agr-how-step{animation:none !important}
+  .agr-how-finger, .agr-how-a, .agr-how-b{display:none}
+  .agr-how-c{opacity:1}
+  .agr-how-step{color:var(--ink)}
+}
+@media (max-width: 999.98px){ .agr-how{grid-template-columns:1fr} }

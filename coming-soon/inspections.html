@@ -11,22 +11,28 @@
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="stylesheet" href="/assets/page.css">
 <link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/dash.css">
 <link rel="stylesheet" href="/assets/inspections.css">
 <script src="/assets/auth.js"></script>
 <script src="/assets/page.js" defer></script>
+<script src="/assets/agreement-fill.js" defer></script>
 <script src="/assets/inspections.js" defer></script>
 </head>
-<body>
+<body class="has-dash">
 <header class="bar">
 <a class="logo" href="/" aria-label="Inspyx, home">
-<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214.0,94.7 214.00,111.70 L214.00,222.00 Q214.0,236.0 200.00,236.00 L145.50,236.00 Q143.0,236.0 143.00,233.50 L143.00,192.00 Q143.0,178.0 129.00,178.00 L111.00,178.00 Q97.0,178.0 97.00,192.00 L97.00,233.50 Q97.0,236.0 94.50,236.00 L40.00,236.00 Q26.0,236.0 26.00,222.00 L26.00,111.70 Q26.0,94.7 38.97,83.71 L110.08,23.41 Q120.0,15.0 129.92,23.41 Z"></path></svg>
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z"></path><path d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" stroke="#0284C7" stroke-width="19"></path></svg>
 <span>INSPYX</span>
 </a>
 </header>
+<nav class="dash" aria-label="Your dashboard">
+<ul class="dash-items"><li><a href="/today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 6.5 4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5l-1.5-6.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5Z"/></svg><span class="dash-l">What needs you</span><span class="dash-s">To do</span></a></li><li><a href="/inspections" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m9 13 2 2 4-4"/></svg><span class="dash-l">Inspections</span></a></li><li><a href="/calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="dash-l">Calendar</span></a></li><li><a href="/prices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"/><circle cx="8" cy="8" r="1.5"/></svg><span class="dash-l">Prices</span></a></li><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul>
+<details class="dash-more"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></summary><ul><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul></details>
+</nav>
 
 <main class="insp" data-insp hidden>
 <aside class="insp-list">
-<h1>Your inspections</h1>
+<div class="insp-head"><h1>Your inspections</h1><a class="btn small insp-new" href="/new">New inspection</a></div>
 <p class="insp-live" role="status">
 <span data-live="connecting">Connecting…</span>
 <span data-live="live" hidden>Live: a change shows here and on your phone within seconds.</span>
@@ -43,6 +49,24 @@
 <section class="insp-one" data-one>
 <p data-pick>Pick an inspection to see it here.</p>
 <div data-detail hidden>
+<section class="insp-search" data-search-box aria-label="Search this report">
+<label class="insp-search-l">Search this report <input type="search" data-search autocomplete="off" placeholder="gfci, roof, leak…"></label>
+<p class="insp-search-n" data-search-count role="status" aria-live="polite"></p>
+<ol class="insp-search-r" data-search-results></ol>
+<figure class="se-how" data-search-how aria-label="How it works, in three steps">
+<div class="se-how-stage" aria-hidden="true">
+<div class="se-how-scene se-how-a"><span class="se-how-box">gfci<i></i></span></div>
+<div class="se-how-scene se-how-b"><span class="se-how-box">gfci</span><span class="se-how-hit"><b>Kitchen › Outlets</b>Missing <mark>GFCI</mark> protection</span><span class="se-how-hit"><b>Garage › Outlets</b>No <mark>GFCI</mark> at the bench</span></div>
+<div class="se-how-scene se-how-c"><span class="se-how-field">Missing <mark>GFCI</mark> protection</span></div>
+<span class="se-how-finger"></span>
+</div>
+<figcaption class="se-how-steps">
+<span class="se-how-step" data-n="1">Type a word: every stop, item, finding and note is searched</span>
+<span class="se-how-step" data-n="2">Each match shows where it is</span>
+<span class="se-how-step" data-n="3">Tap one to go straight to it</span>
+</figcaption>
+</figure>
+</section>
 <div class="insp-cover">
 <label>Title <input type="text" data-field="title" data-required autocomplete="off"></label>
 <label>Address <input type="text" data-field="address" data-required autocomplete="off"></label>
@@ -59,17 +83,109 @@
 <span data-save="saving" hidden>Saving…</span>
 <span data-save="failed" hidden>Couldn't save. Trying again.</span>
 </p>
+<section class="insp-agr" data-agr hidden aria-live="polite">
+<div data-agr-state="outdated" hidden>
+<h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3 3 3-3"/></svg>The signed agreement is out of date</h2>
+<p class="insp-agr-hint">Your client signed it before these changed. Send them the updated agreement to sign; the one they signed is kept.</p>
+<ul class="insp-agr-changes" data-agr-changes></ul>
+<p class="insp-agr-fee" data-agr-needsfee hidden>Set the price on your phone first, then send the updated agreement.</p>
+<button type="button" class="insp-agr-send" data-agr-send>Send the updated agreement</button>
+<div class="insp-agr-ask" data-agr-ask hidden role="group" aria-label="Send the updated agreement?">
+<p><strong>Send the updated agreement?</strong> Your client gets an email with a link to sign it again, with these changes.</p>
+<button type="button" class="insp-agr-go" data-agr-go>Send</button><button type="button" class="insp-agr-no" data-agr-no>Not now</button>
+</div>
+<figure class="agr-how" aria-label="How it works, in three steps">
+<div class="agr-how-stage" aria-hidden="true">
+<div class="agr-how-scene agr-how-a"><span class="agr-how-title">Out of date</span><span class="agr-how-change">Price: $425.00 → $475.00</span><em class="agr-how-btn">Send the updated agreement</em></div>
+<div class="agr-how-scene agr-how-b"><span class="agr-how-mail"><b>Ana Diaz</b><i>Please sign the updated agreement</i></span></div>
+<div class="agr-how-scene agr-how-c"><span class="agr-how-wait">Updated agreement sent. Waiting for the client to sign it.</span></div>
+<span class="agr-how-finger"></span>
+</div>
+<figcaption class="agr-how-steps">
+<span class="agr-how-step" data-n="1">See what changed since your client signed</span>
+<span class="agr-how-step" data-n="2">Tap Send: they get an email to sign it again</span>
+<span class="agr-how-step" data-n="3">It waits here until they sign</span>
+</figcaption>
+</figure>
+</div>
+<p class="insp-agr-wait" data-agr-state="updateSent" hidden>Updated agreement sent. Waiting for the client to sign it.</p>
+<p class="insp-agr-said" data-agr-said hidden></p>
+</section>
+<section class="insp-people" data-people hidden>
+<h2>People</h2>
+<p class="insp-people-hint">See this inspection exactly as each of them sees it. Opens in a new tab; nothing is counted or sent.</p>
+<figure class="look-how" aria-label="How it works, in three steps">
+<div class="look-how-stage" aria-hidden="true">
+<div class="look-how-scene look-how-a"><span class="look-how-row"><span><b>Dana Reyes</b><i>Client</i></span><em class="look-how-btn">Client view</em></span><span class="look-how-row dim"><span><b>Alex Agent</b><i>Buyer’s agent</i></span><em>Agent view</em></span></div>
+<div class="look-how-scene look-how-b"><span class="look-how-bar"><b>Client view</b><i>What your client sees</i></span><span class="look-how-line"></span><span class="look-how-line short"></span></div>
+<div class="look-how-scene look-how-c"><span class="look-how-bar"><b>Client view</b><i>What your client sees</i></span><span class="look-how-cover"><b>12 Oak St</b><i>This report opens once the inspection is paid.</i><em>Pay $425.00</em></span><span class="look-how-pill">nothing is counted</span></div>
+<span class="look-how-finger"></span>
+</div>
+<figcaption class="look-how-steps">
+<span class="look-how-step" data-n="1">Tap Client view (or Agent view) by the person</span>
+<span class="look-how-step" data-n="2">A new tab opens on exactly what they see</span>
+<span class="look-how-step" data-n="3">Look around: nothing is counted, paid or sent</span>
+</figcaption>
+</figure>
+<ul class="insp-people-list" data-people-list></ul>
+</section>
+<div class="insp-flagbar">
+<button type="button" class="insp-flagfilter" data-flagfilter aria-pressed="false" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg><span>Flagged (<span data-v="flags">0</span>)</span></button>
+<span class="insp-flagnote">Flags are yours alone: they never show in the report.</span>
+<span class="insp-flagtrouble" data-flagtrouble hidden role="status">Couldn’t save that flag. Try again.</span>
+</div>
 <div data-stops></div>
+<figure class="st-how fl-how" aria-label="How flags work, in three steps">
+<div class="st-how-stage" aria-hidden="true">
+<div class="st-how-scene st-how-a"><span class="st-how-row"><span>Loose bracket</span><b class="fl-how-flag"></b></span><span class="st-how-row"><span>Downspouts</span><b class="fl-how-off"></b></span></div>
+<div class="st-how-scene st-how-b"><span class="fl-how-filter">Flagged (1)</span><span class="st-how-row"><span>Loose bracket</span><b class="fl-how-on"></b></span></div>
+<div class="st-how-scene st-how-c"><span class="fl-how-report"><strong>Report</strong><i>1.1 Loose bracket</i><i>No flags in here</i></span></div>
+<span class="st-how-finger fl-how-finger"></span>
+</div>
+<figcaption class="st-how-steps">
+<span class="st-how-step" data-n="1">Tap the flag on anything to come back to it</span>
+<span class="st-how-step" data-n="2">Flagged shows only what you flagged; your phone marks the same ones</span>
+<span class="st-how-step" data-n="3">Flags are your own: they never print in the report</span>
+</figcaption>
+</figure>
+<figure class="st-how" aria-label="How it works, in three steps">
+<div class="st-how-stage" aria-hidden="true">
+<div class="st-how-scene st-how-a"><span class="st-how-row">Gutters</span><span class="st-how-new"><i>Downspouts</i><em>Add item</em></span></div>
+<div class="st-how-scene st-how-b"><span class="st-how-row"><span>Gutters</span><b>↑ ↓</b></span><span class="st-how-row lift"><span>Downspouts</span><b>↑ ↓</b></span></div>
+<div class="st-how-scene st-how-c"><span class="st-how-ask"><strong>Delete the stop “Roof”, with 2 items and 1 photo?</strong><span><em>Delete</em><i>Keep it</i></span></span></div>
+<span class="st-how-finger"></span>
+</div>
+<figcaption class="st-how-steps">
+<span class="st-how-step" data-n="1">Add a stop, an item or a finding: it shows on your phone too</span>
+<span class="st-how-step" data-n="2">Move anything up or down with the arrows</span>
+<span class="st-how-step" data-n="3">Delete asks first and says what goes with it</span>
+</figcaption>
+</figure>
+<form class="insp-add insp-addstop" data-addstop>
+<label>New stop <input type="text" name="name" maxlength="120" autocomplete="off" placeholder="Garage" required></label>
+<label>In the report <select name="chapter" data-addstop-chapter><option value="">Its own chapter</option></select></label>
+<button type="submit">Add stop</button>
+</form>
+<dialog class="insp-confirm" data-confirm aria-labelledby="insp-confirm-t">
+<p id="insp-confirm-t" class="insp-confirm-t" data-confirm-text></p>
+<p class="insp-confirm-n">This can’t be undone, here or on your phone.</p>
+<p class="insp-confirm-n" data-confirm-published hidden>The report your client has stays as it is until you publish again.</p>
+<div class="insp-confirm-b"><button type="button" class="insp-confirm-go" data-confirm-go>Delete</button><button type="button" data-confirm-no autofocus>Keep it</button></div>
+</dialog>
 </div>
 </section>
 </main>
+
+<template data-t="person"><li><span class="insp-who"><strong data-v="name"></strong><span data-v="role"></span></span><a class="insp-look" data-look target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span data-v="look"></span></a></li></template>
+<div data-words hidden><span data-w="client">Client</span><span data-w="buyer_agent">Buyer’s agent</span><span data-w="listing_agent">Listing agent</span><span data-w="look-client">Client view</span><span data-w="look-agent">Agent view</span><span data-w="noname">No name yet</span><span data-w="chapter-of">In the chapter of </span><span data-w="del-stop">Delete the stop “{name}”</span><span data-w="del-item">Delete the item “{name}”</span><span data-w="del-finding">Delete the finding “{name}”</span><span data-w="del-with">, with </span><span data-w="n-item">1 item</span><span data-w="n-items">{n} items</span><span data-w="n-finding">1 finding</span><span data-w="n-findings">{n} findings</span><span data-w="n-photo">1 photo</span><span data-w="n-photos">{n} photos</span><span data-w="and"> and </span><span data-w="unnamed">this one</span><span data-w="agr-clientName">Client</span><span data-w="agr-clientFirstName">Client’s first name</span><span data-w="agr-clientEmail">Client’s email</span><span data-w="agr-propertyAddress">Address</span><span data-w="agr-street">Street</span><span data-w="agr-city">City</span><span data-w="agr-state">State</span><span data-w="agr-zip">ZIP code</span><span data-w="agr-fee">Price</span><span data-w="agr-services">Services</span><span data-w="agr-feeLines">Price lines</span><span data-w="agr-none">(none)</span><span data-w="agr-sending">Sending…</span><span data-w="agr-sent">Sent. Your client will get an email to sign it.</span><span data-w="agr-held">Made. Its email waits: client emails are off in your settings.</span><span data-w="agr-no_address">Made, but your client has no email. Add one, or have them sign on your phone.</span><span data-w="agr-email_failed">Made, but its email didn’t go. Cancel the request and send it again.</span><span data-w="agr-refused">This agreement was already updated. Reload the page.</span><span data-w="agr-no_agreement">You have no agreement to send. Add one in Agreements, then try again.</span><span data-w="agr-details">Your client’s email doesn’t look right. Fix it, then try again.</span><span data-w="agr-failed">That didn’t go through. Try again.</span><span data-w="photo-one">photo</span><span data-w="photo-many">photos</span><span data-w="ai-too-long">These details are longer than Spex can edit (4,000 characters). Shorten them, or edit them yourself.</span><span data-w="ai-unreachable">Spex couldn’t be reached. Your details are unchanged. Try again.</span><span data-w="search-none">Nothing in this report matches.</span><span data-w="search-one">1 match</span><span data-w="search-many">{n} matches</span><span data-w="search-more">Showing the first {n}.</span><span data-w="f-name">Stop</span><span data-w="f-label">Item</span><span data-w="f-note">Note</span><span data-w="f-ni_note">Why not inspected</span><span data-w="f-finding_title">Finding</span><span data-w="f-location">Location</span><span data-w="f-finding_implication">What it means</span><span data-w="f-finding_recommendation">What to do</span><span data-w="f-finding_recommended_trade">Who should fix it</span><span data-w="flag-set">Flag “{name}” for later</span><span data-w="flag-clear">Clear the flag on “{name}”</span></div>
 
 <template data-t="row"><li><a href="#"><strong data-v="title"></strong><span data-v="address"></span><time data-v="day"></time></a></li></template>
 
 <template data-t="stop">
 <section class="insp-stop">
-<h2><input class="insp-name" type="text" data-field="name" data-required aria-label="Stop name" autocomplete="off"></h2>
+<div class="insp-stop-head"><h2><input class="insp-name" type="text" data-field="name" data-required aria-label="Stop name" autocomplete="off"></h2><span class="insp-tools"><button type="button" class="insp-tool" data-move="up" aria-label="Move this stop up">↑</button><button type="button" class="insp-tool" data-move="down" aria-label="Move this stop down">↓</button><button type="button" class="insp-tool insp-del" data-delete aria-label="Delete this stop">Delete</button></span></div>
 <ol class="insp-items"></ol>
+<form class="insp-add" data-additem><label>New item <input type="text" name="name" maxlength="120" autocomplete="off" placeholder="Gutters" required></label><button type="submit">Add item</button></form>
 </section>
 </template>
 
@@ -86,15 +202,18 @@
 <option value="not_present">Not present</option>
 </select>
 </label>
+<span class="insp-tools"><button type="button" class="insp-tool insp-flag" data-flag-btn aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></button><button type="button" class="insp-tool" data-move="up" aria-label="Move this item up">↑</button><button type="button" class="insp-tool" data-move="down" aria-label="Move this item down">↓</button><button type="button" class="insp-tool insp-del" data-delete aria-label="Delete this item">Delete</button></span>
 </div>
 <label>Note <textarea rows="2" data-field="note"></textarea></label>
 <label data-ni hidden>Why it wasn't inspected <textarea rows="2" data-field="ni_note"></textarea></label>
 <ol class="insp-findings"></ol>
+<form class="insp-add" data-addfinding><label>New finding <input type="text" name="name" maxlength="200" autocomplete="off" placeholder="What did you find?" required></label><button type="submit">Add finding</button></form>
 </li>
 </template>
 
 <template data-t="finding">
 <li class="insp-finding">
+<div class="insp-finding-head"><span class="insp-tools"><button type="button" class="insp-tool insp-flag" data-flag-btn data-flag-finding aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></button><button type="button" class="insp-tool" data-move="up" aria-label="Move this finding up">↑</button><button type="button" class="insp-tool" data-move="down" aria-label="Move this finding down">↓</button><button type="button" class="insp-tool insp-del" data-delete aria-label="Delete this finding">Delete</button></span></div>
 <label>Finding <input type="text" data-field="finding_title" autocomplete="off"></label>
 <label>Severity
 <select data-field="severity">
@@ -106,10 +225,45 @@
 </select>
 </label>
 <label>Location <input type="text" data-field="location" autocomplete="off"></label>
+<div class="insp-details">
+<label>Details <textarea rows="3" data-field="note" data-details></textarea></label>
+<div class="ai" data-ai hidden>
+<button type="button" class="ai-open" data-ai-open aria-expanded="false"><img src="/assets/spex-s.svg" alt="" width="22" height="22">Edit with AI</button>
+<div class="ai-actions" data-ai-actions hidden role="group" aria-label="Edit with AI">
+<button type="button" data-ai-action="clearer">Make it clearer</button>
+<button type="button" data-ai-action="shorter">Make it shorter</button>
+<button type="button" data-ai-action="recommend">Add a recommendation</button>
+<button type="button" data-ai-action="grammar">Fix grammar</button>
+<figure class="ai-how" aria-label="How it works, in four steps">
+<div class="ai-how-stage" aria-hidden="true">
+<div class="ai-how-scene ai-how-a"><span class="ai-how-mine">outlet by kitchen sink not gfci protected</span><em class="ai-how-btn">Make it clearer</em></div>
+<div class="ai-how-scene ai-how-b"><span class="ai-how-mine">outlet by kitchen sink not gfci protected</span><span class="ai-how-spex"><b>Spex’s version</b>The electrical outlet by the kitchen sink does not have GFCI protection.</span></div>
+<div class="ai-how-scene ai-how-c"><span class="ai-how-spex"><b>Spex’s version</b>The electrical outlet by the kitchen sink does not have GFCI protection.</span><em class="ai-how-keep">Keep</em></div>
+<div class="ai-how-scene ai-how-d"><span class="ai-how-mine done">The electrical outlet by the kitchen sink does not have GFCI protection.</span></div>
+<span class="ai-how-finger"></span>
+</div>
+<figcaption class="ai-how-steps">
+<span class="ai-how-step" data-n="1">Tap Edit with AI, then Make it clearer</span>
+<span class="ai-how-step" data-n="2">Spex’s version shows beside yours</span>
+<span class="ai-how-step" data-n="3">Tap Keep: nothing changes until you do</span>
+<span class="ai-how-step" data-n="4">The clearer details, saved</span>
+</figcaption>
+</figure>
+</div>
+<p class="ai-working" data-ai-working hidden role="status">Spex is writing its version…</p>
+<div class="ai-version" data-ai-version hidden>
+<p class="ai-label">Spex’s version</p>
+<p class="ai-text" data-ai-text></p>
+<div class="ai-choose"><button type="button" class="ai-keep" data-ai-keep>Keep</button><button type="button" class="ai-discard" data-ai-discard>Discard</button></div>
+<p class="ai-note">Keep puts it in Details, where you can still change it.</p>
+</div>
+<p class="ai-error" data-ai-error hidden role="alert"></p>
+</div>
+</div>
 <label>What it means <textarea rows="2" data-field="finding_implication"></textarea></label>
 <label>What to do <textarea rows="2" data-field="finding_recommendation"></textarea></label>
 <label>Who should fix it <input type="text" data-field="finding_recommended_trade" autocomplete="off"></label>
-<p class="insp-photos" data-photos hidden><span data-v="photos"></span> photos on your phone</p>
+<p class="insp-photos" data-photos hidden><span data-v="photos"></span> <span data-v="photos-word"></span> on your phone</p>
 </li>
 </template>
 </body>

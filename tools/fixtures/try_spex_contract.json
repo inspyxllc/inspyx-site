@@ -1,0 +1,29 @@
+{
+  "colors": {
+    "page": "#F2F3F5",
+    "card": "#FFFFFF",
+    "ink": "#0E1420",
+    "inkSoft": "#4A5362",
+    "inkFaint": "#5E6876",
+    "hairline": "#D9DEE5",
+    "fill": "#E7E9ED",
+    "blue": "#1D62D8",
+    "blueTint": "#E8F0FD",
+    "done": "#157347",
+    "doneTint": "#E3F4EA",
+    "needsYou": "#8A5A00",
+    "needsYouTint": "#FBF0D9",
+    "wrong": "#B3261E",
+    "wrongTint": "#FCE9E7"
+  },
+  "room_progress": [
+    "3 of 9 done",
+    "3 of 9 done · 1 finding",
+    "0 of 4 done · 2 findings"
+  ],
+  "item_marks": [
+    "Inspected",
+    "Not inspected",
+    "Not present"
+  ]
+}
