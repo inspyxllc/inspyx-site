@@ -286,6 +286,19 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     await ctx.close();
   });
 
+  await group('the calendar: a booking whose inspection was deleted on the phone (follow-up 3)', async () => {
+    const s = server(); seed(s);   // the seed's inspection E is made, then deleted
+    const bookings = [{ kind: 'bookings', id: 'bk-e', updated_at: 1, deleted_at: null, data: { id: 'bk-e', status: 'confirmed', inspectionId: E,
+      startsAt: ny('2026-11-19T10:00:00'), endsAt: ny('2026-11-19T12:00:00'), property: { street: '7 Deleted Way', city: 'Miami', state: 'FL' } } }];
+    const { page, ctx } = await open(browser, { server: s, path: 'calendar', hash: '#week-2026-11-18', bookings });
+    await page.waitForTimeout(400);
+    ok('its booking is gone too, never "on your phone at its next sync"', (await blocks(page, '2026-11-19')).every((b) => !/7 Deleted Way/.test(b.title)), JSON.stringify(await blocks(page, '2026-11-19')));
+    await page.evaluate(() => { location.hash = '#2026-11'; });
+    await page.waitForTimeout(300);
+    ok('nor on the month', !(await day(page, '2026-11-19')).join().includes('7 Deleted Way'), JSON.stringify(await day(page, '2026-11-19')));
+    await ctx.close();
+  });
+
   await group('the calendar: other states', async () => {
     const empty = server();
     let r = await open(browser, { server: empty, path: 'calendar' });

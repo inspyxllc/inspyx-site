@@ -76,9 +76,28 @@
     var at = guess - offset(guess);
     return guess - offset(at);
   }
-  function startsAt() {
+  /* The day and time typed, and its instant in his zone; gap: the time doesn't exist that day (the spring night the
+     clocks skip an hour), which would otherwise turn into another hour unseen (Codex on #86). */
+  function when() {
     var d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.day.value), t = /^(\d{2}):(\d{2})$/.exec(f.time.value);
-    return d && t ? instant(+d[1], +d[2], +d[3], +t[1], +t[2], zone()) : null;
+    // A year still being typed (0002, 0020…) is no date yet; JavaScript would also read its first 100 years as the 1900s.
+    if (!d || !t || +d[1] < 2000) return null;
+    var at = instant(+d[1], +d[2], +d[3], +t[1], +t[2], zone()), p = {};
+    new Intl.DateTimeFormat('en-US', { timeZone: zone(), hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })
+      .formatToParts(new Date(at)).forEach(function (x) { p[x.type] = +x.value; });
+    var same = p.year === +d[1] && p.month === +d[2] && p.day === +d[3] && p.hour === +t[1] && p.minute === +t[2];
+    return { at: at, gap: !same, label: new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', hour: 'numeric', minute: '2-digit' }).format(Date.UTC(2000, 0, 1, +t[1], +t[2])) };
+  }
+  function startsAt() {
+    var w = when();
+    return w && !w.gap ? w.at : null;
+  }
+  /* Says so when the time typed doesn't exist that day; clears the line once it does. */
+  function sayGap() {
+    var w = when(), line = $('[data-problem="gap"]');
+    if (w && w.gap) { $('[data-gap-time]').textContent = w.label; problem('gap'); return true; }
+    if (line && !line.hidden) problem('');
+    return false;
   }
 
   // ---- what the form says ------------------------------------------------------------------------------------------
@@ -272,14 +291,14 @@
       // never stays shut (Codex on #86, r2).
       if (mine !== asked) { if (then) then(); return; }
       if (r && r.status === 200 && r.json && r.json.state === 'check') {
-        drawQuote(r.json); problem('');
+        drawQuote(r.json); answered('');
         if (key === priceKey()) checkedFor = key;
         if (then) then();
         return;
       }
-      problem(r && r.json && typeof r.json.error === 'string' ? r.json.error : 'failed');
+      answered(r && r.json && typeof r.json.error === 'string' ? r.json.error : 'failed');
       if (then) then();
-    }, function () { if (mine === asked) problem('failed'); if (then) then(); });
+    }, function () { if (mine === asked) answered('failed'); if (then) then(); });
   }
   function drawQuote(a) {
     var list = $('[data-lines]');
@@ -301,6 +320,9 @@
     $('[data-length]').textContent = length(a.length);
   }
   // A refusal the page has no words for (the server down, say) says the general "couldn't", never nothing.
+  /* A price check's answer: it never takes away (or covers) that the time typed doesn't exist (Codex on
+     inspyx-site #96); that stands until the time is put right. */
+  function answered(which) { if (!sayGap()) problem(which); }
   function problem(which) {
     if (which && !$('[data-problem="' + which + '"]')) which = 'failed';
     showOne('data-problem', which, $('[data-quote]'));
@@ -312,6 +334,7 @@
     e.preventDefault();
     if (busy) return;
     if (chosen().length === 0) { problem('services'); return; }
+    if (sayGap()) return;
     if (startsAt() === null) { problem('time'); return; }
     if (!f.clientName.value.trim() || !f.street.value.trim()) { problem('missing'); return; }
     if (f.emailClient.checked && !f.clientEmail.value.trim()) { problem('email'); return; }
@@ -353,6 +376,7 @@
     }, function () { busy = false; btn.disabled = false; showOne('data-book-say', warned.length ? 'anyway' : 'book'); problem('failed'); });
   });
   form.addEventListener('change', function (e) {
+    if (e.target.name === 'day' || e.target.name === 'time') sayGap();
     if (e.target.name === 'service') drawAddOns();
     if (e.target.name === 'addon') drawAsks();
     if (e.target.name === 'day') drawSlots();
@@ -360,7 +384,10 @@
     if (e.target.name === 'agreement') form.setAttribute('data-touched-agreement', '');
     live();
   });
-  form.addEventListener('input', function (e) { if (e.target.name !== 'emailClient') live(); });
+  form.addEventListener('input', function (e) {
+    if (e.target.name === 'day' || e.target.name === 'time') sayGap();
+    if (e.target.name !== 'emailClient') live();
+  });
 
   // ---- start -----------------------------------------------------------------------------------------------------
   if (!auth.who()) { window.location.replace('/signin'); return; }
