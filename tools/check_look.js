@@ -71,6 +71,16 @@ async function open(browser, o) {
       const rows = body.after ? [] : fields(o.people || []);
       return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ results: [], skipped: [], fields: rows, next: rows.length ? rows[rows.length - 1].seq : body.after, more: false, now: Date.now() }) });
     }
+    // The business sync, read only (the inspections page's "Agreements outdated", 2026-11-24): nothing to read here.
+    if (u === SERVER + '/functions/v1/sync') {
+      const body = JSON.parse(req.postData() || '{}');
+      if (!Array.isArray(body.push) || body.push.length !== 0) { away.push(u + ' (a push)'); return route.abort(); }
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ rows: [], next: null, more: false }) });
+    }
+    // Which inspections have a published report (the inspections page's delete question): none here.
+    if (u === SERVER + '/functions/v1/reports-sent') {
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ reports: [], as_of: new Date().toISOString() }) });
+    }
     if (u !== REPORT) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
     const h = req.headers();

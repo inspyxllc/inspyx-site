@@ -1174,6 +1174,14 @@
       Object.keys(byId).forEach(function (id) { if (byId[id].number === wanted) wanted = id; });
     }
     if (byId[wanted]) openFinding(wanted, ranked);
+
+    /* The repair request builder (2026-11-24, his list item 11; repair.js): only on a person's own link, never on a
+       sample, a look or the agent page. It is told the key and the report it may build on; nothing else is shared. */
+    if (linkKey && !CFG.look && !CFG.ask && !CFG.sample) {
+      try {
+        doc.dispatchEvent(new CustomEvent('inspyx:report-open', { detail: { key: linkKey, version: answer.published_at, report: report } }));
+      } catch (err) { /* an old browser: no builder, the report stands */ }
+    }
   }
 
   // ---------------------------------------------------------------------------------------- other states

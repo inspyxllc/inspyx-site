@@ -1,0 +1,428 @@
+{
+ "state": "open",
+ "published_at": 1794600000000,
+ "report": {
+  "view": "inspyx-report-view/1",
+  "content": "inspyx-report-content/11",
+  "report_id": "0b0e6d0e-1111-4222-8333-444455556666",
+  "title": "Home Inspection Report",
+  "pdf_name": "Inspection Report - 12 Palm Way.pdf",
+  "cover": {
+   "address": "12 Palm Way",
+   "locality": "Miami, FL 33101",
+   "prepared_for": "Dana Reyes",
+   "inspected": "November 6, 2026, 4:09 PM",
+   "inspected_day": "November 6, 2026",
+   "updated": "",
+   "photo": null,
+   "logo": null,
+   "inspector": {
+    "name": "Sam Rivera",
+    "license": "HI 1234",
+    "associations": [
+     "InterNACHI 123"
+    ],
+    "second": "",
+    "company": "Rivera Inspections",
+    "phone": "(305) 555-0100",
+    "email": "sam@example.com",
+    "photo": null
+   },
+   "clients": [
+    "Dana Reyes"
+   ],
+   "agents": [
+    {
+     "name": "Alex Agent",
+     "phone": "305-555-0142",
+     "email": "alex@example.com"
+    }
+   ],
+   "sections": 2
+  },
+  "legend": {
+   "intro": "Each finding in this report is marked with one of the first four categories below. The last two describe items rather than findings.",
+   "rows": [
+    {
+     "code": "SH",
+     "label": "Safety Hazard",
+     "definition": "A condition that poses a risk of injury or fire. Correct promptly using a qualified professional."
+    },
+    {
+     "code": "MD",
+     "label": "Recommendation",
+     "definition": "A system or component that needs repair, replacement or further evaluation by a qualified professional."
+    },
+    {
+     "code": "MN",
+     "label": "Maintenance",
+     "definition": "Upkeep or minor wear to address as part of normal maintenance. Not urgent."
+    },
+    {
+     "code": "NT",
+     "label": "Information",
+     "definition": "Facts for the record (age, type, functioning normally). Not a problem."
+    },
+    {
+     "code": "NI",
+     "label": "Not Inspected",
+     "definition": "Present, but not inspected. The report says why."
+    },
+    {
+     "code": "NP",
+     "label": "Not Present",
+     "definition": "Not present in this property."
+    }
+   ]
+  },
+  "counts": {
+   "findings": 3,
+   "SH": 1,
+   "MD": 1,
+   "MN": 1,
+   "NT": 0,
+   "photos": 0,
+   "not_inspected": 0
+  },
+  "glance": {
+   "lead": "Dana Reyes · November 6, 2026, 4:09 PM · Inspector: Sam Rivera · 3 findings recorded.",
+   "groups": [
+    {
+     "code": "SH",
+     "heading": "Safety hazards — correct promptly",
+     "rows": [
+      {
+       "id": "C1.1",
+       "title": "Cracked tile",
+       "crumb": "Roof › Coverings",
+       "photo": null
+      }
+     ]
+    },
+    {
+     "code": "MD",
+     "heading": "Recommendations — plan the repair",
+     "rows": [
+      {
+       "id": "C1.2",
+       "title": "Loose flashing",
+       "crumb": "Roof › Flashing",
+       "photo": null
+      }
+     ]
+    },
+    {
+     "code": "MN",
+     "heading": "Maintenance",
+     "rows": [
+      {
+       "id": "C2.1",
+       "title": "Corroded fitting",
+       "crumb": "Plumbing › Supply lines",
+       "photo": null
+      }
+     ]
+    }
+   ],
+   "none": "",
+   "not_inspected": []
+  },
+  "details": {
+   "rows": [],
+   "none": "None recorded.",
+   "property": null
+  },
+  "sections": [
+   {
+    "id": "C1",
+    "number": "1",
+    "name": "Roof",
+    "standard": "",
+    "scope": "",
+    "not_inspected": "",
+    "description": "",
+    "counts": {
+     "SH": 1,
+     "MD": 1,
+     "MN": 0,
+     "NT": 0
+    },
+    "items": [
+     {
+      "title": "Coverings",
+      "heading": "Coverings",
+      "lines": [],
+      "lines2": [],
+      "photos": [],
+      "findings": [
+       {
+        "id": "C1.1",
+        "number": "1.1",
+        "place": "Coverings",
+        "category": "SH",
+        "title": "Cracked tile",
+        "crumb": "Roof › Coverings",
+        "observed": "What was seen.",
+        "implication": "",
+        "recommendation": "Have a licensed roofer replace the damaged tiles.",
+        "trade": "licensed roofer",
+        "photos": []
+       }
+      ]
+     },
+     {
+      "title": "Flashing",
+      "heading": "Flashing",
+      "lines": [],
+      "lines2": [],
+      "photos": [],
+      "findings": [
+       {
+        "id": "C1.2",
+        "number": "1.2",
+        "place": "Flashing",
+        "category": "MD",
+        "title": "Loose flashing",
+        "crumb": "Roof › Flashing",
+        "observed": "What was seen.",
+        "implication": "",
+        "recommendation": "Have a roofer secure and seal the flashing.",
+        "trade": "licensed roofer",
+        "photos": []
+       }
+      ]
+     }
+    ],
+    "status": {
+     "not_inspected": [],
+     "partial": [],
+     "clean": [],
+     "not_present": []
+    },
+    "nothing_recorded": ""
+   },
+   {
+    "id": "C2",
+    "number": "2",
+    "name": "Plumbing",
+    "standard": "",
+    "scope": "",
+    "not_inspected": "",
+    "description": "",
+    "counts": {
+     "SH": 0,
+     "MD": 0,
+     "MN": 1,
+     "NT": 0
+    },
+    "items": [
+     {
+      "title": "Supply lines",
+      "heading": "Supply lines",
+      "lines": [],
+      "lines2": [],
+      "photos": [],
+      "findings": [
+       {
+        "id": "C2.1",
+        "number": "2.1",
+        "place": "Supply lines",
+        "category": "MN",
+        "title": "Corroded fitting",
+        "crumb": "Plumbing › Supply lines",
+        "observed": "What was seen.",
+        "implication": "",
+        "recommendation": "Have a plumber replace the fitting.",
+        "trade": "licensed plumber",
+        "photos": []
+       }
+      ]
+     }
+    ],
+    "status": {
+     "not_inspected": [],
+     "partial": [],
+     "clean": [],
+     "not_present": []
+    },
+    "nothing_recorded": ""
+   }
+  ],
+  "who_to_call": [
+   {
+    "id": "C1.1",
+    "category": "SH",
+    "text": "Have a licensed roofer replace the damaged tiles.",
+    "trade": "licensed roofer"
+   },
+   {
+    "id": "C1.2",
+    "category": "MD",
+    "text": "Have a roofer secure and seal the flashing.",
+    "trade": "licensed roofer"
+   },
+   {
+    "id": "C2.1",
+    "category": "MN",
+    "text": "Have a plumber replace the fitting.",
+    "trade": "licensed plumber"
+   }
+  ],
+  "standards": "This is a visual inspection of readily accessible areas and is not technically exhaustive.",
+  "notices": [],
+  "signature": {
+   "image": null,
+   "name": "Sam Rivera",
+   "license": "HI 1234",
+   "date": "November 6, 2026"
+  },
+  "headings": {
+   "glance": "At a glance",
+   "contents": "In this report",
+   "legend": "How findings are categorized",
+   "details": "Inspection details",
+   "who_to_call": "Who to call",
+   "standards": "Standards of practice and limitations"
+  },
+  "card_labels": {
+   "observed": "OBSERVED",
+   "why": "WHY IT MATTERS",
+   "what": "WHAT TO DO",
+   "who": "WHO TO CALL"
+  },
+  "cover_labels": {
+   "found": "WHAT WAS FOUND",
+   "inspector": "YOUR INSPECTOR",
+   "client": "CLIENT",
+   "clients": "CLIENTS",
+   "agent": "BUYER'S AGENT",
+   "agents": "BUYER'S AGENTS"
+  },
+  "status_labels": {
+   "not_inspected": "NOT INSPECTED",
+   "partial": "PARTIALLY INSPECTED",
+   "clean": "INSPECTED – NO DEFICIENCIES OBSERVED",
+   "not_present": "NOT PRESENT"
+  },
+  "glance2": {
+   "lead": "Every finding, the most urgent first.",
+   "none": "",
+   "groups": [
+    {
+     "code": "SH",
+     "head": "Safety hazards — correct promptly (1)",
+     "rows": [
+      {
+       "id": "C1.1",
+       "number": "1.1",
+       "title": "Cracked tile",
+       "place": "Roof › Coverings",
+       "category": "SH",
+       "photo": null
+      }
+     ]
+    },
+    {
+     "code": "MD",
+     "head": "Recommendations — plan the repair (1)",
+     "rows": [
+      {
+       "id": "C1.2",
+       "number": "1.2",
+       "title": "Loose flashing",
+       "place": "Roof › Flashing",
+       "category": "MD",
+       "photo": null
+      }
+     ]
+    },
+    {
+     "code": "MN",
+     "head": "Maintenance (1)",
+     "rows": [
+      {
+       "id": "C2.1",
+       "number": "2.1",
+       "title": "Corroded fitting",
+       "place": "Plumbing › Supply lines",
+       "category": "MN",
+       "photo": null
+      }
+     ]
+    }
+   ],
+   "not_inspected": null
+  },
+  "contents": [
+   {
+    "id": "C1",
+    "number": "1",
+    "name": "Roof"
+   },
+   {
+    "id": "C2",
+    "number": "2",
+    "name": "Plumbing"
+   }
+  ],
+  "legend2": {
+   "rows": [
+    {
+     "code": "SH",
+     "label": "Safety Hazard",
+     "definition": "A condition that poses a risk of injury or fire. Correct promptly using a qualified professional."
+    },
+    {
+     "code": "MD",
+     "label": "Recommendation",
+     "definition": "A system or component that needs repair, replacement or further evaluation by a qualified professional."
+    },
+    {
+     "code": "MN",
+     "label": "Maintenance",
+     "definition": "Upkeep or minor wear to address as part of normal maintenance. Not urgent."
+    },
+    {
+     "code": "NT",
+     "label": "Information",
+     "definition": "Facts for the record (age, type, functioning normally). Not a problem."
+    }
+   ],
+   "numbers": "Finding numbers: 1.1 is the first finding in section 1."
+  },
+  "who_to_call2": [
+   {
+    "head": "licensed roofer",
+    "findings": [
+     {
+      "id": "C1.1",
+      "number": "1.1",
+      "text": "1.1 Cracked tile · Roof"
+     },
+     {
+      "id": "C1.2",
+      "number": "1.2",
+      "text": "1.2 Loose flashing · Roof"
+     }
+    ]
+   },
+   {
+    "head": "licensed plumber",
+    "findings": [
+     {
+      "id": "C2.1",
+      "number": "2.1",
+      "text": "2.1 Corroded fitting · Plumbing"
+     }
+    ]
+   }
+  ],
+  "report_number": "0B0E6D0E"
+ },
+ "files": {},
+ "media": {},
+ "pdf": {
+  "url": "https://btxlrfvqifnrnxffohsz.supabase.co/storage/v1/object/sign/reports/x.pdf?token=t",
+  "name": "Inspection Report - 12 Palm Way.pdf"
+ }
+}

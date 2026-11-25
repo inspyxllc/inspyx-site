@@ -107,6 +107,22 @@
     sync();
   }
 
+  /* Several fields at once, as one change (2026-11-24, his list item 12): a new part's fields travel together, so the
+     phone makes it whole (inspection_sync_apply.dart makes a stop or an item only when its required fields have all
+     come), and a move's two positions or a delete's parts land together. */
+  function editAll(inspection, writes) {
+    if (!writes.length) return;
+    anyEdits = true;
+    var at = Date.now() + offset;
+    writes.forEach(function (x) {
+      outbox = outbox.filter(function (o) { return !(o.entity === x.entity && o.id === x.id && o.field === x.field); });
+      outbox.push({ inspection: inspection, entity: x.entity, id: x.id, field: x.field, value: x.value, at: at });
+      take({ inspection: inspection, entity: x.entity, id: x.id, field: x.field, value: x.value, at: at, device: me });
+    });
+    show('data-save', 'saving');
+    sync();
+  }
+
   // ---- what shows ----------------------------------------------------------------------------------------------
 
   function parts(entity, where) {
@@ -194,19 +210,33 @@
       box.textContent = '';
       stops.forEach(function (s) {
         var stop = tpl('stop');
+        stop.setAttribute('data-flag-stop', s);
         bind(stop.querySelector('h2'), 'section', s, id);   // its name box only: the items below are bound as items
+        tools(stop.querySelector('.insp-stop-head'), id, 'section', s, stops);
+        addForm(stop.querySelector('[data-additem]'), function (name) { addItem(id, s, name); });
         var ol = stop.querySelector('.insp-items');
-        itemsOf(s).forEach(function (i) {
+        var items = itemsOf(s);
+        items.forEach(function (i) {
           var item = tpl('item');
+          item.setAttribute('data-flag-item', i);
           bind(item, 'item', i, id);
+          flagButton(item.querySelector('.insp-item-head .insp-flag'), id, i);
+          tools(item.querySelector('.insp-item-head'), id, 'item', i, items);
+          addForm(item.querySelector('[data-addfinding]'), function (name) { addFinding(id, i, name); });
           var fol = item.querySelector('.insp-findings');
-          findingsOf(i).forEach(function (f) {
+          var findings = findingsOf(i);
+          findings.forEach(function (f) {
             var finding = tpl('finding');
+            finding.setAttribute('data-flag-finding-row', f);
             bind(finding, 'item', f, id);
+            flagButton(finding.querySelector('.insp-finding-head .insp-flag'), id, f);
+            tools(finding.querySelector('.insp-finding-head'), id, 'item', f, findings);
             var photos = parts('photo', function (p) { return val('photo', p, 'item_id') === f; }).length;
             var line = finding.querySelector('[data-photos]');
             line.hidden = photos === 0;
             line.querySelector('[data-v="photos"]').textContent = String(photos);
+            line.querySelector('[data-v="photos-word"]').textContent = word(photos === 1 ? 'photo-one' : 'photo-many');
+            wireAI(finding, f, i, s);
             fol.appendChild(finding);
           });
           ol.appendChild(item);
@@ -221,9 +251,15 @@
       if (dirty[k]) return;
       var f = fields[k], v = f ? f.value : null;
       var want = el.getAttribute('data-kind') === 'time' ? (typeof v === 'number' && isFinite(v) ? toBox(v) : '') : v === null || v === undefined ? '' : String(v);
+      // An item made here has no status until it is set: the phone's own start, "Not started" (2026-11-24, item 12).
+      if (want === '' && el.getAttribute('data-field') === 'status') want = 'untouched';
       if (el.value !== want) el.value = want;
     });
     renderPeople(id);
+    renderFlags(id);
+    renderAgreement(id);
+    chapterChoices(id);
+    renderSearch(id);
     var started = val('inspection', id, 'inspection_at'), line = $('[data-started]');
     line.hidden = !(typeof started === 'number' && isFinite(started));
     if (!line.hidden) { var t = line.querySelector('[data-v="started"]'); t.textContent = DAY.format(new Date(started)) + ', ' + CLOCK.format(new Date(started)); t.setAttribute('datetime', new Date(started).toISOString()); }
@@ -294,23 +330,598 @@
     });
   }
 
+  /* ---- Agreements outdated (2026-11-24, his Spectora list item 10): whether the agreement the client signed still
+     says what is true today, and "Send the updated agreement". The signings, what their blanks were filled with
+     (signing_details), the fee and the bookings come from the business sync, read only (as calendar.js); the
+     inspection's own fields come from this page's inspection sync. The rulebook is agreement-fill.js, the phone's
+     agreement_outdated.dart in JS. ---- */
+  var Fill = window.InspyxFill;
+  var BIZ = { signings: true, signing_details: true, inspection_fees: true, bookings: true, item_flags: true };
+  var biz = Object.create(null), bizPoint = null, bizPulling = null;
+  function pullBusiness() {
+    if (bizPulling) return bizPulling;
+    var loop = function () {
+      return auth.ask('sync', { push: [], after: bizPoint, limit: 500 }, DEADLINE).then(function (r) {
+        if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) return null;
+        r.json.rows.forEach(takeBiz);
+        if (r.json.next) bizPoint = r.json.next;
+        return r.json.more ? loop() : null;
+      });
+    };
+    bizPulling = loop().then(function () { bizPulling = null; renderOne(); }, function () { bizPulling = null; });
+    return bizPulling;
+  }
+  function takeBiz(row) {
+    if (!row || !BIZ[row.kind] || typeof row.id !== 'string') return;
+    var k = row.kind + '/' + row.id, held = biz[k], wire = flagWire[k];
+    // What the server has, even when a tap still on its way is newer and shown: what that tap goes back to if it isn't
+    // kept (Codex on inspyx-site #95). The feed sends a row once.
+    if (wire && (!wire.sure || row.updated_at >= wire.sure.updated_at)) wire.sure = row;
+    if (!held || row.updated_at >= held.updated_at) biz[k] = row;
+  }
+
+  /* ---- Flag for later (2026-11-24, his list item 12, piece C): the inspector's own mark on an item or a finding,
+     "come back to this". Its own business-sync kind (item_flags; the server's flag_rules.ts, the phone's
+     item_flag_rules.dart, one rulebook), never a field of the inspection: a flag never reaches the report, its
+     fingerprint or "updated since sent". The server deletes a flag with its item or inspection. ---- */
+  var FLAG = 'item_flags', ITEM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  var flagOnly = false, flagTrouble = false;
+  /* While a flag's changes are on the wire: how many, and the copy to go back to (the last one the server has). */
+  var flagWire = {};
+  function flagged(id) {
+    var r = biz[FLAG + '/' + id];
+    return !!(r && r.deleted_at == null && r.data && r.data.deletedAt == null);
+  }
+  /* [inspection]'s flagged items and findings still on the page. */
+  function flagsOf(inspection) {
+    return parts('item', function (i) { return owner['item/' + i] === inspection && flagged(i); });
+  }
+  /* Flags [id] ([on]) or clears it: shown at once; put back, with a line, if the server didn't keep it. */
+  function setFlag(inspection, id, on) {
+    var who = auth.who(), k = FLAG + '/' + id, before = biz[k];
+    if (!who || !ITEM_ID.test(id)) return;
+    // Past the newest copy held, so a clear always wins over the set before it (the People book does the same).
+    var at = Math.max(Date.now(), before ? before.updated_at + 1 : 0);
+    var data = { id: id, ownerAccountId: who.id, inspectionId: inspection,
+      flaggedAt: on ? at : (before && before.data && before.data.flaggedAt) || at, updatedAt: at, deletedAt: on ? null : at };
+    var row = { kind: FLAG, id: id, updated_at: at, deleted_at: data.deletedAt, data: data };
+    var wire = flagWire[k] = flagWire[k] || { n: 0, sure: before };
+    wire.n++;
+    biz[k] = row;
+    flagTrouble = false;
+    renderOne();
+    var settled = function () { wire.n--; if (wire.n === 0 && flagWire[k] === wire) delete flagWire[k]; };
+    // Back to what the server has, never to a tap before this one that it didn't keep either.
+    var undo = function () {
+      settled();
+      if (biz[k] === row) { if (wire.sure) biz[k] = wire.sure; else delete biz[k]; }
+      flagTrouble = true;
+      renderOne();
+    };
+    auth.ask('sync', { push: [row], after: bizPoint, limit: 500 }, DEADLINE).then(function (r) {
+      if (r === null) { window.location.replace('/signin'); return; }
+      if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) { undo(); return; }
+      var mine = function (x) { return x.kind === FLAG && x.id === id; };
+      var kept = !(r.json.skipped || []).some(mine) &&
+        !(r.json.applied || []).some(function (a) { return a.applied === false && mine(a); });
+      r.json.rows.forEach(takeBiz);
+      if (r.json.next) bizPoint = r.json.next;
+      if (!kept) undo(); else {
+        if (!wire.sure || row.updated_at >= wire.sure.updated_at) wire.sure = row;
+        settled();
+        renderOne();
+      }
+      if (r.json.more) pullBusiness();
+    }, undo);
+  }
+  /* The flag buttons' state, the count and the filter: every render, as values are. */
+  function renderFlags(inspection) {
+    var n = flagsOf(inspection).length;
+    if (n === 0) flagOnly = false;
+    var bar = $('[data-flagfilter]');
+    bar.disabled = n === 0;
+    bar.setAttribute('aria-pressed', flagOnly ? 'true' : 'false');
+    bar.querySelector('[data-v="flags"]').textContent = String(n);
+    $('[data-flagtrouble]').hidden = !flagTrouble;
+    all('[data-flag]').forEach(function (b) {
+      var id = b.getAttribute('data-flag'), on = flagged(id);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      var what = text(val('item', id, b.hasAttribute('data-flag-finding') ? 'finding_title' : 'label')).trim() || word('unnamed');
+      var tip = word(on ? 'flag-clear' : 'flag-set').replace('{name}', what);
+      b.setAttribute('aria-label', tip);
+      b.title = tip;
+    });
+    all('[data-flag-item]').forEach(function (li) {
+      var i = li.getAttribute('data-flag-item');
+      li.hidden = flagOnly && !flagged(i) && !findingsUnder(i).some(flagged);
+    });
+    all('[data-flag-finding-row]').forEach(function (li) {
+      var f = li.getAttribute('data-flag-finding-row');
+      li.hidden = flagOnly && !flagged(f) && !flagged(val('item', f, 'parent_item_id'));
+    });
+    all('[data-flag-stop]').forEach(function (sec) {
+      sec.hidden = flagOnly && !all('[data-flag-item]', sec).some(function (li) { return !li.hidden; });
+    });
+  }
+  function flagButton(el, inspection, id) {
+    if (!el) return;
+    if (!ITEM_ID.test(id)) { el.hidden = true; return; }
+    el.setAttribute('data-flag', id);
+    el.addEventListener('click', function () { setFlag(inspection, id, !flagged(id)); });
+  }
+
+  function bizData(kind) {
+    return Object.keys(biz).filter(function (k) { return k.indexOf(kind + '/') === 0; }).map(function (k) { return biz[k]; })
+      .filter(function (r) { return r.deleted_at == null && r.data && typeof r.data === 'object'; }).map(function (r) { return r.data; });
+  }
+  var json = function (v, empty) { try { var o = JSON.parse(v); return o && typeof o === 'object' ? o : empty; } catch (e) { return empty; } };
+
+  /* The inspection's fee as the phone reads it (InspectionFeeStore.feeFor): its newest row, unless that one is deleted. */
+  function feeOf(id) {
+    var rows = Object.keys(biz).filter(function (k) { return k.indexOf('inspection_fees/') === 0; }).map(function (k) { return biz[k]; })
+      .filter(function (r) { return r.data && r.data.inspectionId === id; });
+    rows.sort(function (a, b) { return (b.data.updatedAt || 0) - (a.data.updatedAt || 0) || (a.id < b.id ? 1 : -1); });
+    var r = rows[0], f = r && r.data;
+    if (!f || r.deleted_at != null || f.deletedAt != null || typeof f.totalCents !== 'number') return null;
+    var lines = json(f.linesJson, []);
+    if (!Array.isArray(lines)) return null;
+    return { lines: lines.filter(function (l) { return l && typeof l.name === 'string' && typeof l.cents === 'number'; }),
+      totalCents: f.totalCents, byHand: Object.keys(json(f.selectionJson, {})).length === 0 };
+  }
+
+  /* What the inspection puts into the blanks today, as the phone's _agreementFacts. */
+  function factsOf(id) {
+    var clients = parts('person', function (p) { return owner['person/' + p] === id && val('person', p, 'role') === 'client'; }).sort(byPosition('person'));
+    var first = function (field) { for (var i = 0; i < clients.length; i++) { var v = Fill.dartTrim(text(val('person', clients[i], field))); if (v) return v; } return ''; };
+    var fee = feeOf(id);
+    var st = Fill.dartTrim(text(val('inspection', id, 'state')));
+    return {
+      clientNames: clients.map(function (p) { return text(val('person', p, 'name')); }),
+      clientPhone: first('phone'), clientEmail: first('email'),
+      street: text(val('inspection', id, 'address')), city: text(val('inspection', id, 'city')),
+      state: /^[A-Za-z]{2}$/.test(st) ? st.toUpperCase() : st, zip: text(val('inspection', id, 'zip_code')),
+      inspectionDate: null, today: '', feeCents: fee ? fee.totalCents : null,
+      services: !fee || fee.byHand ? [] : fee.lines.filter(function (l) { return l.kind !== 'discount' && l.kind !== 'tax'; }).map(function (l) { return l.name; }),
+      feeLines: fee ? fee.lines.map(function (l) { return { name: l.name, cents: l.cents }; }) : [],
+      inspectorName: '', company: '', licenseNumber: '', companyPhone: '', fee: fee
+    };
+  }
+
+  /* The inspection's signings: by the id the server copied onto them, or through its booking. */
+  function signingsOf(id) {
+    var booked = bizData('bookings').filter(function (b) { return b.inspectionId === id; }).map(function (b) { return b.id; });
+    return bizData('signings').filter(function (s) { return s.inspectionId === id || booked.indexOf(s.bookingId) >= 0; });
+  }
+
+  var agrSaid = null;     // {id, words}: what the last send said, for that inspection
+  var agrAsking = null;   // the inspection whose "Send?" is open
+  var agrBusy = false;
+  function renderAgreement(id) {
+    var box = $('[data-agr]');
+    if (!Fill) { box.hidden = true; return; }
+    var signings = signingsOf(id), details = Object.create(null);
+    bizData('signing_details').forEach(function (d) { details[d.id] = d; });
+    var facts = factsOf(id);
+    var st = Fill.standing(signings, details, facts);
+    var said = $('[data-agr-said]');
+    said.hidden = !(agrSaid && agrSaid.id === id);
+    if (!said.hidden) said.textContent = agrSaid.words;
+    box.hidden = st.kind === 'holds' && said.hidden;
+    show('data-agr-state', st.kind);
+    if (st.kind !== 'outdated') return;
+    box.setAttribute('data-signing', st.signing.id);
+    var list = $('[data-agr-changes]'), shape = JSON.stringify(st.changes);
+    if (list.getAttribute('data-shape') !== shape) {
+      list.setAttribute('data-shape', shape);
+      list.textContent = '';
+      var shown = function (v) { return Fill.dartTrim(v) === '' ? word('agr-none') : Fill.dartTrim(v).replace(/\n/g, '; '); };
+      st.changes.forEach(function (c) {
+        var li = document.createElement('li');
+        var name = document.createElement('strong'); name.textContent = word('agr-' + c.blank) + ':';
+        var was = document.createElement('s'); was.textContent = shown(c.was);
+        var now = document.createElement('b'); now.textContent = shown(c.now);
+        li.setAttribute('data-blank', c.blank);
+        li.append(name, ' ', was, ' → ', now);
+        list.appendChild(li);
+      });
+    }
+    // No price on record, or one taken off: an updated agreement carries the price, and none would send it as zero
+    // (Codex on #89), whatever else changed.
+    var needsFee = !facts.fee || st.changes.some(function (c) { return (c.blank === 'fee' || c.blank === 'feeLines') && Fill.dartTrim(c.now) === ''; });
+    $('[data-agr-needsfee]').hidden = !needsFee;
+    var send = $('[data-agr-send]');
+    send.hidden = needsFee || agrAsking === id;
+    send.disabled = agrBusy;
+    $('[data-agr-ask]').hidden = needsFee || agrAsking !== id;
+  }
+
+  /* The booking function's request, as the phone's agreementUpdateBody: the same facts the banner compared. */
+  function updateBody(signingId, f) {
+    var orNull = function (v) { v = Fill.dartTrim(v || ''); return v === '' ? null : v; };
+    var KIND = { service: 'service', addOn: 'add_on', discount: 'discount', tax: 'tax' };
+    return {
+      action: 'agreement_update', signing_id: signingId,
+      details: {
+        client: { name: orNull(Fill.valueOf('clientName', f)), email: orNull(f.clientEmail), phone: orNull(f.clientPhone) },
+        property: { street: orNull(f.street), unit: null, city: orNull(f.city), state: orNull(f.state), zip: orNull(f.zip) }
+      },
+      lines: f.fee ? f.fee.lines.filter(function (l) { return Fill.dartTrim(l.name) !== ''; }).map(function (l) {
+        return { kind: f.fee.byHand ? 'by_hand' : (KIND[l.kind] || 'service'), name: Fill.dartTrim(l.name), cents: l.cents };
+      }) : [],
+      totalCents: f.fee ? f.fee.totalCents : 0
+    };
+  }
+  /* The answer, as the phone's agreementUpdateOutcome. */
+  function outcome(r) {
+    var j = r && r.json, err = j && j.error;
+    if (r && r.status === 200 && j && j.state === 'sent') {
+      return j.email === 'queued' || j.email === 'already' || j.email === undefined || j.email === null ? 'sent'
+        : j.email === 'held' ? 'held' : j.email === 'no_address' ? 'no_address' : 'email_failed';
+    }
+    if (r && r.status === 409 && err === 'agreement') return 'no_agreement';
+    if (r && (r.status === 409 || (r.status === 404 && err === 'signing'))) return 'refused';
+    if (r && r.status === 400 && err === 'details') return 'details';
+    return 'failed';
+  }
+  $('[data-agr-send]').addEventListener('click', function () { agrAsking = chosen(); renderOne(); var go = $('[data-agr-go]'); if (go) go.focus(); });
+  $('[data-agr-no]').addEventListener('click', function () { agrAsking = null; renderOne(); });
+  $('[data-agr-go]').addEventListener('click', function () {
+    var id = chosen(), signing = $('[data-agr]').getAttribute('data-signing');
+    if (!id || !signing || agrBusy) return;
+    agrAsking = null; agrBusy = true;
+    agrSaid = { id: id, words: word('agr-sending') }; renderOne();
+    auth.ask('booking', updateBody(signing, factsOf(id)), DEADLINE).then(outcome, function () { return 'failed'; }).then(function (o) {
+      agrBusy = false;
+      agrSaid = { id: id, words: word('agr-' + o) };
+      renderOne();
+      pullBusiness();
+    });
+  });
+
+  /* ---- Edit with AI (2026-11-24, his decision after the Spectora walk; the relay's contract EDIT_WITH_AI.md v1):
+     Spex's version of one finding's details, shown beside the inspector's with Keep or Discard. Nothing changes
+     without Keep, and Keep only fills the Details box, which then saves as typing does. The button shows only when the
+     relay says this inspector may use it ("edit": true); asking is a hello alone, never billed. The sign-in stays in
+     auth.js (InspyxAuth.editFinding). ---- */
+  var RELAY = 'wss://chat---spex-relay-yu5bdad2fa-uc.a.run.app/';
+  var AI_MAX_TEXT = 4000;   // the contract's max_text_chars
+  var aiOpen = null;   // null: not known yet; true or false once the relay answered
+  function checkAI() {
+    if (aiOpen !== null || typeof auth.editFinding !== 'function') return;
+    aiOpen = false;
+    auth.editFinding(null, RELAY).then(function (a) {
+      aiOpen = !!(a && a.admitted);
+      all('[data-ai]').forEach(function (el) { el.hidden = !aiOpen; });
+    }, function () { aiOpen = null; });   // unreachable: asked again on the next visit
+  }
+  var cut = function (v, n) { v = Fill ? Fill.dartTrim(text(v)) : text(v).trim(); return v.length > n ? v.slice(0, n) : v; };
+  function wireAI(el, finding, item, stop) {
+    var box = el.querySelector('[data-ai]'), details = el.querySelector('[data-details]');
+    var q = function (sel) { return box.querySelector(sel); };
+    box.hidden = aiOpen !== true;
+    var shown = function (which) {
+      q('[data-ai-actions]').hidden = which !== 'actions';
+      q('[data-ai-working]').hidden = which !== 'working';
+      q('[data-ai-version]').hidden = which !== 'version';
+      q('[data-ai-error]').hidden = which !== 'error';
+      q('[data-ai-open]').setAttribute('aria-expanded', which === 'actions' ? 'true' : 'false');
+      q('[data-ai-open]').disabled = which === 'working';
+      details.disabled = which === 'working';   // no half-applied text while Spex works
+    };
+    q('[data-ai-open]').addEventListener('click', function () { shown(q('[data-ai-actions]').hidden ? 'actions' : 'none'); });
+    all('[data-ai-action]', box).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var title = el.querySelector('[data-field="finding_title"]');
+        // The details are never cut: Keep replaces them whole, so a cut would delete what was past the limit
+        // (Codex on #90). Over the relay's limit, Spex isn't asked. The title, item and stop are only context.
+        var words = Fill ? Fill.dartTrim(details.value) : details.value.trim();
+        if (words.length > AI_MAX_TEXT) {
+          q('[data-ai-error]').textContent = word('ai-too-long');
+          return shown('error');
+        }
+        var request = { action: b.getAttribute('data-ai-action'),
+          title: cut(title ? title.value : val('item', finding, 'finding_title'), 200), text: words };
+        var itemName = cut(val('item', item, 'label'), 100), stopName = cut(val('section', stop, 'name'), 100);
+        if (itemName) request.item = itemName;
+        if (stopName) request.stop = stopName;
+        var asked = details.value;
+        shown('working');
+        auth.editFinding(request, RELAY).then(function (a) {
+          if (a && typeof a.text === 'string') {
+            if (details.value !== asked) { shown('none'); return; }   // the details changed meanwhile: nothing to offer
+            q('[data-ai-text]').textContent = a.text;
+            box.setAttribute('data-for', asked);
+            return shown('version');
+          }
+          q('[data-ai-error]').textContent = a && typeof a.error === 'string' && a.error ? a.error : word('ai-unreachable');
+          shown('error');
+        }, function () { q('[data-ai-error]').textContent = word('ai-unreachable'); shown('error'); });
+      });
+    });
+    q('[data-ai-keep]').addEventListener('click', function () {
+      // Only over the words Spex was given: details changed since are never overwritten.
+      if (details.value !== box.getAttribute('data-for')) { shown('none'); return; }
+      details.value = q('[data-ai-text]').textContent;
+      shown('none');
+      details.dispatchEvent(new Event('input', { bubbles: true }));
+      details.dispatchEvent(new Event('blur'));
+      details.focus();
+    });
+    q('[data-ai-discard]').addEventListener('click', function () { shown('none'); });
+  }
+  /* ---- the report's structure (2026-11-24, his list item 12): add, move and delete stops, items and findings, as
+     the phone does. Each new part is named as the phone names one (a version-4 id) and made with the fields the phone
+     makes it with; a delete is final, here and on the phone, so it asks first and says what goes. ---- */
+  var newId = function () { return crypto.randomUUID(); };
+  function nextPosition(entity, ids) {
+    var most = -1;
+    ids.forEach(function (x) { var p = val(entity, x, 'position'); if (typeof p === 'number' && p > most) most = p; });
+    return Math.floor(most) + 1;
+  }
+  function stopsOf(inspection) { return parts('section', function (s) { return owner['section/' + s] === inspection; }).sort(byPosition('section')); }
+  function topItemsOf(stop) { return parts('item', function (i) { return val('item', i, 'section_id') === stop && !val('item', i, 'parent_item_id'); }).sort(byPosition('item')); }
+  function findingsUnder(item) { return parts('item', function (f) { return val('item', f, 'parent_item_id') === item; }).sort(byPosition('item')); }
+  function addStop(inspection, name, chapterFrom) {
+    var id = newId(), chapter = chapterFrom ? val('section', chapterFrom, 'report_section_id') : null;
+    editAll(inspection, [
+      { entity: 'section', id: id, field: 'name', value: name },
+      { entity: 'section', id: id, field: 'position', value: nextPosition('section', stopsOf(inspection)) },
+      // Both arrive with it, even as null: its chapter can't be set after it is made (the phone's own rule). Null:
+      // its own chapter, which the phone gives it, as it does a stop it makes itself.
+      { entity: 'section', id: id, field: 'report_section_id', value: typeof chapter === 'string' ? chapter : null },
+      { entity: 'section', id: id, field: 'template_section_ref', value: null }
+    ]);
+    return id;
+  }
+  function addItem(inspection, stop, label) {
+    var id = newId();
+    editAll(inspection, [
+      { entity: 'item', id: id, field: 'section_id', value: stop },
+      { entity: 'item', id: id, field: 'parent_item_id', value: null },
+      { entity: 'item', id: id, field: 'label', value: label },
+      { entity: 'item', id: id, field: 'position', value: nextPosition('item', topItemsOf(stop)) }
+    ]);
+    return id;
+  }
+  function addFinding(inspection, item, title) {
+    var id = newId();
+    editAll(inspection, [
+      { entity: 'item', id: id, field: 'section_id', value: val('item', item, 'section_id') },
+      { entity: 'item', id: id, field: 'parent_item_id', value: item },
+      { entity: 'item', id: id, field: 'label', value: title },
+      { entity: 'item', id: id, field: 'position', value: nextPosition('item', findingsUnder(item)) },
+      { entity: 'item', id: id, field: 'finding_title', value: title }
+    ]);
+    return id;
+  }
+  /* Up or down among its own: the two swap places (both positions, as one change). */
+  function move(inspection, entity, id, siblings, dir) {
+    var at = siblings.indexOf(id), to = at + (dir === 'up' ? -1 : 1);
+    if (at < 0 || to < 0 || to >= siblings.length) return;
+    var other = siblings[to];
+    var positions = siblings.map(function (x) { return val(entity, x, 'position'); });
+    var tied = positions.some(function (p, i) { return typeof p !== 'number' || positions.indexOf(p) !== i; });
+    if (tied) {
+      // Two sharing a place (made at once on two devices), or one with none: every one is numbered again in the
+      // order shown, the two swapped, so nothing else moves (Codex on inspyx-site #92).
+      var order = siblings.slice(); order[at] = other; order[to] = id;
+      editAll(inspection, order.map(function (x, i) { return { entity: entity, id: x, field: 'position', value: i }; }));
+      return;
+    }
+    editAll(inspection, [
+      { entity: entity, id: id, field: 'position', value: positions[to] },
+      { entity: entity, id: other, field: 'position', value: positions[at] }
+    ]);
+  }
+  /* What a delete takes: the part, and everything under it, with how many items, findings and photos. */
+  function underneath(entity, id) {
+    var items = [], findings = [];
+    if (entity === 'section') {
+      topItemsOf(id).forEach(function (i) { items.push(i); findingsUnder(i).forEach(function (f) { findings.push(f); }); });
+    } else if (!val('item', id, 'parent_item_id')) {
+      findingsUnder(id).forEach(function (f) { findings.push(f); });
+    }
+    var owners = {}; [id].concat(items, findings).forEach(function (x) { owners[x] = true; });
+    var photos = parts('photo', function (p) { return owners[val('photo', p, 'item_id')] === true; }).length;
+    return { items: items, findings: findings, photos: photos };
+  }
+  var fill = function (w, v) { return word(w).replace('{name}', v).replace('{n}', v); };
+  function deleteWords(entity, id) {
+    var u = underneath(entity, id);
+    var kind = entity === 'section' ? 'del-stop' : (val('item', id, 'parent_item_id') ? 'del-finding' : 'del-item');
+    var name = text(val(entity, id, entity === 'section' ? 'name' : (kind === 'del-finding' ? 'finding_title' : 'label'))).trim() || word('unnamed');
+    var counts = [];
+    if (u.items.length) counts.push(u.items.length === 1 ? word('n-item') : fill('n-items', u.items.length));
+    if (u.findings.length) counts.push(u.findings.length === 1 ? word('n-finding') : fill('n-findings', u.findings.length));
+    if (u.photos) counts.push(u.photos === 1 ? word('n-photo') : fill('n-photos', u.photos));
+    var tail = counts.length === 0 ? '' : word('del-with') + (counts.length === 1 ? counts[0] : counts.slice(0, -1).join(', ') + word('and') + counts[counts.length - 1]);
+    return fill(kind, name) + tail + '?';
+  }
+  /* Which inspections have a published report (the reports-sent function, as the Reports page reads it): a delete's
+     question says the client's copy stays as it is until the next publish. Unknown (not asked yet, or it failed): the
+     line is left out, never guessed. */
+  var published = null;
+  function pullPublished() {
+    return auth.ask('reports-sent', { action: 'list' }, DEADLINE).then(function (r) {
+      if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.reports)) return;
+      published = {};
+      r.json.reports.forEach(function (x) { if (x && typeof x.inspection_id === 'string') published[x.inspection_id] = true; });
+    }, function () { /* unknown: the line stays out */ });
+  }
+  function publishedLine(inspection) { $('[data-confirm-published]').hidden = !(published && published[inspection]); }
+  function askDelete(inspection, entity, id) {
+    var d = $('[data-confirm]');
+    $('[data-confirm-text]').textContent = deleteWords(entity, id);
+    publishedLine(inspection);
+    pullPublished().then(function () { if (d.open) publishedLine(inspection); });
+    var go = $('[data-confirm-go]'), no = $('[data-confirm-no]');
+    var done = function (yes) {
+      go.onclick = no.onclick = null;
+      if (d.open) d.close();
+      if (!yes) return;
+      var u = underneath(entity, id);
+      // Everything under it goes as well, so no device keeps a part whose stop or item is gone.
+      editAll(inspection, u.findings.concat(u.items).map(function (x) { return { entity: 'item', id: x, field: '_del', value: true }; })
+        .concat([{ entity: entity, id: id, field: '_del', value: true }]));
+      render();
+    };
+    go.onclick = function () { done(true); };
+    no.onclick = function () { done(false); };
+    d.onclose = function () { go.onclick = no.onclick = null; };
+    if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
+    // Keep it has the focus: Return or Enter keeps everything; only a deliberate Delete deletes.
+    no.focus();
+  }
+  /* The tools on a stop, an item or a finding: its moves (off at the ends) and its delete. */
+  function tools(el, inspection, entity, id, siblings) {
+    var at = siblings.indexOf(id);
+    var up = el.querySelector('[data-move="up"]'), down = el.querySelector('[data-move="down"]'), del = el.querySelector('[data-delete]');
+    up.disabled = at <= 0; down.disabled = at === siblings.length - 1;
+    up.addEventListener('click', function () { move(inspection, entity, id, siblings, 'up'); render(); });
+    down.addEventListener('click', function () { move(inspection, entity, id, siblings, 'down'); render(); });
+    del.addEventListener('click', function () { askDelete(inspection, entity, id); });
+  }
+  function addForm(form, onName) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var box = form.querySelector('input[name="name"]'), name = box.value.trim();
+      if (!name) { box.focus(); return; }
+      flagOnly = false;   // what was just added is never hidden by the flag filter
+      onName(name);
+      box.value = '';
+      render();
+    });
+  }
+  /* The new stop's chapter: its own, or the chapter of a stop already in the report. */
+  function chapterChoices(inspection) {
+    var sel = $('[data-addstop-chapter]'), want = JSON.stringify(stopsOf(inspection).map(function (s) { return [s, text(val('section', s, 'name'))]; }));
+    if (sel.getAttribute('data-shape') === want) return;
+    sel.setAttribute('data-shape', want);
+    var keep = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    stopsOf(inspection).forEach(function (s) {
+      if (typeof val('section', s, 'report_section_id') !== 'string') return;
+      var o = document.createElement('option'); o.value = s; o.textContent = word('chapter-of') + (text(val('section', s, 'name')).trim() || word('unnamed'));
+      sel.appendChild(o);
+    });
+    sel.value = keep;
+  }
+
+  /* ---- whole-report search (2026-11-24, his list item 12, piece B): every stop, item, finding and note of the
+     inspection on show, searched here in the browser (nothing is sent); case and accents set aside. A match names
+     where it is and goes straight to its box. ---- */
+  var SEARCH_SHOWN = 50;
+  var SEARCHED = { section: ['name'], item: ['label', 'note', 'ni_note'],
+    finding: ['finding_title', 'location', 'note', 'finding_implication', 'finding_recommendation', 'finding_recommended_trade'] };
+  var fold = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
+  /* Where q is in v, in v's own letters: folding can make a letter shorter (an accent on its own) or longer, so each
+     folded letter remembers the one it came from. */
+  function findIn(v, q) {
+    var folded = '', from = [], to = [], i = 0;
+    Array.from(v).forEach(function (ch) {
+      var f = fold(ch);
+      if (f === '' && to.length) to[to.length - 1] = i + ch.length;   // a lone accent belongs to the letter before it
+      for (var n = 0; n < f.length; n++) { from.push(i); to.push(i + ch.length); }
+      folded += f; i += ch.length;
+    });
+    var at = folded.indexOf(q);
+    return at < 0 ? null : { at: from[at], len: to[at + q.length - 1] - from[at] };
+  }
+  function searchMatches(inspection, query) {
+    var q = fold(query).trim();
+    if (q.length < 2) return [];
+    var out = [];
+    stopsOf(inspection).forEach(function (s) {
+      var stopName = text(val('section', s, 'name')).trim() || word('unnamed');
+      var look = function (entity, kind, id, where) {
+        SEARCHED[kind].forEach(function (field) {
+          var v = text(val(entity, id, field));
+          var m = findIn(v, q);
+          if (m) out.push({ key: key(entity, id, field), field: field, where: where, value: v, at: m.at, len: m.len });
+        });
+      };
+      look('section', 'section', s, [stopName]);
+      topItemsOf(s).forEach(function (i) {
+        var itemName = text(val('item', i, 'label')).trim() || word('unnamed');
+        look('item', 'item', i, [stopName, itemName]);
+        findingsUnder(i).forEach(function (f) {
+          look('item', 'finding', f, [stopName, itemName, text(val('item', f, 'finding_title')).trim() || word('unnamed')]);
+        });
+      });
+    });
+    return out;
+  }
+  function snippet(m) {
+    // The words around the match, in the original's own letters (findIn).
+    var from = Math.max(0, m.at - 40), to = Math.min(m.value.length, m.at + m.len + 60);
+    var frag = document.createDocumentFragment();
+    if (from > 0) frag.appendChild(document.createTextNode('…'));
+    frag.appendChild(document.createTextNode(m.value.slice(from, m.at)));
+    var mark = document.createElement('mark'); mark.textContent = m.value.slice(m.at, m.at + m.len); frag.appendChild(mark);
+    frag.appendChild(document.createTextNode(m.value.slice(m.at + m.len, to)));
+    if (to < m.value.length) frag.appendChild(document.createTextNode('…'));
+    return frag;
+  }
+  function goTo(k) {
+    var box = main.querySelector('[data-key="' + k + '"]');
+    if (!box) return;
+    if (flagOnly && box.closest('[hidden]')) { flagOnly = false; renderOne(); }   // a match is never behind the flag filter
+    box.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    box.focus({ preventScroll: true });
+    box.classList.remove('is-found'); void box.offsetWidth; box.classList.add('is-found');
+  }
+  function renderSearch(inspection) {
+    var box = $('[data-search]'), list = $('[data-search-results]'), count = $('[data-search-count]');
+    var q = box.value, found = searchMatches(inspection, q);
+    $('[data-search-how]').hidden = q.trim().length >= 2;
+    var shape = JSON.stringify([inspection, q, found.map(function (m) { return [m.key, m.value, m.where]; })]);
+    if (list.getAttribute('data-shape') === shape) return;
+    list.setAttribute('data-shape', shape);
+    list.textContent = '';
+    if (q.trim().length < 2) { count.textContent = ''; return; }
+    count.textContent = found.length === 0 ? word('search-none')
+      : (found.length === 1 ? word('search-one') : word('search-many').replace('{n}', found.length)) +
+        (found.length > SEARCH_SHOWN ? ' ' + word('search-more').replace('{n}', SEARCH_SHOWN) : '');
+    found.slice(0, SEARCH_SHOWN).forEach(function (m) {
+      var li = document.createElement('li');
+      var a = document.createElement('button');
+      a.type = 'button'; a.className = 'insp-search-hit'; a.setAttribute('data-search-go', m.key);
+      var where = document.createElement('span'); where.className = 'insp-search-where';
+      where.textContent = m.where.join(' › ') + ' · ' + word('f-' + m.field);
+      var what = document.createElement('span'); what.className = 'insp-search-what'; what.appendChild(snippet(m));
+      a.appendChild(where); a.appendChild(what);
+      a.addEventListener('click', function () { goTo(m.key); });
+      li.appendChild(a); list.appendChild(li);
+    });
+  }
+
   function render() { renderList(); renderOne(); }
 
   var listening = false;
   function showLive(which) { show('data-live', which); }
 
-  window.addEventListener('hashchange', function () { shape = null; render(); });
+  window.addEventListener('hashchange', function () { shape = null; flagOnly = false; flagTrouble = false; render(); });
+  var searching = null;
+  $('[data-search]').addEventListener('input', function () { clearTimeout(searching); searching = setTimeout(function () { var id = chosen(); if (id) renderSearch(id); }, 120); });
+  addForm($('[data-addstop]'), function (name) { var id = chosen(); if (id) addStop(id, name, $('[data-addstop-chapter]').value || null); });
+  $('[data-flagfilter]').addEventListener('click', function () { flagOnly = !flagOnly; renderOne(); });
   var finding = null;
   $('[data-find]').addEventListener('input', function () { clearTimeout(finding); finding = setTimeout(renderList, 120); });
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') sync(); });
-  setInterval(function () { if (document.visibilityState === 'visible') sync(); }, FALLBACK);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } });
+  // The business pull rides the same clock (Codex on inspyx-site #89): a fee changed on the phone or an updated
+  // agreement signed reaches an open tab within a minute, never only on a tab switch. It asks from where it left off.
+  setInterval(function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } }, FALLBACK);
 
   if (!auth.who()) { window.location.replace('/signin'); return; }
   main.hidden = false;
   auth.listen(function (ping) {
     if (ping && ping.signedOut) { window.location.replace('/signin'); return; }
     if (ping && ping.joined) { listening = true; showLive('live'); }
+    else pullBusiness();
     sync();
   });
   sync();
+  pullBusiness();
+  checkAI();
+  pullPublished();
 })();
