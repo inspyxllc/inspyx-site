@@ -210,6 +210,7 @@
       box.textContent = '';
       stops.forEach(function (s) {
         var stop = tpl('stop');
+        stop.setAttribute('data-flag-stop', s);
         bind(stop.querySelector('h2'), 'section', s, id);   // its name box only: the items below are bound as items
         tools(stop.querySelector('.insp-stop-head'), id, 'section', s, stops);
         addForm(stop.querySelector('[data-additem]'), function (name) { addItem(id, s, name); });
@@ -217,14 +218,18 @@
         var items = itemsOf(s);
         items.forEach(function (i) {
           var item = tpl('item');
+          item.setAttribute('data-flag-item', i);
           bind(item, 'item', i, id);
+          flagButton(item.querySelector('.insp-item-head .insp-flag'), id, i);
           tools(item.querySelector('.insp-item-head'), id, 'item', i, items);
           addForm(item.querySelector('[data-addfinding]'), function (name) { addFinding(id, i, name); });
           var fol = item.querySelector('.insp-findings');
           var findings = findingsOf(i);
           findings.forEach(function (f) {
             var finding = tpl('finding');
+            finding.setAttribute('data-flag-finding-row', f);
             bind(finding, 'item', f, id);
+            flagButton(finding.querySelector('.insp-finding-head .insp-flag'), id, f);
             tools(finding.querySelector('.insp-finding-head'), id, 'item', f, findings);
             var photos = parts('photo', function (p) { return val('photo', p, 'item_id') === f; }).length;
             var line = finding.querySelector('[data-photos]');
@@ -251,6 +256,7 @@
       if (el.value !== want) el.value = want;
     });
     renderPeople(id);
+    renderFlags(id);
     renderAgreement(id);
     chapterChoices(id);
     renderSearch(id);
@@ -330,18 +336,14 @@
      inspection's own fields come from this page's inspection sync. The rulebook is agreement-fill.js, the phone's
      agreement_outdated.dart in JS. ---- */
   var Fill = window.InspyxFill;
-  var BIZ = { signings: true, signing_details: true, inspection_fees: true, bookings: true };
+  var BIZ = { signings: true, signing_details: true, inspection_fees: true, bookings: true, item_flags: true };
   var biz = Object.create(null), bizPoint = null, bizPulling = null;
   function pullBusiness() {
     if (bizPulling) return bizPulling;
     var loop = function () {
       return auth.ask('sync', { push: [], after: bizPoint, limit: 500 }, DEADLINE).then(function (r) {
         if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) return null;
-        r.json.rows.forEach(function (row) {
-          if (!row || !BIZ[row.kind] || typeof row.id !== 'string') return;
-          var k = row.kind + '/' + row.id, held = biz[k];
-          if (!held || row.updated_at >= held.updated_at) biz[k] = row;
-        });
+        r.json.rows.forEach(takeBiz);
         if (r.json.next) bizPoint = r.json.next;
         return r.json.more ? loop() : null;
       });
@@ -349,6 +351,105 @@
     bizPulling = loop().then(function () { bizPulling = null; renderOne(); }, function () { bizPulling = null; });
     return bizPulling;
   }
+  function takeBiz(row) {
+    if (!row || !BIZ[row.kind] || typeof row.id !== 'string') return;
+    var k = row.kind + '/' + row.id, held = biz[k], wire = flagWire[k];
+    // What the server has, even when a tap still on its way is newer and shown: what that tap goes back to if it isn't
+    // kept (Codex on inspyx-site #95). The feed sends a row once.
+    if (wire && (!wire.sure || row.updated_at >= wire.sure.updated_at)) wire.sure = row;
+    if (!held || row.updated_at >= held.updated_at) biz[k] = row;
+  }
+
+  /* ---- Flag for later (2026-11-24, his list item 12, piece C): the inspector's own mark on an item or a finding,
+     "come back to this". Its own business-sync kind (item_flags; the server's flag_rules.ts, the phone's
+     item_flag_rules.dart, one rulebook), never a field of the inspection: a flag never reaches the report, its
+     fingerprint or "updated since sent". The server deletes a flag with its item or inspection. ---- */
+  var FLAG = 'item_flags', ITEM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  var flagOnly = false, flagTrouble = false;
+  /* While a flag's changes are on the wire: how many, and the copy to go back to (the last one the server has). */
+  var flagWire = {};
+  function flagged(id) {
+    var r = biz[FLAG + '/' + id];
+    return !!(r && r.deleted_at == null && r.data && r.data.deletedAt == null);
+  }
+  /* [inspection]'s flagged items and findings still on the page. */
+  function flagsOf(inspection) {
+    return parts('item', function (i) { return owner['item/' + i] === inspection && flagged(i); });
+  }
+  /* Flags [id] ([on]) or clears it: shown at once; put back, with a line, if the server didn't keep it. */
+  function setFlag(inspection, id, on) {
+    var who = auth.who(), k = FLAG + '/' + id, before = biz[k];
+    if (!who || !ITEM_ID.test(id)) return;
+    // Past the newest copy held, so a clear always wins over the set before it (the People book does the same).
+    var at = Math.max(Date.now(), before ? before.updated_at + 1 : 0);
+    var data = { id: id, ownerAccountId: who.id, inspectionId: inspection,
+      flaggedAt: on ? at : (before && before.data && before.data.flaggedAt) || at, updatedAt: at, deletedAt: on ? null : at };
+    var row = { kind: FLAG, id: id, updated_at: at, deleted_at: data.deletedAt, data: data };
+    var wire = flagWire[k] = flagWire[k] || { n: 0, sure: before };
+    wire.n++;
+    biz[k] = row;
+    flagTrouble = false;
+    renderOne();
+    var settled = function () { wire.n--; if (wire.n === 0 && flagWire[k] === wire) delete flagWire[k]; };
+    // Back to what the server has, never to a tap before this one that it didn't keep either.
+    var undo = function () {
+      settled();
+      if (biz[k] === row) { if (wire.sure) biz[k] = wire.sure; else delete biz[k]; }
+      flagTrouble = true;
+      renderOne();
+    };
+    auth.ask('sync', { push: [row], after: bizPoint, limit: 500 }, DEADLINE).then(function (r) {
+      if (r === null) { window.location.replace('/signin'); return; }
+      if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) { undo(); return; }
+      var mine = function (x) { return x.kind === FLAG && x.id === id; };
+      var kept = !(r.json.skipped || []).some(mine) &&
+        !(r.json.applied || []).some(function (a) { return a.applied === false && mine(a); });
+      r.json.rows.forEach(takeBiz);
+      if (r.json.next) bizPoint = r.json.next;
+      if (!kept) undo(); else {
+        if (!wire.sure || row.updated_at >= wire.sure.updated_at) wire.sure = row;
+        settled();
+        renderOne();
+      }
+      if (r.json.more) pullBusiness();
+    }, undo);
+  }
+  /* The flag buttons' state, the count and the filter: every render, as values are. */
+  function renderFlags(inspection) {
+    var n = flagsOf(inspection).length;
+    if (n === 0) flagOnly = false;
+    var bar = $('[data-flagfilter]');
+    bar.disabled = n === 0;
+    bar.setAttribute('aria-pressed', flagOnly ? 'true' : 'false');
+    bar.querySelector('[data-v="flags"]').textContent = String(n);
+    $('[data-flagtrouble]').hidden = !flagTrouble;
+    all('[data-flag]').forEach(function (b) {
+      var id = b.getAttribute('data-flag'), on = flagged(id);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      var what = text(val('item', id, b.hasAttribute('data-flag-finding') ? 'finding_title' : 'label')).trim() || word('unnamed');
+      var tip = word(on ? 'flag-clear' : 'flag-set').replace('{name}', what);
+      b.setAttribute('aria-label', tip);
+      b.title = tip;
+    });
+    all('[data-flag-item]').forEach(function (li) {
+      var i = li.getAttribute('data-flag-item');
+      li.hidden = flagOnly && !flagged(i) && !findingsUnder(i).some(flagged);
+    });
+    all('[data-flag-finding-row]').forEach(function (li) {
+      var f = li.getAttribute('data-flag-finding-row');
+      li.hidden = flagOnly && !flagged(f) && !flagged(val('item', f, 'parent_item_id'));
+    });
+    all('[data-flag-stop]').forEach(function (sec) {
+      sec.hidden = flagOnly && !all('[data-flag-item]', sec).some(function (li) { return !li.hidden; });
+    });
+  }
+  function flagButton(el, inspection, id) {
+    if (!el) return;
+    if (!ITEM_ID.test(id)) { el.hidden = true; return; }
+    el.setAttribute('data-flag', id);
+    el.addEventListener('click', function () { setFlag(inspection, id, !flagged(id)); });
+  }
+
   function bizData(kind) {
     return Object.keys(biz).filter(function (k) { return k.indexOf(kind + '/') === 0; }).map(function (k) { return biz[k]; })
       .filter(function (r) { return r.deleted_at == null && r.data && typeof r.data === 'object'; }).map(function (r) { return r.data; });
@@ -685,6 +786,7 @@
       e.preventDefault();
       var box = form.querySelector('input[name="name"]'), name = box.value.trim();
       if (!name) { box.focus(); return; }
+      flagOnly = false;   // what was just added is never hidden by the flag filter
       onName(name);
       box.value = '';
       render();
@@ -763,6 +865,7 @@
   function goTo(k) {
     var box = main.querySelector('[data-key="' + k + '"]');
     if (!box) return;
+    if (flagOnly && box.closest('[hidden]')) { flagOnly = false; renderOne(); }   // a match is never behind the flag filter
     box.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     box.focus({ preventScroll: true });
     box.classList.remove('is-found'); void box.offsetWidth; box.classList.add('is-found');
@@ -797,10 +900,11 @@
   var listening = false;
   function showLive(which) { show('data-live', which); }
 
-  window.addEventListener('hashchange', function () { shape = null; render(); });
+  window.addEventListener('hashchange', function () { shape = null; flagOnly = false; flagTrouble = false; render(); });
   var searching = null;
   $('[data-search]').addEventListener('input', function () { clearTimeout(searching); searching = setTimeout(function () { var id = chosen(); if (id) renderSearch(id); }, 120); });
   addForm($('[data-addstop]'), function (name) { var id = chosen(); if (id) addStop(id, name, $('[data-addstop-chapter]').value || null); });
+  $('[data-flagfilter]').addEventListener('click', function () { flagOnly = !flagOnly; renderOne(); });
   var finding = null;
   $('[data-find]').addEventListener('input', function () { clearTimeout(finding); finding = setTimeout(renderList, 120); });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } });

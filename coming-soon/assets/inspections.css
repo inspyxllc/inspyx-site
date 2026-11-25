@@ -279,3 +279,28 @@
   .is-found{animation:none; box-shadow:0 0 0 4px #FDE68A}
 }
 @media (max-width: 760px){ .se-how{grid-template-columns:1fr} }
+
+/* Flag for later (2026-11-24, his list item 12, piece C): the inspector's own mark; never in the report. */
+.insp-flag{display:inline-grid; place-items:center; padding:0 8px}
+.insp-flag svg, .insp-flagfilter svg{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
+.insp-flag[aria-pressed="true"]{background:var(--navy); color:#FFFFFF; box-shadow:none}
+.insp-flag[aria-pressed="true"] svg path{fill:currentColor}
+.insp-flagbar{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin:18px 0 6px}
+.insp-flagfilter{display:inline-flex; align-items:center; gap:7px; min-height:40px; padding:0 14px; border:0; border-radius:999px;
+  background:#FFFFFF; color:var(--navy); font:600 14.5px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.insp-flagfilter[aria-pressed="true"]{background:var(--navy); color:#FFFFFF; box-shadow:none}
+.insp-flagfilter[aria-pressed="true"] svg path{fill:currentColor}
+.insp-flagfilter:disabled{opacity:.45; cursor:default}
+.insp-flagfilter:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.insp-flagnote{font-size:13.5px; color:var(--ink-faint)}
+.insp-flagtrouble{font-size:13.5px; color:#9B2C2C; font-weight:600}
+.fl-how-flag, .fl-how-off, .fl-how-on{display:inline-block; width:14px; height:14px; border-radius:4px; box-shadow:inset 0 0 0 1.5px var(--navy)}
+.fl-how-on{background:var(--navy)}
+.fl-how-flag{animation:fl-fill 9s infinite}
+.fl-how-filter{justify-self:start; padding:4px 11px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-weight:600; animation:look-press 9s infinite; animation-delay:-3s}
+.fl-how-report{display:grid; gap:5px; padding:10px; border-radius:10px; background:#FFFFFF; box-shadow:0 6px 16px rgba(15,34,56,.15)}
+.fl-how-report i{font-style:normal; color:var(--ink-soft)} .fl-how-report i:last-child{color:var(--ink-faint)}
+.fl-how-finger{animation-name:fl-finger}
+@keyframes fl-fill{0%,20%{background:transparent} 23%,100%{background:var(--navy)}}
+@keyframes fl-finger{0%{left:75%; top:90%; opacity:1} 14%,24%{left:222px; top:16px; opacity:1} 30%{opacity:0} 38%,52%{left:40px; top:14px; opacity:1} 58%,100%{left:40px; top:14px; opacity:0}}
+.insp-item[hidden], .insp-finding[hidden], .insp-stop[hidden], .insp-flag[hidden], .insp-flagtrouble[hidden]{display:none}
