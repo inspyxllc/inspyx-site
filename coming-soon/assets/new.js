@@ -291,14 +291,14 @@
       // never stays shut (Codex on #86, r2).
       if (mine !== asked) { if (then) then(); return; }
       if (r && r.status === 200 && r.json && r.json.state === 'check') {
-        drawQuote(r.json); problem('');
+        drawQuote(r.json); answered('');
         if (key === priceKey()) checkedFor = key;
         if (then) then();
         return;
       }
-      problem(r && r.json && typeof r.json.error === 'string' ? r.json.error : 'failed');
+      answered(r && r.json && typeof r.json.error === 'string' ? r.json.error : 'failed');
       if (then) then();
-    }, function () { if (mine === asked) problem('failed'); if (then) then(); });
+    }, function () { if (mine === asked) answered('failed'); if (then) then(); });
   }
   function drawQuote(a) {
     var list = $('[data-lines]');
@@ -320,6 +320,9 @@
     $('[data-length]').textContent = length(a.length);
   }
   // A refusal the page has no words for (the server down, say) says the general "couldn't", never nothing.
+  /* A price check's answer: it never takes away (or covers) that the time typed doesn't exist (Codex on
+     inspyx-site #96); that stands until the time is put right. */
+  function answered(which) { if (!sayGap()) problem(which); }
   function problem(which) {
     if (which && !$('[data-problem="' + which + '"]')) which = 'failed';
     showOne('data-problem', which, $('[data-quote]'));

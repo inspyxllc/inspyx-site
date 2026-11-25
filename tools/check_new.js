@@ -228,9 +228,13 @@ async function fillBasics(page) {
     await page.fill('[name="day"]', '2027-03-14'); await page.dispatchEvent('[name="day"]', 'change');
     await page.fill('[name="time"]', '02:30'); await page.dispatchEvent('[name="time"]', 'input');
     ok('2:30 AM on March 14, 2027 in New York: it says the time doesn\'t exist that night', await until(async () => (await vis(page, '[data-problem]')).join() === '2:30 AM doesn’t exist that night (the clocks move forward); pick another time.'), JSON.stringify(await vis(page, '[data-problem]')));
+    const GAP = '2:30 AM doesn’t exist that night (the clocks move forward); pick another time.';
+    const sent = asks.length;
+    await until(async () => asks.length > sent, 3000);   // the price check that follows typing
     await page.waitForTimeout(600);
+    ok('it still says so once the price is back (Codex on #96)', (await vis(page, '[data-problem]')).join() === GAP, (await vis(page, '[data-problem]')).join());
     await page.click('[data-book]');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(900);
     ok('Book books nothing, and no instant for it was ever sent', asks.filter((a) => !a.check).length === 0 && !asks.some((a) => typeof a.startsAt === 'number' && a.startsAt >= Date.UTC(2027, 2, 14, 6, 0) && a.startsAt < Date.UTC(2027, 2, 14, 8, 0)), JSON.stringify(asks.map((a) => a.startsAt)));
     ok('and Book says the same, nothing else', (await vis(page, '[data-problem]')).join() === '2:30 AM doesn’t exist that night (the clocks move forward); pick another time.', (await vis(page, '[data-problem]')).join());
     ok('the line goes as soon as the time exists, before any answer', await page.evaluate(() => {
