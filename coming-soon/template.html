@@ -42,7 +42,7 @@
 <div class="te-how-scene te-how-c"><span class="te-how-save">Save</span><span class="te-how-done">Saved as version 2. New inspections start from it.</span></div>
 <span class="te-how-finger"></span>
 <span class="te-how-tip" data-n="1">Open a template, so you see every stop, item and comment</span>
-<span class="te-how-tip" data-n="2">Change, add or move a stop, an item, a comment or a field’s answers, so new reports say it your way</span>
+<span class="te-how-tip" data-n="2">Change, add or move a stop, an item, a comment or a field’s answers, and see it as your report prints it</span>
 <span class="te-how-tip" data-n="3">Save, so new inspections on your phone start from it</span>
 </div>
 <figcaption class="te-how-steps">
@@ -71,7 +71,11 @@
 <p class="te-ro" data-ro hidden>Inspyx’s own template can’t be changed. Make your own copy to change it; new inspections can start from your copy.</p>
 <div class="te-acts"><button type="button" class="te-btn" data-copy hidden>Make your own copy</button><button type="button" class="te-btn ghost" data-use hidden>Use for new inspections</button><button type="button" class="te-btn ghost" data-export hidden>Export</button><span class="te-used" data-used hidden>Used for new inspections</span></div>
 </div>
+<div class="te-findbar">
 <label class="te-search"><span>Find</span><input type="search" data-find placeholder="A stop, an item or a comment's words" autocomplete="off"></label>
+<label class="te-search te-replace" data-replace-box hidden><span>Replace with</span><input data-replace autocomplete="off"></label>
+<button type="button" class="te-btn ghost te-replace-go" data-replace-go hidden>Replace all</button>
+</div>
 <p class="te-found" data-found hidden></p>
 <section class="te-cats" data-cats hidden aria-label="Finding categories"></section>
 <div class="te-stops" data-stops></div>
@@ -83,6 +87,12 @@
 </div>
 <p class="te-say" data-say role="alert" hidden></p>
 </section>
+<aside class="te-preview" data-preview hidden aria-label="In your report" aria-live="polite">
+<header class="te-pv-head"><h3>In your report</h3><button type="button" class="te-mini" data-preview-close>Close</button></header>
+<p class="te-pv-empty" data-preview-empty>Click into an item to see it as your report prints it.</p>
+<div class="te-pv-body" data-preview-body></div>
+<p class="te-pv-note">Words in [brackets] are blanks Spex fills in at the inspection.</p>
+</aside>
 </div>
 </main>
 
@@ -103,6 +113,15 @@
 <span data-w="f-todo">What to do</span>
 <span data-w="no-rating">No category</span>
 <span data-w="f-system">Report section</span>
+<span data-w="see-report">See it in the report</span>
+<span data-w="replace-all">Replace all ({n})</span>
+<span data-w="replaced-1">Replaced 1. Review it, then Save.</span>
+<span data-w="replaced-n">Replaced {n}. Review them, then Save.</span>
+<span data-w="pv-observed">Observed condition</span>
+<span data-w="pv-recommended">Recommended action</span>
+<span data-w="pv-limitation">Limitation:</span>
+<span data-w="pv-untitled">(no name yet)</span>
+<span data-w="pv-answer">{answer}: {choices}</span>
 <span data-w="f-answer">Answer</span>
 <span data-w="f-options">Choices, one per line</span>
 <span data-w="ans-choice">Pick one</span>
