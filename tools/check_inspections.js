@@ -721,9 +721,10 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
      newer (a change elsewhere). */
   function templateServer(rows0) {
     const held = new Map(), pushed = [];
-    let seq = 0, skipAll = null, olderOnce = false;
+    let seq = 0, skipAll = null, olderOnce = false, down = false;
     for (const r of rows0 || []) held.set(r.kind + '/' + r.id, { row: r, seq: ++seq });
     const answer = async (b) => {
+      if (down) return null;
       const skipped = [], applied = [];
       for (const r of b.push || []) {
         pushed.push(r);
@@ -737,7 +738,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const rows = [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row);
       return { rows, next: seq, more: false, skipped, applied };
     };
-    return { answer, pushed, held, set skipAll(v) { skipAll = v; }, set olderOnce(v) { olderOnce = v; } };
+    return { answer, pushed, held, set skipAll(v) { skipAll = v; }, set olderOnce(v) { olderOnce = v; }, set down(v) { down = v; } };
   }
   /* The inspection made from ours: Gutters (ITEM) is the walkthrough's Grading item; its finding has every field. */
   function seedFromOurs(s, from, ref) {
@@ -856,6 +857,33 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim() === 'Saved. Your next inspection offers it under Gutters.'));
     ok('two tries, then kept; no default change, its source kept', pushedOf(t, 'inspection_templates').length === 2 && pushedOf(t, 'template_default').length === 0 &&
       pushedOf(t, 'inspection_templates')[1].data.source === 'copied' && pushedOf(t, 'inspection_templates')[1].data.version === '2');
+    await o.ctx.close();
+
+    // The business feed unreachable (as the page loads, and at Save): the page can't see his copy or his default, so it
+    // saves nothing, rather than make a new copy over his (Codex on #98). Back again: into his copy, his default kept.
+    s = server(); seed(s); seedFromOurs(s);
+    const picked = { kind: 'template_default', id: 'default', updated_at: 6, deleted_at: null, data: { id: 'default', ownerAccountId: ME, templateId: 'inspector.converted-one', updatedAt: 6, deletedAt: null } };
+    t = templateServer([row, picked]); t.down = true;
+    o = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer, files: new Map(files) });
+    await o.page.waitForSelector('.insp-finding');
+    await until(async () => await box(o.page, FIND).isVisible());
+    await box(o.page, FIND).locator('[data-tpl-open]').click();
+    await until(async () => await box(o.page, FIND).locator('[data-tpl-go]').isVisible());
+    await box(o.page, FIND).locator('[data-tpl-go]').click();
+    ok('the business feed unreachable: it says it didn’t go through, and writes nothing (no file, no row, no default)', await until(async () =>
+      (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim() === 'That didn’t go through. Try again.') &&
+      t.pushed.length === 0 && o.fileCalls.filter((c) => c.method === 'POST').length === 0,
+      [await box(o.page, FIND).locator('[data-tpl-done]').textContent(), t.pushed.length, o.fileCalls.length].join(' | '));
+    t.down = false;
+    await until(async () => await box(o.page, FIND).locator('[data-tpl-open]').isEnabled());
+    await box(o.page, FIND).locator('[data-tpl-open]').click();
+    await until(async () => await box(o.page, FIND).locator('[data-tpl-go]').isVisible());
+    await box(o.page, FIND).locator('[data-tpl-go]').click();
+    await until(async () => /^Saved/.test((await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim()));
+    const back = pushedOf(t, 'inspection_templates');
+    ok('back again: it goes into his own copy, as its next version, on top of his; his own default kept', back.length === 1 && back[0].id === id &&
+      back[0].data.version === '2' && typeof back[0].data.base === 'string' && pushedOf(t, 'template_default').length === 0,
+      JSON.stringify(back.map((x) => [x.id, x.data.version, !!x.data.base])));
     await o.ctx.close();
 
     // An item his template doesn't have: said, nothing written.

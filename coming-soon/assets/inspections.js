@@ -345,13 +345,16 @@
     if (bizPulling) return bizPulling;
     var loop = function () {
       return auth.ask('sync', { push: [], after: bizPoint, limit: 500 }, DEADLINE).then(function (r) {
-        if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) return null;
+        if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) return false;
         r.json.rows.forEach(takeBiz);
         if (r.json.next) bizPoint = r.json.next;
-        return r.json.more ? loop() : null;
+        return r.json.more ? loop() : true;
       });
     };
-    bizPulling = loop().then(function () { bizPulling = null; renderOne(); }, function () { bizPulling = null; });
+    // Answers whether the whole feed came in: a save to a template must not take a library it couldn't read for an
+    // empty one (Codex on inspyx-site #98).
+    bizPulling = loop().then(function (ok) { bizPulling = null; renderOne(); return ok === true; },
+      function () { bizPulling = null; return false; });
     return bizPulling;
   }
   function takeBiz(row) {
@@ -636,11 +639,15 @@
       var attempt = function (first, into) {
         return saveInto(into, spot, l).then(function (key) {
           if (key !== 'changed' || !first) return key;
-          return templateFor(spot).then(function (again) { return again.problem ? again.problem : attempt(false, again); });
+          return fresh().then(function (again) { return again.problem ? again.problem : attempt(false, again); });
         });
       };
-      // In the page's queue, after a fresh pull: the template as it stands now, not as it stood when the panel opened.
-      var run = tplQueue.then(function () { return pullBusiness(); }).then(function () { return templateFor(spot); }).then(function (now) {
+      // The template as it stands now, not as it stood when the panel opened: only after a pull that came in whole.
+      // Without one, the page can't tell his own copy and his default from none at all, so it saves nothing.
+      var fresh = function () {
+        return pullBusiness().then(function (ok) { return ok ? templateFor(spot) : { problem: 'failed' }; });
+      };
+      var run = tplQueue.then(fresh).then(function (now) {
         if (now.source) copySource = now.source;
         return now.problem ? now.problem : attempt(true, now);
       });
