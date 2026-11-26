@@ -239,6 +239,20 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     const back = s.held.get('price_services/' + RID);
     ok('the same row back: one id, made when it first was, newer than the deleted one (even with the phone’s clock ahead)', !!back && back.deleted_at === null &&
       back.data.createdAt === on[0].data.createdAt && back.updated_at > ahead.updatedAt, JSON.stringify(back && [back.updated_at, ahead.updatedAt]));
+    // A discount just for reinspections: it offers Reinspection, and saving an unrelated change keeps it just for them.
+    s.put(s.row('price_discounts', { id: 'disc-reinsp', ownerAccountId: ME, code: 'BACKAGAIN', kind: 'percent', value: 1000, appliesToJson: JSON.stringify([RID]), maxUses: null,
+      expiresAt: null, active: true, createdAt: T, updatedAt: T, deletedAt: null }));
+    await page.reload(); await page.waitForSelector('[data-reinsp-edit]:not([hidden])');
+    await page.locator('[data-list="discounts"] li', { hasText: 'BACKAGAIN' }).locator('[data-edit]').click();
+    const dl = page.locator('[data-dialog="discount"]');
+    await until(async () => await dl.isVisible());
+    ok('a discount can name Reinspection', (await dl.locator('input[type="checkbox"][value="' + RID + '"]').count()) === 1 && await dl.locator('input[type="checkbox"][value="' + RID + '"]').isChecked());
+    await page.fill('[data-form="discount"] input[name="code"]', 'BACKAGAIN2');
+    const n0 = calls.length;
+    await page.click('[data-form="discount"] button[type="submit"]');
+    await until(async () => pushed(calls.slice(n0)).some((r) => r.id === 'disc-reinsp'));
+    const dw = pushed(calls.slice(n0)).find((r) => r.id === 'disc-reinsp');
+    ok('saving it keeps it just for reinspections (never widened to every service)', !!dw && dw.data.appliesToJson === JSON.stringify([RID]), dw && dw.data.appliesToJson);
     await ctx.close();
     const ph = await open(browser, { server: s, w: PHONE });
     await ph.page.waitForSelector('[data-reinsp]');

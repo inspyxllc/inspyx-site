@@ -102,7 +102,7 @@
   };
   var byPlace = function (a, b) { return (a.position - b.position) || (a.createdAt - b.createdAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); };
   var byMade = function (a, b) { return (a.createdAt - b.createdAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); };
-  var services = function () { return standing('price_services').filter(function (s) { return s.parentId == null && s.id !== REINSPECTION_ID; }).sort(byPlace); };
+  var services = function () { return standing('price_services').filter(function (s) { return s.parentId == null; }).sort(byPlace); };
   var addOnsOf = function (id) { return standing('price_services').filter(function (s) { return s.parentId === id; }).sort(byPlace); };
   var changesOf = function (id) { return standing('price_modifiers').filter(function (m) { return m.serviceId === id; }).sort(byPlace); };
   var discounts = function () { return standing('price_discounts').sort(byMade); };
@@ -241,7 +241,9 @@
     $('[data-reinsp-now]', main).hidden = !reinOn;
     if (reinOn) $('[data-reinsp-now]', main).textContent = words('reinsp-on') + ' ' + serviceSummary(rein);
     main.querySelector('[data-reinsp]').classList.toggle('is-on', reinOn);
-    var list = $('[data-list="services"]', main), svc = services();
+    // Reinspection has its own card above: the ordinary list leaves it out (and only the list: a discount or a price
+    // change can still name it; Codex on #107).
+    var list = $('[data-list="services"]', main), svc = services().filter(function (s) { return s.id !== REINSPECTION_ID; });
     $('[data-empty="services"]', main).hidden = svc.length > 0;
     list.textContent = '';
     svc.forEach(function (s) {
