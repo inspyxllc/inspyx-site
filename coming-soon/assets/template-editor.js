@@ -532,25 +532,29 @@
      changes as they were when tapped, and draws the editor again from what it saved (Codex on #101). */
   function lock(on) {
     busy = on;
+    // Nothing still on its way may open while a save, copy or switch is under way (Codex on #102).
+    if (on) cancelLoads();
     all('[data-save],[data-discard],[data-copy],[data-use]', main).forEach(function (b) { b.disabled = on; });
     all('[data-k], [data-find]', edit).forEach(function (b) { b.disabled = on || (open && open.readOnly && b.hasAttribute('data-k')); });
     // The steps too: add, move, delete.
     all('.te-mini, [data-item-to]', edit).forEach(function (b) { b.disabled = on; });
     edit.classList.toggle('is-busy', on);
   }
-  function saveOnce(list, first) {
+  /* [target]: the template open when Save was tapped ({ id, row, text }), held for the whole save whatever opens
+     meanwhile (Codex on #102). */
+  function saveOnce(list, first, target) {
     return pull().then(function (ok) {
       if (!ok) return { problem: 'failed' };
-      var row = biz[TPL + '/' + open.id];
+      var row = biz[TPL + '/' + target.id];
       if (!standing(row)) return { problem: 'failed' };
-      var same = row.data.sha256 === open.row.data.sha256;
-      return (same ? Promise.resolve(open.text) : readFile(row)).then(function (text) {
+      var same = row.data.sha256 === target.row.data.sha256;
+      return (same ? Promise.resolve(target.text) : readFile(row)).then(function (text) {
         if (text === null) return { problem: 'failed' };
         var made = TE.apply(text, list);
         if (made.problem) return { problem: made.problem };
         return TS.contentKey(text, digest).then(function (base) {
-          return store(open.id, made.text, made.version, made.name, row.data.source, base, false).then(function (r) {
-            if (r.problem === 'changed' && first) return saveOnce(list, false);
+          return store(target.id, made.text, made.version, made.name, row.data.source, base, false).then(function (r) {
+            if (r.problem === 'changed' && first) return saveOnce(list, false, target);
             return r.problem ? r : { row: r.row, text: made.text };
           });
         });
@@ -561,14 +565,15 @@
     if (busy || !open || open.readOnly) return;
     var list = edits();
     if (!list.length) return;
+    var target = { id: open.id, row: open.row, text: open.text };
     lock(true); say('saving');
-    var run = queue.then(function () { return saveOnce(list, true); });
+    var run = queue.then(function () { return saveOnce(list, true, target); });
     queue = run.catch(function () { return null; });
     run.then(function (r) {
       // The newest there already says all of it (made the same elsewhere): show it.
-      if (r.problem === 'unchanged') return choose(open.id, true);
+      if (r.problem === 'unchanged') return choose(target.id, true);
       if (r.problem) { say('p-' + r.problem); return; }
-      open = { id: open.id, row: r.row, text: r.text, outline: TE.outline(r.text), readOnly: false };
+      open = { id: target.id, row: r.row, text: r.text, outline: TE.outline(r.text), readOnly: false };
       renderOpen();
       say(usedId() === open.id ? 'saved' : 'saved-other', { v: r.row.data.version });
     }, function () { say('p-failed'); }).then(function () { lock(false); });

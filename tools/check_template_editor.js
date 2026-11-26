@@ -77,6 +77,7 @@ async function open(browser, o) {
     if (u.startsWith(SERVER + '/functions/v1/sync')) {
       const b0 = JSON.parse(req.postData() || '{}');
       if (o.biz.gate && (b0.push || []).length) await o.biz.gate;
+      if (o.biz.pullGate && !(b0.push || []).length) await o.biz.pullGate;
       const a = o.biz.answer(b0);
       return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(a) });
     }
@@ -318,6 +319,26 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     await page.waitForTimeout(500);
     ok('another template asked for, slow to come, while he changes the open one: his stays, with his change',
       (await page.locator('[data-name]').inputValue()) === 'Changed while the other loaded' && (await page.locator('[data-count]').textContent()).trim() === '1 change');
+    // Changes on his first, then the other asked for (he says leave them), then Save before it came: the save is his
+    // first's, and the other doesn't open over it.
+    page.removeAllListeners('dialog'); page.on('dialog', (d) => d.accept());
+    let release4; fileGate[fileName(r3)] = new Promise((r) => { release4 = r; });
+    let opened = 0; const before4 = tplPushes(biz).length;
+    await page.locator('[data-open="' + SECOND + '"]').click();
+    await until(async () => (opened = o.fileCalls.filter((c) => c.method === 'GET' && c.name === fileName(r3)).length) >= 2);
+    let releasePull; biz.pullGate = new Promise((r) => { releasePull = r; });
+    await page.locator('[data-save]').click();
+    // The other arrives while the save still waits for its pull.
+    release4();
+    await page.waitForTimeout(400);
+    biz.pullGate = null; releasePull();
+    await until(async () => /^Saved|didn’t go through/.test(await said(page)), 8000);
+    await page.waitForTimeout(400);
+    const p4 = tplPushes(biz).slice(before4);
+    ok('Save tapped while another template was still coming: it saves the one open (its name, not onto the other), and the other doesn’t open over it',
+      p4.length === 1 && p4[0].id === MINE && p4[0].data.name === 'Changed while the other loaded' && (await page.locator('[data-name]').inputValue()) === 'Changed while the other loaded' &&
+      !tplPushes(biz).some((r) => r.id === SECOND), JSON.stringify(p4.map((r) => [r.id, r.data.name])));
+    page.removeAllListeners('dialog'); page.on('dialog', (d) => d.dismiss());
     ok('no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
     await o.ctx.close();
   });
