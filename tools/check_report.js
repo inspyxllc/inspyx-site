@@ -82,7 +82,8 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
 
   // ---- a reinspection (content /15, 2026-11-26): its cover, the recheck's tiles in the PDF's colours, the summary
   // for the agent (as text), and each rechecked finding's result first on its card; an ordinary report shows none.
-  {
+  // On the sample only: the live site has no sample to open (Codex on #118).
+  if (!PROD) {
     const plain = await open(browser);
     const none = await plain.page.evaluate(() => ({
       kicker: document.querySelector('.kicker').textContent, recheck: !!document.getElementById('recheck'),
@@ -121,7 +122,7 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
         tiles, cards, firstIsRecheck: !!first && first.classList.contains('recheck'),
         agent: (document.querySelector('#recheck .for-agent') || {}).textContent,
         scripts: document.querySelectorAll('#recheck script, .recheck b').length,
-        wide: document.documentElement.scrollWidth <= window.innerWidth,
+        scrollW: document.documentElement.scrollWidth,
       };
     });
     ok('a reinspection: the cover says so and when the inspection it rechecks was', got.kicker.indexOf('Reinspection Report') === 0 &&
@@ -136,7 +137,8 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
       [all[3].id, 'recheck recheck-not_checked', 'RecheckedNot checked.'],
       [all[4].id, 'recheck recheck-fixed', 'RecheckedFixed. <b>clear</b> now'],
     ]), JSON.stringify(got.cards));
-    ok('a reinspection: nothing scrolls sideways at a phone\'s width; no page errors', got.wide && o.errs.length === 0, JSON.stringify(o.errs));
+    // Against the view's own width: in phone mode a page too wide widens innerWidth with it.
+    ok('a reinspection: nothing scrolls sideways at a phone\'s width; no page errors', got.scrollW <= o.page.viewportSize().width && o.errs.length === 0, JSON.stringify([got.scrollW, o.errs]));
     await o.ctx.close();
   }
 
