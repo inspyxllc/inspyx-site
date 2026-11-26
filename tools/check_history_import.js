@@ -42,17 +42,18 @@ async function expected(start, name, bytes, pastRows) {
 }
 const keptOf = (rows) => { const o = {}; rows.filter((r) => r.deleted_at == null && r.data.deletedAt == null).forEach((r) => { o[r.data.name] = [r.data.role, r.data.phone, r.data.email, r.data.company, r.data.note]; }); return JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]])); };
 function syncServer(rows0) {
-  const held = new Map(), pushes = []; let seq = 0, failKind = null;
+  const held = new Map(), pushes = []; let seq = 0, failKind = null, turnDown = () => false;
   for (const r of rows0) held.set(r.kind + '/' + r.id, { row: r, seq: ++seq });
   const answer = (b) => {
     if (failKind && (b.push || []).some((r) => r.kind === failKind)) return null;
-    const applied = [];
+    const applied = [], skipped = [];
     if ((b.push || []).length) pushes.push(b.push.length);
-    for (const r of b.push || []) { const k = r.kind + '/' + r.id, h = held.get(k); if (h && h.row.updated_at >= r.updated_at) { applied.push({ kind: r.kind, id: r.id, applied: false }); continue; } held.set(k, { row: r, seq: ++seq }); applied.push({ kind: r.kind, id: r.id, applied: true }); }
+    for (const r of b.push || []) { if (turnDown(r)) { skipped.push({ kind: r.kind, id: r.id, reason: 'too_long' }); continue; } const k = r.kind + '/' + r.id, h = held.get(k); if (h && h.row.updated_at >= r.updated_at) { applied.push({ kind: r.kind, id: r.id, applied: false }); continue; } held.set(k, { row: r, seq: ++seq }); applied.push({ kind: r.kind, id: r.id, applied: true }); }
     const after = typeof b.after === 'number' ? b.after : 0;
-    return { rows: [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row), next: seq, more: false, skipped: [], applied };
+    return { rows: [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row), next: seq, more: false, skipped, applied };
   };
-  return { answer, pushes, set failKind(k) { failKind = k; }, rows: () => [...held.values()].map((h) => h.row).filter((r) => r.kind === 'inspector_contacts'), past: () => [...held.values()].map((h) => h.row).filter((r) => r.kind === 'past_inspections') };
+  // put: a change another device made meanwhile.
+  return { answer, pushes, put: (r) => held.set(r.kind + '/' + r.id, { row: r, seq: ++seq }), set failKind(k) { failKind = k; }, set turnDown(f) { turnDown = f; }, rows: () => [...held.values()].map((h) => h.row).filter((r) => r.kind === 'inspector_contacts'), past: () => [...held.values()].map((h) => h.row).filter((r) => r.kind === 'past_inspections') };
 }
 async function open(browser, o) {
   const ctx = await browser.newContext({ viewport: { width: o.w || 1280, height: 900 }, locale: 'en-US' });
@@ -154,6 +155,78 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     sync.failKind = null;
     await o.page.locator('[data-undo]').click();
     ok('and Undo takes those inspections back', await until(async () => (await said(o.page)) === 'Undone: People is as it was.', 8000) && sync.past().every((r) => r.data.deletedAt !== null));
+    await o.ctx.close();
+  });
+
+  await group('an inspection too long to keep: named by its line before and after Keep, never counted or silently left out', async () => {
+    const sync = syncServer(seed()), o = await open(browser, { sync });
+    // Every box is at most 32,767 characters (the reader's own limit), so three full boxes of 3-byte letters make a row
+    // over 256 KB: the row the rules refuse.
+    const big = '€'.repeat(32000);
+    await pick(o.page, 'long.csv', Buffer.from('Inspection Date,Property Address,Client Name,Services,Inspector,Notes\n11/04/2026,1 Long St,Lee Long,' + [big, big, big].join(',') + '\n11/05/2026,2 Short St,Sam Short,Home,Ann,ok\n'));
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    const sum = await o.page.locator('[data-insp-sum]').textContent();
+    ok('the preview counts only the one it can keep, and names the one too long by its line',
+      await o.page.locator('[data-keep]').getAttribute('data-keep') === '1' && await o.page.locator('[data-refused]').getAttribute('data-refused') === '1' &&
+      /1 inspection can’t be kept: it holds too much to keep \(line 2\)\./.test(sum), sum.slice(0, 200));
+    for (const [w, big] of [[375, false], [393, false], [430, false], [375, true]]) {
+      await o.page.setViewportSize({ width: w, height: 900 });
+      await o.page.evaluate((b) => { document.documentElement.style.fontSize = b ? '130%' : ''; document.body.style.zoom = b ? '1.3' : ''; }, big);
+      const m = await o.page.evaluate(() => { const p = document.querySelector('[data-refused]').getBoundingClientRect(); return { page: document.documentElement.scrollWidth, vw: innerWidth, right: p.right }; });
+      ok('the note fits at ' + w + (big ? ' with large text' : '') + ': no sideways scroll, nothing past the edge', m.page <= m.vw && m.right <= m.vw + 0.5, JSON.stringify(m));
+      if (process.env.SHOTS) await o.page.locator('[data-insp-sum]').screenshot({ path: path.join(process.env.SHOTS, 'refused-' + w + (big ? '-large' : '') + '.png') });
+    }
+    await o.page.evaluate(() => { document.documentElement.style.fontSize = ''; document.body.style.zoom = ''; });
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 8000);
+    const t = await o.page.locator('[data-done-t]').textContent();
+    ok('after Keep: the one it could keep is kept; the one too long is named again, with what to do', sync.past().length === 1 && sync.past()[0].data.address.indexOf('2 Short St') === 0 &&
+      /1 inspection can’t be kept: it holds too much to keep \(line 2\)\. Shorten its longest boxes/.test(t), t.slice(0, 200));
+    await o.ctx.close();
+  });
+
+  await group('only refused lines: Keep never just redraws; it says why', async () => {
+    const sync = syncServer(seed()), o = await open(browser, { sync });
+    const big = '€'.repeat(32000);
+    await pick(o.page, 'only-long.csv', Buffer.from('Inspection Date,Property Address,Client Name,Services,Inspector,Notes\n11/04/2026,1 Long St,,' + [big, big, big].join(',') + '\n'));
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    const go = o.page.locator('[data-go]');
+    ok('nothing to keep: the button says so and waits; the line is named', await go.isDisabled() && /line 2/.test(await o.page.locator('[data-insp-sum]').textContent()),
+      await go.textContent());
+    ok('nothing was sent', sync.past().length === 0);
+    await o.ctx.close();
+  });
+
+  await group('another device changes the list between the preview and Keep: only a refused line is left, and Keep says so', async () => {
+    const HEAD = 'Inspection Date,Property Address,Client Name,Services,Inspector,Notes\n', big = '€'.repeat(32000);
+    const twin = async (line) => { const t = await READER.inspections('t.csv', Buffer.from(HEAD + line + '\n'), {}), r = typeof t === 'string' ? JSON.parse(t) : t; return r.inspections[0]; };
+    const k2 = PS.newRows([await twin('11/04/2026,1 Long St,Lee Long,Home,Ann,ok')], ME, 1500, () => 'kept-long-twin', 'import-before').push[0];
+    const k3 = PS.newRows([await twin('11/05/2026,2 Short St,Sam Short,Home,Ann,ok')], ME, 1600, () => 'kept-short', 'import-other').push[0];
+    // Both clients already in People, as the file has them: the people have nothing to change.
+    const person = (id, name) => { const d = { id, ownerAccountId: ME, role: 'client', name, phone: null, email: null, company: null, note: null, lastUsedAt: 1000, createdAt: 1000, updatedAt: 1000, deletedAt: null }; return { kind: 'inspector_contacts', id, updated_at: 1000, deleted_at: null, data: d }; };
+    const sync = syncServer([person('p-lee', 'Lee Long'), person('p-sam', 'Sam Short'), k2]), o = await open(browser, { sync });
+    await pick(o.page, 'race.csv', Buffer.from(HEAD + '11/04/2026,1 Long St,Lee Long,' + [big, big, big].join(',') + '\n11/05/2026,2 Short St,Sam Short,Home,Ann,ok\n'));
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    ok('the preview: one to keep (line 3), one already kept (line 2\'s twin)', await o.page.locator('[data-keep]').getAttribute('data-keep') === '1' && await o.page.locator('[data-already]').getAttribute('data-already') === '1' && !(await o.page.locator('[data-go]').isDisabled()));
+    // Meanwhile: line 2's twin taken back, line 3 kept, both on another device.
+    const gone = JSON.parse(JSON.stringify(k2)); gone.data.deletedAt = 2000; gone.data.updatedAt = 2000; gone.updated_at = 2000; gone.deleted_at = 2000; sync.put(gone); sync.put(k3);
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 8000);
+    const t = await o.page.locator('[data-done-t]').textContent();
+    ok('Keep sends nothing and names line 2, never a silent redraw', sync.past().filter((r) => r.deleted_at == null).length === 1 && /line 2/.test(t) && await o.page.locator('[data-undo]').isHidden(), t.slice(0, 160));
+    await o.ctx.close();
+  });
+
+  await group('the server takes some inspections, not all: the rest are said, never left out of the count', async () => {
+    const sync = syncServer(seed()), o = await open(browser, { sync });
+    sync.turnDown = (r) => r.kind === 'past_inspections' && r.data.address.indexOf('2 Short St') === 0;
+    await pick(o.page, 'some.csv', Buffer.from('Inspection Date,Property Address,Client Name\n11/04/2026,1 Main St,Lee Long\n11/05/2026,2 Short St,Sam Short\n'));
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 8000);
+    const t = await o.page.locator('[data-done-t]').textContent();
+    ok('one kept, and the one turned down said, with what to do', sync.past().length === 1 && /^1 inspection kept on your list\./.test(t) &&
+      /1 more inspection didn’t go through: bring the same file in again later/.test(t) && await o.page.locator('[data-undo]').isVisible(), t.slice(0, 220));
     await o.ctx.close();
   });
 

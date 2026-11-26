@@ -152,9 +152,11 @@
     var n = c.new + c.fill + c.bring_back, go = $('[data-go]');
     if (HISTORY) {
       // The inspections: new ones to keep, and how many are on his list already.
-      var k = r.new_count || 0, have = r.already_count || 0;
+      // A new one the rules would refuse is never counted as one to keep: it is named, with its line (Codex on #110).
+      var refused = refusedOf(r), k = Math.max(0, (r.new_count || 0) - refused.length), have = r.already_count || 0;
       var ins = $('[data-insp-sum]'); ins.textContent = '';
       if (k) { var a = el('span', 'pi-pill pi-new', plural('keep', k)); a.setAttribute('data-keep', String(k)); ins.appendChild(a); }
+      if (refused.length) { var rf = el('span', 'pi-pill pi-refused', refusedWords(refused)); rf.setAttribute('data-refused', String(refused.length)); ins.appendChild(rf); }
       if (have) { var b2 = el('span', 'pi-pill pi-unchanged', plural('already', have)); b2.setAttribute('data-already', String(have)); ins.appendChild(b2); }
       go.textContent = k && n ? words('go-both', { k: k, n: n }) : k ? plural('go-insp', k) : n ? plural('go', n) : words('go-none');
       go.disabled = !(k || n) || busy;
@@ -240,6 +242,21 @@
     [].slice.call(main.querySelectorAll('button, select, input')).forEach(function (b) { b.disabled = on; });
     if (!on && read && !done) draw();
   }
+  /* The lines the rules won't take, in his words: too long (the reason he can fix), or refused for another reason. */
+  function refusedWords(problems) {
+    if (!problems || !problems.length) return '';
+    var long = problems.filter(function (p) { return p.problem === 'too_long'; }), other = problems.filter(function (p) { return p.problem !== 'too_long'; });
+    var lines = function (l) { return l.map(function (p) { return p.line; }).join(', '); };
+    return [long.length ? plural('refused-long', long.length, { lines: lines(long) }) : '', other.length ? plural('refused-other', other.length, { lines: lines(other) }) : '']
+      .filter(Boolean).join(' ');
+  }
+  /* The new inspections the rules would refuse, seen before he keeps anything (the same rows, stand-in ids and times). */
+  var STAND_IN = '00000000-0000-0000-0000-000000000000';
+  function refusedOf(r) {
+    var me = (auth.who() || {}).id || STAND_IN;
+    return PS.newRows(r.inspections || [], me, Date.now(), function () { return STAND_IN; }, STAND_IN).problems;
+  }
+
   $('[data-go]').addEventListener('click', function () {
     if (busy || !file || !read) return;
     var me = auth.who().id;
@@ -254,14 +271,26 @@
         donePast = null;
         // A history: its new inspections kept first, under one import id (Undo takes the import back).
         var past = HISTORY ? PS.newRows(r.inspections || [], me, Date.now(), function () { return window.crypto.randomUUID(); }, window.crypto.randomUUID()) : { push: [] };
-        if (!made.push.length && !past.push.length) { draw(); return; }
+        // A line the rules won't take (too long to keep): said by its line, never silently left out (Codex on #110).
+        var refusedNote = refusedWords(past.problems);
+        var tell = function (text) { return refusedNote ? (text ? text + ' ' : '') + refusedNote : text; };
+        if (!made.push.length && !past.push.length) {
+          if (!refusedNote) { draw(); return; }
+          read = null; say(null); $('[data-read]').hidden = true; $('[data-done]').hidden = false;
+          $('[data-done-t]').textContent = refusedNote; $('[data-undo]').hidden = true;
+          return;
+        }
         var keepPast = past.push.length ? sendAll(past.push, function (k) { say('keeping', { done: k, n: past.push.length }); }, pastBook) : Promise.resolve({ kept: [], broke: false });
         return keepPast.then(function (pr) {
           if (past.push.length) {
             donePast = pr.kept.length ? { importId: past.push[0].data.importId, n: pr.kept.length } : null;
+            // The server took some, not all (it went through, and turned some rows down): the rest are said, never
+            // left out of the count (the same class as Codex on #110).
+            var left = pr.broke ? 0 : past.push.length - pr.kept.length;
+            if (left > 0) refusedNote = (refusedNote ? refusedNote + ' ' : '') + plural('past-left', left);
             if (pr.broke) {
               read = null; say(null); $('[data-read]').hidden = true; $('[data-done]').hidden = false;
-              $('[data-done-t]').textContent = words('done-past-broke', { k: pr.kept.length, n: past.push.length });
+              $('[data-done-t]').textContent = tell(words('done-past-broke', { k: pr.kept.length, n: past.push.length }));
               $('[data-undo]').hidden = !donePast;
               return;
             }
@@ -272,7 +301,7 @@
         var n = made.push.length;
         if (!n) {
           read = null; say(null); $('[data-read]').hidden = true; $('[data-done]').hidden = false;
-          $('[data-done-t]').textContent = plural('done-insp', donePast ? donePast.n : 0);
+          $('[data-done-t]').textContent = tell(plural('done-insp', donePast ? donePast.n : 0));
           $('[data-undo]').hidden = !donePast;
           return;
         }
@@ -284,7 +313,7 @@
             // on #110).
             if (!donePast) { say('failed'); return; }
             done = []; read = null; say(null); $('[data-read]').hidden = true; $('[data-done]').hidden = false;
-            $('[data-done-t]').textContent = plural('done-insp', donePast.n) + ' ' + words('people-broke');
+            $('[data-done-t]').textContent = tell(plural('done-insp', donePast.n) + ' ' + words('people-broke'));
             $('[data-undo]').hidden = false;
             return;
           }
@@ -296,7 +325,7 @@
           $('[data-read]').hidden = true; $('[data-done]').hidden = false;
           var said$ = kept.length === n ? words('done', { n: n }) : words(res.broke ? 'done-broke' : 'done-part', { kept: kept.length, n: n });
           if (donePast) said$ = plural('done-insp', donePast.n) + ' ' + said$;
-          $('[data-done-t]').textContent = said$;
+          $('[data-done-t]').textContent = HISTORY ? tell(said$) : said$;
           $('[data-undo]').hidden = !done.length && !donePast;
         });
         }
