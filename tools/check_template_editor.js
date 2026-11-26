@@ -60,7 +60,7 @@ function bizServer(rows0) {
     const rows = [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row);
     return { rows, next: seq, more: false, skipped: [], applied };
   };
-  return { answer, pushed, held, put(r) { held.set(r.kind + '/' + r.id, { row: r, seq: ++seq }); }, set down(v) { down = v; } };
+  return { answer, pushed, held, gate: null, put(r) { held.set(r.kind + '/' + r.id, { row: r, seq: ++seq }); }, set down(v) { down = v; } };
 }
 
 async function open(browser, o) {
@@ -75,7 +75,9 @@ async function open(browser, o) {
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url(), cors = { 'access-control-allow-origin': '*' };
     if (u.startsWith(SERVER + '/functions/v1/sync')) {
-      const a = o.biz.answer(JSON.parse(req.postData() || '{}'));
+      const b0 = JSON.parse(req.postData() || '{}');
+      if (o.biz.gate && (b0.push || []).length) await o.biz.gate;
+      const a = o.biz.answer(b0);
       return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(a) });
     }
     if (u.startsWith(SERVER + '/storage/v1/object/')) {
@@ -162,8 +164,14 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
         await page.screenshot({ path: path.join(SHOTS, 'te-edit-' + label + '.png'), fullPage: false });
         await page.screenshot({ path: path.join(SHOTS, 'te-top-' + label + '.png'), fullPage: false, clip: { x: 0, y: 0, width: w, height: 900 } });
       }
+      let open1; biz.gate = new Promise((r) => { open1 = r; });
       await page.locator('[data-save]').click();
+      await until(async () => (await page.locator('[data-edit] [data-k]:not([disabled])').count()) === 0);
+      ok(label + ': while it saves, nothing in the editor can be changed (what he types then would be lost)',
+        (await page.locator('[data-edit] [data-k]').count()) > 0 && (await page.locator('[data-edit] [data-k]:not([disabled])').count()) === 0 && await page.locator('[data-find]').isDisabled());
+      open1(); biz.gate = null;
       await until(async () => /^Saved/.test(await said(page)));
+      ok(label + ': saved, every field can be changed again', (await page.locator('[data-edit] [data-k][disabled]').count()) === 0);
       const want = TE.apply(V1, [{ op: 'template', name: 'Oak Street Walkthrough' }, { op: 'stop', ref: STOP.ref, name: 'Outside, all around' },
         { op: 'item', ref: ITEM.ref, label: 'Grading and drainage' }, { op: 'line', item: ITEM.ref, kind: 'deficiency', position: DEF.position,
           text: 'Soil slopes toward the house on the [side] side.', rating: 'safety', recommendation: 'Have a grading contractor correct the slope.' }]);
@@ -249,11 +257,14 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
           : d.length === 0 && await said(page) === 'Your own copy is made. Change anything; Save makes its next version.'),
         JSON.stringify([p.map((x) => x.id), d.map((x) => x.data.templateId), await said(page)]));
       if (!makesDefault) {
+        await page.fill('[data-name]', 'My Walkthrough, changing');
         await page.locator('[data-use]').click();
         await until(async () => /^New inspections now start from/.test(await said(page)));
         const d2 = biz.pushed.filter((r) => r.kind === 'template_default');
         ok('“Use for new inspections” makes it the one they start from, and says so', d2.length === 1 && d2[0].data.templateId === MINE && d2[0].updated_at > 900 &&
           await said(page) === 'New inspections now start from “My Walkthrough”, instead of “Converted one”.' && await page.locator('[data-used]').isVisible(), await said(page));
+        ok('and a change not saved yet stays, still counted', (await page.locator('[data-name]').inputValue()) === 'My Walkthrough, changing' &&
+          (await page.locator('[data-count]').textContent()).trim() === '1 change' && await page.locator('[data-bar]').isVisible());
       }
       ok('no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
       await o.ctx.close();

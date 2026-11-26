@@ -75,7 +75,7 @@ function row(id, name, text, at, base) {
     ['not_finding', [{ op: 'line', item: item.ref, kind: 'limitation', position: lim.position, rating: 'safety' }]],
     ['too_long', [{ op: 'template', name: 'x'.repeat(121) }]],
     ['unchanged', [{ op: 'stop', ref: stop.ref, name: stop.name }]],
-  ].map(([want, edits]) => ({ want, got: E.apply(start, edits).problem || null }));
+  ].map(([want, edits]) => ({ want, got: E.apply(start, edits).problem || null, edits }));
   for (const p of problems) if (p.want !== p.got) throw new Error('problem ' + p.want + ' gave ' + p.got);
 
   const files = {

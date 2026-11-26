@@ -171,6 +171,11 @@
   /* A box of words as tall as its words (measured only when shown: a closed stop has no height). */
   function grow(t) { if (!t.offsetParent) return; t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
   function growIn(root) { all('textarea', root).forEach(grow); }
+  function defaultControls() {
+    var ro = open.readOnly, used = usedId(), isUsed = ro ? (used === OURS || used === null) : used === open.id;
+    $('[data-use]').hidden = ro || isUsed;
+    $('[data-used]').hidden = !isUsed;
+  }
   function renderOpen() {
     var o = open.outline, ro = open.readOnly;
     edit.hidden = false;
@@ -179,9 +184,7 @@
     $('[data-ver]').textContent = words('version', { v: o.version });
     $('[data-ro]').hidden = !ro;
     $('[data-copy]').hidden = !ro;
-    var used = usedId(), isUsed = ro ? (used === OURS || used === null) : used === open.id;
-    $('[data-use]').hidden = ro || isUsed;
-    $('[data-used]').hidden = !isUsed;
+    defaultControls();
     // Drawn again after a save: the stops he had open stay open (by ref), where he was.
     var wasOpen = all('.te-stop[open]', stops).map(function (d) { return d.getAttribute('data-stop'); });
     stops.textContent = '';
@@ -306,7 +309,14 @@
   }
 
   /* ---- save: on the newest version there, after a whole pull; once more when another device won the race ---- */
-  function lock(on) { busy = on; all('[data-save],[data-discard],[data-copy],[data-use]', main).forEach(function (b) { b.disabled = on; }); }
+  /* While a save (or a copy, or a switch) is on its way, nothing in the editor can change: the save carries the
+     changes as they were when tapped, and draws the editor again from what it saved (Codex on #101). */
+  function lock(on) {
+    busy = on;
+    all('[data-save],[data-discard],[data-copy],[data-use]', main).forEach(function (b) { b.disabled = on; });
+    all('[data-k], [data-find]', edit).forEach(function (b) { b.disabled = on || (open && open.readOnly && b.hasAttribute('data-k')); });
+    edit.classList.toggle('is-busy', on);
+  }
   function saveOnce(list, first) {
     return pull().then(function (ok) {
       if (!ok) return { problem: 'failed' };
@@ -393,7 +403,8 @@
     queue = run.catch(function () { return null; });
     run.then(function (k) {
       if (k !== 'ok') { say('p-' + (k === 'changed' ? 'failed' : k)); return; }
-      renderOpen();
+      // Only what says which one new inspections use: his unsaved changes stay as they are (Codex on #101).
+      defaultControls(); renderList();
       if (before && before !== open.outline.name) say('now-used-instead', { name: open.outline.name, was: before });
       else say('now-used', { name: open.outline.name });
     }, function () { say('p-failed'); }).then(function () { lock(false); });
