@@ -53,6 +53,36 @@ function row(id, name, text, at, base) {
     { name: 'on top of that: a finding\'s category cleared, its words emptied', replay: true, edits: [
         { op: 'line', item: item.ref, kind: 'deficiency', position: def.position, rating: null, text: '' },
       ] },
+    // Piece B: add, move and delete; report sections; a category's name. New refs are made when built, in walk order,
+    // from the names, -2 when taken: a new stop "Lot drainage" (taken by ours), a new "Grading" item in a new stop
+    // "Grounds" (taken by an item of ours), two new "Deck" items.
+    { name: 'stops and items added, moved and deleted; comments added and deleted; a report section; a category renamed',
+      replay: true, edits: [
+        { op: 'add-stop', key: 'new:pool', name: ' Pool & spa ', at: 2 },
+        { op: 'add-item', key: 'new:barrier', stop: 'new:pool', label: 'Pool barrier', system: 'exterior' },
+        { op: 'add-item', key: 'new:deck1', stop: 'new:pool', label: 'Deck', system: 'exterior' },
+        { op: 'add-item', key: 'new:deck2', stop: 'new:pool', label: 'Deck', system: 'exterior' },
+        { op: 'add-line', key: 'new:gate', item: 'new:barrier', kind: 'deficiency', name: ' Gate doesn’t self-close ', text: 'The pool gate doesn’t close and latch by itself.', rating: 'safety' },
+        { op: 'add-line', key: 'new:covered', item: 'new:barrier', kind: 'limitation', name: 'Covered', text: '  ' },
+        { op: 'add-stop', key: 'new:grounds', name: 'Grounds' },
+        { op: 'add-item', key: 'new:grading', stop: 'new:grounds', label: 'Grading', system: 'exterior' },
+        { op: 'add-stop', key: 'new:lot', name: 'Lot drainage', at: 0 },
+        { op: 'add-item', key: 'new:swale', stop: 'new:lot', label: 'Swale', system: 'exterior' },
+        { op: 'move-item', ref: id + '.grounds.walkways', stop: 'new:pool', to: 0 },
+        { op: 'move-stop', ref: id + '.whole-house', to: 1 },
+        { op: 'delete-item', ref: id + '.grounds.driveway' },
+        { op: 'delete-line', item: id + '.grounds.grading', kind: 'information', position: 5 },
+        { op: 'add-line', key: 'new:low', item: id + '.grounds.grading', kind: 'deficiency', name: 'Low spot by the AC pad', rating: 'maintenance' },
+        { op: 'system', ref: id + '.grounds.retaining', system: 'structure' },
+        { op: 'rating-label', id: 'maintenance', label: ' Upkeep ' },
+        // Two new stops of one name, the second added before the first: the first in the walk gets the plain ref.
+        { op: 'add-stop', key: 'new:porch-a', name: 'Porch' },
+        { op: 'add-stop', key: 'new:porch-b', name: 'Porch', at: 1 },
+      ] },
+    { name: 'on top of that: a stop added before deleted, and a new comment deleted', replay: true, edits: [
+        { op: 'delete-stop', ref: id + '.lot-drainage-2' },
+        { op: 'delete-line', item: id + '.pool-spa.pool-barrier', kind: 'limitation', position: 1 },
+      ] },
     { name: 'on top of that: a finding\'s "What to do" (the phone keeps it; the website edits it)', replay: false, edits: [
         { op: 'line', item: item.ref, kind: 'deficiency', position: def.position, recommendation: '  Have a grading contractor correct the slope.  ' },
       ] },
@@ -75,6 +105,11 @@ function row(id, name, text, at, base) {
     ['not_finding', [{ op: 'line', item: item.ref, kind: 'limitation', position: lim.position, rating: 'safety' }]],
     ['too_long', [{ op: 'template', name: 'x'.repeat(121) }]],
     ['unchanged', [{ op: 'stop', ref: stop.ref, name: stop.name }]],
+    ['no_system', [{ op: 'add-item', key: 'k', stop: stop.ref, label: 'No section' }]],
+    ['no_stops', o.stops.map((x) => ({ op: 'delete-stop', ref: x.ref }))],
+    ['no_part', [{ op: 'move-item', ref: item.ref, stop: id + '.nowhere', to: 0 }]],
+    ['not_finding', [{ op: 'add-line', key: 'k', item: item.ref, kind: 'limitation', name: 'X', rating: 'safety' }]],
+    ['no_rating', [{ op: 'rating-label', id: 'urgent', label: 'Urgent' }]],
   ].map(([want, edits]) => ({ want, got: E.apply(start, edits).problem || null }));
   for (const p of problems) if (p.want !== p.got) throw new Error('problem ' + p.want + ' gave ' + p.got);
 

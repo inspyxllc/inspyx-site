@@ -171,8 +171,116 @@
   /* A box of words as tall as its words (measured only when shown: a closed stop has no height). */
   function grow(t) { if (!t.offsetParent) return; t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
   function growIn(root) { all('textarea', root).forEach(grow); }
+  /* ---- the parts, kept or new. A kept part is named by its ref (a comment: its item, kind and position); a new
+     one by a key of its own ('new:N'), as the edit list names it. ---- */
+  var ops = [], nextKey = 0;
+  var newKey = function () { return 'new:' + (++nextKey); };
+  function button(label, attr, cls) { var b = el('button', 'te-mini' + (cls ? ' ' + cls : ''), label); b.type = 'button'; b.setAttribute(attr, ''); return b; }
+  function systemField(value, key, ro) {
+    var wrap = el('label', 'te-f te-f-system'), sel = el('select');
+    wrap.appendChild(el('span', null, words('f-system')));
+    open.outline.systems.forEach(function (x) { var o = el('option', null, x.name); o.value = x.id; sel.appendChild(o); });
+    sel.value = value || ''; sel.setAttribute('data-k', JSON.stringify(key)); sel.setAttribute('data-was', value || ''); sel.setAttribute('data-sys', '');
+    sel.disabled = !!ro; wrap.appendChild(sel); return wrap;
+  }
+  function lineEl(itemKey, l, isNew, ro) {
+    var kind = l.kind, c = el('div', 'te-line');
+    var k = function (f) { return isNew ? { op: 'line', key: l.key, f: f } : { op: 'line', item: itemKey, kind: kind, position: l.position, f: f }; };
+    c.setAttribute('data-line', isNew ? l.key : itemKey + '|' + kind + '|' + l.position);
+    c.appendChild(field(words('f-name'), l.name, k('name'), false, ro));
+    if (kind !== 'information') c.appendChild(field(words('f-text'), l.text, k('text'), true, ro));
+    if (kind === 'deficiency') {
+      c.appendChild(ratingField(l, open.outline.ratings, k('rating'), ro));
+      c.appendChild(field(words('f-todo'), l.recommendation, k('recommendation'), true, ro));
+    }
+    if (!ro) c.appendChild(button(words('delete-line'), 'data-del-line', 'danger'));
+    return c;
+  }
+  function groupEl(kind) { var g = el('div', 'te-group te-' + kind); g.setAttribute('data-group', kind); g.appendChild(el('h4', null, words('kind-' + kind))); return g; }
+  function itemEl(i, isNew, ro) {
+    var it = el('div', 'te-item');
+    it.setAttribute('data-item', i.ref);
+    var head = el('div', 'te-item-head');
+    if (!ro) { var grip = el('span', 'te-grip'); grip.setAttribute('aria-hidden', 'true'); grip.title = words('drag'); grip.draggable = true; head.appendChild(grip); }
+    head.appendChild(field(words('f-item'), i.label, { op: 'item', ref: i.ref }, false, ro));
+    if (open.outline.systems.length) { head.appendChild(systemField(i.system, { op: 'system', ref: i.ref }, ro)); head.classList.add('sys'); }
+    if (!ro) head.classList.add('grip');
+    it.appendChild(head);
+    if (!ro) {
+      var tools = el('div', 'te-tools');
+      tools.appendChild(button(words('up'), 'data-item-up')); tools.appendChild(button(words('down'), 'data-item-down'));
+      var to = el('select', 'te-moveto'); to.setAttribute('data-item-to', ''); to.setAttribute('aria-label', words('move-to'));
+      tools.appendChild(to);
+      tools.appendChild(button(words('delete-item'), 'data-del-item', 'danger'));
+      it.appendChild(tools);
+    }
+    ['information', 'limitation', 'deficiency'].forEach(function (kind) {
+      var lines = i.lines.filter(function (l) { return l.kind === kind; });
+      var g = groupEl(kind);
+      lines.forEach(function (l) { g.appendChild(lineEl(i.ref, l, isNew, ro)); });
+      g.hidden = !lines.length;
+      it.appendChild(g);
+    });
+    if (!ro) {
+      var add = el('div', 'te-add-line');
+      ['information', 'limitation', 'deficiency'].forEach(function (kind) { var b = button(words('add-' + kind), 'data-add-line', 'add'); b.setAttribute('data-kind', kind); add.appendChild(b); });
+      it.appendChild(add);
+    }
+    return it;
+  }
+  function stopEl(s, isNew, ro, opened) {
+    var d = el('details', 'te-stop'), sum = el('summary');
+    d.setAttribute('data-stop', s.ref);
+    if (opened) d.open = true;
+    sum.appendChild(el('b', null, s.name || words('new-stop'))); sum.appendChild(el('em', null, plural('items', s.items.length)));
+    if (!ro) sum.draggable = true;
+    d.appendChild(sum);
+    d.addEventListener('toggle', function () { if (d.open) growIn(d); });
+    var head = el('div', 'te-stop-head');
+    head.appendChild(field(words('f-stop'), s.name, { op: 'stop', ref: s.ref }, false, ro));
+    if (!ro) {
+      var tools = el('div', 'te-tools');
+      tools.appendChild(button(words('up'), 'data-stop-up')); tools.appendChild(button(words('down'), 'data-stop-down'));
+      tools.appendChild(button(words('delete-stop'), 'data-del-stop', 'danger'));
+      head.appendChild(tools);
+    }
+    d.appendChild(head);
+    var list = el('div', 'te-items'); list.setAttribute('data-items', '');
+    s.items.forEach(function (i) { list.appendChild(itemEl(i, isNew, ro)); });
+    d.appendChild(list);
+    if (!ro) d.appendChild(button(words('add-item'), 'data-add-item', 'add wide'));
+    return d;
+  }
+  function ratingsEl(ro) {
+    var box = $('[data-cats]');
+    box.textContent = '';
+    box.hidden = !open.outline.ratings.length;
+    box.appendChild(el('h3', null, words('cats')));
+    box.appendChild(el('p', 'te-cats-lede', words('cats-lede')));
+    var grid = el('div', 'te-cats-grid');
+    open.outline.ratings.forEach(function (r) { grid.appendChild(field(words('cat', { name: r.label }), r.label, { op: 'rating-label', id: r.id }, false, ro)); });
+    box.appendChild(grid);
+  }
+  function stopLabels() {
+    // Each item's "Move to" choices: every stop, by the name it has now; and each stop's count.
+    var names = all('.te-stop', stops).map(function (d) {
+      var box = d.querySelector('.te-stop-head [data-k]');
+      return { key: d.getAttribute('data-stop'), name: (box && box.value.trim()) || words('new-stop') };
+    });
+    all('.te-stop', stops).forEach(function (d) {
+      d.querySelector('summary b').textContent = names.filter(function (n) { return n.key === d.getAttribute('data-stop'); })[0].name;
+      d.querySelector('summary em').textContent = plural('items', d.querySelectorAll('.te-item').length);
+    });
+    all('[data-item-to]', stops).forEach(function (sel) {
+      var here = sel.closest('.te-stop').getAttribute('data-stop');
+      sel.textContent = '';
+      var first = el('option', null, words('move-to')); first.value = ''; sel.appendChild(first);
+      names.forEach(function (n) { if (n.key !== here) { var o = el('option', null, n.name); o.value = n.key; sel.appendChild(o); } });
+    });
+  }
   function renderOpen() {
     var o = open.outline, ro = open.readOnly;
+    ops = [];
     edit.hidden = false;
     nameIn.value = o.name; nameIn.setAttribute('data-was', o.name); nameIn.disabled = ro;
     nameIn.setAttribute('data-k', JSON.stringify({ op: 'template' }));
@@ -182,60 +290,149 @@
     var used = usedId(), isUsed = ro ? (used === OURS || used === null) : used === open.id;
     $('[data-use]').hidden = ro || isUsed;
     $('[data-used]').hidden = !isUsed;
+    ratingsEl(ro);
     // Drawn again after a save: the stops he had open stay open (by ref), where he was.
     var wasOpen = all('.te-stop[open]', stops).map(function (d) { return d.getAttribute('data-stop'); });
     stops.textContent = '';
-    o.stops.forEach(function (s) {
-      var d = el('details', 'te-stop'), sum = el('summary');
-      d.setAttribute('data-stop', s.ref);
-      if (wasOpen.indexOf(s.ref) >= 0) d.open = true;
-      sum.appendChild(el('b', null, s.name)); sum.appendChild(el('em', null, plural('items', s.items.length)));
-      d.appendChild(sum);
-      d.addEventListener('toggle', function () { if (d.open) growIn(d); });
-      d.appendChild(field(words('f-stop'), s.name, { op: 'stop', ref: s.ref }, false, ro));
-      s.items.forEach(function (i) {
-        var it = el('div', 'te-item');
-        it.setAttribute('data-item', i.ref);
-        it.appendChild(field(words('f-item'), i.label, { op: 'item', ref: i.ref }, false, ro));
-        ['information', 'limitation', 'deficiency'].forEach(function (kind) {
-          var lines = i.lines.filter(function (l) { return l.kind === kind; });
-          if (!lines.length) return;
-          var g = el('div', 'te-group te-' + kind);
-          g.appendChild(el('h4', null, words('kind-' + kind)));
-          lines.forEach(function (l) {
-            var k = function (f) { return { op: 'line', item: i.ref, kind: kind, position: l.position, f: f }; };
-            var c = el('div', 'te-line');
-            c.appendChild(field(words('f-name'), l.name, k('name'), false, ro));
-            if (kind !== 'information') c.appendChild(field(words('f-text'), l.text, k('text'), true, ro));
-            if (kind === 'deficiency') {
-              c.appendChild(ratingField(l, o.ratings, k('rating'), ro));
-              c.appendChild(field(words('f-todo'), l.recommendation, k('recommendation'), true, ro));
-            }
-            g.appendChild(c);
-          });
-          it.appendChild(g);
-        });
-        d.appendChild(it);
-      });
-      stops.appendChild(d);
-    });
+    o.stops.forEach(function (s) { stops.appendChild(stopEl(s, false, ro, wasOpen.indexOf(s.ref) >= 0)); });
+    $('[data-add-stop]').hidden = ro;
+    stopLabels();
     find();
     changed();
     renderList();
   }
 
-  /* ---- changes: every field that differs from what it started as, as the edit list ---- */
+  /* ---- what he does to the parts: each a step of the edit list, done on the page at once ---- */
+  var stopIndex = function (d) { return all('.te-stop', stops).indexOf(d); };
+  var itemIndex = function (it) { return all('.te-item', it.parentNode).indexOf(it); };
+  function moveStop(d, to) {
+    var list = all('.te-stop', stops), from = list.indexOf(d);
+    if (to < 0 || to >= list.length || to === from) return;
+    d.remove();
+    var rest = all('.te-stop', stops);
+    if (to >= rest.length) stops.appendChild(d); else stops.insertBefore(d, rest[to]);
+    ops.push({ op: 'move-stop', ref: d.getAttribute('data-stop'), to: to });
+    changed();
+  }
+  function moveItem(it, stopD, to) {
+    var list = stopD.querySelector('[data-items]');
+    it.remove();
+    var rest = all('.te-item', list);
+    if (to >= rest.length) list.appendChild(it); else list.insertBefore(it, rest[to]);
+    ops.push({ op: 'move-item', ref: it.getAttribute('data-item'), stop: stopD.getAttribute('data-stop'), to: Math.min(to, rest.length) });
+    stopD.open = true; growIn(it);
+    stopLabels(); changed();
+  }
+  stops.addEventListener('click', function (e) {
+    var t = e.target.closest('button');
+    if (!t || busy || !open || open.readOnly) return;
+    var d = t.closest('.te-stop'), it = t.closest('.te-item'), line = t.closest('.te-line');
+    if (t.hasAttribute('data-stop-up')) moveStop(d, stopIndex(d) - 1);
+    else if (t.hasAttribute('data-stop-down')) moveStop(d, stopIndex(d) + 1);
+    else if (t.hasAttribute('data-del-stop')) { ops.push({ op: 'delete-stop', ref: d.getAttribute('data-stop') }); d.remove(); stopLabels(); changed(); }
+    else if (t.hasAttribute('data-item-up')) { if (itemIndex(it) > 0) moveItem(it, d, itemIndex(it) - 1); }
+    else if (t.hasAttribute('data-item-down')) { if (itemIndex(it) < all('.te-item', it.parentNode).length - 1) moveItem(it, d, itemIndex(it) + 1); }
+    else if (t.hasAttribute('data-del-item')) { ops.push({ op: 'delete-item', ref: it.getAttribute('data-item') }); it.remove(); stopLabels(); changed(); }
+    else if (t.hasAttribute('data-del-line')) {
+      var at = line.getAttribute('data-line'), p = at.split('|');
+      ops.push(p.length === 3 ? { op: 'delete-line', item: p[0], kind: p[1], position: +p[2] } : { op: 'delete-line', key: at });
+      var g = line.parentNode; line.remove(); g.hidden = !g.querySelector('.te-line'); changed();
+    } else if (t.hasAttribute('data-add-line')) {
+      var kind = t.getAttribute('data-kind'), key = newKey(), ref = it.getAttribute('data-item');
+      ops.push({ op: 'add-line', key: key, item: ref, kind: kind, name: '' });
+      var g2 = it.querySelector('[data-group="' + kind + '"]');
+      var l = lineEl(ref, { key: key, kind: kind, name: '', text: '', rating: null, recommendation: '' }, true, false);
+      g2.appendChild(l); g2.hidden = false;
+      l.querySelector('input').focus(); changed();
+    } else if (t.hasAttribute('data-add-item')) {
+      // A new item takes the report section of the item before it (or the stop's first), as most of a stop prints
+      // under one; he can change it.
+      var items = all('.te-item', d), last = items[items.length - 1];
+      var sysBox = last && last.querySelector('[data-sys]');
+      var system = open.outline.systems.length ? ((sysBox && sysBox.value) || open.outline.systems[0].id) : null;
+      var ikey = newKey();
+      ops.push({ op: 'add-item', key: ikey, stop: d.getAttribute('data-stop'), label: '', system: system });
+      var node = itemEl({ ref: ikey, label: '', system: system, lines: [] }, true, false);
+      d.querySelector('[data-items]').appendChild(node);
+      // Its section is part of the add: shown as set, not as a change of its own.
+      var sb = node.querySelector('[data-sys]'); if (sb) sb.setAttribute('data-was', sb.value);
+      stopLabels(); node.querySelector('input').focus(); changed();
+    }
+  });
+  stops.addEventListener('change', function (e) {
+    var sel = e.target;
+    if (!sel.hasAttribute('data-item-to') || !sel.value) return;
+    var it = sel.closest('.te-item'), target = stops.querySelector('.te-stop[data-stop="' + CSS.escape(sel.value) + '"]');
+    if (target) moveItem(it, target, all('.te-item', target).length);
+  });
+  $('[data-add-stop]').addEventListener('click', function () {
+    if (busy || !open || open.readOnly) return;
+    var key = newKey();
+    ops.push({ op: 'add-stop', key: key, name: '' });
+    var d = stopEl({ ref: key, name: '', items: [] }, true, false, true);
+    stops.appendChild(d); stopLabels(); d.querySelector('input').focus(); changed();
+  });
+
+  /* Drag to move (a wide screen): a stop among the stops, an item before another item or onto a stop. What is
+     dragged is the handle (an item's grip, a stop's title), never a box of words, so words stay selectable. */
+  var dragging = null;
+  stops.addEventListener('dragstart', function (e) {
+    if (!open || open.readOnly || busy || !e.target.closest) return;
+    var grip = e.target.closest('.te-grip'), sum = e.target.closest('.te-stop > summary');
+    dragging = grip ? grip.closest('.te-item') : sum ? sum.parentNode : null;
+    if (!dragging) return;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', ''); e.dataTransfer.setDragImage(dragging, 24, 24); } catch (x) { /* none */ }
+    }
+    dragging.classList.add('is-dragging');
+  });
+  stops.addEventListener('dragend', function () { if (dragging) dragging.classList.remove('is-dragging'); dragging = null; all('.is-over', stops).forEach(function (x) { x.classList.remove('is-over'); }); });
+  // Taken first, before a box of words under the pointer can take it as a text drop (and refuse a move).
+  var overOf = function (e) {
+    if (!dragging || !e.target.closest) return null;
+    var over = dragging.classList.contains('te-item') ? (e.target.closest('.te-item') || e.target.closest('.te-stop')) : e.target.closest('.te-stop');
+    return over && over !== dragging ? over : null;
+  };
+  var accept = function (e) {
+    var over = overOf(e);
+    if (!over) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    all('.is-over', stops).forEach(function (x) { if (x !== over) x.classList.remove('is-over'); });
+    over.classList.add('is-over');
+  };
+  stops.addEventListener('dragenter', accept, true);
+  stops.addEventListener('dragover', accept, true);
+  stops.addEventListener('drop', function (e) {
+    if (!dragging) return;
+    e.preventDefault(); e.stopPropagation();
+    var d = dragging;
+    if (d.classList.contains('te-item')) {
+      var onItem = e.target.closest('.te-item'), onStop = e.target.closest('.te-stop');
+      if (onItem && onItem !== d) moveItem(d, onStop, itemIndex(onItem) - (onItem.parentNode === d.parentNode && itemIndex(d) < itemIndex(onItem) ? 1 : 0));
+      else if (onStop && !onItem) moveItem(d, onStop, all('.te-item', onStop).length);
+    } else {
+      var target = e.target.closest('.te-stop');
+      if (target && target !== d) moveStop(d, stopIndex(target));
+    }
+    stops.dispatchEvent(new Event('dragend'));
+  }, true);
+
+  /* ---- changes: the steps done, then every field that differs from what it started as, as the edit list ---- */
   function edits() {
-    var out = [], lines = {};
+    var out = ops.slice(), lines = {};
     all('[data-k]', edit).forEach(function (box) {
       if (box.value === box.getAttribute('data-was')) return;
       var k = JSON.parse(box.getAttribute('data-k'));
       if (k.op === 'template') out.push({ op: 'template', name: box.value });
       else if (k.op === 'stop') out.push({ op: 'stop', ref: k.ref, name: box.value });
       else if (k.op === 'item') out.push({ op: 'item', ref: k.ref, label: box.value });
+      else if (k.op === 'system') out.push({ op: 'system', ref: k.ref, system: box.value || null });
+      else if (k.op === 'rating-label') out.push({ op: 'rating-label', id: k.id, label: box.value });
       else {
-        var id = k.item + '|' + k.kind + '|' + k.position;
-        var e = lines[id] || (lines[id] = { op: 'line', item: k.item, kind: k.kind, position: k.position });
+        var id = k.key || (k.item + '|' + k.kind + '|' + k.position);
+        var e = lines[id] || (lines[id] = k.key ? { op: 'line', key: k.key } : { op: 'line', item: k.item, kind: k.kind, position: k.position });
         if (!e.added) { out.push(e); e.added = true; }
         e[k.f] = k.f === 'rating' ? (box.value || null) : box.value;
       }
@@ -244,8 +441,9 @@
     return out;
   }
   function changed() {
-    var n = open && !open.readOnly ? all('[data-k]', edit).filter(function (b) { return b.value !== b.getAttribute('data-was'); }).length : 0;
-    all('[data-k]', edit).forEach(function (b) { b.classList.toggle('is-changed', b.value !== b.getAttribute('data-was')); });
+    var boxes = all('[data-k]', edit), diff = boxes.filter(function (b) { return b.value !== b.getAttribute('data-was'); });
+    var n = open && !open.readOnly ? diff.length + ops.length : 0;
+    boxes.forEach(function (b) { b.classList.toggle('is-changed', b.value !== b.getAttribute('data-was')); });
     bar.hidden = n === 0;
     $('[data-count]').textContent = plural('changes', n);
     return n;
@@ -253,6 +451,12 @@
   edit.addEventListener('input', function (e) {
     if (!e.target.hasAttribute('data-k')) return;
     if (e.target.tagName === 'TEXTAREA') grow(e.target);
+    if (e.target.closest('.te-stop-head')) stopLabels();
+    if (e.target.closest('[data-cats]')) {
+      // A category renamed: every finding's list says the new name at once.
+      var id = JSON.parse(e.target.getAttribute('data-k')).id, name = e.target.value.trim() || e.target.getAttribute('data-was');
+      all('select[data-k] option[value="' + CSS.escape(id) + '"]', stops).forEach(function (o) { o.textContent = name; });
+    }
     changed(); if (e.target.value) say(null);
   });
   window.addEventListener('resize', function () { all('.te-stop[open]', stops).forEach(growIn); });
@@ -336,8 +540,7 @@
   });
   $('[data-discard]').addEventListener('click', function () {
     if (busy || !open) return;
-    all('[data-k]', edit).forEach(function (b) { b.value = b.getAttribute('data-was'); });
-    changed(); say(null);
+    renderOpen(); say(null);
   });
 
   /* ---- his own copy of ours: new inspections start from it only when they start from ours now (or from nothing

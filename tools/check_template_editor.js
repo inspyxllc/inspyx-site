@@ -64,13 +64,12 @@ function bizServer(rows0) {
 }
 
 async function open(browser, o) {
-  const ctx = await browser.newContext({ viewport: { width: o.w || WIDE, height: 900 }, locale: 'en-US' });
+  const ctx = await browser.newContext({ viewport: { width: o.w || WIDE, height: o.h || 900 }, locale: 'en-US' });
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, kept());
   const page = await ctx.newPage();
   page.setDefaultTimeout(8000);
   const errs = [], away = [], fileCalls = [], files = o.files;
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
-  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
   page.on('dialog', (d) => d.dismiss());
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url(), cors = { 'access-control-allow-origin': '*' };
@@ -101,6 +100,8 @@ async function open(browser, o) {
 }
 const posts = (o) => o.fileCalls.filter((c) => c.method === 'POST');
 const tplPushes = (b) => b.pushed.filter((r) => r.kind === 'inspection_templates');
+// A part whose place on screen has settled (an opened stop sizes its boxes of words a moment later).
+const settled = async (loc) => { let was = null; for (let n = 0; n < 40; n++) { const b = await loc.boundingBox(); if (was && b && b.x === was.x && b.y === was.y) return; was = b; await new Promise((r) => setTimeout(r, 50)); } };
 const openStop = async (d) => { if (!(await d.evaluate((x) => x.open))) await d.locator('summary').click(); };
 const said = async (page) => (await page.locator('[data-say]').textContent()).trim();
 
@@ -258,6 +259,121 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await o.ctx.close();
     });
   }
+
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('add, move and delete; a report section; a category, ' + label, async () => {
+      const r1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+      const biz = bizServer([r1, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)]]);
+      const o = await open(browser, { w, biz, files });
+      const { page } = o;
+      await page.waitForSelector('[data-open="' + MINE + '"]');
+      await page.locator('[data-open="' + MINE + '"]').click();
+      await until(async () => (await page.locator('.te-stop').count()) === O1.stops.length);
+      const S0 = O1.stops[0], S1 = O1.stops[1];
+      const stop = (ref) => page.locator('.te-stop[data-stop="' + ref + '"]');
+      await openStop(stop(S0.ref));
+      // A new item, under the last one: it takes that one's report section.
+      await stop(S0.ref).locator('[data-add-item]').click();
+      const fresh = stop(S0.ref).locator('.te-item').last();
+      await fresh.locator('[data-k*="\\"op\\":\\"item\\""]').fill('Swale');
+      ok(label + ': a new item comes under the last, its report section that one’s', (await fresh.locator('[data-sys]').inputValue()) === S0.items[S0.items.length - 1].system);
+      await fresh.locator('[data-add-line][data-kind="deficiency"]').click();
+      const nl = fresh.locator('.te-line').last();
+      await nl.locator('[data-k*="\\"f\\":\\"name\\""]').fill('Standing water');
+      await nl.locator('[data-k*="\\"f\\":\\"text\\""]').fill('Water stands in the swale after rain.');
+      await nl.locator('select[data-k*="\\"f\\":\\"rating\\""]').selectOption('maintenance');
+      await fresh.locator('[data-item-up]').click();
+      // In a stop whose items print under another section, a new item takes that one (then it's deleted again).
+      const SX = O1.stops.find((x) => x.items.length && x.items[x.items.length - 1].system !== O1.systems[0].id && x !== S0 && x !== S1);
+      await openStop(stop(SX.ref));
+      await stop(SX.ref).locator('[data-add-item]').click();
+      const sx = stop(SX.ref).locator('.te-item').last();
+      ok(label + ': a new item in another stop takes that stop’s section (' + SX.items[SX.items.length - 1].system + ')', (await sx.locator('[data-sys]').inputValue()) === SX.items[SX.items.length - 1].system);
+      await sx.locator('[data-del-item]').click();
+      // An item of the next stop, moved here; a kept comment deleted; a kept item deleted.
+      const moved = S1.items[0];
+      await openStop(stop(S1.ref));
+      await page.locator('.te-item[data-item="' + moved.ref + '"] [data-item-to]').selectOption(S0.ref);
+      const item0 = page.locator('.te-item[data-item="' + ITEM.ref + '"]');
+      const lim = ITEM.lines.find((l) => l.kind === 'limitation');
+      await item0.locator('.te-line[data-line="' + ITEM.ref + '|limitation|' + lim.position + '"] [data-del-line]').click();
+      await page.locator('.te-item[data-item="' + S0.items[1].ref + '"] [data-del-item]').click();
+      await item0.locator('[data-sys]').selectOption('structure');
+      // A new stop with an item; the first stop moved down; a category renamed.
+      await page.locator('[data-add-stop]').click();
+      const ns = page.locator('.te-stop').last();
+      await ns.locator('.te-stop-head [data-k]').fill('Pool & spa');
+      await ns.locator('[data-add-item]').click();
+      await ns.locator('.te-item').last().locator('[data-k*="\\"op\\":\\"item\\""]').fill('Pool barrier');
+      await stop(S0.ref).locator('[data-stop-down]').click();
+      await page.locator('[data-cats] [data-k*="\\"id\\":\\"maintenance\\""]').fill('Upkeep');
+      ok(label + ': a renamed category reads so at once in every finding’s list', (await item0.locator('select[data-k*="rating"] option[value="maintenance"]').allTextContents()).every((t) => t === 'Upkeep'));
+      ok(label + ': the stop’s title follows its name as typed, and items are counted', (await ns.locator('summary b').textContent()) === 'Pool & spa' && /1 item/.test(await ns.locator('summary em').textContent()));
+      if (SHOTS) { await fresh.scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, 'te-b-' + label + '.png') }); await page.locator('[data-cats]').screenshot({ path: path.join(SHOTS, 'te-b-cats-' + label + '.png') }); }
+      await page.locator('[data-save]').click();
+      await until(async () => /^Saved/.test(await said(page)), 8000);
+      const up = posts(o), pushed = tplPushes(biz);
+      const text = up.length ? up[0].bytes.toString('utf8') : '', out = text ? TE.outline(text) : null;
+      const st = (ref) => out.stops.find((x) => x.ref === ref);
+      const s0 = out && st(S0.ref), refsOf = (x) => x.items.map((i) => i.ref);
+      ok(label + ': saved as version 2 with everything in it: the new item (its own ref, in place, with its finding), the moved item (its old ref), the deleted ones gone',
+        !!out && out.version === '2' && pushed.length === 1 && pushed[0].data.version === '2' &&
+        JSON.stringify(refsOf(s0)) === JSON.stringify([S0.items[0].ref].concat(S0.items.slice(2, -1).map((i) => i.ref), [S0.ref + '.swale', S0.items[S0.items.length - 1].ref, moved.ref])) &&
+        s0.items.find((i) => i.ref === S0.ref + '.swale').lines.some((l) => l.kind === 'deficiency' && l.name === 'Standing water' && l.rating === 'maintenance' && l.text === 'Water stands in the swale after rain.') &&
+        !refsOf(st(S1.ref)).includes(moved.ref), out ? JSON.stringify(refsOf(s0).map((r) => r.slice(MINE.length + 1))) : 'none');
+      const i0 = out && s0.items.find((i) => i.ref === ITEM.ref);
+      ok(label + ': the deleted comment is gone, the others keep their positions; the item prints under its new section',
+        !!i0 && !i0.lines.some((l) => l.kind === 'limitation' && l.position === lim.position) && i0.system === 'structure' &&
+        JSON.stringify(i0.lines.map((l) => l.position)) === JSON.stringify(ITEM.lines.filter((l) => l !== lim).map((l) => l.position)));
+      ok(label + ': the new stop has its ref and its item, last; the first stop moved down one; the category renamed',
+        !!out && out.stops[0].ref === S1.ref && out.stops[1].ref === S0.ref && out.stops[out.stops.length - 1].ref === MINE + '.pool-spa' &&
+        JSON.stringify(refsOf(out.stops[out.stops.length - 1])) === JSON.stringify([MINE + '.pool-spa.pool-barrier']) &&
+        out.ratings.find((r) => r.id === 'maintenance').label === 'Upkeep', out ? out.stops.slice(0, 2).map((x) => x.ref).join(',') : '');
+      ok(label + ': no errors, nothing else leaves the site' + (w === PHONE ? ', nothing off the side' : ''), o.errs.length === 0 && o.away.length === 0 &&
+        (w !== PHONE || await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)), JSON.stringify([o.errs, o.away]));
+      await o.ctx.close();
+    });
+  }
+
+  await group('drag to move; Discard; no stop left', async () => {
+    const r1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const biz = bizServer([r1, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)]]);
+    // Tall enough that a dragged item and the one it is dropped on are both on screen (a test's drag doesn't scroll).
+    const o = await open(browser, { w: WIDE, h: 2400, biz, files });
+    const { page } = o;
+    await page.waitForSelector('[data-open="' + MINE + '"]');
+    await page.locator('[data-open="' + MINE + '"]').click();
+    await until(async () => (await page.locator('.te-stop').count()) === O1.stops.length);
+    const S0 = O1.stops[0];
+    const stopRefs = async () => page.locator('.te-stop').evaluateAll((ds) => ds.map((d) => d.getAttribute('data-stop')));
+    // Dragged by the handles: the drag's own events, as a browser sends them (a headless browser starts a real drag
+    // only now and then, so a real one can't be checked).
+    const dragEvents = (src, dst) => page.evaluate(([a, b]) => {
+      const dt = new DataTransfer(), g = document.querySelector(a), t = document.querySelector(b);
+      const fire = (el, type) => el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt }));
+      fire(g, 'dragstart'); fire(t, 'dragenter'); fire(t, 'dragover'); fire(t, 'drop'); fire(g, 'dragend');
+    }, [src, dst]);
+    await openStop(page.locator('.te-stop').first());
+    const itemRefs = async () => page.locator('.te-stop').first().locator('.te-item').evaluateAll((xs) => xs.map((x) => x.getAttribute('data-item')));
+    ok('only the handles are draggable, never a box of words', await page.locator('.te-item[draggable="true"], .te-stop[draggable="true"], [data-k][draggable="true"]').count() === 0 &&
+      await page.locator('.te-grip[draggable="true"]').count() > 0);
+    await dragEvents('.te-item[data-item="' + S0.items[1].ref + '"] .te-grip', '.te-item[data-item="' + S0.items[0].ref + '"] .te-item-head input');
+    ok('drag an item onto another (over its words): it goes before it', JSON.stringify((await itemRefs()).slice(0, 3)) === JSON.stringify([S0.items[1].ref, S0.items[0].ref, S0.items[2].ref]), JSON.stringify((await itemRefs()).slice(0, 3)));
+    await dragEvents('.te-item[data-item="' + S0.items[0].ref + '"] .te-grip', '.te-stop[data-stop="' + O1.stops[2].ref + '"] > summary');
+    ok('drag an item onto another stop: it goes last there', (await page.locator('.te-stop[data-stop="' + O1.stops[2].ref + '"] .te-item').last().getAttribute('data-item')) === S0.items[0].ref);
+    await page.locator('.te-stop').first().locator('summary').click();
+    await dragEvents('.te-stop:nth-child(4) > summary', '.te-stop:nth-child(1) > summary');
+    ok('drag a stop onto another: it takes its place', (await stopRefs())[0] === O1.stops[3].ref, (await stopRefs()).slice(0, 4).join(','));
+    await openStop(page.locator('.te-stop').first());
+    await page.locator('.te-stop').first().locator('[data-del-stop]').click();
+    await page.locator('[data-discard]').click();
+    ok('Discard puts every stop and item back, in order', JSON.stringify(await stopRefs()) === JSON.stringify(O1.stops.map((x) => x.ref)) && !(await page.locator('[data-bar]').isVisible()));
+    for (let n = O1.stops.length; n > 0; n--) { await openStop(page.locator('.te-stop').first()); await page.locator('.te-stop').first().locator('[data-del-stop]').click(); }
+    await page.locator('[data-save]').click();
+    ok('every stop deleted: it says a template needs one, and writes nothing', await until(async () => await said(page) === 'A template needs at least one stop.') &&
+      posts(o).length === 0 && biz.pushed.length === 0);
+    await o.ctx.close();
+  });
 
   await browser.close();
   console.log(failed ? failed + ' FAILED' : 'ALL PASS');

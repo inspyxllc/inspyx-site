@@ -42,12 +42,12 @@
 <div class="te-how-scene te-how-c"><span class="te-how-save">Save</span><span class="te-how-done">Saved as version 2. New inspections start from it.</span></div>
 <span class="te-how-finger"></span>
 <span class="te-how-tip" data-n="1">Open a template, so you see every stop, item and comment</span>
-<span class="te-how-tip" data-n="2">Change a name or a comment's words, so new reports say it your way</span>
+<span class="te-how-tip" data-n="2">Change, add or move a stop, an item or a comment, so new reports say it your way</span>
 <span class="te-how-tip" data-n="3">Save, so new inspections on your phone start from it</span>
 </div>
 <figcaption class="te-how-steps">
 <span class="te-how-step" data-n="1">Open a template</span>
-<span class="te-how-step" data-n="2">Change a name or a comment's words</span>
+<span class="te-how-step" data-n="2">Change, add or move what's in it</span>
 <span class="te-how-step" data-n="3">Save: new inspections start from it</span>
 </figcaption>
 </figure>
@@ -73,7 +73,9 @@
 </div>
 <label class="te-search"><span>Find</span><input type="search" data-find placeholder="A stop, an item or a comment's words" autocomplete="off"></label>
 <p class="te-found" data-found hidden></p>
+<section class="te-cats" data-cats hidden aria-label="Finding categories"></section>
 <div class="te-stops" data-stops></div>
+<button type="button" class="te-mini add wide" data-add-stop hidden>+ Add a stop</button>
 <div class="te-bar" data-bar hidden>
 <span data-count></span>
 <button type="button" class="te-btn ghost" data-discard>Discard</button>
@@ -100,6 +102,22 @@
 <span data-w="f-rating">Category</span>
 <span data-w="f-todo">What to do</span>
 <span data-w="no-rating">No category</span>
+<span data-w="f-system">Report section</span>
+<span data-w="up">Move up</span>
+<span data-w="down">Move down</span>
+<span data-w="move-to">Move to another stop…</span>
+<span data-w="drag">Drag to move</span>
+<span data-w="delete-stop">Delete this stop</span>
+<span data-w="delete-item">Delete this item</span>
+<span data-w="delete-line">Delete this comment</span>
+<span data-w="add-item">+ Add an item</span>
+<span data-w="add-information">+ Information</span>
+<span data-w="add-limitation">+ Limitation</span>
+<span data-w="add-deficiency">+ Finding</span>
+<span data-w="new-stop">New stop</span>
+<span data-w="cats">Finding categories</span>
+<span data-w="cats-lede">The names your report gives each kind of finding. Renaming one keeps every finding filed under it.</span>
+<span data-w="cat">Name for “{name}”</span>
 <span data-w="changes-1">1 change</span>
 <span data-w="changes-n">{n} changes</span>
 <span data-w="found-0">Nothing matches.</span>
@@ -115,6 +133,8 @@
 <span data-w="now-used">New inspections now start from “{name}”.</span>
 <span data-w="leave">You have changes that aren’t saved. Leave them?</span>
 <span data-w="p-no_name">Every stop, item and comment needs a name.</span>
+<span data-w="p-no_stops">A template needs at least one stop.</span>
+<span data-w="p-no_system">Every item needs a report section.</span>
 <span data-w="p-too_long">A template’s name can be at most 120 characters.</span>
 <span data-w="p-no_part">This template just changed on another device, and a part you changed is gone. Discard, then make your change again.</span>
 <span data-w="p-too_big">This template is too big to save (over 5 MB).</span>
