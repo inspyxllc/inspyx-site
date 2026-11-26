@@ -17,9 +17,24 @@
   if (!main || !auth) return;
   var DEADLINE = 20000, POLL = 30000, MAX_CENTS = 100000000;
   var KINDS = ['price_services', 'price_modifiers', 'price_discounts', 'price_questions'];   // all four edited here (2026-11-23)
-  // Reinspection (his decision, 2026-11-26): a service like any, at his own price, kept under ONE id for every account,
-  // the key the phone and the reinspection link (I2) know it by (the app's price_list.dart reinspectionServiceId).
-  var REINSPECTION_ID = '5e1f0000-0000-4000-8000-00000000feed';
+  // Reinspection (his decision, 2026-11-26): a service like any, at his own price, under an id of its own for each
+  // account: the same every time (one phone may hold two accounts' price lists, and its price rows are keyed by id
+  // alone: I2, 2026-11-26), made as the app makes it (price_list.dart reinspectionServiceIdFor: a name-based uuid,
+  // version 5, of https://inspyx.com/prices/reinspection/<account> in the URL namespace). The key the reinspection link
+  // knows it by.
+  var REINSPECTION_ID = null;
+  function reinspectionIdFor(account) {
+    var ns = '6ba7b811-9dad-11d1-80b4-00c04fd430c8'.replace(/-/g, ''), name = new TextEncoder().encode('https://inspyx.com/prices/reinspection/' + account);
+    var bytes = new Uint8Array(16 + name.length);
+    for (var i = 0; i < 16; i++) bytes[i] = parseInt(ns.substr(i * 2, 2), 16);
+    bytes.set(name, 16);
+    return crypto.subtle.digest('SHA-1', bytes).then(function (h) {
+      var b = new Uint8Array(h).slice(0, 16);
+      b[6] = (b[6] & 0x0f) | 0x50; b[8] = (b[8] & 0x3f) | 0x80;
+      var x = [].map.call(b, function (n) { return ('0' + n.toString(16)).slice(-2); }).join('');
+      return x.slice(0, 8) + '-' + x.slice(8, 12) + '-' + x.slice(12, 16) + '-' + x.slice(16, 20) + '-' + x.slice(20);
+    });
+  }
 
   var $ = function (sel, el) { return (el || document).querySelector(sel); };
   var all = function (sel, el) { return [].slice.call((el || document).querySelectorAll(sel)); };
@@ -219,7 +234,8 @@
 
     // Reinspection: off until he turns it on with his own price; on, it says its price, with Edit (and Delete there to
     // turn it off).
-    var rein = held('price_services', REINSPECTION_ID), reinOn = !!(rein && rein.deletedAt == null && rows['price_services/' + REINSPECTION_ID].deleted_at == null);
+    $('[data-reinsp]', main).hidden = !REINSPECTION_ID;
+    var rein = REINSPECTION_ID ? held('price_services', REINSPECTION_ID) : null, reinOn = !!(rein && rein.deletedAt == null && rows['price_services/' + REINSPECTION_ID].deleted_at == null);
     $('[data-reinsp-on]', main).hidden = reinOn;
     $('[data-reinsp-edit]', main).hidden = !reinOn;
     $('[data-reinsp-now]', main).hidden = !reinOn;
@@ -377,7 +393,7 @@
     finish(svcDialog, [wire('price_services', data)], 'saved');
   });
 
-  $('[data-reinsp-on]', main).addEventListener('click', function () { openService(null, null, REINSPECTION_ID); });
+  $('[data-reinsp-on]', main).addEventListener('click', function () { if (REINSPECTION_ID) openService(null, null, REINSPECTION_ID); });
   $('[data-reinsp-edit]', main).addEventListener('click', function () { openService(held('price_services', REINSPECTION_ID), null); });
 
   $('[data-delete]', svcForm).addEventListener('click', function () {
@@ -541,6 +557,7 @@
   me = who.id;
   main.hidden = false;
   render();
+  reinspectionIdFor(me).then(function (id) { REINSPECTION_ID = id; render(); });
   pull();
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') pull(); });
   setInterval(function () { if (document.visibilityState === 'visible') pull(); }, POLL);

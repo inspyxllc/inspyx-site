@@ -191,7 +191,13 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
   });
 
   await group('reinspection: his own price, one id, off and on again', async () => {
-    const RID = '5e1f0000-0000-4000-8000-00000000feed';
+    // His account's own id, as the app's reinspectionServiceIdFor makes it: a version-5 uuid (Node's own SHA-1 here).
+    const RID = (() => {
+      const ns = Buffer.from('6ba7b8119dad11d180b400c04fd430c8', 'hex'), h = require('crypto').createHash('sha1').update(Buffer.concat([ns, Buffer.from('https://inspyx.com/prices/reinspection/' + ME)])).digest();
+      h[6] = (h[6] & 0x0f) | 0x50; h[8] = (h[8] & 0x3f) | 0x80;
+      const x = h.subarray(0, 16).toString('hex');
+      return x.slice(0, 8) + '-' + x.slice(8, 12) + '-' + x.slice(12, 16) + '-' + x.slice(16, 20) + '-' + x.slice(20);
+    })();
     const s = server(); seed(s);
     const { page, ctx, calls } = await open(browser, { server: s });
     await page.waitForSelector('[data-reinsp-on]');
@@ -209,7 +215,7 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     await page.click(f + ' button[type="submit"]');
     await until(async () => !(await page.locator('[data-dialog="service"]').isVisible()));
     const on = pushed(calls).filter((r) => r.id === RID);
-    ok('on: one row, under the one id every account uses, his price and time, after his services', on.length === 1 && on[0].kind === 'price_services' &&
+    ok('on: one row, under his account’s own reinspection id, his price and time, after his services', on.length === 1 && on[0].kind === 'price_services' &&
       on[0].data.name === 'Reinspection' && on[0].data.feeCents === 17500 && on[0].data.minutes === 60 && on[0].data.parentId === null && on[0].data.position === 2 &&
       on[0].deleted_at === null, JSON.stringify(on[0] && on[0].data));
     if (process.env.SHOTS) await page.locator('[data-reinsp]').screenshot({ path: require('path').join(process.env.SHOTS, 'reinsp-on-wide.png') });
