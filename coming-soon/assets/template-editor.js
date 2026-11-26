@@ -329,6 +329,7 @@
   stops.addEventListener('click', function (e) {
     var t = e.target.closest('button');
     if (!t || busy || !open || open.readOnly) return;
+    cancelLoads();
     var d = t.closest('.te-stop'), it = t.closest('.te-item'), line = t.closest('.te-line');
     if (t.hasAttribute('data-stop-up')) moveStop(d, stopIndex(d) - 1);
     else if (t.hasAttribute('data-stop-down')) moveStop(d, stopIndex(d) + 1);
@@ -365,11 +366,13 @@
   stops.addEventListener('change', function (e) {
     var sel = e.target;
     if (busy || !sel.hasAttribute('data-item-to') || !sel.value) return;
+    cancelLoads();
     var it = sel.closest('.te-item'), target = stops.querySelector('.te-stop[data-stop="' + CSS.escape(sel.value) + '"]');
     if (target) moveItem(it, target, all('.te-item', target).length);
   });
   $('[data-add-stop]').addEventListener('click', function () {
     if (busy || !open || open.readOnly) return;
+    cancelLoads();
     var key = newKey();
     ops.push({ op: 'add-stop', key: key, name: '' });
     var d = stopEl({ ref: key, name: '', items: [] }, true, false, true);
@@ -409,6 +412,7 @@
   stops.addEventListener('dragover', accept, true);
   stops.addEventListener('drop', function (e) {
     if (!dragging) return;
+    cancelLoads();
     e.preventDefault(); e.stopPropagation();
     var d = dragging;
     if (d.classList.contains('te-item')) {
@@ -461,6 +465,7 @@
   }
   edit.addEventListener('input', function (e) {
     if (!e.target.hasAttribute('data-k')) return;
+    cancelLoads();
     if (e.target.tagName === 'TEXTAREA') grow(e.target);
     if (e.target.closest('.te-stop-head')) stopLabels();
     if (e.target.closest('[data-cats]')) {
@@ -471,7 +476,7 @@
     changed(); if (e.target.value) say(null);
   });
   window.addEventListener('resize', function () { all('.te-stop[open]', stops).forEach(growIn); });
-  edit.addEventListener('change', function (e) { if (e.target.hasAttribute('data-k')) changed(); });
+  edit.addEventListener('change', function (e) { if (e.target.hasAttribute('data-k')) { cancelLoads(); changed(); } });
   window.addEventListener('beforeunload', function (e) { if (open && changed()) { e.preventDefault(); e.returnValue = ''; } });
 
   /* ---- find ---- */
@@ -497,6 +502,8 @@
      and, for a reload in the background ([quiet]: changed on another device), only if nothing was changed here
      meanwhile (Codex on #101). */
   var showing = 0;
+  // He changed something while another template (or a reload) was on its way: that one isn't shown (Codex on #102).
+  function cancelLoads() { showing++; }
   function choose(id, force, quiet) {
     if (busy && !force) return;
     if (!force && open && changed() && !window.confirm(words('leave'))) return;

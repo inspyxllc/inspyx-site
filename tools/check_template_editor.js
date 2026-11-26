@@ -277,7 +277,8 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
 
   await group('answers that come back late', async () => {
     const r1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
-    const biz = bizServer([r1, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)]]), fileGate = {};
+    const SECOND = 'inspector.second-one', V1b = TS.makeCopy(COPY, SECOND, 'Second one'), r3 = rowOf(SECOND, 'Second one', V1b, 1100);
+    const biz = bizServer([r1, r3, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)], [fileName(r3), Buffer.from(V1b)]]), fileGate = {};
     const o = await open(browser, { w: WIDE, biz, files, fileGate });
     const { page } = o;
     await page.waitForSelector('[data-open="' + MINE + '"]');
@@ -306,6 +307,17 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     await page.waitForTimeout(400);
     ok('opened one, then Inspyx’s before the first came: Inspyx’s stays open', await page.locator('[data-ro]').isVisible() &&
       (await page.locator('[data-edit] [data-k]:not([disabled])').count()) === 0);
+    // Another of his asked for while his first is open, slow to come; he changes the open one meanwhile: it stays.
+    await page.locator('[data-open="' + MINE + '"]').click();
+    await until(async () => !(await page.locator('[data-ro]').isVisible()) && (await page.locator('[data-name]').inputValue()) === 'My Walkthrough');
+    let release3; fileGate[fileName(r3)] = new Promise((r) => { release3 = r; });
+    await page.locator('[data-open="' + SECOND + '"]').click();
+    await until(async () => o.fileCalls.some((c) => c.method === 'GET' && c.name === fileName(r3)));
+    await page.fill('[data-name]', 'Changed while the other loaded');
+    release3();
+    await page.waitForTimeout(500);
+    ok('another template asked for, slow to come, while he changes the open one: his stays, with his change',
+      (await page.locator('[data-name]').inputValue()) === 'Changed while the other loaded' && (await page.locator('[data-count]').textContent()).trim() === '1 change');
     ok('no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
     await o.ctx.close();
   });
