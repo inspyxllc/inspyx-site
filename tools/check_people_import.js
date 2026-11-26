@@ -1,10 +1,10 @@
 // Self-checks for "Bring in your people": /people-import (2026-11-26, the web importers, contacts first).
-// NOTHING REAL IS ASKED OR CHANGED HERE. The sync function is a stand-in run here (the newest row wins), and so is the
-// file reader: until I2's engine (assets/import/inspyx_import.js, the phone's own reader and planContactImport) lands,
-// a stand-in with its interface reads simple CSV and plans by contacts-import.js's plan (pinned to the phone's import
-// by the app's web_contacts_import_test). What these check is the page: what it shows, what it lets him change, what it
-// keeps in People (the same People the phone's rules give), Undo, batches, and never keeping from a People it couldn't
-// read. Any other request that tries to leave the site is stopped and counted as a failure.
+// NOTHING REAL IS ASKED OR CHANGED HERE. The sync function is a stand-in run here (the newest row wins). The file
+// reader is the real one the page loads (assets/import/inspyx_import.js, I2's build of the phone's own reader and
+// planContactImport). What these check is the page: what it shows, what it lets him change, that what it keeps in
+// People is exactly the reader's plan (the same reader run here in Node gives the expected People), Undo, batches, and
+// never keeping from a People it couldn't read. Any other request that tries to leave the site is stopped and counted
+// as a failure.
 // usage: node tools/serve.js <port> &   then   URL=http://localhost:<port>/ node tools/check_people_import.js
 const path = require('path');
 const playwright = require('playwright');
@@ -22,35 +22,25 @@ const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PA
 const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
 const until = async (fn, ms) => { const end = Date.now() + (ms || 6000); for (;;) { try { if (await fn()) return true; } catch (e) { /* not yet */ } if (Date.now() > end) return false; await new Promise((r) => setTimeout(r, 60)); } };
 
-/* The stand-in reader, with the engine's interface. */
-const STAND_IN = `(function () {
-  var FIELDS = [{ field: 'name', label: 'Name' }, { field: 'phone', label: 'Phone' }, { field: 'email', label: 'Email' }, { field: 'company', label: 'Company' }, { field: 'note', label: 'Note' }];
-  var GUESS = { name: /name/i, phone: /^phone|^tel/i, email: /mail/i, company: /company|office/i, note: /note/i };
-  window.inspyxImport = { contacts: function (fileName, bytes, opts) {
-    opts = opts || {};
-    if (!/\\.(csv|txt)$/i.test(fileName)) return JSON.stringify({ status: 'unsupported', message: 'This kind of file can’t be read here. Export it as CSV.' });
-    var lines = new TextDecoder().decode(bytes).split(/\\r?\\n/), head = lines[0].split(','), kind = opts.kind || (/agent/i.test(fileName) ? 'agents' : 'clients');
-    var match = {};
-    if (opts.match) match = opts.match; else FIELDS.forEach(function (f) { var i = head.findIndex(function (h) { return GUESS[f.field].test(h); }); match[f.field] = i < 0 ? null : i; });
-    var columns = head.map(function (h, i) { var f = Object.keys(match).filter(function (k) { return match[k] === i; })[0] || null; return { index: i, header: h, field: f, sample: (lines[1] || '').split(',')[i] || '' }; });
-    var people = [], skipped = [];
-    lines.slice(1).forEach(function (l, n) {
-      if (!l) return;
-      var c = l.split(','), get = function (f) { return match[f] == null ? null : (c[match[f]] || null); };
-      if (!get('name') || !get('name').trim()) { skipped.push({ line: n + 2, reason: 'No name on this line.' }); return; }
-      people.push({ line: n + 2, role: kind === 'agents' ? 'buyer_agent' : 'client', name: get('name'), phone: get('phone'), email: get('email'), company: get('company'), note: get('note') });
-    });
-    var rows = (opts.existing || []).map(function (e) { return { id: e.id, updated_at: 1, deleted_at: e.deleted_at, data: { id: e.id, ownerAccountId: 'x', role: e.role, name: e.name, phone: e.phone, email: e.email, company: e.company, note: e.note, deletedAt: e.deleted_at } }; });
-    var n = 0, p = window.InspyxContactsImport.plan(rows, people, 'x', 9, function () { return 'stand-in-' + (++n); }), plan = [];
-    p.changes.forEach(function (ch, i) {
-      var row = p.push[i].data, was = rows.filter(function (r) { return r.id === ch.id; })[0];
-      var r = { role: row.role, name: row.name, phone: row.phone, email: row.email, company: row.company, note: row.note };
-      plan.push(!ch.added ? { action: 'fill', id: ch.id, row: r, fills: ch.filled } : was ? { action: 'bring_back', id: ch.id, row: r, fills: ch.filled } : { action: 'new', id: null, row: r, fills: ch.filled });
-    });
-    for (var u = 0; u < p.unchanged; u++) plan.push({ action: 'unchanged', id: null, row: null, fills: {} });
-    return JSON.stringify({ status: 'ok', header_row: 0, columns: columns, fields: FIELDS, has_name: match.name != null, people: people, skipped: skipped, kind: kind, plan: plan });
-  } };
-})();`;
+/* The same reader the page loads, run here in Node: what it plans is what People must hold after. */
+const ENGINE = (() => { const g = {}; const fn = new Function('self', 'window', 'globalThis', require('fs').readFileSync(path.join(__dirname, '../coming-soon/assets/import/inspyx_import.js'), 'utf8'));
+  fn(g, g, g); return g.inspyxImport || global.inspyxImport; })();
+const existingOf = (rows) => rows.map((r) => ({ id: r.id, name: r.data.name, role: r.data.role, phone: r.data.phone, email: r.data.email, company: r.data.company, note: r.data.note,
+  deleted_at: r.deleted_at != null ? r.deleted_at : (r.data.deletedAt == null ? null : r.data.deletedAt) }));
+async function expected(start, name, text, opts) {
+  const t = await ENGINE.contacts(name, new TextEncoder().encode(text), Object.assign({ existing: existingOf(start) }, opts || {}));
+  const r = typeof t === 'string' ? JSON.parse(t) : t;
+  // The plan's meaning, read here on its own (not by the page's code): new = its row; fill = only the boxes it lists;
+  // bring_back = its whole row, deleted no more; unchanged = nothing.
+  const byId = new Map(start.map((x) => [x.id, JSON.parse(JSON.stringify(x))]));
+  let k = 0;
+  for (const e of r.plan) {
+    if (e.action === 'new') { const id = 'want-' + (++k); byId.set(id, { id, deleted_at: null, data: Object.assign({ id, deletedAt: null }, e.row) }); }
+    else if (e.action === 'fill') { const x = byId.get(e.id); Object.assign(x.data, e.fills); }
+    else if (e.action === 'bring_back') { const x = byId.get(e.id); Object.assign(x.data, e.row, { deletedAt: null }); x.deleted_at = null; }
+  }
+  return [...byId.values()];
+}
 
 /* People before: Ana kept, Bob deleted twice (the later keeps his email), Kim kept. */
 function seed() {
@@ -97,9 +87,7 @@ async function open(browser, o) {
   const errs = [], away = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
-  // ENGINE=<path to I2's built inspyx_import.js>: the real reader instead of the stand-in.
-  const REAL = process.env.ENGINE ? require('fs').readFileSync(process.env.ENGINE, 'utf8') : null;
-  await page.route('**/assets/import/inspyx_import.js', (route) => o.noEngine ? route.fulfill({ status: 404, body: '' }) : route.fulfill({ status: 200, contentType: 'application/javascript', body: REAL || STAND_IN }));
+  if (o.noEngine) await page.route('**/assets/import/inspyx_import.js', (route) => route.fulfill({ status: 404, body: '' }));
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url(), cors = { 'access-control-allow-origin': '*' };
     if (u.startsWith(SERVER + '/functions/v1/sync')) {
@@ -144,12 +132,9 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'pi-read-' + label + '.png'), fullPage: true });
       await page.locator('[data-go]').click();
       await until(async () => await page.locator('[data-done]').isVisible(), 8000);
-      // What the phone's own rules give, worked out here.
-      const people = [['Daniel Ortiz', '305-555-0142', null, null], ['ana reyes', '999', 'ana@x.com', 'Sunline'], ['Bob Lane', '222', 'bob@new.com', 'Lane & Co'], ['Kim Ho', null, 'kim@x.com', null], ['Zoë Park', '786', 'zoe@x.com', null]]
-        .map(([name, phone, email, company]) => ({ role: 'client', name, phone, email, company, note: null }));
-      let k = 0; const start = seed(), want = CI.plan(start, people, ME, 5000, () => 'want-' + (++k));
-      const wantRows = [...new Map(start.concat(want.push).map((r) => [r.id, r])).values()];
-      ok(label + ': People then is exactly what the phone’s own import gives (nobody twice; kept boxes kept; Bob back as his newest)',
+      // What the reader plans for this file and these People (its guess of the columns: Mobile is the phone).
+      const wantRows = await expected(seed(), 'clients.csv', CSV);
+      ok(label + ': People then is exactly the reader’s plan (the phone’s own rules: nobody twice; kept boxes kept; Bob back as his newest)',
         keptOf(sync.rows()) === keptOf(wantRows), 'GOT ' + keptOf(sync.rows()) + ' WANT ' + keptOf(wantRows));
       ok(label + ': it says so, with Undo', (await page.locator('[data-done-t]').textContent()) === 'Done: 4 in People. They’ll be on your phone within a few minutes.' && await page.locator('[data-undo]').isVisible(), await page.locator('[data-done-t]').textContent());
       await page.locator('[data-undo]').click();
