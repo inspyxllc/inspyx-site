@@ -608,6 +608,7 @@
       open.setAttribute('aria-expanded', 'true');
       q('[data-tpl-what]').hidden = true;
       q('[data-tpl-choose]').hidden = true;
+      q('[data-tpl-use]').hidden = true;
       q('[data-tpl-nomeaning]').hidden = true;
       where.textContent = word('tpl-looking');
       if (!l.title) { where.textContent = word('tpl-no_title'); return; }
@@ -617,7 +618,13 @@
         if (t.problem) { where.textContent = tplWords('tpl-' + t.problem, { item: itemName() }); return; }
         target = t;
         if (t.source) copySource = t.source;
-        where.textContent = tplWords(t.row ? 'tpl-into' : t.makeDefault ? 'tpl-into-new' : 'tpl-into-new-keep', { name: t.name, item: itemName(), source: t.source || '' });
+        // A new copy that would become the default: asked, with a box ticked for yes (rehearsal round 2, 2026-11-26:
+        // it switched new inspections with a sentence easy to miss).
+        var asks = !t.row && t.makeDefault;
+        where.textContent = tplWords(t.row ? 'tpl-into' : 'tpl-into-new-keep', { name: t.name, item: itemName(), source: t.source || '' });
+        q('[data-tpl-use]').hidden = !asks;
+        q('[data-tpl-use-box]').checked = true;
+        q('[data-tpl-use-words]').textContent = tplWords('tpl-use', { name: t.name });
         q('[data-tpl-v="title"]').textContent = l.title;
         q('[data-tpl-v="details"]').textContent = TS.dartTrim(l.details) || word('tpl-none');
         q('[data-tpl-v="todo"]').textContent = TS.dartTrim(l.recommendation) || word('tpl-none');
@@ -633,6 +640,11 @@
       if (!target || busy) return;
       var spot = templateSpot(inspection, item), l = line();
       if (!spot) return;
+      // His answer to "Use it for my new inspections", read before the panel closes.
+      var useForNew = q('[data-tpl-use]').hidden || q('[data-tpl-use-box]').checked;
+      var withChoice = function (t) {
+        return !t.problem && !t.row && t.makeDefault && !useForNew ? Object.assign({}, t, { makeDefault: false }) : t;
+      };
       busy = true;
       close();
       open.disabled = true;
@@ -641,7 +653,7 @@
       var attempt = function (first, into) {
         return saveInto(into, spot, l).then(function (key) {
           if (key !== 'changed' || !first) return key;
-          return fresh().then(function (again) { return again.problem ? again.problem : attempt(false, again); });
+          return fresh().then(function (again) { return again.problem ? again.problem : attempt(false, withChoice(again)); });
         });
       };
       // The template as it stands now, not as it stood when the panel opened: only after a pull that came in whole.
@@ -651,7 +663,7 @@
       };
       var run = tplQueue.then(fresh).then(function (now) {
         if (now.source) copySource = now.source;
-        return now.problem ? now.problem : attempt(true, now);
+        return now.problem ? now.problem : attempt(true, withChoice(now));
       });
       tplQueue = run.catch(function () { return null; });
       run.then(function (key) {
