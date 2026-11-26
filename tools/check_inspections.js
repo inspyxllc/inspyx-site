@@ -927,8 +927,9 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       pushedOf(t, 'inspection_templates')[1].data.source === 'copied' && pushedOf(t, 'inspection_templates')[1].data.version === '2');
     await o.ctx.close();
 
-    // The business feed unreachable (as the page loads, and at Save): the page can't see his copy or his default, so it
-    // saves nothing, rather than make a new copy over his (Codex on #98). Back again: into his copy, his default kept.
+    // The business feed unreachable: the page can't see his copy or his default. Opening says so and offers no Save
+    // (never "a new copy, made now" over his); down only at Save, it writes nothing (Codex on #98). Back again: into
+    // his copy, his default kept.
     s = server(); seed(s); seedFromOurs(s);
     const picked = { kind: 'template_default', id: 'default', updated_at: 6, deleted_at: null, data: { id: 'default', ownerAccountId: ME, templateId: 'inspector.converted-one', updatedAt: 6, deletedAt: null } };
     t = templateServer([row, picked]); t.down = true;
@@ -936,9 +937,18 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await o.page.waitForSelector('.insp-finding');
     await until(async () => await box(o.page, FIND).isVisible());
     await box(o.page, FIND).locator('[data-tpl-open]').click();
-    await until(async () => await box(o.page, FIND).locator('[data-tpl-go]').isVisible());
+    const downSaid = async () => (await box(o.page, FIND).locator('[data-tpl-where]').textContent()).trim();
+    ok('the feed down as it opens: it says it didn’t go through, offers no Save, and writes nothing', await until(async () =>
+      await downSaid() === 'That didn’t go through. Try again.') && !(await box(o.page, FIND).locator('[data-tpl-go]').isVisible()) &&
+      t.pushed.length === 0 && o.fileCalls.filter((c) => c.method === 'POST').length === 0, await downSaid());
+    await box(o.page, FIND).locator('[data-tpl-open]').click();
+    t.down = false;
+    await box(o.page, FIND).locator('[data-tpl-open]').click();
+    await until(async () => /Into/.test(await downSaid()));
+    ok('back as it opens: it names his own copy', await downSaid() === 'Into your template “My Walkthrough”, under Gutters.', await downSaid());
+    t.down = true;
     await box(o.page, FIND).locator('[data-tpl-go]').click();
-    ok('the business feed unreachable: it says it didn’t go through, and writes nothing (no file, no row, no default)', await until(async () =>
+    ok('the feed down at Save: it says it didn’t go through, and writes nothing (no file, no row, no default)', await until(async () =>
       (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim() === 'That didn’t go through. Try again.') &&
       t.pushed.length === 0 && o.fileCalls.filter((c) => c.method === 'POST').length === 0,
       [await box(o.page, FIND).locator('[data-tpl-done]').textContent(), t.pushed.length, o.fileCalls.length].join(' | '));
