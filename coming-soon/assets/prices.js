@@ -17,6 +17,24 @@
   if (!main || !auth) return;
   var DEADLINE = 20000, POLL = 30000, MAX_CENTS = 100000000;
   var KINDS = ['price_services', 'price_modifiers', 'price_discounts', 'price_questions'];   // all four edited here (2026-11-23)
+  // Reinspection (his decision, 2026-11-26): a service like any, at his own price, under an id of its own for each
+  // account: the same every time (one phone may hold two accounts' price lists, and its price rows are keyed by id
+  // alone: I2, 2026-11-26), made as the app makes it (price_list.dart reinspectionServiceIdFor: a name-based uuid,
+  // version 5, of https://inspyx.com/prices/reinspection/<account> in the URL namespace). The key the reinspection link
+  // knows it by.
+  var REINSPECTION_ID = null;
+  function reinspectionIdFor(account) {
+    var ns = '6ba7b811-9dad-11d1-80b4-00c04fd430c8'.replace(/-/g, ''), name = new TextEncoder().encode('https://inspyx.com/prices/reinspection/' + account);
+    var bytes = new Uint8Array(16 + name.length);
+    for (var i = 0; i < 16; i++) bytes[i] = parseInt(ns.substr(i * 2, 2), 16);
+    bytes.set(name, 16);
+    return crypto.subtle.digest('SHA-1', bytes).then(function (h) {
+      var b = new Uint8Array(h).slice(0, 16);
+      b[6] = (b[6] & 0x0f) | 0x50; b[8] = (b[8] & 0x3f) | 0x80;
+      var x = [].map.call(b, function (n) { return ('0' + n.toString(16)).slice(-2); }).join('');
+      return x.slice(0, 8) + '-' + x.slice(8, 12) + '-' + x.slice(12, 16) + '-' + x.slice(16, 20) + '-' + x.slice(20);
+    });
+  }
 
   var $ = function (sel, el) { return (el || document).querySelector(sel); };
   var all = function (sel, el) { return [].slice.call((el || document).querySelectorAll(sel)); };
@@ -214,6 +232,16 @@
     showOne(main, 'data-state', '');
     all('[data-group]', main).forEach(function (g) { g.hidden = false; });
 
+    // Reinspection: off until he turns it on with his own price; on, it says its price, with Edit (and Delete there to
+    // turn it off).
+    $('[data-reinsp]', main).hidden = !REINSPECTION_ID;
+    var rein = REINSPECTION_ID ? held('price_services', REINSPECTION_ID) : null, reinOn = !!(rein && rein.deletedAt == null && rows['price_services/' + REINSPECTION_ID].deleted_at == null);
+    $('[data-reinsp-on]', main).hidden = reinOn;
+    $('[data-reinsp-now]', main).hidden = !reinOn;
+    if (reinOn) $('[data-reinsp-now]', main).textContent = words('reinsp-on');
+    main.querySelector('[data-reinsp]').classList.toggle('is-on', reinOn);
+    // On, Reinspection is one of his services like any, in the list with its add-ons and price changes (its card above
+    // only offers it while it is off; Codex on #107).
     var list = $('[data-list="services"]', main), svc = services();
     $('[data-empty="services"]', main).hidden = svc.length > 0;
     list.textContent = '';
@@ -279,8 +307,8 @@
     showOne(b, 'data-arm', armed ? '1' : '0');
   }
 
-  function openService(data, parentId) {
-    editing = { data: data, parentId: data ? data.parentId : parentId };
+  function openService(data, parentId, fixedId) {
+    editing = { data: data, parentId: data ? data.parentId : parentId, fixedId: fixedId || null };
     var addOn = editing.parentId != null;
     showOne(svcForm, 'data-title', (data ? 'edit-' : 'new-') + (addOn ? 'addon' : 'service'));
     showOne(svcForm, 'data-time', addOn ? 'addon' : 'service');
@@ -295,6 +323,19 @@
     // Pre-filled "Sales tax" (his pick A, 2026-11-23); an empty percent is no tax.
     svcForm.elements.taxName.value = data && typeof data.taxName === 'string' ? data.taxName : svcForm.elements.taxName.getAttribute('placeholder');
     svcForm.elements.taxRate.value = data && typeof data.taxRate === 'number' ? String(data.taxRate / 100) : '';
+    // Turning Reinspection on: its name, and his own last price if he had it on before; never an amount from us.
+    if (!data && editing.fixedId) {
+      var before = held('price_services', editing.fixedId);
+      svcForm.elements.name.value = before ? before.name : words('reinsp-name');
+      // Everything it had, not just its fee: a save writes the whole row (Codex on #107).
+      if (before) {
+        svcForm.elements.description.value = before.description || '';
+        svcForm.elements.fee.value = centsText(before.feeCents); svcForm.elements.hours.value = hoursText(before.minutes);
+        svcForm.elements.minimum.value = before.minimumFeeCents != null ? centsText(before.minimumFeeCents) : '';
+        if (typeof before.taxName === 'string') svcForm.elements.taxName.value = before.taxName;
+        svcForm.elements.taxRate.value = typeof before.taxRate === 'number' ? String(before.taxRate / 100) : '';
+      }
+    }
     $('[data-delete]', svcForm).hidden = !data;
     armDelete(svcForm, false);
     showOne(svcForm, 'data-problem', '');
@@ -340,9 +381,9 @@
     // The problem now, or none: an earlier try's must not stay on screen while this one is sent.
     showOne(svcForm, 'data-problem', f.problem || '');
     if (f.problem) return;
-    var was = editing.data, at = nextAt(was);
+    var was = editing.data, back = !was && editing.fixedId ? held('price_services', editing.fixedId) : null, at = nextAt(was || back);
     var data = {
-      id: was ? was.id : newId(),
+      id: was ? was.id : (editing.fixedId || newId()),
       ownerAccountId: me,
       parentId: editing.parentId == null ? null : editing.parentId,
       name: f.name,
@@ -352,13 +393,15 @@
       minimumFeeCents: editing.parentId == null ? f.minimumFeeCents : null,
       taxName: editing.parentId == null ? f.taxName : null,
       taxRate: editing.parentId == null ? f.taxRate : null,
-      position: was ? was.position : nextPosition(editing.parentId == null ? null : editing.parentId),
-      createdAt: was ? was.createdAt : at,
+      position: was ? was.position : back ? back.position : nextPosition(editing.parentId == null ? null : editing.parentId),
+      createdAt: was ? was.createdAt : back ? back.createdAt : at,
       updatedAt: at,
       deletedAt: null,
     };
     finish(svcDialog, [wire('price_services', data)], 'saved');
   });
+
+  $('[data-reinsp-on]', main).addEventListener('click', function () { if (REINSPECTION_ID) openService(null, null, REINSPECTION_ID); });
 
   $('[data-delete]', svcForm).addEventListener('click', function () {
     var b = $('[data-delete]', svcForm);
@@ -521,6 +564,7 @@
   me = who.id;
   main.hidden = false;
   render();
+  reinspectionIdFor(me).then(function (id) { REINSPECTION_ID = id; render(); });
   pull();
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') pull(); });
   setInterval(function () { if (document.visibilityState === 'visible') pull(); }, POLL);

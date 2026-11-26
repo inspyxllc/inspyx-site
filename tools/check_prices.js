@@ -190,6 +190,81 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     await ctx.close();
   });
 
+  await group('reinspection: his own price, one id, off and on again', async () => {
+    // His account's own id, as the app's reinspectionServiceIdFor makes it: a version-5 uuid (Node's own SHA-1 here).
+    const RID = (() => {
+      const ns = Buffer.from('6ba7b8119dad11d180b400c04fd430c8', 'hex'), h = require('crypto').createHash('sha1').update(Buffer.concat([ns, Buffer.from('https://inspyx.com/prices/reinspection/' + ME)])).digest();
+      h[6] = (h[6] & 0x0f) | 0x50; h[8] = (h[8] & 0x3f) | 0x80;
+      const x = h.subarray(0, 16).toString('hex');
+      return x.slice(0, 8) + '-' + x.slice(8, 12) + '-' + x.slice(12, 16) + '-' + x.slice(16, 20) + '-' + x.slice(20);
+    })();
+    const s = server(); seed(s);
+    const { page, ctx, calls } = await open(browser, { server: s });
+    await page.waitForSelector('[data-reinsp-on]');
+    ok('off until he turns it on: the card offers it, and it isn’t in his list', await page.locator('[data-reinsp-on]').isVisible() && !(await page.locator('[data-reinsp-edit]').isVisible()) &&
+      !(await vis(page, '[data-list="services"] > li > .prc-row [data-v="name"]')).includes('Reinspection'));
+    await page.click('[data-reinsp-on]');
+    const f = '[data-form="service"]';
+    ok('turning it on: the form says Reinspection, and no price from us', (await page.locator(f + ' input[name="name"]').inputValue()) === 'Reinspection' &&
+      (await page.locator(f + ' input[name="fee"]').inputValue()) === '' && (await page.locator(f + ' input[name="hours"]').inputValue()) === '');
+    const before = calls.length;
+    await page.click(f + ' button[type="submit"]');
+    ok('no price: it asks for his, and sends nothing', (await vis(page, f + ' [data-problem]')).join() === 'Write the fee as dollars, like 450 or 450.50.' && pushed(calls.slice(before)).length === 0);
+    await page.fill(f + ' input[name="fee"]', '175');
+    await page.fill(f + ' input[name="hours"]', '1');
+    await page.click(f + ' button[type="submit"]');
+    await until(async () => !(await page.locator('[data-dialog="service"]').isVisible()));
+    const on = pushed(calls).filter((r) => r.id === RID);
+    ok('on: one row, under his account’s own reinspection id, his price and time, after his services', on.length === 1 && on[0].kind === 'price_services' &&
+      on[0].data.name === 'Reinspection' && on[0].data.feeCents === 17500 && on[0].data.minutes === 60 && on[0].data.parentId === null && on[0].data.position === 2 &&
+      on[0].deleted_at === null, JSON.stringify(on[0] && on[0].data));
+    if (process.env.SHOTS) await page.locator('[data-reinsp]').screenshot({ path: require('path').join(process.env.SHOTS, 'reinsp-on-wide.png') });
+    ok('on: the card says so; Reinspection is in his services once, as any service (its add-ons and price changes there too)', await until(async () => await page.locator('[data-reinsp-now]').isVisible()) &&
+      (await page.locator('[data-reinsp-now]').textContent()).indexOf('On: clients can book it.') === 0 && !(await page.locator('[data-reinsp-on]').isVisible()) &&
+      (await vis(page, '[data-list="services"] > li > .prc-row [data-v="name"]')).filter((n) => n === 'Reinspection').length === 1 &&
+      (await page.locator('[data-list="services"] > li[data-id="' + RID + '"] [data-add="addon"]').count()) === 1);
+    // Off: Delete from its card in the list.
+    await page.locator('[data-list="services"] > li[data-id="' + RID + '"] [data-edit]').first().click();
+    await page.click(f + ' [data-delete]'); await page.click(f + ' [data-delete]');
+    await until(async () => !(await page.locator('[data-dialog="service"]').isVisible()));
+    const gone = s.held.get('price_services/' + RID);
+    ok('off: the row deleted, the card offers it again', !!gone && gone.deleted_at !== null && await until(async () => await page.locator('[data-reinsp-on]').isVisible()));
+    // The phone's clock ahead: the deleted row's time is in the future; on again must still be newer.
+    // ... and it had a description, a minimum and a sales tax (set on the phone): all come back.
+    const ahead = Object.assign({}, gone.data, { updatedAt: Date.now() + 60000, deletedAt: Date.now() + 60000, description: 'Up to 3 items.', minimumFeeCents: 15000, taxName: 'Sales tax', taxRate: 700 });
+    s.put(s.row('price_services', ahead));
+    await page.reload(); await page.waitForSelector('[data-reinsp-on]');
+    await page.click('[data-reinsp-on]');
+    ok('on again: his last price and time, ready', (await page.locator(f + ' input[name="fee"]').inputValue()).replace(/[^0-9.]/g, '') === '175' && (await page.locator(f + ' input[name="hours"]').inputValue()) === '1');
+    await page.click(f + ' button[type="submit"]');
+    await until(async () => !(await page.locator('[data-dialog="service"]').isVisible()));
+    const back = s.held.get('price_services/' + RID);
+    ok('the same row back: one id, made when it first was, newer than the deleted one (even with the phone’s clock ahead)', !!back && back.deleted_at === null &&
+      back.data.createdAt === on[0].data.createdAt && back.updated_at > ahead.updatedAt, JSON.stringify(back && [back.updated_at, ahead.updatedAt]));
+    ok('on again keeps everything it had: description, minimum, sales tax', !!back && back.data.description === 'Up to 3 items.' && back.data.minimumFeeCents === 15000 &&
+      back.data.taxName === 'Sales tax' && back.data.taxRate === 700, JSON.stringify(back && back.data));
+    // A discount just for reinspections: it offers Reinspection, and saving an unrelated change keeps it just for them.
+    s.put(s.row('price_discounts', { id: 'disc-reinsp', ownerAccountId: ME, code: 'BACKAGAIN', kind: 'percent', value: 1000, appliesToJson: JSON.stringify([RID]), maxUses: null,
+      expiresAt: null, active: true, createdAt: T, updatedAt: T, deletedAt: null }));
+    await page.reload(); await page.waitForSelector('[data-reinsp-now]:not([hidden])');
+    await page.locator('[data-list="discounts"] li', { hasText: 'BACKAGAIN' }).locator('[data-edit]').click();
+    const dl = page.locator('[data-dialog="discount"]');
+    await until(async () => await dl.isVisible());
+    ok('a discount can name Reinspection', (await dl.locator('input[type="checkbox"][value="' + RID + '"]').count()) === 1 && await dl.locator('input[type="checkbox"][value="' + RID + '"]').isChecked());
+    await page.fill('[data-form="discount"] input[name="code"]', 'BACKAGAIN2');
+    const n0 = calls.length;
+    await page.click('[data-form="discount"] button[type="submit"]');
+    await until(async () => pushed(calls.slice(n0)).some((r) => r.id === 'disc-reinsp'));
+    const dw = pushed(calls.slice(n0)).find((r) => r.id === 'disc-reinsp');
+    ok('saving it keeps it just for reinspections (never widened to every service)', !!dw && dw.data.appliesToJson === JSON.stringify([RID]), dw && dw.data.appliesToJson);
+    await ctx.close();
+    const ph = await open(browser, { server: s, w: PHONE });
+    await ph.page.waitForSelector('[data-reinsp]');
+    if (process.env.SHOTS) await ph.page.locator('[data-reinsp]').screenshot({ path: require('path').join(process.env.SHOTS, 'reinsp-on-phone.png') });
+    ok('on a phone: the card fits, nothing off the side', await ph.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await ph.ctx.close();
+  });
+
   await group('changing and deleting', async () => {
     const s = server(); seed(s);
     const { page, ctx, calls } = await open(browser, { server: s });
