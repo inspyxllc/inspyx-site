@@ -185,8 +185,37 @@
     });
   }
 
+  /* ---- deleting one of his templates, and Undo (2026-11-26): the rows the phone's own Remove and Undo send
+     (template_sync_kind.dart _held; inspector_templates.dart hide / unhide) ---- */
+  /* The removal of template [held] (its row as the server holds it) at [at]: the row marked deleted, as the phone's
+     removal travels ({ id, ownerAccountId, base?, createdAt, updatedAt, deletedAt }). [base]: the content key of the
+     file the row names, what the website last saw there: a phone holding an edit made since keeps the template (the
+     phone's applySyncedRemoval). Its file stays: inspections made with it keep it, and Undo brings it back. */
+  function removalRow(held, me, at, base) {
+    var data = { id: held.id, ownerAccountId: me };
+    if (base) data.base = base;
+    data.createdAt = at; data.updatedAt = at; data.deletedAt = at;
+    return { kind: 'inspection_templates', id: held.id, updated_at: at, deleted_at: at, data: data };
+  }
+  /* Undo: the template back as it was before [at] ([was]: its live row then), the same file, so the phone shows it
+     again (applySynced: the same content, a hidden template shown again). */
+  function restoreRow(was, me, at, base) {
+    var d = was.data, data = { id: was.id, ownerAccountId: me, name: d.name, version: d.version, source: d.source,
+      sha256: d.sha256, byteLength: d.byteLength };
+    if (base) data.base = base;
+    data.createdAt = at; data.updatedAt = at; data.deletedAt = null;
+    return { kind: 'inspection_templates', id: was.id, updated_at: at, deleted_at: null, data: data };
+  }
+  /* The one new inspections start from: [templateId], or null for none chosen (then Inspyx's Walkthrough, as on the
+     phone when the template it started from is removed). */
+  function defaultRow(me, at, templateId) {
+    return { kind: 'template_default', id: 'default', updated_at: at, deleted_at: null,
+      data: { id: 'default', ownerAccountId: me, templateId: templateId, updatedAt: at, deletedAt: null } };
+  }
+
   var api = { canonical: canonical, dartTrim: dartTrim, compareVersions: compareVersions, nextVersionAfter: nextVersionAfter,
     newTemplateId: newTemplateId, editedProvenance: editedProvenance, firstSource: firstSource, isCopyOf: isCopyOf,
-    makeCopy: makeCopy, refIn: refIn, addLine: addLine, contentKey: contentKey };
+    makeCopy: makeCopy, refIn: refIn, addLine: addLine, contentKey: contentKey,
+    removalRow: removalRow, restoreRow: restoreRow, defaultRow: defaultRow };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.InspyxTemplateSave = api;
 })(typeof window !== 'undefined' ? window : this);

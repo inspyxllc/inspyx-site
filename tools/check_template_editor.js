@@ -690,6 +690,195 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     await o.ctx.close();
   });
 
+  /* ---- deleting one of his templates (2026-11-26): the phone's Remove, on the web ---- */
+  const startDel = async (rows, extra) => {
+    const files = new Map([[fileName(rows[0]), Buffer.from(V1)]]);
+    const biz = bizServer(rows), o = await open(browser, Object.assign({ biz, files }, extra || {}));
+    await o.page.locator('[data-open="' + MINE + '"]').click();
+    await until(async () => await o.page.locator('[data-edit]').isVisible() && (await o.page.locator('[data-name]').inputValue()) === 'My Walkthrough');
+    return { o, biz, files, page: o.page };
+  };
+  const pushedOf = (biz, kind) => biz.pushed.filter((r) => r.kind === kind);
+
+  await group('delete one of his own: asked first; Keep it changes nothing; Delete sends the phone\'s removal; Undo brings it back', async () => {
+    const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const { o, biz, files, page } = await startDel([R1]);
+    ok('his own template has Delete', await page.locator('[data-delete]').isVisible());
+    await page.locator('[data-delete]').click();
+    const q = await page.locator('[data-del-q]').textContent();
+    ok('asked first: it names the template and says inspections made with it keep it; not his default, so no note', await page.locator('[data-del-ask]').isVisible() &&
+      /Delete “My Walkthrough”\?/.test(q) && /Inspections already made with it keep it/.test(q) && await page.locator('[data-del-default]').isHidden(), q);
+    await page.locator('[data-del-no]').click();
+    ok('Keep it: the question goes, nothing sent', await page.locator('[data-del-ask]').isHidden() && biz.pushed.length === 0);
+    await page.locator('[data-delete]').click();
+    await page.locator('[data-del-yes]').click();
+    await until(async () => await page.locator('[data-gone]').isVisible());
+    const rm = pushedOf(biz, 'inspection_templates').pop(), base = await TS.contentKey(V1, digest);
+    ok('the removal is the phone\'s: deleted_at and data.deletedAt the same time, after the row\'s; only the removal\'s columns; base = the content key of the file it read',
+      rm && rm.id === MINE && rm.deleted_at !== null && rm.data.deletedAt === rm.deleted_at && rm.updated_at === rm.deleted_at && rm.updated_at > R1.updated_at &&
+      JSON.stringify(Object.keys(rm.data).sort()) === JSON.stringify(['base', 'createdAt', 'deletedAt', 'id', 'ownerAccountId', 'updatedAt']) &&
+      rm.data.base === base && rm.data.ownerAccountId === ME, JSON.stringify(rm));
+    ok('not his default: the one new inspections start from is left alone', pushedOf(biz, 'template_default').length === 0);
+    ok('gone from his list and the editor; said, with Undo; its file stays', (await page.locator('[data-open="' + MINE + '"]').count()) === 0 && await page.locator('[data-edit]').isHidden() &&
+      /^Deleted “My Walkthrough”\.$/.test(await page.locator('[data-gone-t]').textContent()) && await page.locator('[data-gone-undo]').isVisible() &&
+      files.has(fileName(R1)) && !o.fileCalls.some((c) => c.method !== 'GET' && c.method !== 'POST'));
+    await page.locator('[data-gone-undo]').click();
+    await until(async () => (await page.locator('[data-open="' + MINE + '"]').count()) === 1 && await page.locator('[data-edit]').isVisible());
+    const back = pushedOf(biz, 'inspection_templates').pop();
+    ok('Undo: the same file back, live, after the removal; it opens again', back.deleted_at === null && back.data.deletedAt === null && back.updated_at > rm.updated_at &&
+      back.data.sha256 === R1.data.sha256 && back.data.version === R1.data.version && back.data.name === R1.data.name && back.data.byteLength === R1.data.byteLength &&
+      back.data.source === R1.data.source && back.data.base === base && /is back on your list/.test(await page.locator('[data-gone-t]').textContent()) &&
+      (await page.locator('[data-name]').inputValue()) === 'My Walkthrough', JSON.stringify(back));
+    ok('no errors; nothing asked of anyone else', !o.errs.length && !o.away.length, o.errs.concat(o.away).join(' | ').slice(0, 200));
+    await o.ctx.close();
+  });
+
+  await group('his default: said before; after, new inspections start from Walkthrough, as on the phone; Undo doesn\'t make it the default again', async () => {
+    const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const { o, biz, page } = await startDel([R1, dflt(MINE, 1100)]);
+    await page.locator('[data-delete]').click();
+    const note = await page.locator('[data-del-default]').textContent();
+    ok('the question says new inspections start from it, and from Walkthrough once it\'s deleted', await page.locator('[data-del-default]').isVisible() && /start from “Walkthrough”/.test(note), note);
+    await page.locator('[data-del-yes]').click();
+    await until(async () => await page.locator('[data-gone]').isVisible());
+    const d = pushedOf(biz, 'template_default').pop(), rm = pushedOf(biz, 'inspection_templates').pop();
+    ok('the default is none chosen, sent with the removal, at the same time', d && d.data.templateId === null && d.deleted_at === null && d.data.deletedAt === null && d.updated_at === rm.updated_at && d.updated_at > 1100, JSON.stringify(d));
+    ok('said; Walkthrough is now the one used', /New inspections now start from “Walkthrough”/.test(await page.locator('[data-gone-t]').textContent()) &&
+      /Used for new inspections/.test(await page.locator('[data-open="ours"]').textContent()));
+    const n = pushedOf(biz, 'template_default').length;
+    await page.locator('[data-gone-undo]').click();
+    await until(async () => (await page.locator('[data-open="' + MINE + '"]').count()) === 1);
+    ok('Undo: back, but not the default (the phone\'s Undo neither), and it says how to make it so', pushedOf(biz, 'template_default').length === n &&
+      /still start from “Walkthrough”/.test(await page.locator('[data-gone-t]').textContent()));
+    await o.ctx.close();
+  });
+
+  await group('Inspyx\'s own: never a Delete', async () => {
+    const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const { o, page } = await startDel([R1]);
+    await page.locator('[data-open="ours"]').click();
+    await until(async () => await page.locator('[data-ro]').isVisible());
+    ok('no Delete on Inspyx\'s template', await page.locator('[data-delete]').isHidden());
+    await o.ctx.close();
+  });
+
+  await group('changed elsewhere meanwhile: deleted already; a newer version there (its base is that one); Undo after another device brought it back', async () => {
+    {
+      const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+      const { o, biz, page } = await startDel([R1]);
+      biz.put(TS.removalRow(R1, ME, 2000, 'x'));
+      const n = biz.pushed.length;
+      await page.locator('[data-delete]').click(); await page.locator('[data-del-yes]').click();
+      await until(async () => await page.locator('[data-gone]').isVisible());
+      ok('deleted on another device: said, nothing sent, no Undo', biz.pushed.length === n && /already deleted on another device/.test(await page.locator('[data-gone-t]').textContent()) &&
+        await page.locator('[data-gone-undo]').isHidden());
+      await o.ctx.close();
+    }
+    {
+      const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+      const { o, biz, files, page } = await startDel([R1]);
+      const V2 = TS.makeCopy(COPY, MINE, 'My Walkthrough, edited on the phone'), R2 = rowOf(MINE, 'My Walkthrough, edited on the phone', V2, 1500);
+      files.set(fileName(R2), Buffer.from(V2)); biz.put(R2);
+      await page.locator('[data-delete]').click(); await page.locator('[data-del-yes]').click();
+      await until(async () => await page.locator('[data-gone]').isVisible());
+      const rm = pushedOf(biz, 'inspection_templates').pop();
+      ok('a newer version there: the removal\'s base is its content key, after its time', rm.data.base === await TS.contentKey(V2, digest) && rm.updated_at > 1500, JSON.stringify(rm.data));
+      await o.ctx.close();
+    }
+    {
+      const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+      const { o, biz, page } = await startDel([R1]);
+      await page.locator('[data-delete]').click(); await page.locator('[data-del-yes]').click();
+      await until(async () => await page.locator('[data-gone]').isVisible());
+      biz.put(Object.assign(rowOf(MINE, 'My Walkthrough', V1, 9e12)));
+      const n = biz.pushed.length;
+      await page.locator('[data-gone-undo]').click();
+      await until(async () => /another device/.test(await page.locator('[data-gone-t]').textContent()));
+      ok('Undo after another device brought it back: that stands, nothing sent', biz.pushed.length === n);
+      await o.ctx.close();
+    }
+  });
+
+  await group('Undo while another template is open with changes not saved: it comes back in the list; those changes stay (Codex on #114)', async () => {
+    const SECOND = 'inspector.second', V9 = TS.makeCopy(COPY, SECOND, 'Second one');
+    const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000), R9 = rowOf(SECOND, 'Second one', V9, 1000);
+    const { o, files, page } = await startDel([R1, R9]);
+    files.set(fileName(R9), Buffer.from(V9));
+    await page.locator('[data-delete]').click(); await page.locator('[data-del-yes]').click();
+    await until(async () => await page.locator('[data-gone]').isVisible());
+    await page.locator('[data-open="' + SECOND + '"]').click();
+    await until(async () => (await page.locator('[data-name]').inputValue()) === 'Second one');
+    await page.locator('[data-name]').fill('Second one, renamed');
+    await page.locator('[data-gone-undo]').click();
+    await until(async () => (await page.locator('[data-open="' + MINE + '"]').count()) === 1);
+    await new Promise((r) => setTimeout(r, 400));
+    ok('back in the list; the other template stays open with his change', (await page.locator('[data-name]').inputValue()) === 'Second one, renamed' &&
+      /is back on your list/.test(await page.locator('[data-gone-t]').textContent()), (await page.locator('[data-name]').inputValue()) + ' / ' + (await page.locator('[data-gone-t]').textContent()));
+    await o.ctx.close();
+  });
+
+  await group('deleted with the report preview open at a middle width: the list, and its Undo, show again (Codex on #114)', async () => {
+    const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const { o, page } = await startDel([R1], { w: 1200 });
+    await until(async () => (await page.locator('.te-stop').count()) > 0);
+    await openStop(page.locator('.te-stop').first());
+    await page.locator('.te-item[data-item="' + ITEM.ref + '"] [data-see]').click();
+    await until(async () => await page.locator('[data-preview]').isVisible());
+    ok('the preview takes the list\'s place (as it should, before)', await page.locator('.te-list').isHidden());
+    await page.locator('[data-delete]').click(); await page.locator('[data-del-yes]').click();
+    await until(async () => await page.locator('[data-gone]').isVisible(), 4000);
+    ok('after: the preview gone, the list and Undo shown', await page.locator('[data-preview]').isHidden() && await page.locator('.te-list').isVisible() &&
+      await page.locator('[data-gone-undo]').isVisible());
+    await o.ctx.close();
+  });
+
+  await group('Undo after another device brought it back, edited it and deleted it again: that device\'s removal stands (Codex on #114)', async () => {
+    const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const { o, biz, page } = await startDel([R1]);
+    await page.locator('[data-delete]').click(); await page.locator('[data-del-yes]').click();
+    await until(async () => await page.locator('[data-gone]').isVisible());
+    const mine = pushedOf(biz, 'inspection_templates').pop();
+    biz.put(TS.removalRow(R1, ME, mine.updated_at + 5000, 'another-edit'));
+    const n = biz.pushed.length;
+    await page.locator('[data-gone-undo]').click();
+    await until(async () => /another device/.test(await page.locator('[data-gone-t]').textContent()));
+    ok('nothing sent; said', biz.pushed.length === n);
+    await o.ctx.close();
+  });
+
+  await group('the feed down: nothing sent, said, the template still open', async () => {
+    const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const { o, biz, page } = await startDel([R1]);
+    biz.down = true;
+    await page.locator('[data-delete]').click(); await page.locator('[data-del-yes]').click();
+    await until(async () => (await page.locator('[data-say]').getAttribute('data-said')) === 'p-failed');
+    ok('said; nothing sent; still open', biz.pushed.length === 0 && await page.locator('[data-edit]').isVisible() && await page.locator('[data-gone]').isHidden());
+    await o.ctx.close();
+  });
+
+  for (const [w, big] of [[375, false], [393, false], [430, false], [375, true]]) {
+    await group('delete measured at ' + w + (big ? ', large text' : ''), async () => {
+      const R1 = rowOf(MINE, 'A template with a much longer name than most', V1, 1000);
+      const files = new Map([[fileName(R1), Buffer.from(V1)]]);
+      const biz = bizServer([R1, dflt(MINE, 1100)]), o = await open(browser, { biz, files, w });
+      const page = o.page;
+      if (big) await page.evaluate(() => { document.body.style.zoom = '1.3'; });
+      await page.locator('[data-open="' + MINE + '"]').click();
+      await until(async () => await page.locator('[data-edit]').isVisible());
+      await page.locator('[data-delete]').click();
+      const fit = async (sel) => page.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return { page: document.documentElement.scrollWidth, vw: innerWidth, right: r.right }; }, sel);
+      const a = await fit('[data-del-ask]'), b0 = await fit('[data-delete]');
+      ok('the question and Delete fit', a.page <= a.vw && a.right <= a.vw + 0.5 && b0.right <= b0.vw + 0.5, JSON.stringify([a, b0]));
+      if (SHOTS) await page.locator('[data-del-ask]').screenshot({ path: path.join(SHOTS, 'tpl-del-ask-' + w + (big ? '-large' : '') + '.png') });
+      await page.locator('[data-del-yes]').click();
+      await until(async () => await page.locator('[data-gone]').isVisible());
+      const g = await fit('[data-gone]');
+      ok('the "Deleted", with Undo, fits', g.page <= g.vw && g.right <= g.vw + 0.5, JSON.stringify(g));
+      if (SHOTS) await page.locator('[data-gone]').screenshot({ path: path.join(SHOTS, 'tpl-del-gone-' + w + (big ? '-large' : '') + '.png') });
+      await o.ctx.close();
+    });
+  }
+
   await browser.close();
   console.log(failed ? failed + ' FAILED' : 'ALL PASS');
   process.exit(failed ? 1 : 0);

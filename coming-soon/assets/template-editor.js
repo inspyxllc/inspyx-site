@@ -315,6 +315,8 @@
     $('[data-copy]').hidden = !ro;
     defaultControls();
     $('[data-export]').hidden = ro;
+    // His own only: Inspyx's never leaves the list.
+    $('[data-delete]').hidden = ro; askDelete(false);
     ratingsEl(ro);
     // Drawn again after a save: the stops he had open stay open (by ref), where he was.
     var wasOpen = all('.te-stop[open]', stops).map(function (d) { return d.getAttribute('data-stop'); });
@@ -667,7 +669,7 @@
     busy = on;
     // Nothing still on its way may open while a save, copy or switch is under way (Codex on #102).
     if (on) cancelLoads();
-    all('[data-save],[data-discard],[data-copy],[data-use],[data-export]', main).forEach(function (b) { b.disabled = on; });
+    all('[data-save],[data-discard],[data-copy],[data-use],[data-export],[data-delete],[data-del-yes],[data-del-no],[data-gone-undo]', main).forEach(function (b) { b.disabled = on; });
     all('[data-k], [data-find]', edit).forEach(function (b) { b.disabled = on || (open && open.readOnly && b.hasAttribute('data-k')); });
     // The steps too: add, move, delete.
     all('.te-mini, [data-item-to]', edit).forEach(function (b) { b.disabled = on; });
@@ -778,6 +780,103 @@
       if (before && before !== open.outline.name) say('now-used-instead', { name: open.outline.name, was: before });
       else say('now-used', { name: open.outline.name });
     }, function () { say('p-failed'); }).then(function () { lock(false); });
+  });
+
+  /* ---- deleting one of his templates (the lead's audit, 2026-11-26: the phone's Remove, on the web): asked first;
+     the row marked deleted, as the phone's removal travels (template-save.js removalRow), so it leaves his list here
+     and on every phone; its file stays, so inspections made with it keep it. The one new inspections start from, if
+     it was this one, is none chosen again (then Inspyx's Walkthrough), as the phone does. Undo brings it back as it
+     was, not as the one new inspections start from (the phone's Undo neither). ---- */
+  var OURS_NAME = function () { return copyFile ? copyFile.sourceName : 'Walkthrough'; };
+  var gone = null, goneTimer = null, GONE_FOR = 30000;   // { was: its live row, name, wasDefault }
+  /* The editor empty again (its template deleted): the report preview with it, so the list (with Undo) shows again
+     at every width (Codex on #114: between widths the preview took the list's place). */
+  function clearOpen() { open = null; edit.hidden = true; pvItem = null; renderPreview(); }
+  function askDelete(on) {
+    var ask = $('[data-del-ask]');
+    ask.hidden = !on;
+    if (!on || !open) return;
+    $('[data-del-q]').textContent = words(changed() ? 'del-q-changed' : 'del-q', { name: open.outline.name });
+    var isDefault = usedId() === open.id;
+    $('[data-del-default]').hidden = !isDefault;
+    $('[data-del-default]').textContent = isDefault ? words('del-default', { ours: OURS_NAME() }) : '';
+    $('[data-del-no]').focus();
+  }
+  function showGone(text, undo) {
+    var box = $('[data-gone]');
+    clearTimeout(goneTimer);
+    box.hidden = !text; $('[data-gone-t]').textContent = text || '';
+    $('[data-gone-undo]').hidden = !undo;
+    if (text && undo) goneTimer = setTimeout(function () { gone = null; showGone(null); }, GONE_FOR);
+  }
+  $('[data-delete]').addEventListener('click', function () { if (!busy && open && !open.readOnly) askDelete(true); });
+  $('[data-del-no]').addEventListener('click', function () { askDelete(false); $('[data-delete]').focus(); });
+  $('[data-del-yes]').addEventListener('click', function () {
+    if (busy || !open || open.readOnly) return;
+    var id = open.id, name = open.outline.name, me = auth.who().id;
+    askDelete(false); lock(true); say('deleting');
+    var run = queue.then(function () {
+      return pull().then(function (ok) {
+        if (!ok) return { problem: 'failed' };
+        var row = biz[TPL + '/' + id];
+        if (!standing(row)) return { problem: 'gone' };
+        // The newest there, read: its content key is the removal's base (a phone with an edit made since keeps it).
+        return readFile(row).then(function (text) {
+          if (text === null) return { problem: 'failed' };
+          return TS.contentKey(text, digest).then(function (base) {
+            var d = biz[TPL_DEFAULT + '/default'], wasDefault = usedId() === id;
+            var at = Math.max(Date.now(), row.updated_at + 1, wasDefault && d ? d.updated_at + 1 : 0);
+            var push = [TS.removalRow(row, me, at, base)];
+            if (wasDefault) push.push(TS.defaultRow(me, at, null));
+            return send(push, id).then(function (k) {
+              return k === 'ok' ? { was: row, base: base, wasDefault: wasDefault, at: at } : { problem: k === 'changed' ? 'failed' : k };
+            });
+          });
+        });
+      });
+    });
+    queue = run.catch(function () { return null; });
+    run.then(function (r) {
+      if (r.problem) {
+        if (r.problem === 'gone') { clearOpen(); renderList(); showGone(words('p-gone'), false); return; }
+        say('p-' + r.problem); return;
+      }
+      gone = { was: r.was, base: r.base, name: name, wasDefault: r.wasDefault, at: r.at };
+      clearOpen();
+      if (decodeURIComponent((window.location.hash || '').slice(1)) === id) history.replaceState(null, '', window.location.pathname);
+      renderList();
+      showGone(words(r.wasDefault ? 'deleted-default' : 'deleted', { name: name, ours: OURS_NAME() }), true);
+      $('[data-gone-undo]').focus();
+    }, function () { say('p-failed'); }).then(function () { lock(false); });
+  });
+  $('[data-gone-undo]').addEventListener('click', function () {
+    if (busy || !gone) return;
+    var g = gone, me = auth.who().id;
+    lock(true); showGone(words('undoing'), false);
+    var run = queue.then(function () {
+      return pull().then(function (ok) {
+        if (!ok) return 'failed';
+        var row = biz[TPL + '/' + g.was.id];
+        // Only this page's own removal is taken back: brought back, changed, or deleted again on another device
+        // meanwhile, that device's change stands (Codex on #114).
+        if (!row || standing(row) || row.updated_at !== g.at) return 'changed';
+        var at = Math.max(Date.now(), row.updated_at + 1);
+        return send([TS.restoreRow(g.was, me, at, g.base)], g.was.id);
+      });
+    });
+    queue = run.catch(function () { return null; });
+    run.then(function (k) {
+      if (k === 'ok') {
+        gone = null; renderList();
+        showGone(words(g.wasDefault ? 'undone-default' : 'undone', { name: g.name, ours: OURS_NAME() }), false);
+        // Back in his list; it opens only when that loses nothing: another template open with changes not saved
+        // stays as it is (Codex on #114).
+        if (!open || !changed()) return choose(g.was.id, true);
+        return;
+      }
+      if (k === 'changed') { gone = null; renderList(); showGone(words('undo-changed'), false); return; }
+      showGone(words('undo-failed'), true);
+    }, function () { showGone(words('undo-failed'), true); }).then(function () { lock(false); });
   });
 
   /* ---- start, and keep in step with the phone ---- */

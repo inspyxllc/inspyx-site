@@ -57,6 +57,7 @@
 </div>
 <div class="te-grid">
 <section class="te-list" aria-label="Your templates">
+<div class="te-gone" data-gone role="status" hidden><p data-gone-t></p><button type="button" class="te-btn ghost" data-gone-undo>Undo</button></div>
 <h2>Yours</h2>
 <ul data-mine></ul>
 <p class="te-none" data-mine-none hidden>None of your own yet. Make your own copy of Inspyx’s, then change it as you like.</p>
@@ -69,7 +70,12 @@
 <label class="te-name"><span>Template name</span><input data-name maxlength="120" autocomplete="off"></label>
 <p class="te-ver" data-ver></p>
 <p class="te-ro" data-ro hidden>Inspyx’s own template can’t be changed. Make your own copy to change it; new inspections can start from your copy.</p>
-<div class="te-acts"><button type="button" class="te-btn" data-copy hidden>Make your own copy</button><button type="button" class="te-btn ghost" data-use hidden>Use for new inspections</button><button type="button" class="te-btn ghost" data-export hidden>Export</button><span class="te-used" data-used hidden>Used for new inspections</span></div>
+<div class="te-acts"><button type="button" class="te-btn" data-copy hidden>Make your own copy</button><button type="button" class="te-btn ghost" data-use hidden>Use for new inspections</button><button type="button" class="te-btn ghost" data-export hidden>Export</button><span class="te-used" data-used hidden>Used for new inspections</span><button type="button" class="te-btn ghost danger" data-delete hidden>Delete this template</button></div>
+<div class="te-ask" data-del-ask role="alertdialog" aria-labelledby="te-del-q" hidden>
+<p id="te-del-q" data-del-q></p>
+<p class="te-ask-note" data-del-default hidden></p>
+<div class="te-acts"><button type="button" class="te-btn danger-solid" data-del-yes>Delete</button><button type="button" class="te-btn ghost" data-del-no>Keep it</button></div>
+</div>
 </div>
 <div class="te-findbar">
 <label class="te-search"><span>Find</span><input type="search" data-find placeholder="A stop, an item or a comment's words" autocomplete="off"></label>
@@ -172,6 +178,18 @@
 <span data-w="p-no_part">This template just changed on another device, and a part you changed is gone. Discard, then make your change again.</span>
 <span data-w="p-too_big">This template is too big to save (over 5 MB).</span>
 <span data-w="p-full">Your templates are full. Remove one you don’t use, then try again.</span>
+<span data-w="del-q">Delete “{name}”? It leaves your list here and on your phone. Inspections already made with it keep it.</span>
+<span data-w="del-q-changed">Delete “{name}”? It leaves your list here and on your phone, and the changes you haven’t saved are lost. Inspections already made with it keep it.</span>
+<span data-w="del-default">New inspections start from it now; once it’s deleted, they start from “{ours}”.</span>
+<span data-w="deleting">Deleting…</span>
+<span data-w="deleted">Deleted “{name}”.</span>
+<span data-w="deleted-default">Deleted “{name}”. New inspections now start from “{ours}”.</span>
+<span data-w="undoing">Bringing it back…</span>
+<span data-w="undone">“{name}” is back on your list.</span>
+<span data-w="undone-default">“{name}” is back on your list. New inspections still start from “{ours}”: open it and choose Use for new inspections to change that.</span>
+<span data-w="undo-failed">It couldn’t be brought back. Try Undo again.</span>
+<span data-w="undo-changed">It was changed on another device meanwhile, so it stays as that device left it.</span>
+<span data-w="p-gone">It was already deleted on another device.</span>
 <span data-w="p-failed">That didn’t go through. Try again.</span>
 <span data-w="p-changed">This template just changed on another device. Try again.</span>
 </template>
