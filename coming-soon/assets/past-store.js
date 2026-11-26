@@ -37,7 +37,7 @@
   }
 
   /* The rows for the reader's new inspections ([inspections]: its answer's list). Answers { push, problems: [{ line,
-     problem }] } (a row the rules would refuse is never sent). */
+     problem, address, date }] } (a row the rules would refuse is never sent). */
   function newRows(inspections, me, now, newId, importId) {
     var push = [], problems = [];
     inspections.forEach(function (x) {
@@ -47,7 +47,8 @@
       data.feeCents = typeof x.row.feeCents === 'number' ? x.row.feeCents : null;
       data.removedAt = null; data.updatedAt = now; data.deletedAt = null;
       var p = problem(data);
-      if (p) problems.push({ line: x.line, problem: p }); else push.push(wire(data));
+      // Named by its line in a file; one read from Spectora has none (line 0), so by its address and day too.
+      if (p) problems.push({ line: x.line, problem: p, address: data.address, date: data.date }); else push.push(wire(data));
     });
     return { push: push, problems: problems };
   }

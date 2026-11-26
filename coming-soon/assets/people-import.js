@@ -36,6 +36,9 @@
   function say(key, fill) { var p = $('[data-say]'); p.hidden = !key; p.textContent = key ? words(key, fill) : ''; p.setAttribute('data-said', key || ''); }
 
   var file = null;     // { name, bytes }
+  // Or read straight from Spectora (2026-11-26, the web importers' piece 3: I2's spectora-import function and the
+  // engine's spectora/spectoraStep): what was read, as the engine takes it. The inspector's key is never here.
+  var spx = null;      // people: { clients, agents, clients_cut, agents_cut }; a history: { records, cut }
   var choice = { kind: null, match: null };
   var read = null;     // the engine's answer shown now
   var turn = 0, busy = false, done = null, picked = 0;
@@ -60,6 +63,11 @@
   /* The engine on the file, with his choices and People as held. */
   function engine() {
     var opts = { existing: existing() };
+    // Read from Spectora: nothing to match (no columns), and the engine's Spectora planner.
+    if (spx) {
+      if (HISTORY) opts.existing_past = PS.keptForReader(pastBook.rows(), auth.who().id);
+      return Promise.resolve(window.inspyxImport.spectora(HISTORY ? 'inspections' : 'people', spx, opts)).then(function (t) { return typeof t === 'string' ? JSON.parse(t) : t; });
+    }
     // A history: the inspections kept already, so the same one is never kept twice.
     if (HISTORY) opts.existing_past = PS.keptForReader(pastBook.rows(), auth.who().id);
     if (choice.kind) opts.kind = choice.kind;
@@ -72,7 +80,7 @@
     var mine = ++turn;
     // While it reads (again), Bring in waits: it would keep a plan he hasn't seen.
     $('[data-go]').disabled = true;
-    if (!window.inspyxImport || typeof window.inspyxImport[read$] !== 'function') { say('no-engine'); return Promise.resolve(); }
+    if (!window.inspyxImport || typeof window.inspyxImport[spx ? 'spectora' : read$] !== 'function') { say('no-engine'); return Promise.resolve(); }
     say('reading');
     return freshPeople().then(function (ok) {
       if (mine !== turn) return;
@@ -99,8 +107,15 @@
       b.classList.toggle('is-on', on); b.setAttribute('aria-checked', on ? 'true' : 'false');
     });
     // Each column: its header, its first value, and what it holds (the reader's guess, or his choice).
+    // Read from Spectora: no columns, and nobody to say who is in it (clients are clients, agents agents).
+    var cols = r.columns || [];
+    $('[data-cols-h]').hidden = !cols.length; $('[data-cols-wrap]').hidden = !cols.length;
+    var kinds = main.querySelector('.pi-kind'); if (kinds) kinds.hidden = !!spx;
+    var agentsNote = $('[data-spx-agents]');
+    if (agentsNote) { agentsNote.hidden = !(spx && r.agents_read); agentsNote.textContent = spx && r.agents_read ? words('spx-agents') : ''; }
+    $('[data-again]').textContent = words(spx ? 'again-spx' : 'again-file');
     var tb = $('[data-cols]'); tb.textContent = '';
-    r.columns.forEach(function (c) {
+    cols.forEach(function (c) {
       var tr = el('tr'), sel = el('select');
       sel.setAttribute('data-col', String(c.index)); sel.setAttribute('aria-label', c.header || ('#' + (c.index + 1)));
       var none = el('option', null, words('not-used')); none.value = ''; sel.appendChild(none);
@@ -112,9 +127,9 @@
       tb.appendChild(tr);
     });
     // Nothing can be read yet: the column that holds the names (people), or a date, address or client (a history).
-    $('[data-noname]').hidden = HISTORY ? !!r.can_file : !!r.has_name;
+    $('[data-noname]').hidden = spx ? true : HISTORY ? !!r.can_file : !!r.has_name;
     var people = HISTORY ? (r.inspections || []) : (r.people || []);
-    $('[data-count]').textContent = plural('count', people.length);
+    $('[data-count]').textContent = plural(spx ? 'count-spx' : 'count', people.length);
     if (HISTORY) {
       var cut = $('[data-cut]');
       cut.hidden = !r.cut; cut.textContent = r.cut ? (r.cut_message || '') : '';
@@ -148,7 +163,8 @@
     $('[data-more]').textContent = words('more', { shown: SHOWN, n: people.length });
     var sk = r.skipped || [], box = $('[data-skipped]'), list = $('[data-skipped-list]');
     box.hidden = !sk.length; $('[data-skipped-n]').textContent = plural('skipped', sk.length); list.textContent = '';
-    sk.forEach(function (x) { list.appendChild(el('li', null, words('line', { line: x.line, reason: x.reason }))); });
+    // A line of a file by its number; a Spectora record (or a list cut short) by where it is.
+    sk.forEach(function (x) { list.appendChild(el('li', null, x.where ? words('where', { where: x.where, reason: x.reason }) : words('line', { line: x.line, reason: x.reason }))); });
     var n = c.new + c.fill + c.bring_back, go = $('[data-go]');
     if (HISTORY) {
       // The inspections: new ones to keep, and how many are on his list already.
@@ -193,7 +209,8 @@
   function take(f) {
     if (!f || busy) return;
     // A new file: nothing of the last import is this one's to show or to undo (Codex on #110).
-    done = null; donePast = null; $('[data-done]').hidden = true;
+    done = null; donePast = null; $('[data-done]').hidden = true; spx = null; spxSay(null); spxLock(false);
+    var kb = $('[data-spx-key]'); if (kb) kb.value = ''; spxHide(true);
     // Another file: any reading still on its way for the last one is over now, before this one is even read (Codex on
     // #106): it can't bring the last file's preview back.
     turn++; $('[data-go]').disabled = true;
@@ -203,7 +220,7 @@
     read = null; $('[data-read]').hidden = true;
     // Only the last file picked counts: an earlier one that finishes reading later is dropped (Codex on #106).
     var mine = ++picked;
-    reader.onload = function () { if (mine !== picked) return; file = { name: f.name, bytes: new Uint8Array(reader.result) }; choice = { kind: null, match: null }; run(); };
+    reader.onload = function () { if (mine !== picked) return; spx = null; file = { name: f.name, bytes: new Uint8Array(reader.result) }; choice = { kind: null, match: null }; run(); };
     reader.onerror = function () { if (mine === picked) say('failed'); };
     reader.readAsArrayBuffer(f);
   }
@@ -212,7 +229,113 @@
   drop.addEventListener('dragover', function (e) { e.preventDefault(); drop.classList.add('is-over'); });
   drop.addEventListener('dragleave', function () { drop.classList.remove('is-over'); });
   drop.addEventListener('drop', function (e) { e.preventDefault(); drop.classList.remove('is-over'); take(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]); });
-  $('[data-again]').addEventListener('click', function () { if (!busy) $('[data-pick]').click(); });
+  $('[data-again]').addEventListener('click', function () {
+    if (busy) return;
+    if (spx) { showSrc('spectora'); var k = $('[data-spx-key]'); if (k) k.focus(); } else $('[data-pick]').click();
+  });
+
+  /* ---- where they come from: a file, or Spectora ---- */
+  function showSrc(which) {
+    [].slice.call(main.querySelectorAll('[data-src]')).forEach(function (b) {
+      var on = b.getAttribute('data-src') === which; b.classList.toggle('is-on', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    [].slice.call(main.querySelectorAll('[data-src-pane]')).forEach(function (p) { p.hidden = p.getAttribute('data-src-pane') !== which; });
+  }
+  main.addEventListener('click', function (e) { var b = e.target.closest('[data-src]'); if (b) showSrc(b.getAttribute('data-src')); });
+
+  /* ---- read straight from Spectora (I2's spectora-import): every page, waiting or stopping as the app does ----
+     The key goes only into each call's body (never kept: not in the page's state, storage, the address or a log), and
+     its box is emptied when the reading ends. */
+  var LIMIT = 100, ASK_DEADLINE = 60000;
+  function spxSay(key, fill, text) { var p = $('[data-spx-say]'); if (!p) return; p.hidden = !key && !text; p.textContent = text || (key ? words(key, fill) : ''); p.setAttribute('data-said', key || (text ? 'stop' : '')); }
+  var sleep = function (ms) { return new Promise(function (ok) { setTimeout(ok, ms); }); };
+  /* One list ([what]) from page 1 on, into [got]. Answers null when it was read to its end (or cut at Spectora's
+     limit: [got] says so), or { message } when it stopped (what was read stays in [got], said as cut). */
+  function readList(key, what, got, mine, progress) {
+    var list = what === 'inspections' ? 'records' : what, cutKey = what === 'inspections' ? 'cut' : what + '_cut', before = null;
+    var page = function (n, attempt) {
+      var body = { key: key, what: what, page: n };
+      if (before) body.before = before;
+      return auth.ask('spectora-import', body, ASK_DEADLINE).then(function (r) {
+        if (r === null) { window.location.replace('/signin'); return { over: true }; }
+        return r.status === 200 && r.json && Array.isArray(r.json.records) ? r.json : (r.json && typeof r.json === 'object' ? r.json : {});
+      }, function () { return { refused: 'no_signal' }; }).then(function (a) {
+        if (mine !== picked || a.over) return { over: true };
+        if (Array.isArray(a.records)) {
+          got[list] = got[list].concat(a.records); progress();
+          if (what === 'inspections' && !before && typeof a.before === 'string') before = a.before;
+          if (a.cut === true) { got[cutKey] = true; return null; }
+          if (a.has_next === true) {
+            if (n >= LIMIT) { got[cutKey] = true; return null; }
+            return page(n + 1, 0);
+          }
+          return null;
+        }
+        // No records: the app's own rule says wait (then the same page again) or stop.
+        var step = {};
+        try { step = JSON.parse(window.inspyxImport.spectoraStep(a, attempt)); } catch (e) { step = {}; }
+        if (typeof step.wait_seconds === 'number' && step.wait_seconds >= 0) {
+          spxSay(null, null, plural('spx-wait', Math.ceil(step.wait_seconds)));
+          return sleep(step.wait_seconds * 1000).then(function () { return mine !== picked ? { over: true } : page(n, attempt + 1); });
+        }
+        got[cutKey] = true;
+        return { message: typeof step.message === 'string' && step.message ? step.message : words('failed') };
+      });
+    };
+    return page(1, 0);
+  }
+  /* While Spectora is read, only its form waits (a wait Spectora asks for can be long): a file can still be picked,
+     and Stop ends the reading; either way that reading never lands. */
+  function spxLock(on) {
+    var k = $('[data-spx-key]'), g = $('[data-spx-go]'), st = $('[data-spx-stop]');
+    var eye = $('[data-spx-eye]');
+    if (k) k.disabled = on; if (g) g.disabled = on; if (eye) eye.disabled = on; if (st) st.hidden = !on;
+  }
+  /* The key is a secret: hidden as typed; the eye shows it while he checks it, and it is hidden again whenever the box
+     is emptied. */
+  function spxHide(on) {
+    var k = $('[data-spx-key]'), eye = $('[data-spx-eye]');
+    if (k) k.type = on ? 'password' : 'text';
+    if (eye) { eye.setAttribute('aria-pressed', on ? 'false' : 'true'); eye.setAttribute('aria-label', words(on ? 'eye-show' : 'eye-hide')); }
+  }
+  var spxEye = $('[data-spx-eye]');
+  if (spxEye) spxEye.addEventListener('click', function () { var k = $('[data-spx-key]'); spxHide(k && k.type === 'text'); });
+  var spxStop = $('[data-spx-stop]');
+  if (spxStop) spxStop.addEventListener('click', function () { picked++; spxLock(false); spxSay('spx-stopped'); var k = $('[data-spx-key]'); if (k) k.value = ''; spxHide(true); });
+  var spxForm = $('[data-spx]');
+  if (spxForm) spxForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var box = $('[data-spx-key]'), key = box ? box.value.trim() : '';
+    if (busy) return;
+    if (!key) { spxSay('spx-no-key'); if (box) box.focus(); return; }
+    if (!window.inspyxImport || typeof window.inspyxImport.spectoraStep !== 'function' || typeof window.inspyxImport.spectora !== 'function') { spxSay('no-engine'); return; }
+    // A new read: nothing of the last import (or file) is this one's to show, keep or undo.
+    done = null; donePast = null; $('[data-done]').hidden = true;
+    var mine = ++picked; turn++; read = null; file = null; spx = null; $('[data-read]').hidden = true; say(null);
+    var got = HISTORY ? { records: [], cut: false } : { clients: [], agents: [], clients_cut: false, agents_cut: false };
+    var progress = function () { spxSay(HISTORY ? 'spx-reading' : 'spx-reading', HISTORY ? { n: got.records.length } : { clients: got.clients.length, agents: got.agents.length }); };
+    progress(); spxLock(true);
+    var whats = HISTORY ? ['inspections'] : ['clients', 'agents'], stop = null;
+    var next = function (i) {
+      if (i >= whats.length) return Promise.resolve(null);
+      return readList(key, whats[i], got, mine, progress).then(function (end) { return end ? end : next(i + 1); });
+    };
+    next(0).catch(function () { return { message: words('failed') }; }).then(function (end) {
+      // The key is forgotten now, whatever happened.
+      key = '';
+      if (mine !== picked || (end && end.over)) return;
+      if (box) box.value = '';
+      spxHide(true); spxLock(false);
+      stop = end && end.message;
+      var any = HISTORY ? got.records.length : got.clients.length + got.agents.length;
+      if (stop && !any) { spxSay(null, null, stop); return; }
+      // Stopped part way: what was read is offered, the stop said above it (the engine lists the rest as left out).
+      if (stop) spxSay(null, null, stop + ' ' + words('spx-partial')); else spxSay(null);
+      spx = got; choice = { kind: null, match: null };
+      return run();
+    });
+  });
+  window.addEventListener('pagehide', function () { var b = $('[data-spx-key]'); if (b) b.value = ''; spxHide(true); });
 
   /* ---- keep them: People read whole and planned again now, then sent 200 at a time ---- */
   /* Sends [push] 200 at a time. Answers { kept: ids the server kept, broke: true when a batch didn't go through } (what
@@ -246,8 +369,9 @@
   function refusedWords(problems) {
     if (!problems || !problems.length) return '';
     var long = problems.filter(function (p) { return p.problem === 'too_long'; }), other = problems.filter(function (p) { return p.problem !== 'too_long'; });
-    var lines = function (l) { return l.map(function (p) { return p.line; }).join(', '); };
-    return [long.length ? plural('refused-long', long.length, { lines: lines(long) }) : '', other.length ? plural('refused-other', other.length, { lines: lines(other) }) : '']
+    var at = problems.some(function (p) { return !(p.line > 0); }) ? '-at' : '';
+    var lines = function (l) { return l.map(function (p) { return p.line > 0 ? p.line : (p.address || p.date || '?'); }).join(at ? '; ' : ', '); };
+    return [long.length ? plural('refused-long' + at, long.length, { lines: lines(long) }) : '', other.length ? plural('refused-other' + at, other.length, { lines: lines(other) }) : '']
       .filter(Boolean).join(' ');
   }
   /* The new inspections the rules would refuse, seen before he keeps anything (the same rows, stand-in ids and times). */
@@ -258,7 +382,7 @@
   }
 
   $('[data-go]').addEventListener('click', function () {
-    if (busy || !file || !read) return;
+    if (busy || (!file && !spx) || !read) return;
     var me = auth.who().id;
     turn++; lock(true);
     freshPeople().then(function (ok) {

@@ -1,0 +1,3 @@
+
+# dart2js writes a deps list beside its output (local paths): never published
+coming-soon/assets/import/*.deps

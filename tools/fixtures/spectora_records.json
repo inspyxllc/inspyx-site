@@ -1,0 +1,22 @@
+{
+  "_about": "What spectora-import sends, page after page, gathered by the page: Spectora's public API shapes (connect.spectora.com /v2). Every name, address and number is made up.",
+  "clients": [
+    {"id": "c1", "type": "contact", "attributes": {"first_name": "Ana", "last_name": "Reyes", "email": "ana@example.com", "mobile_phone": "305-555-0101", "address": "12 Palm Way", "city": "Miami", "state": "FL", "zip": "33101", "notes": "Prefers texts."}},
+    {"id": "c2", "type": "contact", "attributes": {"first_name": "Bob", "last_name": "Diaz", "phone": "305-555-0102"}},
+    {"id": "c3", "type": "contact", "attributes": {"first_name": "", "last_name": "", "email": "nobody@example.com"}},
+    {"id": "c4", "type": "contact", "attributes": {"first_name": "ana", "last_name": "reyes", "home_phone": "305-555-0199", "private_notes": "Second record."}},
+    {"id": "c5", "type": "contact", "attributes": {"first_name": "Cara", "last_name": "Soto", "email": "not-an-email"}}
+  ],
+  "agents": [
+    {"id": "a1", "type": "connection", "attributes": {"first_name": "Dave", "last_name": "Lima", "email": "dave@realty.example", "agency_name": "Sun Realty"}},
+    {"id": "a2", "type": "connection", "attributes": {"first_name": "Eva", "last_name": "Ruiz", "phone": "786-555-0110", "agency_name": ""}}
+  ],
+  "records": [
+    {"id": "i1", "type": "inspection", "attributes": {"datetime": "2026-11-03T16:00:00Z", "full_address": "12 Palm Way, Miami, FL 33101", "buyer_names": "Ana Reyes", "buying_agent_name": "Dave Lima", "selling_agent_name": "Eva Ruiz", "quote": "$425.00", "service_names": "Home Inspection", "service_add_on_names": "Wind Mitigation", "inspector_name": "Moe Inspector", "order_id": "S-1001", "notes": "Gate code 4411."}},
+    {"id": "i2", "type": "inspection", "attributes": {"datetime": "2026-11-10T15:30:00Z", "property_address": "8 Oak St", "property_address_2": "Apt 103", "buyer_name": "Maria Lopez", "quote": "call for price", "order_id": "S-1002"}},
+    {"id": "i3", "type": "inspection", "attributes": {"datetime": "2026-11-03T16:00:00Z", "full_address": "12 Palm Way, Miami, FL 33101", "buyer_names": "Ana Reyes", "order_id": "S-1001"}},
+    {"id": "i4", "type": "inspection", "attributes": {"datetime": "not a date", "datetime_formatted": "sometime in Nov", "full_address": "40 Bay Rd", "buyer_names": "Jose Pena"}},
+    {"id": "i5", "type": "inspection", "attributes": {}},
+    {"id": "i6", "type": "inspection", "attributes": {"datetime": "2026-10-20T14:00:00Z", "full_address": "77 Elm Ct", "buyer_names": "Lia Vega", "quote": "350", "order_id": "S-0990"}}
+  ]
+}

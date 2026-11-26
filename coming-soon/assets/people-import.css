@@ -95,3 +95,19 @@
 .pi-people-n{margin:0 0 8px; color:var(--ink-soft, #4A5362)}
 .pi-people .pi-d, .pi-people .pi-f{white-space:nowrap}
 @media (max-width: 699.98px){ .pi-people .pi-d, .pi-people .pi-f{grid-column:1 / -1; color:var(--ink-soft, #4A5362); font-size:13.5px} .pi-people .pi-f:empty, .pi-people .pi-d:empty{display:none} }
+
+/* Where they come from (2026-11-26): a file, or straight from Spectora with an API key. */
+.pi-src{display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 4px}
+.pi-spx-l{margin:10px 0 0; color:var(--ink-soft, #4A5362)}
+.pi-spx{display:grid; gap:14px; margin:6px 0 10px; padding:18px; border-radius:18px; background:#fff; box-shadow:inset 0 0 0 1px #DDE3EC}
+.pi-spx-h{margin:0; font-weight:700}
+.pi-spx-steps{margin:0; padding-left:22px; display:grid; gap:6px; line-height:1.45}
+.pi-spx-k{display:grid; gap:6px; font-weight:600}
+.pi-spx-k input{min-width:0; width:100%; box-sizing:border-box; padding:11px 12px; border-radius:12px; border:1px solid #C9D2E0; font:inherit; font-weight:400; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px}
+.pi-spx-k input:focus{outline:2px solid #1D62D8; outline-offset:1px}
+.pi-spx-in{position:relative; display:block}
+.pi-spx-in input{padding-right:48px}
+.pi-spx-eye{position:absolute; top:50%; right:4px; transform:translateY(-50%); display:grid; place-items:center; width:40px; height:40px; border:0; border-radius:10px; background:transparent; color:#4A5362; cursor:pointer}
+.pi-spx-eye:hover{background:#F1F3F6} .pi-spx-eye:focus-visible{outline:2px solid #1D62D8; outline-offset:1px}
+.pi-spx-eye svg{width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.pi-spx-eye[aria-pressed="true"] .pi-spx-slash{display:none}
