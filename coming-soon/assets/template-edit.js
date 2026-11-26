@@ -24,6 +24,12 @@
 
   var NAME_MAX = 120, BYTES_MAX = 5 * 1024 * 1024;
   var KINDS = ['information', 'limitation', 'deficiency'];
+  // template_manifest.dart AnswerType.values; the ones a field may be given here are the phone editor's _newAnswers
+  // (the rest come only in imports, and a field that has one may keep it). Choices: template_editor.dart _takesChoices.
+  var ANSWERS = ['condition', 'boolean', 'checkbox', 'date', 'number', 'range', 'text', 'choice', 'multi_choice'];
+  var NEW_ANSWERS = ['choice', 'multi_choice', 'boolean', 'text', 'number', 'date'];
+  var takesChoices = function (a) { return a === 'choice' || a === 'multi_choice' || a === 'checkbox'; };
+  var cleanChoices = function (list) { return (Array.isArray(list) ? list : []).map(trim).filter(function (o) { return o; }); };
   var byPosition = function (a, b) { return a.position - b.position; };
   var copy = function (o) { return JSON.parse(JSON.stringify(o)); };
   var trim = function (v) { return TS.dartTrim(String(v == null ? '' : v)); };
@@ -50,7 +56,8 @@
           return { ref: i.ref, label: i.label, system: i.system || null,
             lines: (i.saved_lines || []).slice().sort(byPosition).map(function (l) {
               return { kind: l.kind, position: l.position, name: l.name, text: l.text == null ? '' : l.text,
-                rating: l.rating || null, recommendation: l.recommendation == null ? '' : l.recommendation };
+                rating: l.rating || null, recommendation: l.recommendation == null ? '' : l.recommendation,
+                answerType: l.answer_type || null, options: (l.options || []).slice() };
             }) };
         }) };
       })
@@ -71,7 +78,8 @@
             lines: (i.saved_lines || []).slice().sort(byPosition).map(function (l) {
               return { key: i.ref + '|' + l.kind + '|' + l.position, base: l, kind: l.kind, name: l.name,
                 text: l.text == null ? null : l.text, rating: l.rating == null ? null : l.rating,
-                recommendation: l.recommendation == null ? null : l.recommendation };
+                recommendation: l.recommendation == null ? null : l.recommendation,
+                answerType: l.answer_type == null ? null : l.answer_type, options: (l.options || []).slice() };
             }) };
         }) };
       })
@@ -143,6 +151,14 @@
       var words = trim(l.text);
       if (words) c.text = words; else delete c.text;
       if (l.kind === 'deficiency') { if (l.rating) c.rating = l.rating; else delete c.rating; }
+      // A field's answer and choices (DraftLine._build): its kind of answer; its choices, trimmed, blanks dropped; a
+      // field whose kind of answer changed drops the old units and defaults.
+      if (l.answerType) c.answer_type = l.answerType; else delete c.answer_type;
+      var choices = cleanChoices(l.options);
+      if (choices.length) c.options = choices; else delete c.options;
+      if (!l.base || (l.base.answer_type || null) !== (l.answerType || null)) {
+        delete c.units; delete c.default_value; delete c.default_value2; delete c.default_unit;
+      }
       // "What to do" the phone carries over as it was (DraftLine._build); only an edit here changes it.
       if (l.todoEdited) { var todo = trim(l.recommendation); if (todo) c.recommendation = todo; else delete c.recommendation; }
       return c;
@@ -184,12 +200,14 @@
        { op: 'delete-stop', ref } | { op: 'delete-item', ref } | { op: 'delete-line', item, kind, position | key }
        { op: 'system', ref, system }                      an item's report section
        { op: 'rating-label', id, label }                  a finding category's name
+     A line edit or add may also carry answerType and options (an information field's kind of answer and choices).
      Answers { text, version, from, name } (the new version's file, its number, the one it was made from, the
      template's name) or { problem, at } with the edit's index (-1: the whole):
        'no_name' (an emptied name), 'too_long' (a template name over 120 characters), 'no_part' (a part that isn't
        there), 'no_rating' (a category the template hasn't), 'not_finding' (a category or "What to do" on a comment
        that isn't a finding), 'no_system' (an item without a report section, in a template that has them),
-       'no_stops' (none left), 'unchanged' (nothing differs), 'too_big' (over the 5 MB a template file may be). */
+       'no_stops' (none left), 'not_field' (an answer or choices on a comment that isn't an information field),
+       'no_answer' (a kind of answer a field can't be given here), 'unchanged' (nothing differs), 'too_big' (over the 5 MB a template file may be). */
   function apply(text, edits) {
     var manifest = JSON.parse(text), d = draftOf(manifest), v = d.version;
     var ratingIds = (v.ratings || []).map(function (r) { return r.id; });
@@ -210,6 +228,16 @@
           var l = hit.line;
           if (e.name !== undefined) l.name = String(e.name == null ? '' : e.name);
           if (e.text !== undefined) l.text = e.text;
+          if (e.answerType !== undefined || e.options !== undefined) {
+            if (l.kind !== 'information') return bad('not_field');
+            var answer = e.answerType !== undefined ? e.answerType : l.answerType;
+            var had = l.base ? (l.base.answer_type || null) : null;
+            if (answer !== had && NEW_ANSWERS.indexOf(answer) < 0) return bad('no_answer');
+            if (answer !== null && ANSWERS.indexOf(answer) < 0) return bad('no_answer');
+            l.answerType = answer;
+            // As the phone's field editor keeps it: choices only for an answer that takes them.
+            l.options = takesChoices(answer) ? cleanChoices(e.options !== undefined ? e.options : l.options) : [];
+          }
           if (e.rating !== undefined || e.recommendation !== undefined) {
             if (l.kind !== 'deficiency') return bad('not_finding');
             if (e.rating !== undefined) {
@@ -232,8 +260,13 @@
           if (!e.key || keys[e.key] || !(hit = itemOf(d, e.item)) || KINDS.indexOf(e.kind) < 0) return bad('no_part');
           if ((e.rating != null || trim(e.recommendation)) && e.kind !== 'deficiency') return bad('not_finding');
           if (e.rating != null && ratingIds.indexOf(e.rating) < 0) return bad('no_rating');
+          if ((e.answerType !== undefined || e.options !== undefined) && e.kind !== 'information') return bad('not_field');
+          // A new field starts as "Pick one", as on the phone.
+          var na = e.kind === 'information' ? (e.answerType === undefined ? 'choice' : e.answerType) : null;
+          if (e.kind === 'information' && NEW_ANSWERS.indexOf(na) < 0) return bad('no_answer');
           keys[e.key] = true;
           hit.item.lines.push({ key: e.key, base: null, kind: e.kind, name: String(e.name == null ? '' : e.name),
+            answerType: na, options: na && takesChoices(na) ? cleanChoices(e.options) : [],
             text: e.text == null ? null : e.text, rating: e.rating == null ? null : e.rating, recommendation: e.recommendation == null ? null : e.recommendation,
             todoEdited: true });
           break;
@@ -277,7 +310,16 @@
     return { text: text2, version: ov.version, from: from, name: out.templates[0].name };
   }
 
-  var api = { outline: outline, apply: apply };
+  /* The name an exported template's file takes (export_everything.dart safeFileName), with .inspyx. */
+  function fileName(name) {
+    var out = String(name).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\s+/g, ' ');
+    out = trim(out);
+    if (out.charAt(0) === '.') out = '-' + out.slice(1);
+    if (out.length > 80) out = trim(out.slice(0, 80));
+    return (out || 'Untitled') + '.inspyx';
+  }
+
+  var api = { outline: outline, apply: apply, fileName: fileName, ANSWERS: NEW_ANSWERS, takesChoices: takesChoices };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.InspyxTemplateEdit = api;
 })(typeof window !== 'undefined' ? window : this,
   typeof module === 'object' && module.exports ? require('./template-save.js') : (typeof window !== 'undefined' ? window.InspyxTemplateSave : null));

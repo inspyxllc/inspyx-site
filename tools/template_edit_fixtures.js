@@ -83,6 +83,16 @@ function row(id, name, text, at, base) {
         { op: 'delete-stop', ref: id + '.lot-drainage-2' },
         { op: 'delete-line', item: id + '.pool-spa.pool-barrier', kind: 'limitation', position: 1 },
       ] },
+    // Piece C: information fields, their kind of answer and choices, as the phone's field editor keeps them.
+    { name: 'information fields: a kind of answer changed (its units go), choices edited, an imported kind kept, fields added',
+      replay: true, edits: [
+        { op: 'line', item: id + '.grounds.retaining', kind: 'information', position: 5, answerType: 'text' },
+        { op: 'line', item: id + '.grounds.vegetation', kind: 'information', position: 4, options: ['  None close ', '', 'Within 10 feet', 'Over the roof', 'Touching the walls '] },
+        { op: 'line', item: id + '.grounds.walkways', kind: 'information', position: 4, options: ['Concrete', ' Pavers'] },
+        { op: 'line', item: id + '.hvac.condenser', kind: 'information', position: 5, answerType: 'choice', options: ['1', ' 2 ', ''] },
+        { op: 'add-line', key: 'new:gate-type', item: id + '.grounds.grading', kind: 'information', name: 'Gate type', options: [' Self-closing ', 'Manual'] },
+        { op: 'add-line', key: 'new:serviced', item: id + '.hvac.condenser', kind: 'information', name: 'Last serviced', answerType: 'date', options: ['dropped'] },
+      ] },
     { name: 'on top of that: a finding\'s "What to do" (the phone keeps it; the website edits it)', replay: false, edits: [
         { op: 'line', item: item.ref, kind: 'deficiency', position: def.position, recommendation: '  Have a grading contractor correct the slope.  ' },
       ] },
@@ -110,6 +120,9 @@ function row(id, name, text, at, base) {
     ['no_part', [{ op: 'move-item', ref: item.ref, stop: id + '.nowhere', to: 0 }]],
     ['not_finding', [{ op: 'add-line', key: 'k', item: item.ref, kind: 'limitation', name: 'X', rating: 'safety' }]],
     ['no_rating', [{ op: 'rating-label', id: 'urgent', label: 'Urgent' }]],
+    ['not_field', [{ op: 'line', item: item.ref, kind: 'deficiency', position: def.position, answerType: 'text' }]],
+    ['no_answer', [{ op: 'line', item: id + '.grounds.vegetation', kind: 'information', position: 4, answerType: 'range' }]],
+    ['no_answer', [{ op: 'add-line', key: 'k', item: item.ref, kind: 'information', name: 'X', answerType: 'checkbox' }]],
   ].map(([want, edits]) => ({ want, got: E.apply(start, edits).problem || null, edits }));
   for (const p of problems) if (p.want !== p.got) throw new Error('problem ' + p.want + ' gave ' + p.got);
 
@@ -117,7 +130,9 @@ function row(id, name, text, at, base) {
     'README.md': '# What the website\'s template editor writes\n\nMade by inspyx-site `tools/template_edit_fixtures.js` from ' +
       '`coming-soon/assets/template-edit.js`. Do not edit: make them again. Run by `test/src/data/web_template_edit_test.dart`.\n',
     // Control characters written as escapes (the same strings when read), never raw in the file.
-    'cases.json': JSON.stringify({ owner: OWNER, templateId: id, start, startRow: row(id, name, start, T0, null), cases, problems }, null, 2)
+    'cases.json': JSON.stringify({ owner: OWNER, templateId: id, start, startRow: row(id, name, start, T0, null), cases, problems,
+      // An exported template's file name, as the phone names it (export_everything.dart safeFileName).
+      exportNames: ['My Walkthrough', '  My/Walk:through  \t x', '.hidden', '', 'a'.repeat(90), 'Smith & Daughters — Pool, Spa “and” Lanai?', 'tab\u0001name'].map((n) => [n, E.fileName(n)]) }, null, 2)
       .replace(/[\u0080-\u009f\u200b-\u200f\u2028\u2029\u2060\ufeff]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')) + '\n',
   };
   let bad = 0;

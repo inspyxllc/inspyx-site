@@ -154,3 +154,8 @@
 .te-edit{padding-bottom:calc(var(--te-bar, 0px) + env(safe-area-inset-bottom, 0px))}
 html{scroll-padding-bottom:calc(var(--te-bar, 0px) + env(safe-area-inset-bottom, 0px))}
 .te-edit.is-busy .te-stops, .te-edit.is-busy .te-head{opacity:.7; transition:opacity .2s}
+
+/* ---- piece C: a field's answer and choices; export ---- */
+.te-information .te-line{grid-template-columns:minmax(0, 1fr) minmax(0, 200px)}
+.te-information .te-line .te-f-options, .te-information .te-line [data-del-line]{grid-column:1 / -1}
+@media (max-width: 599.98px){ .te-information .te-line{grid-template-columns:minmax(0, 1fr)} }
