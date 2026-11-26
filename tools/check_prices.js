@@ -230,7 +230,8 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     const gone = s.held.get('price_services/' + RID);
     ok('off: the row deleted, the card offers it again', !!gone && gone.deleted_at !== null && await until(async () => await page.locator('[data-reinsp-on]').isVisible()));
     // The phone's clock ahead: the deleted row's time is in the future; on again must still be newer.
-    const ahead = Object.assign({}, gone.data, { updatedAt: Date.now() + 60000, deletedAt: Date.now() + 60000 });
+    // ... and it had a description, a minimum and a sales tax (set on the phone): all come back.
+    const ahead = Object.assign({}, gone.data, { updatedAt: Date.now() + 60000, deletedAt: Date.now() + 60000, description: 'Up to 3 items.', minimumFeeCents: 15000, taxName: 'Sales tax', taxRate: 700 });
     s.put(s.row('price_services', ahead));
     await page.reload(); await page.waitForSelector('[data-reinsp-on]');
     await page.click('[data-reinsp-on]');
@@ -240,6 +241,8 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     const back = s.held.get('price_services/' + RID);
     ok('the same row back: one id, made when it first was, newer than the deleted one (even with the phone’s clock ahead)', !!back && back.deleted_at === null &&
       back.data.createdAt === on[0].data.createdAt && back.updated_at > ahead.updatedAt, JSON.stringify(back && [back.updated_at, ahead.updatedAt]));
+    ok('on again keeps everything it had: description, minimum, sales tax', !!back && back.data.description === 'Up to 3 items.' && back.data.minimumFeeCents === 15000 &&
+      back.data.taxName === 'Sales tax' && back.data.taxRate === 700, JSON.stringify(back && back.data));
     // A discount just for reinspections: it offers Reinspection, and saving an unrelated change keeps it just for them.
     s.put(s.row('price_discounts', { id: 'disc-reinsp', ownerAccountId: ME, code: 'BACKAGAIN', kind: 'percent', value: 1000, appliesToJson: JSON.stringify([RID]), maxUses: null,
       expiresAt: null, active: true, createdAt: T, updatedAt: T, deletedAt: null }));

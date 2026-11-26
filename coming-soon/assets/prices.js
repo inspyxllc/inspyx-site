@@ -327,7 +327,14 @@
     if (!data && editing.fixedId) {
       var before = held('price_services', editing.fixedId);
       svcForm.elements.name.value = before ? before.name : words('reinsp-name');
-      if (before) { svcForm.elements.fee.value = centsText(before.feeCents); svcForm.elements.hours.value = hoursText(before.minutes); }
+      // Everything it had, not just its fee: a save writes the whole row (Codex on #107).
+      if (before) {
+        svcForm.elements.description.value = before.description || '';
+        svcForm.elements.fee.value = centsText(before.feeCents); svcForm.elements.hours.value = hoursText(before.minutes);
+        svcForm.elements.minimum.value = before.minimumFeeCents != null ? centsText(before.minimumFeeCents) : '';
+        if (typeof before.taxName === 'string') svcForm.elements.taxName.value = before.taxName;
+        svcForm.elements.taxRate.value = typeof before.taxRate === 'number' ? String(before.taxRate / 100) : '';
+      }
     }
     $('[data-delete]', svcForm).hidden = !data;
     armDelete(svcForm, false);
