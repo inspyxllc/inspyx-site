@@ -464,6 +464,9 @@
   // test/tool/web_template_copies_test.dart).
   var COPIES = { 'inspyx.walkthrough': true };
   var TPL = 'inspection_templates', TPL_DEFAULT = 'template_default';
+  // One save at a time on the page, each from the newest template: two saved at once would both start from the same
+  // version, and the later would write over the earlier's comment.
+  var tplQueue = Promise.resolve();
   function hex(buf) { return [].map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
   function digest(text) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(hex); }
   var tplWords = function (w, values) { var t = word(w); Object.keys(values || {}).forEach(function (k) { t = t.split('{' + k + '}').join(values[k]); }); return t; };
@@ -618,7 +621,7 @@
     q('[data-tpl-cancel]').addEventListener('click', close);
     q('[data-tpl-go]').addEventListener('click', function () {
       if (!target || busy) return;
-      var spot = templateSpot(inspection, item), t = target, l = line();
+      var spot = templateSpot(inspection, item), l = line();
       if (!spot) return;
       busy = true;
       close();
@@ -631,7 +634,12 @@
           return templateFor(spot).then(function (again) { return again.problem ? again.problem : attempt(false, again); });
         });
       };
-      attempt(true, t).then(function (key) {
+      // In the page's queue, after a fresh pull: the template as it stands now, not as it stood when the panel opened.
+      var run = tplQueue.then(function () { return pullBusiness(); }).then(function () { return templateFor(spot); }).then(function (now) {
+        return now.problem ? now.problem : attempt(true, now);
+      });
+      tplQueue = run.catch(function () { return null; });
+      run.then(function (key) {
         if (key === null) return;
         say(key, { item: itemName() });
       }, function () { say('failed'); }).then(function () { busy = false; open.disabled = false; renderOne(); });

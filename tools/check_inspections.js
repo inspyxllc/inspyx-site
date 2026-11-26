@@ -882,6 +882,30 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim() === 'Your templates are full. Remove one you don’t use, then try again.') && t.pushed.length === 0);
     await o.ctx.close();
 
+    // Two saved at once: one after the other, the second from the first's version; both comments stand.
+    s = server(); seed(s); seedFromOurs(s);
+    const F2 = '6f1c2a3b-0000-4000-8000-0000000000a6';
+    s.phone('item', F2, 'section_id', SEC); s.phone('item', F2, 'parent_item_id', ITEM); s.phone('item', F2, 'label', 'Loose bracket');
+    s.phone('item', F2, 'position', 1); s.phone('item', F2, 'finding_title', 'Loose bracket'); s.phone('item', F2, 'severity', 'MN');
+    t = templateServer();
+    const both = new Map();
+    o = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer, files: both });
+    await o.page.waitForSelector('.insp-finding');
+    for (const f of [FIND, F2]) {
+      await box(o.page, f).locator('[data-tpl-open]').click();
+      await until(async () => await box(o.page, f).locator('[data-tpl-go]').isVisible());
+    }
+    await Promise.all([box(o.page, FIND).locator('[data-tpl-go]').click(), box(o.page, F2).locator('[data-tpl-go]').click()]);
+    await until(async () => pushedOf(t, 'inspection_templates').length === 2 &&
+      (await box(o.page, F2).locator('[data-tpl-done]').textContent()).trim().indexOf('Saved') === 0, 8000);
+    const tr = pushedOf(t, 'inspection_templates');
+    const last = tr.length ? both.get(ME + '/' + tr[tr.length - 1].id + '/' + tr[tr.length - 1].data.sha256 + '.json') : null;
+    const names = last ? JSON.parse(last.toString('utf8')).templates[0].versions[0].sections.flatMap((x) => x.items).filter((i) => i.ref.endsWith('.grounds.grading'))[0].saved_lines.map((l) => l.name) : [];
+    ok('two saved at once: one after the other (2, then 3), one copy, and both comments stand', tr.length === 2 && tr[0].data.version === '2' && tr[1].data.version === '3' &&
+      tr[0].id === tr[1].id && pushedOf(t, 'template_default').length === 1 && names.includes('Gutter pulling away') && names.includes('Loose bracket'),
+      JSON.stringify([tr.map((x) => x.id + '@' + x.data.version), names.slice(-2)]));
+    await o.ctx.close();
+
     // No template at all: no button.
     s = server(); seed(s);
     o = await open(browser, { server: s, hash: '#' + INSP, bizServer: templateServer().answer, files: new Map() });
