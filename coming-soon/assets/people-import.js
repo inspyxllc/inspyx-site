@@ -148,6 +148,9 @@
   function take(f) {
     if (!f || busy) return;
     done = null; $('[data-done]').hidden = true;
+    // Another file: any reading still on its way for the last one is over now, before this one is even read (Codex on
+    // #106): it can't bring the last file's preview back.
+    turn++; $('[data-go]').disabled = true;
     if (f.size > MAX) { picked++; file = null; read = null; $('[data-read]').hidden = true; say('too-big'); return; }
     var reader = new FileReader();
     // Another file: what was read from the last one goes at once, so nothing can bring in this one unseen (Codex on #106).

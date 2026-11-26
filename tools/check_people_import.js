@@ -301,6 +301,32 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     await o.ctx.close();
   });
 
+  await group('another file while the last one is still being read: the last one never comes back', async () => {
+    const sync = syncServer(seed()), o = await open(browser, { sync });
+    // The next file's own reading is slow (it finishes after People has come for the last one).
+    await o.page.evaluate(() => {
+      const orig = FileReader.prototype.readAsArrayBuffer; let n = 0;
+      FileReader.prototype.readAsArrayBuffer = function (b) {
+        const r = this, k = n++;
+        // The page sets onload before it reads: wrap it, so this file's load arrives late in every engine.
+        if (k === 1) { const h = r.onload; r.onload = function () { setTimeout(() => h.call(r), 1500); }; }
+        return orig.call(this, b);
+      };
+    });
+    let openA; sync.pullGate = new Promise((r) => { openA = r; });
+    await pick(o.page, 'a.csv', 'Name,Email\nAnna Old,anna@x.com\n');
+    await o.page.waitForTimeout(300);
+    await pick(o.page, 'b.csv', 'Name,Email\nBen New,ben@x.com\nBea New,bea@x.com\n');
+    // Watch the page from here on: the last file must never show (nor be offered).
+    await o.page.evaluate(() => { window.__sawOld = false; const look = () => { if (/Anna Old/.test(document.querySelector('[data-people]').textContent) && !document.querySelector('[data-read]').hidden) window.__sawOld = true; }; window.__watch = setInterval(look, 10); });
+    sync.pullGate = null; openA();
+    await o.page.waitForTimeout(2200);
+    ok('the last file’s reading, finishing after another was picked, never shows or offers it', !(await o.page.evaluate(() => window.__sawOld)));
+    ok('then the file he picked shows', await until(async () => (await o.page.locator('[data-count]').textContent()) === '2 people in this file', 6000) &&
+      (await o.page.locator('[data-people] tr').first().locator('.pi-n').textContent()) === 'Ben New');
+    await o.ctx.close();
+  });
+
   await group('switching Clients / Agents keeps his column choices', async () => {
     const o = await open(browser, { sync: syncServer(seed()) });
     await pick(o.page, 'clients.csv', 'Name,Phone,Email\nPat Moore,555-0101,pat@x.com\n');
