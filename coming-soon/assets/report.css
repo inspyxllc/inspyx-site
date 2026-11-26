@@ -22,6 +22,14 @@
 .cat-MD{--c:#A35407; --t:#FDF1E3}
 .cat-MN{--c:#33691E; --t:#EEF6E6}
 .cat-NT{--c:#455A64; --t:#ECEFF1}
+/* A reinspection (content /15): each result in the colour its tile has, as the PDF's card. */
+.recheck-fixed{--c:#33691E; --t:#EEF6E6}
+.recheck-partly{--c:#A35407; --t:#FDF1E3}
+.recheck-not_fixed{--c:#B3261E; --t:#FDECEB}
+.recheck-not_checked{--c:#455A64; --t:#ECEFF1}
+.recheck{margin:0 0 14px; padding:10px 12px 2px; border-radius:10px; background:var(--t); border-left:3px solid var(--c)}
+.recheck .eyebrow{color:var(--c)}
+.for-agent{margin-top:18px}
 .cat-NI{--c:#5E35B1; --t:#EFE9FB}
 .cat-NP{--c:#00695C; --t:#E3F2F0}
 

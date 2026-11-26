@@ -79,6 +79,67 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
 
 (async () => {
   const browser = await engine.launch();
+
+  // ---- a reinspection (content /15, 2026-11-26): its cover, the recheck's tiles in the PDF's colours, the summary
+  // for the agent (as text), and each rechecked finding's result first on its card; an ordinary report shows none.
+  {
+    const plain = await open(browser);
+    const none = await plain.page.evaluate(() => ({
+      kicker: document.querySelector('.kicker').textContent, recheck: !!document.getElementById('recheck'),
+      cards: document.querySelectorAll('.recheck').length, rechecks: !!document.querySelector('.cover-rechecks'),
+    }));
+    ok('an ordinary report: no recheck, its own title', !none.recheck && none.cards === 0 && !none.rechecks && none.kicker.indexOf(report.title) === 0, JSON.stringify(none));
+    await plain.ctx.close();
+
+    const re = clone(sample);
+    const all = [];
+    re.report.sections.forEach((s) => s.items.forEach((it) => it.findings.forEach((f) => all.push(f))));
+    const results = [
+      ['fixed', 'Fixed', ''], ['partly', 'Partly fixed', 'Two of the three clips replaced.'], ['not_fixed', 'Not fixed', ''],
+      [null, 'Not checked', ''], ['fixed', 'Fixed', '<b>clear</b> now'],
+    ];
+    results.forEach((r, i) => { all[i].reinspect = { result: r[0], label: r[1], note: r[2] }; });
+    for (let i = results.length; i < all.length; i++) all[i].reinspect = null;
+    re.report.reinspection = {
+      original_inspected: 'November 6, 2026, 4:09 PM',
+      summary: 'One left to fix: the <script>alert(1)</script> rail.',
+      counts: { fixed: 2, not_fixed: 1, partly: 1, not_checked: 1 },
+    };
+    const o = await open(browser, { answer: () => ({ body: re }) });
+    const got = await o.page.evaluate(() => {
+      const tiles = [].map.call(document.querySelectorAll('#recheck .tile'), (t) => [t.className.replace('tile', '').trim(), t.textContent.trim()]);
+      const cards = [].map.call(document.querySelectorAll('[data-finding-card]'), (c) => {
+        const r = c.querySelector('.recheck');
+        return r ? [c.getAttribute('data-finding-card'), r.className, r.textContent.trim()] : null;
+      }).filter(Boolean);
+      const first = document.querySelector('[data-finding-card] .card-b').firstElementChild;
+      return {
+        kicker: document.querySelector('.kicker').textContent.trim(),
+        rechecks: (document.querySelector('.cover-rechecks') || {}).textContent,
+        heading: (document.querySelector('#recheck .part-t') || {}).textContent,
+        before: !!document.querySelector('#recheck + #glance'),
+        tiles, cards, firstIsRecheck: !!first && first.classList.contains('recheck'),
+        agent: (document.querySelector('#recheck .for-agent') || {}).textContent,
+        scripts: document.querySelectorAll('#recheck script, .recheck b').length,
+        wide: document.documentElement.scrollWidth <= window.innerWidth,
+      };
+    });
+    ok('a reinspection: the cover says so and when the inspection it rechecks was', got.kicker.indexOf('Reinspection Report') === 0 &&
+      got.rechecks === 'Rechecks the inspection of November 6, 2026, 4:09 PM', JSON.stringify([got.kicker, got.rechecks]));
+    ok('a reinspection: What was rechecked, before the glance, its tiles in the PDF\'s order, counts and colours', got.heading === 'What was rechecked' && got.before &&
+      same(got.tiles, [['cat-MN', '2Fixed'], ['cat-MD', '1Partly fixed'], ['cat-SH', '1Not fixed'], ['cat-NT', '1Not checked']]), JSON.stringify(got.tiles));
+    ok('a reinspection: the summary for the agent, as text, never as HTML', got.agent === 'For the agentOne left to fix: the <script>alert(1)</script> rail.' && got.scripts === 0, JSON.stringify([got.agent, got.scripts]));
+    ok('a reinspection: each rechecked finding says its result first, and only those', got.firstIsRecheck && same(got.cards, [
+      [all[0].id, 'recheck recheck-fixed', 'RecheckedFixed.'],
+      [all[1].id, 'recheck recheck-partly', 'RecheckedPartly fixed. Two of the three clips replaced.'],
+      [all[2].id, 'recheck recheck-not_fixed', 'RecheckedNot fixed.'],
+      [all[3].id, 'recheck recheck-not_checked', 'RecheckedNot checked.'],
+      [all[4].id, 'recheck recheck-fixed', 'RecheckedFixed. <b>clear</b> now'],
+    ]), JSON.stringify(got.cards));
+    ok('a reinspection: nothing scrolls sideways at a phone\'s width; no page errors', got.wide && o.errs.length === 0, JSON.stringify(o.errs));
+    await o.ctx.close();
+  }
+
   console.log('engine: ' + engine.name() + (PROD ? ' (PROD=1: the states only, against ' + base + ')' : ''));
 
   // PROD=1 (2026-11-23, the lead): against the live site there is no /r/sample, so only "the other states" run, the
