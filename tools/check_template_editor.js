@@ -339,6 +339,22 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       p4.length === 1 && p4[0].id === MINE && p4[0].data.name === 'Changed while the other loaded' && (await page.locator('[data-name]').inputValue()) === 'Changed while the other loaded' &&
       !tplPushes(biz).some((r) => r.id === SECOND), JSON.stringify(p4.map((r) => [r.id, r.data.name])));
     page.removeAllListeners('dialog'); page.on('dialog', (d) => d.dismiss());
+    // The other asked for, slow to come; meanwhile the phone changes the open one and the page hears of it: the
+    // background reload waits, and the one he asked for opens.
+    let release5; fileGate[fileName(r3)] = new Promise((r) => { release5 = r; });
+    const nGets = o.fileCalls.filter((c) => c.method === 'GET' && c.name === fileName(r3)).length;
+    await page.locator('[data-open="' + SECOND + '"]').click();
+    await until(async () => o.fileCalls.filter((c) => c.method === 'GET' && c.name === fileName(r3)).length > nGets);
+    const cur = [...biz.held.values()].map((h) => h.row).filter((r) => r.id === MINE).sort((a, b) => b.updated_at - a.updated_at)[0];
+    const curText = files.get(fileName(cur)).toString('utf8');
+    const v9 = TE.apply(curText, [{ op: 'item', ref: O1.stops[2].items[0].ref, label: 'Phone again' }]);
+    const r9 = rowOf(MINE, cur.data.name, v9.text, cur.updated_at + 5000, 'copied', await TS.contentKey(curText, digest));
+    files.set(fileName(r9), Buffer.from(v9.text)); biz.put(r9);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForTimeout(400);
+    release5();
+    ok('a background reload while a template he chose is on its way: his choice opens', await until(async () => (await page.locator('[data-name]').inputValue()) === 'Second one'),
+      await page.locator('[data-name]').inputValue());
     ok('no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
     await o.ctx.close();
   });

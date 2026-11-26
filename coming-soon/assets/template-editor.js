@@ -501,14 +501,17 @@
   /* Opens [id] (null: Inspyx's). An answer that comes back late is shown only if it is still the last one asked for,
      and, for a reload in the background ([quiet]: changed on another device), only if nothing was changed here
      meanwhile (Codex on #101). */
-  var showing = 0;
+  var showing = 0, waiting = null;
   // He changed something while another template (or a reload) was on its way: that one isn't shown (Codex on #102).
   function cancelLoads() { showing++; }
   function choose(id, force, quiet) {
     if (busy && !force) return;
     if (!force && open && changed() && !window.confirm(words('leave'))) return;
     var mine = ++showing;
-    var still = function () { return mine === showing && !(quiet && open && changed()); };
+    // A template he chose, on its way: a reload in the background waits for it (refresh), never cancels it.
+    if (!quiet) waiting = mine;
+    var done = function () { if (waiting === mine) waiting = null; };
+    var still = function () { done(); return mine === showing && !(quiet && open && changed()); };
     if (!quiet) say(null);
     if (id === null) {
       return ours().then(function (c) {
@@ -641,7 +644,7 @@
       if (!ok) { if (!Object.keys(biz).length) state('failed'); return; }
       state(null);
       // The open one changed on another device and nothing is changed here: show the newest.
-      if (open && open.id && !busy && !changed()) {
+      if (open && open.id && !busy && waiting === null && !changed()) {
         var row = biz[TPL + '/' + open.id];
         if (standing(row) && row.data.sha256 !== open.row.data.sha256) choose(open.id, true, true);
       }
