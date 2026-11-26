@@ -799,6 +799,39 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     }
   });
 
+  await group('Undo while another template is open with changes not saved: it comes back in the list; those changes stay (Codex on #114)', async () => {
+    const SECOND = 'inspector.second', V9 = TS.makeCopy(COPY, SECOND, 'Second one');
+    const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000), R9 = rowOf(SECOND, 'Second one', V9, 1000);
+    const { o, files, page } = await startDel([R1, R9]);
+    files.set(fileName(R9), Buffer.from(V9));
+    await page.locator('[data-delete]').click(); await page.locator('[data-del-yes]').click();
+    await until(async () => await page.locator('[data-gone]').isVisible());
+    await page.locator('[data-open="' + SECOND + '"]').click();
+    await until(async () => (await page.locator('[data-name]').inputValue()) === 'Second one');
+    await page.locator('[data-name]').fill('Second one, renamed');
+    await page.locator('[data-gone-undo]').click();
+    await until(async () => (await page.locator('[data-open="' + MINE + '"]').count()) === 1);
+    await new Promise((r) => setTimeout(r, 400));
+    ok('back in the list; the other template stays open with his change', (await page.locator('[data-name]').inputValue()) === 'Second one, renamed' &&
+      /is back on your list/.test(await page.locator('[data-gone-t]').textContent()), (await page.locator('[data-name]').inputValue()) + ' / ' + (await page.locator('[data-gone-t]').textContent()));
+    await o.ctx.close();
+  });
+
+  await group('deleted with the report preview open at a middle width: the list, and its Undo, show again (Codex on #114)', async () => {
+    const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const { o, page } = await startDel([R1], { w: 1200 });
+    await until(async () => (await page.locator('.te-stop').count()) > 0);
+    await openStop(page.locator('.te-stop').first());
+    await page.locator('.te-item[data-item="' + ITEM.ref + '"] [data-see]').click();
+    await until(async () => await page.locator('[data-preview]').isVisible());
+    ok('the preview takes the list\'s place (as it should, before)', await page.locator('.te-list').isHidden());
+    await page.locator('[data-delete]').click(); await page.locator('[data-del-yes]').click();
+    await until(async () => await page.locator('[data-gone]').isVisible(), 4000);
+    ok('after: the preview gone, the list and Undo shown', await page.locator('[data-preview]').isHidden() && await page.locator('.te-list').isVisible() &&
+      await page.locator('[data-gone-undo]').isVisible());
+    await o.ctx.close();
+  });
+
   await group('the feed down: nothing sent, said, the template still open', async () => {
     const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
     const { o, biz, page } = await startDel([R1]);

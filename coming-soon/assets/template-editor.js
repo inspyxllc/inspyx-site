@@ -789,6 +789,9 @@
      was, not as the one new inspections start from (the phone's Undo neither). ---- */
   var OURS_NAME = function () { return copyFile ? copyFile.sourceName : 'Walkthrough'; };
   var gone = null, goneTimer = null, GONE_FOR = 30000;   // { was: its live row, name, wasDefault }
+  /* The editor empty again (its template deleted): the report preview with it, so the list (with Undo) shows again
+     at every width (Codex on #114: between widths the preview took the list's place). */
+  function clearOpen() { open = null; edit.hidden = true; pvItem = null; renderPreview(); }
   function askDelete(on) {
     var ask = $('[data-del-ask]');
     ask.hidden = !on;
@@ -835,11 +838,11 @@
     queue = run.catch(function () { return null; });
     run.then(function (r) {
       if (r.problem) {
-        if (r.problem === 'gone') { open = null; edit.hidden = true; renderList(); showGone(words('p-gone'), false); return; }
+        if (r.problem === 'gone') { clearOpen(); renderList(); showGone(words('p-gone'), false); return; }
         say('p-' + r.problem); return;
       }
       gone = { was: r.was, base: r.base, name: name, wasDefault: r.wasDefault };
-      open = null; edit.hidden = true;
+      clearOpen();
       if (decodeURIComponent((window.location.hash || '').slice(1)) === id) history.replaceState(null, '', window.location.pathname);
       renderList();
       showGone(words(r.wasDefault ? 'deleted-default' : 'deleted', { name: name, ours: OURS_NAME() }), true);
@@ -865,7 +868,10 @@
       if (k === 'ok') {
         gone = null; renderList();
         showGone(words(g.wasDefault ? 'undone-default' : 'undone', { name: g.name, ours: OURS_NAME() }), false);
-        return choose(g.was.id, true);
+        // Back in his list; it opens only when that loses nothing: another template open with changes not saved
+        // stays as it is (Codex on #114).
+        if (!open || !changed()) return choose(g.was.id, true);
+        return;
       }
       if (k === 'changed') { gone = null; renderList(); showGone(words('undo-changed'), false); return; }
       showGone(words('undo-failed'), true);
