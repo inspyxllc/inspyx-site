@@ -133,6 +133,10 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await until(async () => await page.locator('[data-ro]').isVisible());
       ok(label + ': Inspyx’s opens read only: every field locked, “Make your own copy” offered, nothing written',
         (await page.locator('[data-edit] [data-k]:not([disabled])').count()) === 0 && await page.locator('[data-copy]').isVisible() && posts(o).length === 0 && biz.pushed.length === 0);
+      const oursName = await page.locator('[data-name]').inputValue(), oursVer = (await page.locator('[data-ver]').textContent()).trim();
+      ok(label + ': Inspyx’s shows its own name and version, never the copy’s stand-ins', oursName === COPY.sourceName &&
+        oursVer.indexOf(String(COPY.sourceVersion)) >= 0 && !/zz/i.test(oursName), JSON.stringify([oursName, oursVer]));
+      if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'te-ours-' + label + '.png'), fullPage: false });
 
       // His: every stop, find.
       await page.locator('[data-open="' + MINE + '"]').click();
