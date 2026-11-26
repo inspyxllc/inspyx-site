@@ -62,7 +62,7 @@ async function open(browser, o) {
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); if (v === null) localStorage.removeItem('inspyx.signin'); else localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, store);
   const page = await ctx.newPage();
   page.setDefaultTimeout(8000);
-  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [], relay = [];
+  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [], relay = [], fileCalls = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
   await page.routeWebSocket(/realtime\/v1\/websocket/, (ws) => {
@@ -112,6 +112,26 @@ async function open(browser, o) {
       const a = o.booking(b);
       return route.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a.json) });
     }
+    // The private store's template files (Save to template): o.files holds them, by name; o.onFile may answer otherwise.
+    if (o.files && u.startsWith(SERVER + '/storage/v1/object/')) {
+      const tail = u.slice((SERVER + '/storage/v1/object/').length);
+      const cors = { 'access-control-allow-origin': '*' };
+      if (req.method() === 'POST' && tail.indexOf('business-templates/') === 0) {
+        const name = tail.slice('business-templates/'.length), body = req.postDataBuffer();
+        fileCalls.push({ method: 'POST', name, auth: req.headers().authorization, bytes: body });
+        const other = o.onFile ? o.onFile('POST', name) : null;
+        if (other) return route.fulfill({ status: other.status, contentType: 'application/json', headers: cors, body: JSON.stringify(other.json || {}) });
+        if (o.files.has(name)) return route.fulfill({ status: 400, contentType: 'application/json', headers: cors, body: JSON.stringify({ statusCode: '409' }) });
+        o.files.set(name, body);
+        return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify({ Key: name }) });
+      }
+      if (req.method() === 'GET' && tail.indexOf('authenticated/business-templates/') === 0) {
+        const name = tail.slice('authenticated/business-templates/'.length);
+        fileCalls.push({ method: 'GET', name, auth: req.headers().authorization });
+        if (!o.files.has(name)) return route.fulfill({ status: 400, contentType: 'application/json', headers: cors, body: JSON.stringify({ statusCode: '404' }) });
+        return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: o.files.get(name) });
+      }
+    }
     if (!u.startsWith(SERVER + SYNC)) { away.push(u); return route.abort(); }
     const body = JSON.parse(req.postData() || '{}');
     calls.push({ headers: req.headers(), body });
@@ -125,7 +145,7 @@ async function open(browser, o) {
   const res = await page.goto(url + 'inspections' + (o.hash || ''), { waitUntil: 'load' });
   await page.waitForTimeout(500);
   const ping = () => sockets[sockets.length - 1].ws.send(JSON.stringify({ topic: 'realtime:insp:' + ME, event: 'broadcast', ref: null, payload: { type: 'broadcast', event: 'changed', payload: { seq: s.seq } } }));
-  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls, relay };
+  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls, relay, fileCalls };
 }
 
 const vis = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.hidden && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel);
@@ -151,7 +171,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const c = calls[0] || { headers: {}, body: {} };
       ok(label + ': opens with no errors, asks only the sync function, as the signed-in inspector, from the start', errs.length === 0 && away.length === 0 && c.headers.authorization === 'Bearer test-access-1' && /^web-[0-9a-f]{18}$/.test(c.body.device) && c.body.after === null, errs.concat(away).join(' | '));
       const csp = res.headers()['content-security-policy'] || '';
-      ok(label + ': served with the signed-in pages\' rule, plus the live socket to Inspyx\'s server and Spex\'s relay socket (Edit with AI), nothing else', /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/chat---spex-relay-yu5bdad2fa-uc\.a\.run\.app;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
+      ok(label + ': served with the signed-in pages\' rule, plus this site (its template copies), the live socket to Inspyx\'s server and Spex\'s relay socket (Edit with AI), nothing else', /connect-src 'self' https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/chat---spex-relay-yu5bdad2fa-uc\.a\.run\.app;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));
       const list = await vis(page, '[data-list="items"] li');
       ok(label + ': lists both inspections, the newest first, with their addresses', list.length === 2 && /^9 Elm Ave/.test(list[0]) && /^12 Oak St.*Miami/.test(list[1]), JSON.stringify(list));
       ok(label + ': shows the inspection\'s title and address in their boxes', await boxValue(page, 'inspection', INSP, 'title') === '12 Oak St' && await boxValue(page, 'inspection', INSP, 'address') === '12 Oak St, Miami');
@@ -688,6 +708,263 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     ok('a deleted finding\u2019s flag is not counted', await until(async () => (await page.locator('[data-flag="' + FIND + '"]').count()) === 0 &&
       (await page.locator('[data-flagfilter]').textContent()).trim() === 'Flagged (1)'));
     await ctx.close();
+  });
+
+  /* ---- Save to template (his list item 12, piece D) ---- */
+  const TS = require('../coming-soon/assets/template-save.js');
+  const COPY = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '../coming-soon/assets/template-copies/inspyx.walkthrough.json'), 'utf8'));
+  const nodeSha = (t) => require('crypto').createHash('sha256').update(Buffer.from(t, 'utf8')).digest('hex');
+  const nodeDigest = (t) => Promise.resolve(nodeSha(t));
+  const GRADING = 'inspyx.walkthrough.grounds.grading';
+  /* The business sync for templates, with the server's own rule: newest wins, a row it holds newer is "applied:
+     false"; o.skipAll answers every template row skipped with [reason]; o.olderOnce answers the first push as held
+     newer (a change elsewhere). */
+  function templateServer(rows0) {
+    const held = new Map(), pushed = [];
+    let seq = 0, skipAll = null, olderOnce = false, down = false;
+    for (const r of rows0 || []) held.set(r.kind + '/' + r.id, { row: r, seq: ++seq });
+    const answer = async (b) => {
+      if (down) return null;
+      const skipped = [], applied = [];
+      for (const r of b.push || []) {
+        pushed.push(r);
+        if (skipAll && r.kind === 'inspection_templates') { skipped.push({ kind: r.kind, id: r.id, reason: skipAll }); continue; }
+        if (olderOnce && r.kind === 'inspection_templates') { olderOnce = false; applied.push({ kind: r.kind, id: r.id, applied: false }); continue; }
+        const k = r.kind + '/' + r.id, h = held.get(k);
+        if (h && h.row.updated_at >= r.updated_at) { applied.push({ kind: r.kind, id: r.id, applied: false }); continue; }
+        held.set(k, { row: r, seq: ++seq }); applied.push({ kind: r.kind, id: r.id, applied: true });
+      }
+      const after = typeof b.after === 'number' ? b.after : 0;
+      const rows = [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row);
+      return { rows, next: seq, more: false, skipped, applied };
+    };
+    return { answer, pushed, held, set skipAll(v) { skipAll = v; }, set olderOnce(v) { olderOnce = v; }, set down(v) { down = v; } };
+  }
+  /* The inspection made from ours: Gutters (ITEM) is the walkthrough's Grading item; its finding has every field. */
+  function seedFromOurs(s, from, ref) {
+    s.phone('inspection', INSP, 'source_template_id', from || 'inspyx.walkthrough');
+    s.phone('item', ITEM, 'checklist_item_ref', ref || (from && from.indexOf('inspector.') === 0 ? from + '.grounds.grading' : GRADING));
+    s.phone('item', FIND, 'note', 'The gutter is pulling away at the NE corner.');
+    s.phone('item', FIND, 'finding_recommendation', 'Have a gutter contractor refasten it.');
+    s.phone('item', FIND, 'finding_implication', 'Water can spill against the wall.');
+  }
+  const pushedOf = (t, kind) => t.pushed.filter((r) => r.kind === kind);
+
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('save to template, ' + label, async () => {
+      const s = server(); seed(s); seedFromOurs(s);
+      // A second finding under Gutters, and an item added by hand (no template item) with a finding of its own.
+      const F2 = '6f1c2a3b-0000-4000-8000-0000000000a6', HAND = '6f1c2a3b-0000-4000-8000-0000000000a7', HF = '6f1c2a3b-0000-4000-8000-0000000000a8';
+      s.phone('item', F2, 'section_id', SEC); s.phone('item', F2, 'parent_item_id', ITEM); s.phone('item', F2, 'label', 'Loose bracket');
+      s.phone('item', F2, 'position', 1); s.phone('item', F2, 'finding_title', 'Loose bracket'); s.phone('item', F2, 'severity', 'MN');
+      s.phone('item', HAND, 'section_id', SEC); s.phone('item', HAND, 'label', 'Fence'); s.phone('item', HAND, 'position', 1);
+      s.phone('item', HF, 'section_id', SEC); s.phone('item', HF, 'parent_item_id', HAND); s.phone('item', HF, 'label', 'Leaning post');
+      s.phone('item', HF, 'position', 0); s.phone('item', HF, 'finding_title', 'Leaning post'); s.phone('item', HF, 'severity', 'MN');
+      const t = templateServer(), files = new Map();
+      const { page, ctx, errs, away, fileCalls } = await open(browser, { server: s, w, hash: '#' + INSP, bizServer: t.answer, files });
+      await page.waitForSelector('.insp-finding');
+      const box = (f) => page.locator('[data-flag-finding-row="' + f + '"] [data-tpl]');
+      ok(label + ': a finding under a template item offers Save to template', await box(FIND).isVisible() && await box(F2).isVisible());
+      ok(label + ': a finding under an item added by hand doesn’t', !(await box(HF).isVisible()));
+
+      // Open: where it goes and what goes, asked first; nothing written.
+      await box(FIND).locator('[data-tpl-open]').click();
+      const where = box(FIND).locator('[data-tpl-where]');
+      await until(async () => /Into/.test(await where.textContent()));
+      const said = (await where.textContent()).trim();
+      ok(label + ': it says where it goes first: a new copy of Inspyx’s walkthrough, made now, under the item, which new inspections start from',
+        said === 'Into “My Walkthrough”, your own copy of Inspyx’s Walkthrough, made now, under Gutters. Your new inspections will start from it.', said);
+      const what = await box(FIND).locator('[data-tpl-what] dd').allTextContents();
+      ok(label + ': and what goes: the title, the details, what to do, the category', JSON.stringify(what) ===
+        JSON.stringify(['Gutter pulling away', 'The gutter is pulling away at the NE corner.', 'Have a gutter contractor refasten it.', 'Recommendation']), JSON.stringify(what));
+      ok(label + ': it says “What it means” stays on this inspection', await box(FIND).locator('[data-tpl-nomeaning]').isVisible());
+      ok(label + ': its how-to, in three steps', await box(FIND).locator('.tpl-how').isVisible() && (await box(FIND).locator('.tpl-how .st-how-step').count()) === 3);
+      ok(label + ': nothing is written by opening it', fileCalls.filter((c) => c.method === 'POST').length === 0 && t.pushed.length === 0);
+      if (process.env.SHOTS) await box(FIND).screenshot({ path: require('path').join(process.env.SHOTS, 'tpl-ask-' + label + '.png') });
+      await box(FIND).locator('[data-tpl-cancel]').click();
+      ok(label + ': Cancel writes nothing and closes it', !(await box(FIND).locator('[data-tpl-panel]').isVisible()) && t.pushed.length === 0);
+
+      // Save: the copy with the comment, the file first, then its row and the default, as one push.
+      await box(FIND).locator('[data-tpl-open]').click();
+      await until(async () => await box(FIND).locator('[data-tpl-go]').isVisible());
+      await box(FIND).locator('[data-tpl-go]').click();
+      const done = box(FIND).locator('[data-tpl-done]');
+      ok(label + ': it says it is saved in his own copy, now used for his new inspections', await until(async () => (await done.textContent()).trim() ===
+        'Saved to your own copy of the Walkthrough template, now used for your new inspections.'), await done.textContent());
+      const id = 'inspector.my-walkthrough';
+      const want = TS.addLine(TS.makeCopy(COPY, id, 'My Walkthrough'), { itemRef: id + '.grounds.grading', title: 'Gutter pulling away',
+        details: 'The gutter is pulling away at the NE corner.', recommendation: 'Have a gutter contractor refasten it.', code: 'MD' });
+      const posts = fileCalls.filter((c) => c.method === 'POST');
+      ok(label + ': one file, in his own folder, named by its content: the phone’s copy with the comment, byte for byte', posts.length === 1 &&
+        posts[0].name === ME + '/' + id + '/' + nodeSha(want.text) + '.json' && posts[0].bytes.toString('utf8') === want.text && /^Bearer /.test(posts[0].auth || ''), posts.map((p) => p.name).join(' '));
+      const rows = pushedOf(t, 'inspection_templates'), dflt = pushedOf(t, 'template_default');
+      const d = rows[0] && rows[0].data;
+      ok(label + ': its row names that file: version 2, copied, its size, no base (the server held none)', rows.length === 1 && d.id === id && d.ownerAccountId === ME &&
+        d.name === 'My Walkthrough' && d.version === '2' && d.source === 'copied' && d.sha256 === nodeSha(want.text) && d.byteLength === Buffer.byteLength(want.text) &&
+        !('base' in d) && d.deletedAt === null && rows[0].updated_at === d.updatedAt, JSON.stringify(d));
+      ok(label + ': and new inspections start from the copy', dflt.length === 1 && dflt[0].data.templateId === id && dflt[0].data.id === 'default' &&
+        dflt[0].updated_at === rows[0].updated_at && t.pushed.indexOf(rows[0]) < t.pushed.indexOf(dflt[0]), JSON.stringify(dflt.map((x) => x.data)));
+      ok(label + ': the inspection itself is not changed', ![...s.held.values()].some((h) => h.seq > 0 && /template|saved_line/.test(h.field) && h.device !== 'phone-aaaaaaaaaaaaaaaaaa'));
+
+      // A second finding: into the same copy, read back from the store; the next version, its base the first.
+      await box(F2).locator('[data-tpl-open]').click();
+      await until(async () => /Into/.test(await box(F2).locator('[data-tpl-where]').textContent()));
+      ok(label + ': the next one goes into the copy he now has', (await box(F2).locator('[data-tpl-where]').textContent()).trim() === 'Into your template “My Walkthrough”, under Gutters.');
+      ok(label + ': no “What it means”, no note about it', !(await box(F2).locator('[data-tpl-nomeaning]').isVisible()));
+      await box(F2).locator('[data-tpl-go]').click();
+      await until(async () => pushedOf(t, 'inspection_templates').length === 2);
+      const want2 = TS.addLine(want.text, { itemRef: id + '.grounds.grading', title: 'Loose bracket', details: '', recommendation: '', code: 'MN' });
+      const d2 = pushedOf(t, 'inspection_templates')[1].data;
+      ok(label + ': it read his file back, as him', fileCalls.some((c) => c.method === 'GET' && c.name === ME + '/' + id + '/' + nodeSha(want.text) + '.json' && /^Bearer /.test(c.auth || '')));
+      ok(label + ': version 3, on top of 2, its base what the server held', d2.version === '3' && d2.sha256 === nodeSha(want2.text) &&
+        d2.base === await TS.contentKey(want.text, nodeDigest) && files.get(ME + '/' + id + '/' + d2.sha256 + '.json').toString('utf8') === want2.text, JSON.stringify(d2));
+      ok(label + ': the default is left as it is', pushedOf(t, 'template_default').length === 1);
+
+      // The same comment again: refused before anything is written.
+      const before = t.pushed.length, postsBefore = fileCalls.filter((c) => c.method === 'POST').length;
+      await box(FIND).locator('[data-tpl-open]').click();
+      await until(async () => await box(FIND).locator('[data-tpl-go]').isVisible());
+      await box(FIND).locator('[data-tpl-go]').click();
+      ok(label + ': the same comment twice: it says it’s already there', await until(async () => (await box(FIND).locator('[data-tpl-done]').textContent()).trim() === 'It’s already in your template.'));
+      ok(label + ': and writes nothing', t.pushed.length === before && fileCalls.filter((c) => c.method === 'POST').length === postsBefore);
+      if (process.env.SHOTS) await page.locator('.insp-one').screenshot({ path: require('path').join(process.env.SHOTS, 'tpl-' + label + '.png') });
+      ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
+      await ctx.close();
+    });
+  }
+
+  await group('save to template: his own template, a missing item, a full store, a change elsewhere', async () => {
+    // From his own template (made on the phone): into that one; no copy, no default.
+    const id = 'inspector.my-walkthrough';
+    const mine = TS.makeCopy(COPY, id, 'My Walkthrough');
+    const files = new Map([[ME + '/' + id + '/' + nodeSha(mine) + '.json', Buffer.from(mine, 'utf8')]]);
+    const row = { kind: 'inspection_templates', id, updated_at: 5, deleted_at: null, data: { id, ownerAccountId: ME, name: 'My Walkthrough',
+      version: '1', source: 'copied', sha256: nodeSha(mine), byteLength: Buffer.byteLength(mine), createdAt: 5, updatedAt: 5, deletedAt: null } };
+    let s = server(); seed(s); seedFromOurs(s, id);
+    let t = templateServer([row]);
+    let o = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer, files });
+    const box = (pg, f) => pg.locator('[data-flag-finding-row="' + f + '"] [data-tpl]');
+    await o.page.waitForSelector('.insp-finding');
+    await until(async () => await box(o.page, FIND).isVisible());
+    await box(o.page, FIND).locator('[data-tpl-open]').click();
+    await until(async () => /Into/.test(await box(o.page, FIND).locator('[data-tpl-where]').textContent()));
+    ok('his own template: it goes into that one', (await box(o.page, FIND).locator('[data-tpl-where]').textContent()).trim() === 'Into your template “My Walkthrough”, under Gutters.');
+    // Changed elsewhere as it saves: read again, tried once more, saved.
+    t.olderOnce = true;
+    await box(o.page, FIND).locator('[data-tpl-go]').click();
+    ok('changed elsewhere as it saved: it reads it again, tries once more, and saves', await until(async () =>
+      (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim() === 'Saved. Your next inspection offers it under Gutters.'));
+    ok('two tries, then kept; no default change, its source kept', pushedOf(t, 'inspection_templates').length === 2 && pushedOf(t, 'template_default').length === 0 &&
+      pushedOf(t, 'inspection_templates')[1].data.source === 'copied' && pushedOf(t, 'inspection_templates')[1].data.version === '2');
+    await o.ctx.close();
+
+    // The business feed unreachable (as the page loads, and at Save): the page can't see his copy or his default, so it
+    // saves nothing, rather than make a new copy over his (Codex on #98). Back again: into his copy, his default kept.
+    s = server(); seed(s); seedFromOurs(s);
+    const picked = { kind: 'template_default', id: 'default', updated_at: 6, deleted_at: null, data: { id: 'default', ownerAccountId: ME, templateId: 'inspector.converted-one', updatedAt: 6, deletedAt: null } };
+    t = templateServer([row, picked]); t.down = true;
+    o = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer, files: new Map(files) });
+    await o.page.waitForSelector('.insp-finding');
+    await until(async () => await box(o.page, FIND).isVisible());
+    await box(o.page, FIND).locator('[data-tpl-open]').click();
+    await until(async () => await box(o.page, FIND).locator('[data-tpl-go]').isVisible());
+    await box(o.page, FIND).locator('[data-tpl-go]').click();
+    ok('the business feed unreachable: it says it didn’t go through, and writes nothing (no file, no row, no default)', await until(async () =>
+      (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim() === 'That didn’t go through. Try again.') &&
+      t.pushed.length === 0 && o.fileCalls.filter((c) => c.method === 'POST').length === 0,
+      [await box(o.page, FIND).locator('[data-tpl-done]').textContent(), t.pushed.length, o.fileCalls.length].join(' | '));
+    t.down = false;
+    await until(async () => await box(o.page, FIND).locator('[data-tpl-open]').isEnabled());
+    await box(o.page, FIND).locator('[data-tpl-open]').click();
+    await until(async () => await box(o.page, FIND).locator('[data-tpl-go]').isVisible());
+    await box(o.page, FIND).locator('[data-tpl-go]').click();
+    await until(async () => /^Saved/.test((await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim()));
+    const back = pushedOf(t, 'inspection_templates');
+    ok('back again: it goes into his own copy, as its next version, on top of his; his own default kept', back.length === 1 && back[0].id === id &&
+      back[0].data.version === '2' && typeof back[0].data.base === 'string' && pushedOf(t, 'template_default').length === 0,
+      JSON.stringify(back.map((x) => [x.id, x.data.version, !!x.data.base])));
+    await o.ctx.close();
+
+    // An item his template doesn't have: said, nothing written.
+    s = server(); seed(s); seedFromOurs(s, null, 'inspyx.walkthrough.nowhere.nothing');
+    t = templateServer();
+    o = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer, files: new Map() });
+    await o.page.waitForSelector('.insp-finding');
+    await box(o.page, FIND).locator('[data-tpl-open]').click();
+    await until(async () => await box(o.page, FIND).locator('[data-tpl-go]').isVisible());
+    await box(o.page, FIND).locator('[data-tpl-go]').click();
+    ok('an item the template doesn’t have: it says so, and writes nothing', await until(async () =>
+      (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim() === 'Your template has no “Gutters” to put it under. Add that item to your template first.') &&
+      t.pushed.length === 0 && o.fileCalls.length === 0, [await box(o.page, FIND).locator('[data-tpl-done]').textContent(), t.pushed.length, o.fileCalls.length].join(' | '));
+    await o.ctx.close();
+
+    // The store full: said, and no row.
+    s = server(); seed(s); seedFromOurs(s);
+    t = templateServer();
+    o = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer, files: new Map(), onFile: () => ({ status: 400, json: { statusCode: '403' } }) });
+    await o.page.waitForSelector('.insp-finding');
+    await box(o.page, FIND).locator('[data-tpl-open]').click();
+    await until(async () => await box(o.page, FIND).locator('[data-tpl-go]').isVisible());
+    await box(o.page, FIND).locator('[data-tpl-go]').click();
+    ok('the store full: it says so, and no row goes', await until(async () =>
+      (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim() === 'Your templates are full. Remove one you don’t use, then try again.') && t.pushed.length === 0);
+    await o.ctx.close();
+
+    // Two saved at once: one after the other, the second from the first's version; both comments stand.
+    s = server(); seed(s); seedFromOurs(s);
+    const F2 = '6f1c2a3b-0000-4000-8000-0000000000a6';
+    s.phone('item', F2, 'section_id', SEC); s.phone('item', F2, 'parent_item_id', ITEM); s.phone('item', F2, 'label', 'Loose bracket');
+    s.phone('item', F2, 'position', 1); s.phone('item', F2, 'finding_title', 'Loose bracket'); s.phone('item', F2, 'severity', 'MN');
+    t = templateServer();
+    const both = new Map();
+    o = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer, files: both });
+    await o.page.waitForSelector('.insp-finding');
+    for (const f of [FIND, F2]) {
+      await box(o.page, f).locator('[data-tpl-open]').click();
+      await until(async () => await box(o.page, f).locator('[data-tpl-go]').isVisible());
+    }
+    await Promise.all([box(o.page, FIND).locator('[data-tpl-go]').click(), box(o.page, F2).locator('[data-tpl-go]').click()]);
+    await until(async () => pushedOf(t, 'inspection_templates').length === 2 &&
+      (await box(o.page, F2).locator('[data-tpl-done]').textContent()).trim().indexOf('Saved') === 0, 8000);
+    const tr = pushedOf(t, 'inspection_templates');
+    const last = tr.length ? both.get(ME + '/' + tr[tr.length - 1].id + '/' + tr[tr.length - 1].data.sha256 + '.json') : null;
+    const names = last ? JSON.parse(last.toString('utf8')).templates[0].versions[0].sections.flatMap((x) => x.items).filter((i) => i.ref.endsWith('.grounds.grading'))[0].saved_lines.map((l) => l.name) : [];
+    ok('two saved at once: one after the other (2, then 3), one copy, and both comments stand', tr.length === 2 && tr[0].data.version === '2' && tr[1].data.version === '3' &&
+      tr[0].id === tr[1].id && pushedOf(t, 'template_default').length === 1 && names.includes('Gutter pulling away') && names.includes('Loose bracket'),
+      JSON.stringify([tr.map((x) => x.id + '@' + x.data.version), names.slice(-2)]));
+    await o.ctx.close();
+
+    // A default he picked himself: kept. The copy is made, nothing says it is used for new inspections.
+    for (const [what, picked, replaced] of [['a default he picked himself is kept', 'inspector.converted-one', false],
+      ['a default of the Inspyx template it was copied from is replaced by the copy', 'inspyx.walkthrough', true]]) {
+      s = server(); seed(s); seedFromOurs(s);
+      const d0 = { kind: 'template_default', id: 'default', updated_at: 7, deleted_at: null, data: { id: 'default', ownerAccountId: ME, templateId: picked, updatedAt: 7, deletedAt: null } };
+      t = templateServer([d0]);
+      o = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer, files: new Map() });
+      await o.page.waitForSelector('.insp-finding');
+      await box(o.page, FIND).locator('[data-tpl-open]').click();
+      await until(async () => await box(o.page, FIND).locator('[data-tpl-go]').isVisible());
+      const where = (await box(o.page, FIND).locator('[data-tpl-where]').textContent()).trim();
+      await box(o.page, FIND).locator('[data-tpl-go]').click();
+      await until(async () => pushedOf(t, 'inspection_templates').length === 1 && /^Saved/.test((await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim()));
+      const doneText = (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim();
+      const dpush = pushedOf(t, 'template_default');
+      ok(what, replaced
+        ? /Your new inspections will start from it\.$/.test(where) && dpush.length === 1 && dpush[0].data.templateId === 'inspector.my-walkthrough' && dpush[0].updated_at > 7 &&
+          doneText === 'Saved to your own copy of the Walkthrough template, now used for your new inspections.'
+        : !/new inspections/.test(where) && dpush.length === 0 &&
+          doneText === 'Saved to your own copy of the Walkthrough template. Choose it for an inspection to have it offered there.',
+        JSON.stringify([where, doneText, dpush.map((x) => x.data.templateId)]));
+      await o.ctx.close();
+    }
+
+    // No template at all: no button.
+    s = server(); seed(s);
+    o = await open(browser, { server: s, hash: '#' + INSP, bizServer: templateServer().answer, files: new Map() });
+    await o.page.waitForSelector('.insp-finding');
+    ok('an inspection from no template: no Save to template', (await o.page.locator('[data-tpl]:visible').count()) === 0);
+    await o.ctx.close();
   });
 
   await group('editing on the web', async () => {
