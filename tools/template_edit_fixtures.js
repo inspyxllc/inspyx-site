@@ -81,7 +81,9 @@ function row(id, name, text, at, base) {
   const files = {
     'README.md': '# What the website\'s template editor writes\n\nMade by inspyx-site `tools/template_edit_fixtures.js` from ' +
       '`coming-soon/assets/template-edit.js`. Do not edit: make them again. Run by `test/src/data/web_template_edit_test.dart`.\n',
-    'cases.json': JSON.stringify({ owner: OWNER, templateId: id, start, startRow: row(id, name, start, T0, null), cases, problems }, null, 2) + '\n',
+    // Control characters written as escapes (the same strings when read), never raw in the file.
+    'cases.json': JSON.stringify({ owner: OWNER, templateId: id, start, startRow: row(id, name, start, T0, null), cases, problems }, null, 2)
+      .replace(/[\u0080-\u009f\u200b-\u200f\u2028\u2029\u2060\ufeff]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')) + '\n',
   };
   let bad = 0;
   for (const [f, body] of Object.entries(files)) {
