@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Edit your templates</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/dash.css">
+<link rel="stylesheet" href="/assets/template-editor.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/template-save.js" defer></script>
+<script src="/assets/template-edit.js" defer></script>
+<script src="/assets/template-editor.js" defer></script>
+</head>
+<body class="has-dash">
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z"></path><path d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" stroke="#0284C7" stroke-width="19"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+<nav class="dash" aria-label="Your dashboard">
+<ul class="dash-items"><li><a href="/today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 6.5 4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5l-1.5-6.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5Z"/></svg><span class="dash-l">What needs you</span><span class="dash-s">To do</span></a></li><li><a href="/inspections"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m9 13 2 2 4-4"/></svg><span class="dash-l">Inspections</span></a></li><li><a href="/calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="dash-l">Calendar</span></a></li><li><a href="/prices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"/><circle cx="8" cy="8" r="1.5"/></svg><span class="dash-l">Prices</span></a></li><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul>
+<details class="dash-more"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></summary><ul><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul></details>
+</nav>
+
+
+<main class="te" data-te hidden>
+<h1>Edit your templates</h1>
+<p class="te-lede">The stops, items and pre-written comments your inspections start from. A change applies to new inspections; one already started keeps its own.</p>
+<figure class="te-how" aria-label="How it works, in three steps">
+<div class="te-how-stage" aria-hidden="true">
+<div class="te-how-scene te-how-a"><span class="te-how-card"><b>My Walkthrough</b><em>Used for new inspections</em></span><span class="te-how-card dim"><b>Walkthrough</b><em>From Inspyx</em></span></div>
+<div class="te-how-scene te-how-b"><span class="te-how-row"><i>Grounds</i></span><span class="te-how-row sub"><i>Ground slope and drainage</i></span><span class="te-how-field">Soil slopes toward the house on the <b>[side]</b><i class="te-how-caret"></i></span></div>
+<div class="te-how-scene te-how-c"><span class="te-how-save">Save</span><span class="te-how-done">Saved as version 2. New inspections start from it.</span></div>
+<span class="te-how-finger"></span>
+<span class="te-how-tip" data-n="1">Open a template, so you see every stop, item and comment</span>
+<span class="te-how-tip" data-n="2">Change, add or move a stop, an item or a comment, so new reports say it your way</span>
+<span class="te-how-tip" data-n="3">Save, so new inspections on your phone start from it</span>
+</div>
+<figcaption class="te-how-steps">
+<span class="te-how-step" data-n="1">Open a template</span>
+<span class="te-how-step" data-n="2">Change, add or move what's in it</span>
+<span class="te-how-step" data-n="3">Save: new inspections start from it</span>
+</figcaption>
+</figure>
+<div class="te-state" role="status">
+<p data-state="loading">Reading your templates…</p>
+<p data-state="failed" hidden>Your templates couldn’t be read. Check your connection; this page keeps trying.</p>
+</div>
+<div class="te-grid">
+<section class="te-list" aria-label="Your templates">
+<h2>Yours</h2>
+<ul data-mine></ul>
+<p class="te-none" data-mine-none hidden>None of your own yet. Make your own copy of Inspyx’s, then change it as you like.</p>
+<h2>From Inspyx</h2>
+<ul data-ours></ul>
+<p class="te-more"><a href="/templates">Bring in a template from another tool</a></p>
+</section>
+<section class="te-edit" data-edit hidden aria-live="polite">
+<div class="te-head">
+<label class="te-name"><span>Template name</span><input data-name maxlength="120" autocomplete="off"></label>
+<p class="te-ver" data-ver></p>
+<p class="te-ro" data-ro hidden>Inspyx’s own template can’t be changed. Make your own copy to change it; new inspections can start from your copy.</p>
+<div class="te-acts"><button type="button" class="te-btn" data-copy hidden>Make your own copy</button><button type="button" class="te-btn ghost" data-use hidden>Use for new inspections</button><span class="te-used" data-used hidden>Used for new inspections</span></div>
+</div>
+<label class="te-search"><span>Find</span><input type="search" data-find placeholder="A stop, an item or a comment's words" autocomplete="off"></label>
+<p class="te-found" data-found hidden></p>
+<section class="te-cats" data-cats hidden aria-label="Finding categories"></section>
+<div class="te-stops" data-stops></div>
+<button type="button" class="te-mini add wide" data-add-stop hidden>+ Add a stop</button>
+<div class="te-bar" data-bar hidden>
+<span data-count></span>
+<button type="button" class="te-btn ghost" data-discard>Discard</button>
+<button type="button" class="te-btn" data-save>Save</button>
+</div>
+<p class="te-say" data-say role="alert" hidden></p>
+</section>
+</div>
+</main>
+
+<template data-t="words">
+<span data-w="version">Version {v}</span>
+<span data-w="used">Used for new inspections</span>
+<span data-w="ours">From Inspyx</span>
+<span data-w="items-1">1 item</span>
+<span data-w="items-n">{n} items</span>
+<span data-w="kind-information">Information</span>
+<span data-w="kind-limitation">Limitations</span>
+<span data-w="kind-deficiency">Findings</span>
+<span data-w="f-stop">Stop</span>
+<span data-w="f-item">Item</span>
+<span data-w="f-name">Comment</span>
+<span data-w="f-text">Words</span>
+<span data-w="f-rating">Category</span>
+<span data-w="f-todo">What to do</span>
+<span data-w="no-rating">No category</span>
+<span data-w="f-system">Report section</span>
+<span data-w="up">Move up</span>
+<span data-w="down">Move down</span>
+<span data-w="move-to">Move to another stop…</span>
+<span data-w="drag">Drag to move</span>
+<span data-w="delete-stop">Delete this stop</span>
+<span data-w="delete-item">Delete this item</span>
+<span data-w="delete-line">Delete this comment</span>
+<span data-w="add-item">+ Add an item</span>
+<span data-w="add-information">+ Information</span>
+<span data-w="add-limitation">+ Limitation</span>
+<span data-w="add-deficiency">+ Finding</span>
+<span data-w="new-stop">New stop</span>
+<span data-w="cats">Finding categories</span>
+<span data-w="cats-lede">The names your report gives each kind of finding. Renaming one keeps every finding filed under it.</span>
+<span data-w="cat">Name for “{name}”</span>
+<span data-w="changes-1">1 change</span>
+<span data-w="changes-n">{n} changes</span>
+<span data-w="found-0">Nothing matches.</span>
+<span data-w="found-1">1 match</span>
+<span data-w="found-n">{n} matches</span>
+<span data-w="saving">Saving…</span>
+<span data-w="saved">Saved as version {v}. New inspections start from it.</span>
+<span data-w="saved-other">Saved as version {v}. New inspections that use this template start from it.</span>
+<span data-w="copying">Making your copy…</span>
+<span data-w="copied">Your own copy is made. Change anything; Save makes its next version.</span>
+<span data-w="copied-default">Your own copy is made, and new inspections now start from it. Change anything; Save makes its next version.</span>
+<span data-w="using">Setting it…</span>
+<span data-w="now-used">New inspections now start from “{name}”.</span>
+<span data-w="now-used-instead">New inspections now start from “{name}”, instead of “{was}”.</span>
+<span data-w="leave">You have changes that aren’t saved. Leave them?</span>
+<span data-w="p-no_name">Every stop, item and comment needs a name.</span>
+<span data-w="p-no_stops">A template needs at least one stop.</span>
+<span data-w="p-no_system">Every item needs a report section.</span>
+<span data-w="p-too_long">A template’s name can be at most 120 characters.</span>
+<span data-w="p-no_part">This template just changed on another device, and a part you changed is gone. Discard, then make your change again.</span>
+<span data-w="p-too_big">This template is too big to save (over 5 MB).</span>
+<span data-w="p-full">Your templates are full. Remove one you don’t use, then try again.</span>
+<span data-w="p-failed">That didn’t go through. Try again.</span>
+<span data-w="p-changed">This template just changed on another device. Try again.</span>
+</template>
+</body>
+</html>
