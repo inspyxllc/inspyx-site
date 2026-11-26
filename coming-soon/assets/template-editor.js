@@ -183,12 +183,29 @@
     sel.value = value || ''; sel.setAttribute('data-k', JSON.stringify(key)); sel.setAttribute('data-was', value || ''); sel.setAttribute('data-sys', '');
     sel.disabled = !!ro; wrap.appendChild(sel); return wrap;
   }
+  function answerField(value, key, ro) {
+    var wrap = el('label', 'te-f te-f-answer'), sel = el('select');
+    wrap.appendChild(el('span', null, words('f-answer')));
+    // The kinds a field may be given here; one it came with (from an import) stays offered.
+    var list = TE.ANSWERS.slice();
+    if (value && list.indexOf(value) < 0) list.push(value);
+    list.forEach(function (a) { var o = el('option', null, words('ans-' + a) || a); o.value = a; sel.appendChild(o); });
+    sel.value = value || ''; sel.setAttribute('data-k', JSON.stringify(key)); sel.setAttribute('data-was', value || ''); sel.setAttribute('data-answer', '');
+    sel.disabled = !!ro; wrap.appendChild(sel); return wrap;
+  }
   function lineEl(itemKey, l, isNew, ro) {
     var kind = l.kind, c = el('div', 'te-line');
     var k = function (f) { return isNew ? { op: 'line', key: l.key, f: f } : { op: 'line', item: itemKey, kind: kind, position: l.position, f: f }; };
     c.setAttribute('data-line', isNew ? l.key : itemKey + '|' + kind + '|' + l.position);
     c.appendChild(field(words('f-name'), l.name, k('name'), false, ro));
     if (kind !== 'information') c.appendChild(field(words('f-text'), l.text, k('text'), true, ro));
+    if (kind === 'information') {
+      // A field: its kind of answer, and its choices (one a line) when that answer takes them.
+      c.appendChild(answerField(l.answerType, k('answerType'), ro));
+      var ch = field(words('f-options'), (l.options || []).join('\n'), k('options'), true, ro);
+      ch.classList.add('te-f-options'); ch.hidden = !TE.takesChoices(l.answerType);
+      c.appendChild(ch);
+    }
     if (kind === 'deficiency') {
       c.appendChild(ratingField(l, open.outline.ratings, k('rating'), ro));
       c.appendChild(field(words('f-todo'), l.recommendation, k('recommendation'), true, ro));
@@ -293,6 +310,7 @@
     $('[data-ro]').hidden = !ro;
     $('[data-copy]').hidden = !ro;
     defaultControls();
+    $('[data-export]').hidden = ro;
     ratingsEl(ro);
     // Drawn again after a save: the stops he had open stay open (by ref), where he was.
     var wasOpen = all('.te-stop[open]', stops).map(function (d) { return d.getAttribute('data-stop'); });
@@ -345,7 +363,8 @@
       var kind = t.getAttribute('data-kind'), key = newKey(), ref = it.getAttribute('data-item');
       ops.push({ op: 'add-line', key: key, item: ref, kind: kind, name: '' });
       var g2 = it.querySelector('[data-group="' + kind + '"]');
-      var l = lineEl(ref, { key: key, kind: kind, name: '', text: '', rating: null, recommendation: '' }, true, false);
+      var l = lineEl(ref, { key: key, kind: kind, name: '', text: '', rating: null, recommendation: '',
+        answerType: kind === 'information' ? 'choice' : null, options: [] }, true, false);
       g2.appendChild(l); g2.hidden = false;
       l.querySelector('input').focus(); changed();
     } else if (t.hasAttribute('data-add-item')) {
@@ -441,7 +460,7 @@
         var id = k.key || (k.item + '|' + k.kind + '|' + k.position);
         var e = lines[id] || (lines[id] = k.key ? { op: 'line', key: k.key } : { op: 'line', item: k.item, kind: k.kind, position: k.position });
         if (!e.added) { out.push(e); e.added = true; }
-        e[k.f] = k.f === 'rating' ? (box.value || null) : box.value;
+        e[k.f] = k.f === 'rating' || k.f === 'answerType' ? (box.value || null) : k.f === 'options' ? box.value.split('\n') : box.value;
       }
     });
     out.forEach(function (e) { delete e.added; });
@@ -476,7 +495,16 @@
     changed(); if (e.target.value) say(null);
   });
   window.addEventListener('resize', function () { all('.te-stop[open]', stops).forEach(growIn); });
-  edit.addEventListener('change', function (e) { if (e.target.hasAttribute('data-k')) { cancelLoads(); changed(); } });
+  edit.addEventListener('change', function (e) {
+    if (!e.target.hasAttribute('data-k')) return;
+    cancelLoads();
+    if (e.target.hasAttribute('data-answer')) {
+      var box = e.target.closest('.te-line').querySelector('.te-f-options');
+      box.hidden = !TE.takesChoices(e.target.value);
+      if (!box.hidden) growIn(box);
+    }
+    changed();
+  });
   window.addEventListener('beforeunload', function (e) { if (open && changed()) { e.preventDefault(); e.returnValue = ''; } });
 
   /* ---- find ---- */
@@ -537,7 +565,7 @@
     busy = on;
     // Nothing still on its way may open while a save, copy or switch is under way (Codex on #102).
     if (on) cancelLoads();
-    all('[data-save],[data-discard],[data-copy],[data-use]', main).forEach(function (b) { b.disabled = on; });
+    all('[data-save],[data-discard],[data-copy],[data-use],[data-export]', main).forEach(function (b) { b.disabled = on; });
     all('[data-k], [data-find]', edit).forEach(function (b) { b.disabled = on || (open && open.readOnly && b.hasAttribute('data-k')); });
     // The steps too: add, move, delete.
     all('.te-mini, [data-item-to]', edit).forEach(function (b) { b.disabled = on; });
@@ -611,6 +639,18 @@
     }, function () { say('p-failed'); }).then(function () { lock(false); });
   });
 
+  /* ---- export: his template's saved version, as the phone exports it (the file itself, named as the phone names
+     it), to keep or to bring into another account ---- */
+  $('[data-export]').addEventListener('click', function () {
+    if (!open || open.readOnly || !open.text) return;
+    var url = URL.createObjectURL(new Blob([open.text], { type: 'application/json' }));
+    var a = document.createElement('a');
+    a.href = url; a.download = TE.fileName(open.outline.name);
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    say(changed() ? 'exported-saved' : 'exported', { name: a.download });
+  });
+
   /* ---- the one new inspections start from ---- */
   $('[data-use]').addEventListener('click', function () {
     if (busy || !open || open.readOnly) return;
@@ -651,10 +691,17 @@
       renderList();
     });
   }
+  /* /template#<id>: that template opens (from /templates after an import), unless he opened one himself first. */
+  function fromAddress() {
+    var id = decodeURIComponent((window.location.hash || '').slice(1));
+    if (!id || open || showing) return;
+    if (id === OURS) { choose(null); return; }
+    if (standing(biz[TPL + '/' + id])) choose(id);
+  }
   auth.current().then(function (s) {
     if (!s) return;
     main.hidden = false;
-    ours().catch(function () { return null; }).then(refresh);
+    ours().catch(function () { return null; }).then(refresh).then(fromAddress);
   });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') refresh(); });
   setInterval(function () { if (document.visibilityState === 'visible') refresh(); }, FALLBACK);

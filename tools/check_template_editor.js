@@ -64,7 +64,7 @@ function bizServer(rows0) {
 }
 
 async function open(browser, o) {
-  const ctx = await browser.newContext({ viewport: { width: o.w || WIDE, height: o.h || 900 }, locale: 'en-US' });
+  const ctx = await browser.newContext({ viewport: { width: o.w || WIDE, height: o.h || 900 }, locale: 'en-US', acceptDownloads: true });
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, kept());
   const page = await ctx.newPage();
   page.setDefaultTimeout(8000);
@@ -100,7 +100,7 @@ async function open(browser, o) {
     }
     away.push(u); return route.abort();
   });
-  await page.goto(url + 'template', { waitUntil: 'domcontentloaded' });
+  await page.goto(url + 'template' + (o.hash || ''), { waitUntil: 'domcontentloaded' });
   return { ctx, page, errs, away, fileCalls };
 }
 const posts = (o) => o.fileCalls.filter((c) => c.method === 'POST');
@@ -357,6 +357,73 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await page.locator('[data-name]').inputValue());
     ok('no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
     await o.ctx.close();
+  });
+
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('fields and export, ' + label, async () => {
+      const r1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+      const biz = bizServer([r1, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)]]);
+      const o = await open(browser, { w, biz, files });
+      const { page } = o;
+      await page.waitForSelector('[data-open="' + MINE + '"]');
+      await page.locator('[data-open="' + MINE + '"]').click();
+      await until(async () => (await page.locator('.te-stop').count()) > 0);
+      await openStop(page.locator('.te-stop').first());
+      const line = (item, pos) => page.locator('.te-line[data-line="' + MINE + '.' + item + '|information|' + pos + '"]');
+      // A number field with units, made Text: its choices box stays away.
+      await line('grounds.retaining', 5).locator('[data-answer]').selectOption('text');
+      ok(label + ': a field’s answer offers the phone’s kinds, by their names', JSON.stringify(await line('grounds.retaining', 5).locator('[data-answer] option').allTextContents()) ===
+        JSON.stringify(['Pick one', 'Pick any', 'Yes / No', 'Text', 'Number', 'Date']));
+      ok(label + ': Text takes no choices: no choices box', !(await line('grounds.retaining', 5).locator('.te-f-options').isVisible()));
+      // Pick one's choices, edited (spaces, a blank line).
+      const veg = line('grounds.vegetation', 4);
+      ok(label + ': a Pick one field shows its choices, one a line', await veg.locator('.te-f-options').isVisible() &&
+        (await veg.locator('.te-f-options textarea').inputValue()) === 'None close\nWithin 10 feet\nOver the roof');
+      await veg.locator('.te-f-options textarea').fill('  None close \n\nWithin 10 feet\nOver the roof\nTouching the walls ');
+      // An imported kind (Checkbox) stays offered on the field that has it.
+      ok(label + ': a field that came with Checkbox keeps it offered', (await line('grounds.walkways', 4).locator('[data-answer]').inputValue()) === 'checkbox');
+      // A new field: Pick one, with its choices box.
+      const grading = page.locator('.te-item[data-item="' + MINE + '.grounds.grading"]');
+      await grading.locator('[data-add-line][data-kind="information"]').click();
+      const nf = grading.locator('[data-group="information"] .te-line').last();
+      ok(label + ': a new field starts as Pick one, with its choices box', (await nf.locator('[data-answer]').inputValue()) === 'choice' && await nf.locator('.te-f-options').isVisible());
+      await nf.locator('input').first().fill('Gate type');
+      await nf.locator('.te-f-options textarea').fill('Self-closing\nManual');
+      if (SHOTS) { await veg.scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(SHOTS, 'te-c-' + label + '.png') }); }
+      // Export now: the saved version, and it says the changes aren't in it.
+      const [dl1] = await Promise.all([page.waitForEvent('download'), page.locator('[data-export]').click()]);
+      const got1 = fs.readFileSync(await dl1.path(), 'utf8');
+      ok(label + ': Export with changes not saved: the saved version, named as the phone names it, and it says so', dl1.suggestedFilename() === 'My Walkthrough.inspyx' && got1 === V1 &&
+        /Your changes aren’t in it until you save\.$/.test(await said(page)), dl1.suggestedFilename());
+      await page.locator('[data-save]').click();
+      await until(async () => /^Saved/.test(await said(page)), 8000);
+      const text = posts(o)[0].bytes.toString('utf8'), v = JSON.parse(text).templates[0].versions[0];
+      const L = (item, pos) => v.sections.flatMap((x) => x.items).find((i) => i.ref === MINE + '.' + item).saved_lines.find((l) => l.kind === 'information' && l.position === pos);
+      const gate = v.sections.flatMap((x) => x.items).find((i) => i.ref === MINE + '.grounds.grading').saved_lines.find((l) => l.name === 'Gate type');
+      ok(label + ': saved as the phone keeps fields: Text without its units, choices trimmed and the blank dropped, the new field Pick one with its choices',
+        L('grounds.retaining', 5).answer_type === 'text' && !L('grounds.retaining', 5).units && !L('grounds.retaining', 5).default_unit &&
+        JSON.stringify(L('grounds.vegetation', 4).options) === JSON.stringify(['None close', 'Within 10 feet', 'Over the roof', 'Touching the walls']) &&
+        !!gate && gate.answer_type === 'choice' && JSON.stringify(gate.options) === JSON.stringify(['Self-closing', 'Manual']), JSON.stringify([L('grounds.retaining', 5), gate]));
+      const [dl2] = await Promise.all([page.waitForEvent('download'), page.locator('[data-export]').click()]);
+      ok(label + ': Export after saving: the new version’s very bytes', fs.readFileSync(await dl2.path(), 'utf8') === text && /^Exported as “My Walkthrough\.inspyx”/.test(await said(page)));
+      ok(label + ': no errors, nothing else leaves the site' + (w === PHONE ? ', nothing off the side' : ''), o.errs.length === 0 && o.away.length === 0 &&
+        (w !== PHONE || await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)), JSON.stringify([o.errs, o.away]));
+      await o.ctx.close();
+    });
+  }
+
+  await group('opened from its address (/template#<id>, the link after an import)', async () => {
+    const r1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const biz = bizServer([r1, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)]]);
+    const o = await open(browser, { w: WIDE, biz, files, hash: '#' + MINE });
+    ok('/template#<his id> opens that template', await until(async () => (await o.page.locator('[data-name]').inputValue()) === 'My Walkthrough' &&
+      !(await o.page.locator('[data-ro]').isVisible())));
+    await o.ctx.close();
+    const o2 = await open(browser, { w: WIDE, biz: bizServer([r1]), files, hash: '#inspector.nowhere' });
+    await o2.page.waitForSelector('[data-open="' + MINE + '"]');
+    await o2.page.waitForTimeout(300);
+    ok('an address naming no template of his opens nothing, and says nothing wrong', await o2.page.locator('[data-edit]').isHidden() && o2.errs.length === 0);
+    await o2.ctx.close();
   });
 
   // His design bar (the lead, 2026-11-26): measured at 375, 393 and 430 wide, and in large text, with real long names.
