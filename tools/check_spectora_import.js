@@ -302,6 +302,28 @@ const sigOf = (rows) => JSON.stringify(rows.filter((r) => r.deleted_at == null &
     await o.ctx.close();
   });
 
+  await group('the key box behaves like a secret: hidden, never saved or spell-checked; the eye shows it', async () => {
+    for (const history of [false, true]) {
+      const sync = syncServer(seed()), spx = spxServer(history ? [page200(R)] : [page200(C), page200(A)]);
+      const o = await open(browser, { sync, spx, history }), { page } = o;
+      await page.locator('[data-src="spectora"]').click();
+      const box = page.locator('[data-spx-key]'), eye = page.locator('[data-spx-eye]');
+      const at = async () => box.evaluate((e) => ({ type: e.type, ac: e.getAttribute('autocomplete'), sp: e.getAttribute('spellcheck'), cor: e.getAttribute('autocorrect'), cap: e.getAttribute('autocapitalize'), form: e.form && e.form.getAttribute('autocomplete') }));
+      const a = await at();
+      ok((history ? 'history' : 'people') + ': a hidden box, autocomplete off, no spell check, no autocorrect or capitals', a.type === 'password' && a.ac === 'off' && a.sp === 'false' && a.cor === 'off' && a.cap === 'off' && a.form === 'off', JSON.stringify(a));
+      await box.fill(KEY);
+      await eye.click();
+      ok((history ? 'history' : 'people') + ': the eye shows it, and says it hides it now', (await at()).type === 'text' && await eye.getAttribute('aria-pressed') === 'true' && await eye.getAttribute('aria-label') === 'Hide the key' && await box.inputValue() === KEY);
+      await eye.click();
+      ok((history ? 'history' : 'people') + ': and hides it again', (await at()).type === 'password' && await eye.getAttribute('aria-label') === 'Show the key');
+      await eye.click();
+      await page.locator('[data-spx-go]').click();
+      await until(async () => await page.locator('[data-read]').isVisible(), 8000);
+      ok((history ? 'history' : 'people') + ': read: the box empty and hidden again', (await at()).type === 'password' && await box.inputValue() === '' && await eye.getAttribute('aria-pressed') === 'false');
+      await o.ctx.close();
+    }
+  });
+
   await group('no key: said, nothing asked', async () => {
     const sync = syncServer(seed()), spx = spxServer([page200([])]);
     const o = await open(browser, { sync, spx }), { page } = o;

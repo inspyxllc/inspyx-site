@@ -87,7 +87,7 @@
 <li>Copy the key and paste it below.</li>
 <li>Inspyx uses it once, for this import, to read your past inspections. It isn’t kept, and nothing in Spectora changes.</li>
 </ol>
-<label class="pi-spx-k"><span>Spectora API key</span><input type="text" data-spx-key autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>
+<label class="pi-spx-k"><span>Spectora API key</span><span class="pi-spx-in"><input type="password" data-spx-key autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore><button type="button" class="pi-spx-eye" data-spx-eye aria-label="Show the key" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="pi-spx-slash" d="M4 4l16 16"/></svg></button></span></label>
 <div class="pi-acts"><button type="submit" class="pi-btn" data-spx-go>Read my past inspections</button><button type="button" class="pi-btn ghost" data-spx-stop hidden>Stop</button></div>
 </form>
 <p class="pi-say" data-spx-say role="status" hidden></p>
@@ -119,6 +119,8 @@
 <span data-w="spx-wait-1">Spectora asked Inspyx to wait. Trying again in 1 second…</span>
 <span data-w="spx-wait-n">Spectora asked Inspyx to wait. Trying again in {n} seconds…</span>
 <span data-w="spx-stopped">Stopped: nothing is brought in, and your key is forgotten.</span>
+<span data-w="eye-show">Show the key</span>
+<span data-w="eye-hide">Hide the key</span>
 <span data-w="spx-no-key">Paste your Spectora API key first.</span>
 <span data-w="spx-partial">What was read before that is below; the rest is listed as left out.</span>
 <span data-w="where">{where}: {reason}</span>

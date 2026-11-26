@@ -210,7 +210,7 @@
     if (!f || busy) return;
     // A new file: nothing of the last import is this one's to show or to undo (Codex on #110).
     done = null; donePast = null; $('[data-done]').hidden = true; spx = null; spxSay(null); spxLock(false);
-    var kb = $('[data-spx-key]'); if (kb) kb.value = '';
+    var kb = $('[data-spx-key]'); if (kb) kb.value = ''; spxHide(true);
     // Another file: any reading still on its way for the last one is over now, before this one is even read (Codex on
     // #106): it can't bring the last file's preview back.
     turn++; $('[data-go]').disabled = true;
@@ -288,10 +288,20 @@
      and Stop ends the reading; either way that reading never lands. */
   function spxLock(on) {
     var k = $('[data-spx-key]'), g = $('[data-spx-go]'), st = $('[data-spx-stop]');
-    if (k) k.disabled = on; if (g) g.disabled = on; if (st) st.hidden = !on;
+    var eye = $('[data-spx-eye]');
+    if (k) k.disabled = on; if (g) g.disabled = on; if (eye) eye.disabled = on; if (st) st.hidden = !on;
   }
+  /* The key is a secret: hidden as typed; the eye shows it while he checks it, and it is hidden again whenever the box
+     is emptied. */
+  function spxHide(on) {
+    var k = $('[data-spx-key]'), eye = $('[data-spx-eye]');
+    if (k) k.type = on ? 'password' : 'text';
+    if (eye) { eye.setAttribute('aria-pressed', on ? 'false' : 'true'); eye.setAttribute('aria-label', words(on ? 'eye-show' : 'eye-hide')); }
+  }
+  var spxEye = $('[data-spx-eye]');
+  if (spxEye) spxEye.addEventListener('click', function () { var k = $('[data-spx-key]'); spxHide(k && k.type === 'text'); });
   var spxStop = $('[data-spx-stop]');
-  if (spxStop) spxStop.addEventListener('click', function () { picked++; spxLock(false); spxSay('spx-stopped'); var k = $('[data-spx-key]'); if (k) k.value = ''; });
+  if (spxStop) spxStop.addEventListener('click', function () { picked++; spxLock(false); spxSay('spx-stopped'); var k = $('[data-spx-key]'); if (k) k.value = ''; spxHide(true); });
   var spxForm = $('[data-spx]');
   if (spxForm) spxForm.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -315,7 +325,7 @@
       key = '';
       if (mine !== picked || (end && end.over)) return;
       if (box) box.value = '';
-      spxLock(false);
+      spxHide(true); spxLock(false);
       stop = end && end.message;
       var any = HISTORY ? got.records.length : got.clients.length + got.agents.length;
       if (stop && !any) { spxSay(null, null, stop); return; }
@@ -325,7 +335,7 @@
       return run();
     });
   });
-  window.addEventListener('pagehide', function () { var b = $('[data-spx-key]'); if (b) b.value = ''; });
+  window.addEventListener('pagehide', function () { var b = $('[data-spx-key]'); if (b) b.value = ''; spxHide(true); });
 
   /* ---- keep them: People read whole and planned again now, then sent 200 at a time ---- */
   /* Sends [push] 200 at a time. Answers { kept: ids the server kept, broke: true when a batch didn't go through } (what

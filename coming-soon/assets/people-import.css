@@ -105,3 +105,9 @@
 .pi-spx-k{display:grid; gap:6px; font-weight:600}
 .pi-spx-k input{min-width:0; width:100%; box-sizing:border-box; padding:11px 12px; border-radius:12px; border:1px solid #C9D2E0; font:inherit; font-weight:400; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px}
 .pi-spx-k input:focus{outline:2px solid #1D62D8; outline-offset:1px}
+.pi-spx-in{position:relative; display:block}
+.pi-spx-in input{padding-right:48px}
+.pi-spx-eye{position:absolute; top:50%; right:4px; transform:translateY(-50%); display:grid; place-items:center; width:40px; height:40px; border:0; border-radius:10px; background:transparent; color:#4A5362; cursor:pointer}
+.pi-spx-eye:hover{background:#F1F3F6} .pi-spx-eye:focus-visible{outline:2px solid #1D62D8; outline-offset:1px}
+.pi-spx-eye svg{width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.pi-spx-eye[aria-pressed="true"] .pi-spx-slash{display:none}
