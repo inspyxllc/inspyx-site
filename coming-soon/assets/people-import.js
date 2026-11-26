@@ -9,6 +9,8 @@
 (function () {
   'use strict';
   var auth = window.InspyxAuth, book = window.InspyxPeopleBook, CI = window.InspyxContactsImport;
+  // Past inspections are kept too (the past_inspections sync kind, I2's schema v43): their book and their rules.
+  var pastBook = window.InspyxPastBook, PS = window.InspyxPastStore;
   var main = document.querySelector('[data-pi]');
   if (!auth || !book || !CI || !main) return;
   var MAX = 10 * 1024 * 1024, BATCH = 200, SHOWN = 50;
@@ -18,6 +20,8 @@
   var HISTORY = main.getAttribute('data-mode') === 'history';
   var read$ = HISTORY ? 'inspections' : 'contacts';
   var planOf = function (r) { return (HISTORY ? r && r.people && r.people.plan : r && r.plan) || []; };
+  if (HISTORY && (!pastBook || !PS)) return;
+  var donePast = null;   // { importId, n }: the inspections the last Bring in kept, for Undo
   var $ = function (sel) { return main.querySelector(sel); };
   var words = (function () {
     var box = document.querySelector('template[data-t="words"]').content;
@@ -46,10 +50,18 @@
     });
   }
   /* People read whole, now: true, or false when it couldn't be (then nothing is planned or kept). */
-  function freshPeople() { return Promise.resolve(book.pull()).then(function () { return book.loaded() && !book.failing(); }); }
+  /* People (and, for a history, the kept past inspections) read whole, now: true, or false when they couldn't be. */
+  function freshPeople() {
+    var books = HISTORY ? [book, pastBook] : [book];
+    return Promise.all(books.map(function (b) { return Promise.resolve(b.pull()); })).then(function () {
+      return books.every(function (b) { return b.loaded() && !b.failing(); });
+    });
+  }
   /* The engine on the file, with his choices and People as held. */
   function engine() {
     var opts = { existing: existing() };
+    // A history: the inspections kept already, so the same one is never kept twice.
+    if (HISTORY) opts.existing_past = PS.keptForReader(pastBook.rows(), auth.who().id);
     if (choice.kind) opts.kind = choice.kind;
     if (choice.match) opts.match = choice.match;
     return Promise.resolve(window.inspyxImport[read$](file.name, file.bytes, opts)).then(function (t) { return typeof t === 'string' ? JSON.parse(t) : t; });
@@ -138,7 +150,19 @@
     box.hidden = !sk.length; $('[data-skipped-n]').textContent = plural('skipped', sk.length); list.textContent = '';
     sk.forEach(function (x) { list.appendChild(el('li', null, words('line', { line: x.line, reason: x.reason }))); });
     var n = c.new + c.fill + c.bring_back, go = $('[data-go]');
-    go.textContent = n ? plural('go', n) : words('go-none'); go.disabled = !n || busy;
+    if (HISTORY) {
+      // The inspections: new ones to keep, and how many are on his list already.
+      // A new one the rules would refuse is never counted as one to keep: it is named, with its line (Codex on #110).
+      var refused = refusedOf(r), k = Math.max(0, (r.new_count || 0) - refused.length), have = r.already_count || 0;
+      var ins = $('[data-insp-sum]'); ins.textContent = '';
+      if (k) { var a = el('span', 'pi-pill pi-new', plural('keep', k)); a.setAttribute('data-keep', String(k)); ins.appendChild(a); }
+      if (refused.length) { var rf = el('span', 'pi-pill pi-refused', refusedWords(refused)); rf.setAttribute('data-refused', String(refused.length)); ins.appendChild(rf); }
+      if (have) { var b2 = el('span', 'pi-pill pi-unchanged', plural('already', have)); b2.setAttribute('data-already', String(have)); ins.appendChild(b2); }
+      go.textContent = k && n ? words('go-both', { k: k, n: n }) : k ? plural('go-insp', k) : n ? plural('go', n) : words('go-none');
+      go.disabled = !(k || n) || busy;
+    } else {
+      go.textContent = n ? plural('go', n) : words('go-none'); go.disabled = !n || busy;
+    }
   }
 
   /* ---- his choices: who is in the file; what a column holds ---- */
@@ -168,7 +192,8 @@
   /* ---- the file ---- */
   function take(f) {
     if (!f || busy) return;
-    done = null; $('[data-done]').hidden = true;
+    // A new file: nothing of the last import is this one's to show or to undo (Codex on #110).
+    done = null; donePast = null; $('[data-done]').hidden = true;
     // Another file: any reading still on its way for the last one is over now, before this one is even read (Codex on
     // #106): it can't bring the last file's preview back.
     turn++; $('[data-go]').disabled = true;
@@ -192,12 +217,18 @@
   /* ---- keep them: People read whole and planned again now, then sent 200 at a time ---- */
   /* Sends [push] 200 at a time. Answers { kept: ids the server kept, broke: true when a batch didn't go through } (what
      earlier batches kept stays kept, and so stays undoable: Codex on #106). */
-  function sendAll(push, progress) {
-    var kept = [], at = 0;
+  function sendAll(push, progress, bk) {
+    var kept = [], at = 0, to = bk || book;
     var next = function () {
       if (at >= push.length) return Promise.resolve({ kept: kept, broke: false });
-      var part = push.slice(at, at + BATCH);
-      return book.send(part).then(function (a) {
+      // 200 rows at most, and about 2 MB (a past inspection's row may be up to 256 KB).
+      var part = [], bytes = 0;
+      while (at + part.length < push.length && part.length < BATCH) {
+        var size = JSON.stringify(push[at + part.length]).length;
+        if (part.length && bytes + size > 2000000) break;
+        part.push(push[at + part.length]); bytes += size;
+      }
+      return to.send(part).then(function (a) {
         if (!a) return { kept: kept, broke: true };
         kept = kept.concat(a.kept); at += part.length;
         if (progress) progress(at);
@@ -211,6 +242,21 @@
     [].slice.call(main.querySelectorAll('button, select, input')).forEach(function (b) { b.disabled = on; });
     if (!on && read && !done) draw();
   }
+  /* The lines the rules won't take, in his words: too long (the reason he can fix), or refused for another reason. */
+  function refusedWords(problems) {
+    if (!problems || !problems.length) return '';
+    var long = problems.filter(function (p) { return p.problem === 'too_long'; }), other = problems.filter(function (p) { return p.problem !== 'too_long'; });
+    var lines = function (l) { return l.map(function (p) { return p.line; }).join(', '); };
+    return [long.length ? plural('refused-long', long.length, { lines: lines(long) }) : '', other.length ? plural('refused-other', other.length, { lines: lines(other) }) : '']
+      .filter(Boolean).join(' ');
+  }
+  /* The new inspections the rules would refuse, seen before he keeps anything (the same rows, stand-in ids and times). */
+  var STAND_IN = '00000000-0000-0000-0000-000000000000';
+  function refusedOf(r) {
+    var me = (auth.who() || {}).id || STAND_IN;
+    return PS.newRows(r.inspections || [], me, Date.now(), function () { return STAND_IN; }, STAND_IN).problems;
+  }
+
   $('[data-go]').addEventListener('click', function () {
     if (busy || !file || !read) return;
     var me = auth.who().id;
@@ -221,32 +267,88 @@
         if (!r || r.status !== 'ok') { say('failed'); return; }
         read = r;
         var made = CI.applyPlan(book.rows(), planOf(r), me, Date.now(), function () { return window.crypto.randomUUID(); });
-        if (!made.push.length) { draw(); return; }
+        // Each Bring in is an import of its own: the last one's is not this one's (Codex on #110).
+        donePast = null;
+        // A history: its new inspections kept first, under one import id (Undo takes the import back).
+        var past = HISTORY ? PS.newRows(r.inspections || [], me, Date.now(), function () { return window.crypto.randomUUID(); }, window.crypto.randomUUID()) : { push: [] };
+        // A line the rules won't take (too long to keep): said by its line, never silently left out (Codex on #110).
+        var refusedNote = refusedWords(past.problems);
+        var tell = function (text) { return refusedNote ? (text ? text + ' ' : '') + refusedNote : text; };
+        if (!made.push.length && !past.push.length) {
+          if (!refusedNote) { draw(); return; }
+          read = null; say(null); $('[data-read]').hidden = true; $('[data-done]').hidden = false;
+          $('[data-done-t]').textContent = refusedNote; $('[data-undo]').hidden = true;
+          return;
+        }
+        var keepPast = past.push.length ? sendAll(past.push, function (k) { say('keeping', { done: k, n: past.push.length }); }, pastBook) : Promise.resolve({ kept: [], broke: false });
+        return keepPast.then(function (pr) {
+          if (past.push.length) {
+            donePast = pr.kept.length ? { importId: past.push[0].data.importId, n: pr.kept.length } : null;
+            // The server took some, not all (it went through, and turned some rows down): the rest are said, never
+            // left out of the count (the same class as Codex on #110).
+            var left = pr.broke ? 0 : past.push.length - pr.kept.length;
+            if (left > 0) refusedNote = (refusedNote ? refusedNote + ' ' : '') + plural('past-left', left);
+            if (pr.broke) {
+              read = null; say(null); $('[data-read]').hidden = true; $('[data-done]').hidden = false;
+              $('[data-done-t]').textContent = tell(words('done-past-broke', { k: pr.kept.length, n: past.push.length }));
+              $('[data-undo]').hidden = !donePast;
+              return;
+            }
+          }
+          return bringPeople();
+        });
+        function bringPeople() {
         var n = made.push.length;
+        if (!n) {
+          read = null; say(null); $('[data-read]').hidden = true; $('[data-done]').hidden = false;
+          $('[data-done-t]').textContent = tell(plural('done-insp', donePast ? donePast.n : 0));
+          $('[data-undo]').hidden = !donePast;
+          return;
+        }
         say('bringing', { done: 0, n: n });
         return sendAll(made.push, function (k) { say('bringing', { done: k, n: n }); }).then(function (res) {
           var kept = res.kept;
-          if (!kept.length && res.broke) { say('failed'); return; }
+          if (!kept.length && res.broke) {
+            // The inspections were kept, then the people didn't go through: say what was kept, with its Undo (Codex
+            // on #110).
+            if (!donePast) { say('failed'); return; }
+            done = []; read = null; say(null); $('[data-read]').hidden = true; $('[data-done]').hidden = false;
+            $('[data-done-t]').textContent = tell(plural('done-insp', donePast.n) + ' ' + words('people-broke'));
+            $('[data-undo]').hidden = false;
+            return;
+          }
           var keptSet = {}; kept.forEach(function (id) { keptSet[id] = true; });
           done = made.changes.filter(function (c) { return keptSet[c.id]; });
           // Kept: what was read is spent (People has changed); a new file, or this one again, reads afresh.
           read = null;
           say(null);
           $('[data-read]').hidden = true; $('[data-done]').hidden = false;
-          $('[data-done-t]').textContent = kept.length === n ? words('done', { n: n }) : words(res.broke ? 'done-broke' : 'done-part', { kept: kept.length, n: n });
-          $('[data-undo]').hidden = !done.length;
+          var said$ = kept.length === n ? words('done', { n: n }) : words(res.broke ? 'done-broke' : 'done-part', { kept: kept.length, n: n });
+          if (donePast) said$ = plural('done-insp', donePast.n) + ' ' + said$;
+          $('[data-done-t]').textContent = HISTORY ? tell(said$) : said$;
+          $('[data-undo]').hidden = !done.length && !donePast;
         });
+        }
       });
     }).catch(function () { say('failed'); }).then(function () { lock(false); });
   });
 
   /* ---- Undo: what it added deleted again, what it filled cleared (unless changed since), as the phone's Undo ---- */
   $('[data-undo]').addEventListener('click', function () {
-    if (busy || !done || !done.length) return;
+    if (busy || ((!done || !done.length) && !donePast)) return;
     var me = auth.who().id;
     lock(true); say('undoing');
     freshPeople().then(function (ok) {
       if (!ok) { say('undo-failed'); return; }
+      // The inspections this import kept: deleted (every row of its import id), as the phone takes an import back.
+      var pastUndo = donePast ? sendAll(PS.undoImport(pastBook.rows(), donePast.importId, me, Date.now()), null, pastBook) : Promise.resolve({ kept: [], broke: false });
+      return pastUndo.then(function (pr) {
+        if (donePast) {
+          var still = PS.undoImport(pastBook.rows(), donePast.importId, me, Date.now()).length;
+          if (!still) donePast = null;
+          if (pr.broke || still) { say('undo-failed'); return; }
+        }
+        if (!done || !done.length) { done = null; say('undone'); $('[data-undo]').hidden = true; return; }
       var push = CI.undo(book.rows(), done, me, Date.now());
       return sendAll(push).then(function (res) {
         // Only what the server took back is undone; a row it kept out (the phone changed that person meanwhile) stays
@@ -257,6 +359,7 @@
         if (!done.length) { done = null; say('undone'); $('[data-undo]').hidden = true; }
         else say(res.broke ? 'undo-failed' : 'undo-part', { n: done.length });
       });
+      });
     }).catch(function () { say('undo-failed'); }).then(function () { lock(false); $('[data-read]').hidden = true; });
   });
 
@@ -264,5 +367,6 @@
     if (!s) return;
     main.hidden = false;
     book.start(function () {});
+    if (HISTORY) pastBook.start(function () {});
   });
 })();

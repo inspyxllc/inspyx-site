@@ -56,6 +56,8 @@
 .pi-sum{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 10px}
 .pi-pill{padding:5px 10px; border-radius:999px; font-weight:600; font-size:13px; background:#EEF3FD; color:#1D62D8}
 .pi-pill.pi-new{background:#E9F7EF; color:#16703A} .pi-pill.pi-unchanged{background:#F1F3F6; color:#4A5362}
+/* A line the rules won't take: a sentence, not a count, so it wraps and reads as a note (Codex on #110). */
+.pi-pill.pi-refused{background:#FFF4E5; color:#8A4B00; border-radius:12px; line-height:1.4; white-space:normal; flex-basis:100%}
 .pi-more{font-size:13px; color:var(--ink-soft, #4A5362)}
 .pi-skipped{margin-top:10px} .pi-skipped summary{cursor:pointer; font-weight:600} .pi-skipped ul{font-size:14px; color:var(--ink-soft, #4A5362)}
 .pi-acts{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px}
