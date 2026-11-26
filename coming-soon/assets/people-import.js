@@ -123,7 +123,8 @@
   /* ---- his choices: who is in the file; what a column holds ---- */
   main.addEventListener('click', function (e) {
     var k = e.target.closest('[data-kind]');
-    if (k && file && !busy && read && k.getAttribute('data-kind') !== read.kind) { choice.kind = k.getAttribute('data-kind'); choice.match = null; run(); }
+    // Who is in the file changes their role only: his column choices stay (built from his latest, not the screen).
+    if (k && file && !busy && read && k.getAttribute('data-kind') !== (choice.kind || read.kind)) { choice.kind = k.getAttribute('data-kind'); run(); }
   });
   main.addEventListener('change', function (e) {
     var sel = e.target.closest('[data-col]');

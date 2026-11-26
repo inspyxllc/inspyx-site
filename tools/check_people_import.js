@@ -282,6 +282,19 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     await o.ctx.close();
   });
 
+  await group('switching Clients / Agents keeps his column choices', async () => {
+    const o = await open(browser, { sync: syncServer(seed()) });
+    await pick(o.page, 'clients.csv', 'Name,Phone,Email\nPat Moore,555-0101,pat@x.com\n');
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    await o.page.locator('[data-col="1"]').selectOption('');
+    await until(async () => (await o.page.locator('[data-people] tr').first().locator('.pi-p').textContent()) === '');
+    await o.page.locator('[data-kind="agents"]').click();
+    await until(async () => (await o.page.locator('[data-kind="agents"]').getAttribute('aria-checked')) === 'true');
+    ok('Agents: Phone, which he set to Not used, stays so', (await o.page.locator('[data-col="1"]').inputValue()) === '' &&
+      (await o.page.locator('[data-people] tr').first().locator('.pi-p').textContent()) === '');
+    await o.ctx.close();
+  });
+
   await group('a names-only file: it asks which column holds the names', async () => {
     const o = await open(browser, { sync: syncServer(seed()) });
     await pick(o.page, 'names.csv', 'Name\nPat Moore\nRay Diaz\n');
