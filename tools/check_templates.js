@@ -236,7 +236,7 @@ const settled = (page) => page.waitForFunction(() => {
     await page.click('.tpl-card [data-add]');
     await page.waitForFunction(() => document.querySelector('.tpl-card [data-saved]').textContent.length > 0, null, { timeout: 15000 });
     const said = await page.locator('.tpl-card [data-saved]').innerText();
-    ok('it says the phone\'s "Added"', said === 'Added "Roof". Choose it when you start a new inspection.', said);
+    ok('it says the phone\'s "Added", with a way to edit it', said === 'Added "Roof". Choose it when you start a new inspection. Edit it →', said);
     const f = w.stores[0], r = w.pushes[0];
     const sha = f ? crypto.createHash('sha256').update(f.body).digest('hex') : '';
     ok('the file went first, to the inspector\'s own folder, named by its content', !!f && f.name === ME + '/' + (r && r.id) + '/' + sha + '.json' && f.type === 'application/json' && w.stores.length === 1, f && f.name);
@@ -245,6 +245,8 @@ const settled = (page) => page.waitForFunction(() => {
       r.data.sha256 === sha && r.data.byteLength === f.body.length && r.data.createdAt === r.data.updatedAt && r.updated_at === r.data.updatedAt && r.data.deletedAt === null && r.deleted_at === null &&
       typeof r.data.version === 'string' && r.data.name === 'Roof' && !('base' in r.data), r && JSON.stringify(r.data));
     ok('the row was kept', w.rows.has('inspection_templates/' + (r && r.id)));
+    const editHref = async () => page.locator('.tpl-card [data-saved] a').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
+    ok('its "Edit it" goes straight to it in the editor: /template#<its id, encoded>', JSON.stringify(await editHref()) === JSON.stringify(['/template#' + encodeURIComponent(r && r.id)]), JSON.stringify(await editHref()));
     ok('the button can\'t add it twice', await page.locator('.tpl-card [data-add]').isDisabled());
     // The same file again: already added, nothing sent.
     await page.click('.tpl-again');
@@ -253,6 +255,7 @@ const settled = (page) => page.waitForFunction(() => {
     await page.click('.tpl-card [data-add]');
     await page.waitForFunction(() => document.querySelector('.tpl-card [data-saved]').textContent.length > 0, null, { timeout: 15000 });
     ok('the same template again: "already added", and nothing more is sent', (await page.locator('.tpl-card [data-saved]').innerText()).startsWith('"Roof" was already added') && w.stores.length === 1 && w.pushes.length === 1);
+    ok('already added: "Edit it" goes to it too', JSON.stringify(await editHref()) === JSON.stringify(['/template#' + encodeURIComponent(r && r.id)]), JSON.stringify(await editHref()));
     ok('nothing left the site and no error showed', w.outside.length === 0 && page.errors.length === 0, (w.outside.concat(page.errors)).join(' | '));
     await ctx.close();
   });
@@ -265,6 +268,7 @@ const settled = (page) => page.waitForFunction(() => {
     await o.page.click('.tpl-card [data-add]');
     await o.page.waitForFunction(() => document.querySelector('.tpl-card [data-saved]').textContent.length > 0, null, { timeout: 15000 });
     ok('the store refuses the file (his folder full): it says so, and no row goes', (await o.page.locator('.tpl-card [data-saved]').innerText()).startsWith('Your templates are full') && w.pushes.length === 0);
+    ok('full: no "Edit it" (a failure never offers it)', (await o.page.locator('.tpl-card [data-saved] a').count()) === 0);
     await o.ctx.close();
     w = world({ skip: 'template:name' }); o = await open(browser, w, { save: true });
     await o.page.waitForSelector('[data-drop]');
@@ -273,6 +277,7 @@ const settled = (page) => page.waitForFunction(() => {
     await o.page.click('.tpl-card [data-add]');
     await o.page.waitForFunction(() => document.querySelector('.tpl-card [data-saved]').textContent.length > 0, null, { timeout: 15000 });
     ok('the server keeps the row out: "couldn\'t be added", and it can be tried again', (await o.page.locator('.tpl-card [data-saved]').innerText()) === "The template couldn't be added. Nothing changed." && !(await o.page.locator('.tpl-card [data-add]').isDisabled()));
+    ok('couldn\'t be added: no "Edit it"', (await o.page.locator('.tpl-card [data-saved] a').count()) === 0);
     await o.ctx.close();
   });
 
