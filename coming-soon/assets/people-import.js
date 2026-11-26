@@ -126,8 +126,11 @@
   main.addEventListener('change', function (e) {
     var sel = e.target.closest('[data-col]');
     if (!sel || !read || busy) return;
-    // The whole match as it stands, his change in it: each field to its column, or none.
+    // The whole match as it stands, his change in it: EVERY field the reader offers, to its column or to none, so a
+    // column he set to "Not used" stays so when he changes another (the reader guesses only fields it isn't told;
+    // Codex on #106).
     var m = {};
+    read.fields.forEach(function (f) { m[f.field] = null; });
     read.columns.forEach(function (c) { if (c.field) m[c.field] = c.index; });
     Object.keys(m).forEach(function (f) { if (m[f] === +sel.getAttribute('data-col')) m[f] = null; });
     if (sel.value) m[sel.value] = +sel.getAttribute('data-col');
@@ -152,13 +155,15 @@
   $('[data-again]').addEventListener('click', function () { if (!busy) $('[data-pick]').click(); });
 
   /* ---- keep them: People read whole and planned again now, then sent 200 at a time ---- */
+  /* Sends [push] 200 at a time. Answers { kept: ids the server kept, broke: true when a batch didn't go through } (what
+     earlier batches kept stays kept, and so stays undoable: Codex on #106). */
   function sendAll(push, progress) {
     var kept = [], at = 0;
     var next = function () {
-      if (at >= push.length) return Promise.resolve(kept);
+      if (at >= push.length) return Promise.resolve({ kept: kept, broke: false });
       var part = push.slice(at, at + BATCH);
       return book.send(part).then(function (a) {
-        if (!a) return null;
+        if (!a) return { kept: kept, broke: true };
         kept = kept.concat(a.kept); at += part.length;
         if (progress) progress(at);
         return next();
@@ -184,15 +189,16 @@
         if (!made.push.length) { draw(); return; }
         var n = made.push.length;
         say('bringing', { done: 0, n: n });
-        return sendAll(made.push, function (k) { say('bringing', { done: k, n: n }); }).then(function (kept) {
-          if (kept === null) { say('failed'); return; }
+        return sendAll(made.push, function (k) { say('bringing', { done: k, n: n }); }).then(function (res) {
+          var kept = res.kept;
+          if (!kept.length && res.broke) { say('failed'); return; }
           var keptSet = {}; kept.forEach(function (id) { keptSet[id] = true; });
           done = made.changes.filter(function (c) { return keptSet[c.id]; });
           // Kept: what was read is spent (People has changed); a new file, or this one again, reads afresh.
           read = null;
           say(null);
           $('[data-read]').hidden = true; $('[data-done]').hidden = false;
-          $('[data-done-t]').textContent = kept.length === n ? words('done', { n: n }) : words('done-part', { kept: kept.length, n: n });
+          $('[data-done-t]').textContent = kept.length === n ? words('done', { n: n }) : words(res.broke ? 'done-broke' : 'done-part', { kept: kept.length, n: n });
           $('[data-undo]').hidden = !done.length;
         });
       });
@@ -207,9 +213,14 @@
     freshPeople().then(function (ok) {
       if (!ok) { say('undo-failed'); return; }
       var push = CI.undo(book.rows(), done, me, Date.now());
-      return sendAll(push).then(function (kept) {
-        if (kept === null) { say('undo-failed'); return; }
-        done = null; say('undone'); $('[data-undo]').hidden = true;
+      return sendAll(push).then(function (res) {
+        // Only what the server took back is undone; a row it kept out (the phone changed that person meanwhile) stays
+        // for another Undo (Codex on #106).
+        var back = {}; res.kept.forEach(function (id) { back[id] = true; });
+        var left = push.filter(function (r) { return !back[r.id]; }).map(function (r) { return r.id; });
+        done = done.filter(function (c) { return left.indexOf(c.id) >= 0; });
+        if (!done.length) { done = null; say('undone'); $('[data-undo]').hidden = true; }
+        else say(res.broke ? 'undo-failed' : 'undo-part', { n: done.length });
       });
     }).catch(function () { say('undo-failed'); }).then(function () { lock(false); $('[data-read]').hidden = true; });
   });

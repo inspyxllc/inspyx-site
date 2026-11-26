@@ -61,10 +61,12 @@ const keptOf = (rows) => {
 };
 
 function syncServer(rows0) {
-  const held = new Map(), pushes = []; let seq = 0, down = false;
+  const held = new Map(), pushes = []; let seq = 0, down = false, failAfter = null, before = null;
   for (const r of rows0) held.set(r.id, { row: r, seq: ++seq });
   const answer = (b) => {
     if (down) return null;
+    if ((b.push || []).length && failAfter !== null && pushes.length >= failAfter) return null;
+    if ((b.push || []).length && before) { const f = before; before = null; f(); }
     const applied = [];
     if ((b.push || []).length) pushes.push(b.push.length);
     for (const r of b.push || []) {
@@ -76,7 +78,8 @@ function syncServer(rows0) {
     const rows = [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row);
     return { rows, next: seq, more: false, skipped: [], applied };
   };
-  return { answer, held, pushes, rows: () => [...held.values()].map((h) => h.row), set down(v) { down = v; } };
+  return { answer, held, pushes, rows: () => [...held.values()].map((h) => h.row), set down(v) { down = v; }, set failAfter(v) { failAfter = v; }, set before(f) { before = f; },
+    bump(id) { const h = held.get(id); const r = JSON.parse(JSON.stringify(h.row)); r.updated_at = r.data.updatedAt = Date.now() + 600000; r.data.note = 'Changed on the phone'; held.set(id, { row: r, seq: ++seq }); } };
 }
 
 async function open(browser, o) {
@@ -207,6 +210,48 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await o.ctx.close();
     });
   }
+
+  await group('a column set to “Not used” stays so; a broken batch stays undoable; an Undo row kept out', async () => {
+    let sync = syncServer(seed()), o = await open(browser, { sync });
+    await pick(o.page, 'clients.csv', 'Name,Phone,Email\nPat Moore,555-0101,pat@x.com\n');
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    await o.page.locator('[data-col="1"]').selectOption('');
+    await until(async () => (await o.page.locator('[data-people] tr').first().locator('.pi-p').textContent()) === '');
+    await o.page.locator('[data-col="2"]').selectOption('');
+    await until(async () => (await o.page.locator('[data-people] tr').first().locator('.pi-e').textContent()) === '');
+    ok('Phone set to Not used, then Email: Phone stays unused (never guessed back)', (await o.page.locator('[data-col="1"]').inputValue()) === '' &&
+      (await o.page.locator('[data-people] tr').first().locator('.pi-p').textContent()) === '');
+    await o.ctx.close();
+
+    sync = syncServer(seed()); o = await open(browser, { sync });
+    const many = 'Name,Phone\n' + Array.from({ length: 450 }, (_, i) => 'Agent ' + i + ',555-' + i).join('\n') + '\n';
+    await pick(o.page, 'agents.csv', many);
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    sync.failAfter = 1;
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 10000);
+    ok('the connection breaks after the first 200: it says so, and Undo stays for those 200', (await o.page.locator('[data-done-t]').textContent()).indexOf('200 of 450 are in People; then the connection broke.') === 0 &&
+      await o.page.locator('[data-undo]').isVisible(), await o.page.locator('[data-done-t]').textContent());
+    sync.failAfter = null;
+    await o.page.locator('[data-undo]').click();
+    ok('Undo takes those 200 back', await until(async () => (await said(o.page)) === 'Undone: People is as it was.', 10000) && keptOf(sync.rows()) === keptOf(seed()));
+    await o.ctx.close();
+
+    sync = syncServer(seed()); o = await open(browser, { sync });
+    await pick(o.page, 'clients.csv', CSV);
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 8000);
+    // The phone changes a person the import added, just as Undo is on its way.
+    const added = sync.rows().find((r) => r.data.name === 'Daniel Ortiz');
+    sync.before = () => sync.bump(added.id);
+    await o.page.locator('[data-undo]').click();
+    ok('an Undo row the server keeps out: it says so, and Undo stays for it', await until(async () => (await said(o.page)) === '1 couldn’t be taken back yet (changed on your phone meanwhile). Tap Undo again.', 8000) &&
+      await o.page.locator('[data-undo]').isVisible(), await said(o.page));
+    await o.page.locator('[data-undo]').click();
+    ok('Undo again: done', await until(async () => (await said(o.page)) === 'Undone: People is as it was.', 8000));
+    await o.ctx.close();
+  });
 
   await group('People links here', async () => {
     const o = await open(browser, { sync: syncServer(seed()) });
