@@ -52,6 +52,8 @@
   /* ---- read the file (again, after a choice) ---- */
   function run() {
     var mine = ++turn;
+    // While it reads (again), Bring in waits: it would keep a plan he hasn't seen.
+    $('[data-go]').disabled = true;
     if (!window.inspyxImport || typeof window.inspyxImport.contacts !== 'function') { say('no-engine'); return Promise.resolve(); }
     say('reading');
     return freshPeople().then(function (ok) {
@@ -143,6 +145,8 @@
     done = null; $('[data-done]').hidden = true;
     if (f.size > MAX) { file = null; read = null; $('[data-read]').hidden = true; say('too-big'); return; }
     var reader = new FileReader();
+    // Another file: what was read from the last one goes at once, so nothing can bring in this one unseen (Codex on #106).
+    read = null; $('[data-read]').hidden = true;
     reader.onload = function () { file = { name: f.name, bytes: new Uint8Array(reader.result) }; choice = { kind: null, match: null }; run(); };
     reader.onerror = function () { say('failed'); };
     reader.readAsArrayBuffer(f);

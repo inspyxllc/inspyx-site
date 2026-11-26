@@ -61,11 +61,12 @@ const keptOf = (rows) => {
 };
 
 function syncServer(rows0) {
-  const held = new Map(), pushes = []; let seq = 0, down = false, failAfter = null, before = null;
+  const held = new Map(), pushes = []; let seq = 0, down = false, failAfter = null, before = null, pullGate = null;
   for (const r of rows0) held.set(r.id, { row: r, seq: ++seq });
-  const answer = (b) => {
+  const answer = async (b) => {
     if (down) return null;
     if ((b.push || []).length && failAfter !== null && pushes.length >= failAfter) return null;
+    if (!(b.push || []).length && pullGate) await pullGate;
     if ((b.push || []).length && before) { const f = before; before = null; f(); }
     const applied = [];
     if ((b.push || []).length) pushes.push(b.push.length);
@@ -78,7 +79,7 @@ function syncServer(rows0) {
     const rows = [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row);
     return { rows, next: seq, more: false, skipped: [], applied };
   };
-  return { answer, held, pushes, rows: () => [...held.values()].map((h) => h.row), set down(v) { down = v; }, set failAfter(v) { failAfter = v; }, set before(f) { before = f; },
+  return { answer, held, pushes, rows: () => [...held.values()].map((h) => h.row), set down(v) { down = v; }, set failAfter(v) { failAfter = v; }, set before(f) { before = f; }, set pullGate(p) { pullGate = p; },
     bump(id) { const h = held.get(id); const r = JSON.parse(JSON.stringify(h.row)); r.updated_at = r.data.updatedAt = Date.now() + 600000; r.data.note = 'Changed on the phone'; held.set(id, { row: r, seq: ++seq }); } };
 }
 
@@ -94,7 +95,7 @@ async function open(browser, o) {
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url(), cors = { 'access-control-allow-origin': '*' };
     if (u.startsWith(SERVER + '/functions/v1/sync')) {
-      const a = o.sync.answer(JSON.parse(req.postData() || '{}'));
+      const a = await o.sync.answer(JSON.parse(req.postData() || '{}'));
       if (a === null) return route.fulfill({ status: 503, contentType: 'application/json', headers: cors, body: '{}' });
       return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(a) });
     }
@@ -221,6 +222,21 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     await until(async () => (await o.page.locator('[data-people] tr').first().locator('.pi-e').textContent()) === '');
     ok('Phone set to Not used, then Email: Phone stays unused (never guessed back)', (await o.page.locator('[data-col="1"]').inputValue()) === '' &&
       (await o.page.locator('[data-people] tr').first().locator('.pi-p').textContent()) === '');
+    await o.ctx.close();
+
+    // Another file picked while People is still being read for it: the last file's preview is gone, nothing to tap.
+    sync = syncServer(seed()); o = await open(browser, { sync });
+    await pick(o.page, 'one.csv', 'Name,Email\nPat Moore,pat@x.com\n');
+    await until(async () => (await o.page.locator('[data-count]').textContent()) === '1 person in this file');
+    let open2; sync.pullGate = new Promise((r) => { open2 = r; });
+    await pick(o.page, 'others.csv', 'Name,Email\n' + Array.from({ length: 100 }, (_, i) => 'Other ' + i + ',o' + i + '@x.com').join('\n') + '\n');
+    await o.page.waitForTimeout(300);
+    ok('another file: the last one’s preview and its Bring in are gone until this one is read', await o.page.locator('[data-read]').isHidden() &&
+      sync.pushes.length === 0);
+    sync.pullGate = null; open2();
+    await until(async () => (await o.page.locator('[data-count]').textContent()) === '100 people in this file');
+    ok('then it shows this file, and only then offers to bring it in', await o.page.locator('[data-read]').isVisible() && (await o.page.locator('[data-go]').textContent()) === 'Bring in 100 people',
+      JSON.stringify([await o.page.locator('[data-read]').isVisible(), await o.page.locator('[data-count]').textContent(), await o.page.locator('[data-go]').textContent(), await said(o.page)]));
     await o.ctx.close();
 
     sync = syncServer(seed()); o = await open(browser, { sync });
