@@ -118,7 +118,7 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       const o = await open(browser, { w, sync });
       const { page } = o;
       ok(label + ': the page says what it is for in one line, with its how-to in three steps, a tip by the finger at each',
-        await page.locator('.pi-lede').isVisible() && (await page.locator('.pi-how-step').count()) === 3 && (await page.locator('.pi-how-tip').count()) === 3);
+        await page.locator('.pi-lede').isVisible() && (await page.locator('[data-src-pane="file"] .pi-how-step').count()) === 3 && (await page.locator('[data-src-pane="file"] .pi-how-tip').count()) === 3);
       await pick(page, 'clients.csv', CSV);
       await until(async () => await page.locator('[data-read]').isVisible());
       ok(label + ': it reads the file: how many people, each column with its first value and what it holds', (await page.locator('[data-count]').textContent()) === '5 people in this file' &&

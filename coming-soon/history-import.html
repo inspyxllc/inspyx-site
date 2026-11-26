@@ -37,7 +37,9 @@
 <main class="pi" data-pi data-mode="history" hidden>
 <p class="pi-back"><a href="/people">← People</a></p>
 <h1>Bring in past inspections</h1>
-<p class="pi-lede">Your inspection history from the app you used before, from its export: Inspyx keeps every inspection on your list, here and on your phone, and brings the clients and agents it names into People. One you already have is never kept twice.</p>
+<p class="pi-lede">Your inspection history from the app you used before, from its export or straight from Spectora: Inspyx keeps every inspection on your list, here and on your phone, and brings the clients and agents it names into People. One you already have is never kept twice.</p>
+<div class="pi-src" role="tablist" aria-label="Where they come from"><button type="button" class="pi-chip is-on" role="tab" aria-selected="true" data-src="file">From a file</button><button type="button" class="pi-chip" role="tab" aria-selected="false" data-src="spectora">From Spectora</button></div>
+<div data-src-pane="file">
 <figure class="pi-how" aria-label="How it works, in three steps">
 <div class="pi-how-stage" aria-hidden="true">
 <div class="pi-how-scene pi-how-a"><span class="pi-how-file"><b>CSV</b>inspections.csv</span><span class="pi-how-drop">Drop your file here</span></div>
@@ -59,11 +61,43 @@
 <span class="pi-drop-t">Drop your file here, or choose it</span>
 <span class="pi-drop-s">CSV, TSV or Excel (.xlsx), up to 10 MB</span>
 </label>
+</div>
+<div data-src-pane="spectora" hidden>
+<p class="pi-spx-l">Your past inspections, read straight from your Spectora account with an API key: nothing to export.</p>
+<figure class="pi-how" aria-label="How it works with Spectora, in three steps">
+<div class="pi-how-stage" aria-hidden="true">
+<div class="pi-how-scene pi-how-a"><span class="pi-how-file"><b>KEY</b>Spectora API key</span><span class="pi-how-drop">Paste it here</span></div>
+<div class="pi-how-scene pi-how-b"><span class="pi-how-col"><i>Inspections</i><em>1,240 read</em></span><span class="pi-how-col"><i>Clients and agents</i><em>in them</em></span></div>
+<div class="pi-how-scene pi-how-c"><span class="pi-how-btn">Keep 1,240 inspections, bring 512 people in</span><span class="pi-how-done">1,240 kept, 512 in People. Undo</span></div>
+<span class="pi-how-finger"></span>
+<span class="pi-how-tip" data-n="1">Paste your Spectora key, so Inspyx can read your past inspections</span>
+<span class="pi-how-tip" data-n="2">Inspyx reads every page of them, so none is missed</span>
+<span class="pi-how-tip" data-n="3">Keep them, so your history and its people are on your list and your phone</span>
+</div>
+<figcaption class="pi-how-steps">
+<span class="pi-how-step" data-n="1">Paste your Spectora API key</span>
+<span class="pi-how-step" data-n="2">Inspyx reads them, page by page</span>
+<span class="pi-how-step" data-n="3">Keep them, with their clients and agents. Undo is one tap</span>
+</figcaption>
+</figure>
+<form class="pi-spx" data-spx autocomplete="off">
+<p class="pi-spx-h">Where to find your key</p>
+<ol class="pi-spx-steps">
+<li>In Spectora, an account admin opens Settings, then API Keys, and makes a key.</li>
+<li>Copy the key and paste it below.</li>
+<li>Inspyx uses it once, for this import, to read your past inspections. It isn’t kept, and nothing in Spectora changes.</li>
+</ol>
+<label class="pi-spx-k"><span>Spectora API key</span><input type="text" data-spx-key autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>
+<div class="pi-acts"><button type="submit" class="pi-btn" data-spx-go>Read my past inspections</button><button type="button" class="pi-btn ghost" data-spx-stop hidden>Stop</button></div>
+</form>
+<p class="pi-say" data-spx-say role="status" hidden></p>
+</div>
+
 <p class="pi-say" data-say role="status" hidden></p>
 <section class="pi-read" data-read hidden>
-<h2>What each column holds</h2>
+<h2 data-cols-h>What each column holds</h2>
 <p class="pi-note" data-noname hidden>Pick the column that holds the date, the address or the client: an inspection can’t be read without one.</p>
-<div class="pi-cols-wrap"><table class="pi-cols"><thead><tr><th>Column</th><th>First value</th><th>Holds</th></tr></thead><tbody data-cols></tbody></table></div>
+<div class="pi-cols-wrap" data-cols-wrap><table class="pi-cols"><thead><tr><th>Column</th><th>First value</th><th>Holds</th></tr></thead><tbody data-cols></tbody></table></div>
 <h2 data-count></h2>
 <div class="pi-sum" data-insp-sum></div>
 <p class="pi-note" data-cut hidden></p>
@@ -81,6 +115,21 @@
 </main>
 
 <template data-t="words">
+<span data-w="spx-reading">Reading from Spectora… {n} inspections</span>
+<span data-w="spx-wait-1">Spectora asked Inspyx to wait. Trying again in 1 second…</span>
+<span data-w="spx-wait-n">Spectora asked Inspyx to wait. Trying again in {n} seconds…</span>
+<span data-w="spx-stopped">Stopped: nothing is brought in, and your key is forgotten.</span>
+<span data-w="spx-no-key">Paste your Spectora API key first.</span>
+<span data-w="spx-partial">What was read before that is below; the rest is listed as left out.</span>
+<span data-w="where">{where}: {reason}</span>
+<span data-w="again-spx">Read Spectora again</span>
+<span data-w="again-file">Choose another file</span>
+<span data-w="count-spx-1">1 inspection read from Spectora</span>
+<span data-w="count-spx-n">{n} inspections read from Spectora</span>
+<span data-w="refused-long-at-1">1 inspection can’t be kept: it holds too much to keep ({lines}). Shorten its longest boxes in Spectora and read it again.</span>
+<span data-w="refused-long-at-n">{n} inspections can’t be kept: they hold too much to keep ({lines}). Shorten their longest boxes in Spectora and read them again.</span>
+<span data-w="refused-other-at-1">1 inspection can’t be kept as Spectora has it ({lines}).</span>
+<span data-w="refused-other-at-n">{n} inspections can’t be kept as Spectora has them ({lines}).</span>
 <span data-w="reading">Reading your file…</span>
 <span data-w="keep-1">1 new to keep</span>
 <span data-w="keep-n">{n} new to keep</span>
