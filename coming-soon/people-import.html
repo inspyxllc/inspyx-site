@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Bring in your people</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/dash.css">
+<link rel="stylesheet" href="/assets/people-import.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/people-book.js" defer></script>
+<script src="/assets/import/inspyx_import.js" defer></script>
+<script src="/assets/contacts-import.js" defer></script>
+<script src="/assets/people-import.js" defer></script>
+</head>
+<body class="has-dash">
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z"></path><path d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" stroke="#0284C7" stroke-width="19"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+<nav class="dash" aria-label="Your dashboard">
+<ul class="dash-items"><li><a href="/today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 6.5 4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5l-1.5-6.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5Z"/></svg><span class="dash-l">What needs you</span><span class="dash-s">To do</span></a></li><li><a href="/inspections"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m9 13 2 2 4-4"/></svg><span class="dash-l">Inspections</span></a></li><li><a href="/calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="dash-l">Calendar</span></a></li><li><a href="/prices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"/><circle cx="8" cy="8" r="1.5"/></svg><span class="dash-l">Prices</span></a></li><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul>
+<details class="dash-more"><summary aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></summary><ul><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul></details>
+</nav>
+
+
+<main class="pi" data-pi hidden>
+<p class="pi-back"><a href="/people">← People</a></p>
+<h1>Bring in your people</h1>
+<p class="pi-lede">Your clients or agents from the app you use now, from its export file: they join People here and on your phone. Nobody is kept twice, and what you already have is never changed.</p>
+<figure class="pi-how" aria-label="How it works, in three steps">
+<div class="pi-how-stage" aria-hidden="true">
+<div class="pi-how-scene pi-how-a"><span class="pi-how-file"><b>CSV</b>clients.csv</span><span class="pi-how-drop">Drop your file here</span></div>
+<div class="pi-how-scene pi-how-b"><span class="pi-how-col"><i>Full Name</i><em>Name</em></span><span class="pi-how-col"><i>Cell</i><em>Phone</em></span><span class="pi-how-col"><i>E-mail</i><em>Email</em></span></div>
+<div class="pi-how-scene pi-how-c"><span class="pi-how-btn">Bring in 214 people</span><span class="pi-how-done">214 in People. Undo</span></div>
+<span class="pi-how-finger"></span>
+<span class="pi-how-tip" data-n="1">Drop your old app’s export, so Inspyx reads your people</span>
+<span class="pi-how-tip" data-n="2">Check each column’s meaning, so names and numbers land right</span>
+<span class="pi-how-tip" data-n="3">Bring them in, so they’re in People on your phone too</span>
+</div>
+<figcaption class="pi-how-steps">
+<span class="pi-how-step" data-n="1">Drop your export file (CSV or Excel)</span>
+<span class="pi-how-step" data-n="2">Check what each column holds</span>
+<span class="pi-how-step" data-n="3">Bring them in. Undo is one tap</span>
+</figcaption>
+</figure>
+<label class="pi-drop" data-drop>
+<input type="file" accept=".csv,.tsv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-pick>
+<span class="pi-drop-t">Drop your file here, or choose it</span>
+<span class="pi-drop-s">CSV, TSV or Excel (.xlsx), up to 10 MB</span>
+</label>
+<p class="pi-say" data-say role="status" hidden></p>
+<section class="pi-read" data-read hidden>
+<div class="pi-kind" role="radiogroup" aria-label="Who is in this file">
+<span>This file holds</span>
+<button type="button" class="pi-chip" data-kind="clients" role="radio">Clients</button>
+<button type="button" class="pi-chip" data-kind="agents" role="radio">Agents</button>
+</div>
+<h2>What each column holds</h2>
+<p class="pi-note" data-noname hidden>Pick the column that holds each person’s name: nobody can be read without one.</p>
+<div class="pi-cols-wrap"><table class="pi-cols"><thead><tr><th>Column</th><th>First value</th><th>Holds</th></tr></thead><tbody data-cols></tbody></table></div>
+<h2 data-count></h2>
+<div class="pi-sum" data-sum></div>
+<div class="pi-people-wrap"><table class="pi-people"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Company</th></tr></thead><tbody data-people></tbody></table></div>
+<p class="pi-more" data-more hidden></p>
+<details class="pi-skipped" data-skipped hidden><summary data-skipped-n></summary><ul data-skipped-list></ul></details>
+<div class="pi-acts"><button type="button" class="pi-btn" data-go></button><button type="button" class="pi-btn ghost" data-again>Choose another file</button></div>
+</section>
+<section class="pi-done" data-done hidden>
+<p class="pi-done-t" data-done-t></p>
+<div class="pi-acts"><a class="pi-btn" href="/people">See them in People</a><button type="button" class="pi-btn ghost" data-undo>Undo</button></div>
+</section>
+</main>
+
+<template data-t="words">
+<span data-w="reading">Reading your file…</span>
+<span data-w="too-big">This file is over 10 MB. Export fewer people at a time, or save it as CSV.</span>
+<span data-w="no-engine">This page couldn’t start its file reader. Reload the page.</span>
+<span data-w="no-people">People couldn’t be read. Check your connection, then try again: nothing is brought in until it can.</span>
+<span data-w="count-1">1 person in this file</span>
+<span data-w="count-n">{n} people in this file</span>
+<span data-w="sum-new">{n} new</span>
+<span data-w="sum-fill">{n} you have, with boxes to fill</span>
+<span data-w="sum-back">{n} you’d deleted, brought back</span>
+<span data-w="sum-same">{n} you have already, nothing new</span>
+<span data-w="more">Showing the first {shown} of {n}.</span>
+<span data-w="skipped-1">1 line left out</span>
+<span data-w="skipped-n">{n} lines left out</span>
+<span data-w="line">Line {line}: {reason}</span>
+<span data-w="go-1">Bring in 1 person</span>
+<span data-w="go-n">Bring in {n} people</span>
+<span data-w="go-none">Nothing new to bring in</span>
+<span data-w="not-used">Not used</span>
+<span data-w="role-client">Client</span>
+<span data-w="role-buyer_agent">Buyer’s agent</span>
+<span data-w="role-listing_agent">Listing agent</span>
+<span data-w="bringing">Bringing them in… {done} of {n}</span>
+<span data-w="done">Done: {n} in People. They’ll be on your phone within a few minutes.</span>
+<span data-w="done-part">{kept} of {n} are in People. The rest didn’t go through (a change from your phone may be newer): try that file again later; nothing is kept twice.</span>
+<span data-w="failed">That didn’t go through. Nothing more was brought in; what’s listed in People is kept. Try again.</span>
+<span data-w="undoing">Taking them back out…</span>
+<span data-w="undone">Undone: People is as it was.</span>
+<span data-w="undo-failed">Undo didn’t go through. Try again.</span>
+<span data-w="undo-part">{n} couldn’t be taken back yet (changed on your phone meanwhile). Tap Undo again.</span>
+<span data-w="done-broke">{kept} of {n} are in People; then the connection broke. Undo takes back what came in; or bring in the file again later, and nobody is kept twice.</span>
+</template>
+</body>
+</html>

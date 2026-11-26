@@ -114,6 +114,21 @@
     failing: function () { return failing; },
     personOf: personOf,
     add: add,
+    // For bringing people in (people-import.js): every row held, deleted ones too; and a batch sent as one exchange,
+    // answering which rows were kept ('kept' ids), or null when it didn't go through.
+    rows: function () { return Object.keys(rows).map(function (k) { return rows[k]; }); },
+    send: function (push) {
+      return exchange(push).then(function (answer) {
+        if (!answer) return null;
+        var refused = {};
+        (answer.skipped || []).forEach(function (x) { if (x.kind === KIND) refused[x.id] = true; });
+        (answer.applied || []).forEach(function (a) { if (a.kind === KIND && a.applied === false) refused[a.id] = true; });
+        var kept = push.filter(function (r) { return !refused[r.id]; });
+        kept.forEach(take);
+        return (answer.more ? pull() : Promise.resolve()).then(function () { tell(); return { kept: kept.map(function (r) { return r.id; }) }; });
+      }, function () { return null; });
+    },
+    pull: pull,
     newDraft: function () { return { id: window.crypto.randomUUID(), at: 0, last: 0 }; },
   };
 })();
