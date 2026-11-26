@@ -131,9 +131,13 @@
     // The whole match as it stands, his change in it: EVERY field the reader offers, to its column or to none, so a
     // column he set to "Not used" stays so when he changes another (the reader guesses only fields it isn't told;
     // Codex on #106).
+    // Built on his latest choice, even one still being read (two changes before the first answer: Codex on #106).
     var m = {};
-    read.fields.forEach(function (f) { m[f.field] = null; });
-    read.columns.forEach(function (c) { if (c.field) m[c.field] = c.index; });
+    if (choice.match) Object.keys(choice.match).forEach(function (f) { m[f] = choice.match[f]; });
+    else {
+      read.fields.forEach(function (f) { m[f.field] = null; });
+      read.columns.forEach(function (c) { if (c.field) m[c.field] = c.index; });
+    }
     Object.keys(m).forEach(function (f) { if (m[f] === +sel.getAttribute('data-col')) m[f] = null; });
     if (sel.value) m[sel.value] = +sel.getAttribute('data-col');
     choice.match = m; run();

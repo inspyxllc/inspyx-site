@@ -224,6 +224,19 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       (await o.page.locator('[data-people] tr').first().locator('.pi-p').textContent()) === '');
     await o.ctx.close();
 
+    // The same two changes made before the first is read again (People still being read): Phone still stays unused.
+    sync = syncServer(seed()); o = await open(browser, { sync });
+    await pick(o.page, 'clients.csv', 'Name,Phone,Email\nPat Moore,555-0101,pat@x.com\n');
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    let open3; sync.pullGate = new Promise((r) => { open3 = r; });
+    await o.page.locator('[data-col="1"]').selectOption('');
+    await o.page.locator('[data-col="2"]').selectOption('');
+    sync.pullGate = null; open3();
+    await until(async () => (await o.page.locator('[data-people] tr').first().locator('.pi-e').textContent()) === '');
+    ok('two changes before the first is read again: both kept (Phone not guessed back)', (await o.page.locator('[data-people] tr').first().locator('.pi-p').textContent()) === '' &&
+      (await o.page.locator('[data-col="1"]').inputValue()) === '');
+    await o.ctx.close();
+
     // Another file picked while People is still being read for it: the last file's preview is gone, nothing to tap.
     sync = syncServer(seed()); o = await open(browser, { sync });
     await pick(o.page, 'one.csv', 'Name,Email\nPat Moore,pat@x.com\n');
@@ -266,6 +279,18 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await o.page.locator('[data-undo]').isVisible(), await said(o.page));
     await o.page.locator('[data-undo]').click();
     ok('Undo again: done', await until(async () => (await said(o.page)) === 'Undone: People is as it was.', 8000));
+    await o.ctx.close();
+  });
+
+  await group('a names-only file: it asks which column holds the names', async () => {
+    const o = await open(browser, { sync: syncServer(seed()) });
+    await pick(o.page, 'names.csv', 'Name\nPat Moore\nRay Diaz\n');
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    ok('no column read as names yet (the phone’s own rule): it asks for one, and offers nothing to bring in', await o.page.locator('[data-noname]').isVisible() &&
+      (await o.page.locator('[data-go]').textContent()) === 'Nothing new to bring in' && await o.page.locator('[data-go]').isDisabled());
+    await o.page.locator('[data-col="0"]').selectOption({ label: 'Name' });
+    ok('he picks it: both people read', await until(async () => (await o.page.locator('[data-count]').textContent()) === '2 people in this file') && !(await o.page.locator('[data-noname]').isVisible()),
+      await o.page.locator('[data-count]').textContent());
     await o.ctx.close();
   });
 
