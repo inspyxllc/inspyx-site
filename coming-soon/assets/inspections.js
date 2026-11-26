@@ -529,7 +529,11 @@
       if (copy.source !== spot.from) return { problem: 'failed' };
       // Every id he has had, removed ones too: a new one is never an old one (the phone's newTemplateIdFor).
       var id = TS.newTemplateId(copy.copyName, rows.map(function (r) { return r.id; }));
-      return { id: id, name: copy.copyName, text: TS.makeCopy(copy, id, copy.copyName), row: null, source: copy.sourceName };
+      // New inspections start from the copy only when they start from ours now (or from nothing he chose): never over a
+      // default he picked himself (the lead's condition on his yes, 2026-11-26).
+      var dflt = biz[TPL_DEFAULT + '/default'], now = standingRow(dflt) ? dflt.data.templateId : null;
+      return { id: id, name: copy.copyName, text: TS.makeCopy(copy, id, copy.copyName), row: null, source: copy.sourceName,
+        makeDefault: now === null || now === undefined || now === spot.from };
     }).catch(function () { return { problem: 'failed' }; });
   }
 
@@ -556,7 +560,7 @@
         if (base) data.base = base;
         var push = [{ kind: TPL, id: target.id, updated_at: at, deleted_at: null, data: data }];
         // A copy made here: new inspections start from it, or the comment would never show (his yes, 2026-11-26).
-        if (!target.row) push.push({ kind: TPL_DEFAULT, id: 'default', updated_at: at, deleted_at: null,
+        if (!target.row && target.makeDefault) push.push({ kind: TPL_DEFAULT, id: 'default', updated_at: at, deleted_at: null,
           data: { id: 'default', ownerAccountId: me, templateId: target.id, updatedAt: at, deletedAt: null } });
         return auth.ask('sync', { push: push, after: bizPoint, limit: 500 }, DEADLINE).then(function (r) {
           if (r === null) { window.location.replace('/signin'); return null; }
@@ -569,7 +573,7 @@
           if (skipped.length) return skipped.some(function (x) { return x.reason === 'template:full'; }) ? 'full' : 'failed';
           if ((r.json.applied || []).some(function (a) { return a.applied === false && mine(a); })) return 'changed';
           push.forEach(takeBiz);
-          return 'saved';
+          return target.row ? 'saved' : target.makeDefault ? 'saved-copy-default' : 'saved-copy';
         });
       });
     });
@@ -581,7 +585,7 @@
     box.setAttribute('data-tpl-item', item);
     var q = function (sel) { return box.querySelector(sel); };
     var open = q('[data-tpl-open]'), panel = q('[data-tpl-panel]'), where = q('[data-tpl-where]'), done = q('[data-tpl-done]');
-    var target = null, busy = false, turn = 0;
+    var target = null, busy = false, turn = 0, copySource = '';
     var line = function () {
       var t = text(val('item', finding, 'finding_title')).trim() || text(val('item', finding, 'label')).trim();
       return { title: t, details: text(val('item', finding, 'note')), recommendation: text(val('item', finding, 'finding_recommendation')),
@@ -607,7 +611,8 @@
         if (mine !== turn) return;
         if (t.problem) { where.textContent = tplWords('tpl-' + t.problem, { item: itemName() }); return; }
         target = t;
-        where.textContent = tplWords(t.row ? 'tpl-into' : 'tpl-into-new', { name: t.name, item: itemName(), source: t.source || '' });
+        if (t.source) copySource = t.source;
+        where.textContent = tplWords(t.row ? 'tpl-into' : t.makeDefault ? 'tpl-into-new' : 'tpl-into-new-keep', { name: t.name, item: itemName(), source: t.source || '' });
         q('[data-tpl-v="title"]').textContent = l.title;
         q('[data-tpl-v="details"]').textContent = TS.dartTrim(l.details) || word('tpl-none');
         q('[data-tpl-v="todo"]').textContent = TS.dartTrim(l.recommendation) || word('tpl-none');
@@ -636,12 +641,13 @@
       };
       // In the page's queue, after a fresh pull: the template as it stands now, not as it stood when the panel opened.
       var run = tplQueue.then(function () { return pullBusiness(); }).then(function () { return templateFor(spot); }).then(function (now) {
+        if (now.source) copySource = now.source;
         return now.problem ? now.problem : attempt(true, now);
       });
       tplQueue = run.catch(function () { return null; });
       run.then(function (key) {
         if (key === null) return;
-        say(key, { item: itemName() });
+        say(key, { item: itemName(), source: copySource });
       }, function () { say('failed'); }).then(function () { busy = false; open.disabled = false; renderOne(); });
     });
   }

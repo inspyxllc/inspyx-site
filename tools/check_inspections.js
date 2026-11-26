@@ -788,7 +788,8 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await until(async () => await box(FIND).locator('[data-tpl-go]').isVisible());
       await box(FIND).locator('[data-tpl-go]').click();
       const done = box(FIND).locator('[data-tpl-done]');
-      ok(label + ': it says it is saved, and where the next inspection offers it', await until(async () => (await done.textContent()).trim() === 'Saved. Your next inspection offers it under Gutters.'), await done.textContent());
+      ok(label + ': it says it is saved in his own copy, now used for his new inspections', await until(async () => (await done.textContent()).trim() ===
+        'Saved to your own copy of the Walkthrough template, now used for your new inspections.'), await done.textContent());
       const id = 'inspector.my-walkthrough';
       const want = TS.addLine(TS.makeCopy(COPY, id, 'My Walkthrough'), { itemRef: id + '.grounds.grading', title: 'Gutter pulling away',
         details: 'The gutter is pulling away at the NE corner.', recommendation: 'Have a gutter contractor refasten it.', code: 'MD' });
@@ -905,6 +906,30 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       tr[0].id === tr[1].id && pushedOf(t, 'template_default').length === 1 && names.includes('Gutter pulling away') && names.includes('Loose bracket'),
       JSON.stringify([tr.map((x) => x.id + '@' + x.data.version), names.slice(-2)]));
     await o.ctx.close();
+
+    // A default he picked himself: kept. The copy is made, nothing says it is used for new inspections.
+    for (const [what, picked, replaced] of [['a default he picked himself is kept', 'inspector.converted-one', false],
+      ['a default of the Inspyx template it was copied from is replaced by the copy', 'inspyx.walkthrough', true]]) {
+      s = server(); seed(s); seedFromOurs(s);
+      const d0 = { kind: 'template_default', id: 'default', updated_at: 7, deleted_at: null, data: { id: 'default', ownerAccountId: ME, templateId: picked, updatedAt: 7, deletedAt: null } };
+      t = templateServer([d0]);
+      o = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer, files: new Map() });
+      await o.page.waitForSelector('.insp-finding');
+      await box(o.page, FIND).locator('[data-tpl-open]').click();
+      await until(async () => await box(o.page, FIND).locator('[data-tpl-go]').isVisible());
+      const where = (await box(o.page, FIND).locator('[data-tpl-where]').textContent()).trim();
+      await box(o.page, FIND).locator('[data-tpl-go]').click();
+      await until(async () => pushedOf(t, 'inspection_templates').length === 1 && /^Saved/.test((await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim()));
+      const doneText = (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim();
+      const dpush = pushedOf(t, 'template_default');
+      ok(what, replaced
+        ? /Your new inspections will start from it\.$/.test(where) && dpush.length === 1 && dpush[0].data.templateId === 'inspector.my-walkthrough' && dpush[0].updated_at > 7 &&
+          doneText === 'Saved to your own copy of the Walkthrough template, now used for your new inspections.'
+        : !/new inspections/.test(where) && dpush.length === 0 &&
+          doneText === 'Saved to your own copy of the Walkthrough template. Choose it for an inspection to have it offered there.',
+        JSON.stringify([where, doneText, dpush.map((x) => x.data.templateId)]));
+      await o.ctx.close();
+    }
 
     // No template at all: no button.
     s = server(); seed(s);

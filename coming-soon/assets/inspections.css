@@ -322,7 +322,7 @@
 .tpl-go, .tpl-cancel{min-height:40px; padding:0 18px; border:0; border-radius:999px; font:600 14.5px var(--font); cursor:pointer}
 .tpl-go{background:var(--navy); color:#FFFFFF} .tpl-cancel{background:#F1F3F6; color:var(--ink)}
 .tpl-done{margin:0; font-size:14px; color:var(--ink-soft)}
-.tpl-done[data-tpl-said="saved"]{color:#1E6B3A; font-weight:600}
+.tpl-done[data-tpl-said="saved"], .tpl-done[data-tpl-said="saved-copy"], .tpl-done[data-tpl-said="saved-copy-default"]{color:#1E6B3A; font-weight:600}
 .tpl-done[data-tpl-said="full"], .tpl-done[data-tpl-said="failed"], .tpl-done[data-tpl-said="changed"], .tpl-done[data-tpl-said="no_item"], .tpl-done[data-tpl-said="gone"]{color:#9B2C2C; font-weight:600}
 .tpl-how{margin-top:6px}
 .tpl-how-btn{justify-self:start; padding:5px 11px; border-radius:999px; background:#FFFFFF; color:var(--navy); font-style:normal; font-weight:600; box-shadow:inset 0 0 0 1.5px rgba(31,78,121,.3); animation:look-press 9s infinite}
