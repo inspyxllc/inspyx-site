@@ -5,7 +5,7 @@
                2026-11-22: no reading of pictures on the server or in the browser);
      convert   its lines go to the Spex server, which sorts them as on the phone; each template comes back as the
                app's own template file with its preview, in the phone's own words (convert_words.dart);
-     add       (behind SAVE until the app's template sync, inspyx-mobile #694, is on every phone) its file goes to the
+     add       (on since 2026-11-26: the phones pull templates, inspyx-mobile #694, build 19) its file goes to the
                private store business-templates, then its row (kind inspection_templates) through the sync
                function, as the phone sends its own: the file first, so the server finds it.
    The sign-in never reaches this file: auth.js hands it to the converter and to the store itself.
@@ -16,8 +16,9 @@
   var main = document.querySelector('[data-tpl]');
   if (!auth || !main) return;
 
-  // Adding from the website waits for the phones to pull templates (inspyx-mobile #694).
-  var SAVE = false;
+  // Adding from the website (on 2026-11-26: the phones pull templates since inspyx-mobile #694, build 19; the
+  // first real add is checked end to end in prod before anyone relies on it, the lead's proof run).
+  var SAVE = true;
   // The Spex server's chat address, as the app's Spex Chat uses it (spex_chat_brain.dart).
   var RELAY = 'wss://chat---spex-relay-yu5bdad2fa-uc.a.run.app/';
   var DEADLINE = 30000, KIND = 'inspection_templates', SHOWN = 200;

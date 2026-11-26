@@ -56,6 +56,7 @@ async function open(browser, w, opts) {
     const req = route.request(), u = new URL(req.url());
     if (u.origin === HOME) {
       if (o.save && u.pathname === '/assets/templates.js') {
+        // On in the page itself since 2026-11-26; kept so an older copy still runs these checks switched on.
         const body = fs.readFileSync(path.join(__dirname, '..', 'coming-soon', 'assets', 'templates.js'), 'utf8').replace('var SAVE = false;', 'var SAVE = true;');
         return route.fulfill({ status: 200, contentType: 'text/javascript', body });
       }
@@ -170,7 +171,7 @@ const settled = (page) => page.waitForFunction(() => {
     ok('no engineer words: no "readings", no "Information"', !/reading|Information/.test(await card.innerText()));
     ok('a section holding such a line says how many', (await card.locator('.tpl-dot').count()) >= 1);
     ok('the lines went to the Spex server as the website, signed in', w.hellos.length > 0 && w.hellos.every((h) => h.client === 'inspyx-web-convert' && h.access_token === 'test-access-1'));
-    ok('with adding not yet on, nothing is offered to add, and it says so', !(await card.locator('[data-add]').isVisible()) && (await card.locator('[data-saved]').innerText()).startsWith('Adding from the website comes next'));
+    ok('adding is on (2026-11-26): "Add" is offered under the preview, and nothing is said until it is tapped', (await card.locator('[data-add]').isVisible()) && (await card.locator('[data-saved]').innerText()).trim() === '');
     ok('and nothing was stored or synced', w.stores.length === 0 && w.pushes.length === 0);
     ok('the page\'s own script never held the sign-in', !fs.readFileSync(path.join(__dirname, '..', 'coming-soon', 'assets', 'templates.js'), 'utf8').match(/\.access\b|access_token|Bearer/));
     ok('nothing left the site and no error showed', w.outside.length === 0 && page.errors.length === 0, (w.outside.concat(page.errors)).join(' | '));
