@@ -12,6 +12,12 @@
   var main = document.querySelector('[data-pi]');
   if (!auth || !book || !CI || !main) return;
   var MAX = 10 * 1024 * 1024, BATCH = 200, SHOWN = 50;
+  // /history-import (past inspections, 2026-11-26): the same page and the same rules, reading a history file
+  // (inspyxImport.inspections); the people it names come into People. Storing the inspections themselves follows when
+  // the past_inspections sync kind lands (I2, schema v43).
+  var HISTORY = main.getAttribute('data-mode') === 'history';
+  var read$ = HISTORY ? 'inspections' : 'contacts';
+  var planOf = function (r) { return (HISTORY ? r && r.people && r.people.plan : r && r.plan) || []; };
   var $ = function (sel) { return main.querySelector(sel); };
   var words = (function () {
     var box = document.querySelector('template[data-t="words"]').content;
@@ -46,7 +52,7 @@
     var opts = { existing: existing() };
     if (choice.kind) opts.kind = choice.kind;
     if (choice.match) opts.match = choice.match;
-    return Promise.resolve(window.inspyxImport.contacts(file.name, file.bytes, opts)).then(function (t) { return typeof t === 'string' ? JSON.parse(t) : t; });
+    return Promise.resolve(window.inspyxImport[read$](file.name, file.bytes, opts)).then(function (t) { return typeof t === 'string' ? JSON.parse(t) : t; });
   }
 
   /* ---- read the file (again, after a choice) ---- */
@@ -54,7 +60,7 @@
     var mine = ++turn;
     // While it reads (again), Bring in waits: it would keep a plan he hasn't seen.
     $('[data-go]').disabled = true;
-    if (!window.inspyxImport || typeof window.inspyxImport.contacts !== 'function') { say('no-engine'); return Promise.resolve(); }
+    if (!window.inspyxImport || typeof window.inspyxImport[read$] !== 'function') { say('no-engine'); return Promise.resolve(); }
     say('reading');
     return freshPeople().then(function (ok) {
       if (mine !== turn) return;
@@ -93,15 +99,30 @@
       var td = el('td'); td.appendChild(sel); tr.appendChild(td);
       tb.appendChild(tr);
     });
-    $('[data-noname]').hidden = !!r.has_name;
-    var people = r.people || [];
+    // Nothing can be read yet: the column that holds the names (people), or a date, address or client (a history).
+    $('[data-noname]').hidden = HISTORY ? !!r.can_file : !!r.has_name;
+    var people = HISTORY ? (r.inspections || []) : (r.people || []);
     $('[data-count]').textContent = plural('count', people.length);
-    var c = counts(r.plan), sum = $('[data-sum]'); sum.textContent = '';
+    if (HISTORY) {
+      var cut = $('[data-cut]');
+      cut.hidden = !r.cut; cut.textContent = r.cut ? (r.cut_message || '') : '';
+      $('[data-people-n]').textContent = words('people-n', { clients: r.people ? r.people.clients : 0, agents: r.people ? r.people.agents : 0 });
+    }
+    var c = counts(planOf(r)), sum = $('[data-sum]'); sum.textContent = '';
     [['new', 'sum-new'], ['fill', 'sum-fill'], ['bring_back', 'sum-back'], ['unchanged', 'sum-same']].forEach(function (k) {
       if (c[k[0]]) { var s = el('span', 'pi-pill pi-' + k[0], words(k[1], { n: c[k[0]] })); s.setAttribute('data-sum-' + k[0], String(c[k[0]])); sum.appendChild(s); }
     });
     var pb = $('[data-people]'); pb.textContent = '';
-    people.slice(0, SHOWN).forEach(function (p) {
+    if (HISTORY) people.slice(0, SHOWN).forEach(function (x) {
+      // A past inspection: its day (as the file wrote it when it isn't a date), the address, the client, the fee.
+      var tr = el('tr');
+      tr.appendChild(el('td', 'pi-d', x.date || x.date_in_file || ''));
+      tr.appendChild(el('td', 'pi-n', x.address || ''));
+      tr.appendChild(el('td', 'pi-c', x.client || ''));
+      tr.appendChild(el('td', 'pi-f', typeof x.fee_cents === 'number' ? '$' + (x.fee_cents / 100).toLocaleString('en-US', { minimumFractionDigits: x.fee_cents % 100 ? 2 : 0, maximumFractionDigits: 2 }) : ''));
+      pb.appendChild(tr);
+    });
+    else people.slice(0, SHOWN).forEach(function (p) {
       // The whole file has one role (the Clients / Agents switch says it). On a phone each person stacks: name, then
       // phone · email · company (the lead, 2026-11-26).
       var tr = el('tr');
@@ -199,7 +220,7 @@
       return engine().then(function (r) {
         if (!r || r.status !== 'ok') { say('failed'); return; }
         read = r;
-        var made = CI.applyPlan(book.rows(), r.plan || [], me, Date.now(), function () { return window.crypto.randomUUID(); });
+        var made = CI.applyPlan(book.rows(), planOf(r), me, Date.now(), function () { return window.crypto.randomUUID(); });
         if (!made.push.length) { draw(); return; }
         var n = made.push.length;
         say('bringing', { done: 0, n: n });

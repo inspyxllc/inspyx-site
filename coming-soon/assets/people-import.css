@@ -89,3 +89,7 @@
   .pi-people .pi-c{grid-column:1 / -1; color:var(--ink-soft, #4A5362); font-size:13px; overflow-wrap:anywhere}
   .pi-people .pi-c:empty{display:none}
 }
+/* Past inspections: the people line under the count; the table's day and fee. */
+.pi-people-n{margin:0 0 8px; color:var(--ink-soft, #4A5362)}
+.pi-people .pi-d, .pi-people .pi-f{white-space:nowrap}
+@media (max-width: 699.98px){ .pi-people .pi-d, .pi-people .pi-f{grid-column:1 / -1; color:var(--ink-soft, #4A5362); font-size:13.5px} .pi-people .pi-f:empty, .pi-people .pi-d:empty{display:none} }
