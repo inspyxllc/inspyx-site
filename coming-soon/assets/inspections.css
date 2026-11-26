@@ -319,6 +319,10 @@
 .tpl-what dt{color:var(--ink-faint)} .tpl-what dd{margin:0; color:var(--ink); overflow-wrap:anywhere; white-space:pre-wrap}
 .tpl-note{margin:0; font-size:13.5px; color:var(--ink-soft)}
 .tpl-choose{display:flex; gap:8px; flex-wrap:wrap}
+/* Use the new copy for new inspections: asked, ticked for yes (rehearsal round 2, 2026-11-26). */
+.tpl-use{display:flex; align-items:center; gap:10px; min-height:44px; margin:2px 0 10px; font:500 14.5px var(--font); color:var(--ink); cursor:pointer}
+.tpl-use[hidden]{display:none}
+.tpl-use input{width:20px; height:20px; margin:0; accent-color:var(--navy); flex:none}
 .tpl-go, .tpl-cancel{min-height:40px; padding:0 18px; border:0; border-radius:999px; font:600 14.5px var(--font); cursor:pointer}
 .tpl-go{background:var(--navy); color:#FFFFFF} .tpl-cancel{background:#F1F3F6; color:var(--ink)}
 .tpl-done{margin:0; font-size:14px; color:var(--ink-soft)}

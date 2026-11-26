@@ -840,8 +840,13 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const where = box(FIND).locator('[data-tpl-where]');
       await until(async () => /Into/.test(await where.textContent()));
       const said = (await where.textContent()).trim();
-      ok(label + ': it says where it goes first: a new copy of Inspyx’s walkthrough, made now, under the item, which new inspections start from',
-        said === 'Into “My Walkthrough”, your own copy of Inspyx’s Walkthrough, made now, under Gutters. Your new inspections will start from it.', said);
+      ok(label + ': it says where it goes first: a new copy of Inspyx’s walkthrough, made now, under the item',
+        said === 'Into “My Walkthrough”, your own copy of Inspyx’s Walkthrough, made now, under Gutters.', said);
+      // Rehearsal round 2 (2026-11-26): switching new inspections to it is asked, ticked for yes, never in passing.
+      const use = box(FIND).locator('[data-tpl-use]');
+      ok(label + ': it asks whether new inspections start from the copy, ticked for yes', await use.isVisible() &&
+        (await use.textContent()).trim() === 'Use “My Walkthrough” for my new inspections' && await box(FIND).locator('[data-tpl-use-box]').isChecked(),
+        await use.textContent());
       const what = await box(FIND).locator('[data-tpl-what] dd').allTextContents();
       ok(label + ': and what goes: the title, the details, what to do, the category', JSON.stringify(what) ===
         JSON.stringify(['Gutter pulling away', 'The gutter is pulling away at the NE corner.', 'Have a gutter contractor refasten it.', 'Recommendation']), JSON.stringify(what));
@@ -878,6 +883,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await box(F2).locator('[data-tpl-open]').click();
       await until(async () => /Into/.test(await box(F2).locator('[data-tpl-where]').textContent()));
       ok(label + ': the next one goes into the copy he now has', (await box(F2).locator('[data-tpl-where]').textContent()).trim() === 'Into your template “My Walkthrough”, under Gutters.');
+      ok(label + ': into his own copy, nothing is asked about new inspections', !(await box(F2).locator('[data-tpl-use]').isVisible()));
       ok(label + ': no “What it means”, no note about it', !(await box(F2).locator('[data-tpl-nomeaning]').isVisible()));
       await box(F2).locator('[data-tpl-go]').click();
       await until(async () => pushedOf(t, 'inspection_templates').length === 2);
@@ -901,6 +907,26 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await ctx.close();
     });
   }
+
+  await group('save to template: unticked, new inspections stay on ours (rehearsal round 2)', async () => {
+    const s = server(); seed(s); seedFromOurs(s);
+    const t = templateServer(), files = new Map();
+    const { page, ctx, errs, away, fileCalls } = await open(browser, { server: s, w: WIDE, hash: '#' + INSP, bizServer: t.answer, files });
+    await page.waitForSelector('.insp-finding');
+    const box = page.locator('[data-flag-finding-row="' + FIND + '"] [data-tpl]');
+    await box.locator('[data-tpl-open]').click();
+    await until(async () => await box.locator('[data-tpl-use]').isVisible());
+    await box.locator('[data-tpl-use-box]').uncheck();
+    await box.locator('[data-tpl-go]').click();
+    const done = box.locator('[data-tpl-done]');
+    const want = 'Saved to your own copy of the Walkthrough template. Choose it for an inspection to have it offered there.';
+    ok('unticked: saved, and it says new inspections are not switched',
+      await until(async () => ((await done.textContent()) || '').trim() === want), await done.textContent());
+    ok('unticked: the copy is made, the default is not touched', pushedOf(t, 'inspection_templates').length === 1 &&
+      pushedOf(t, 'template_default').length === 0, JSON.stringify(t.pushed.map((r) => r.kind)));
+    ok('unticked: no errors, nothing leaves the site', errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
+    await ctx.close();
+  });
 
   await group('save to template: his own template, a missing item, a full store, a change elsewhere', async () => {
     // From his own template (made on the phone): into that one; no copy, no default.
@@ -1024,14 +1050,15 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await box(o.page, FIND).locator('[data-tpl-open]').click();
       await until(async () => await box(o.page, FIND).locator('[data-tpl-go]').isVisible());
       const where = (await box(o.page, FIND).locator('[data-tpl-where]').textContent()).trim();
+      const asked = await box(o.page, FIND).locator('[data-tpl-use]').isVisible() && await box(o.page, FIND).locator('[data-tpl-use-box]').isChecked();
       await box(o.page, FIND).locator('[data-tpl-go]').click();
       await until(async () => pushedOf(t, 'inspection_templates').length === 1 && /^Saved/.test((await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim()));
       const doneText = (await box(o.page, FIND).locator('[data-tpl-done]').textContent()).trim();
       const dpush = pushedOf(t, 'template_default');
       ok(what, replaced
-        ? /Your new inspections will start from it\.$/.test(where) && dpush.length === 1 && dpush[0].data.templateId === 'inspector.my-walkthrough' && dpush[0].updated_at > 7 &&
+        ? asked && !/new inspections/.test(where) && dpush.length === 1 && dpush[0].data.templateId === 'inspector.my-walkthrough' && dpush[0].updated_at > 7 &&
           doneText === 'Saved to your own copy of the Walkthrough template, now used for your new inspections.'
-        : !/new inspections/.test(where) && dpush.length === 0 &&
+        : !asked && !/new inspections/.test(where) && dpush.length === 0 &&
           doneText === 'Saved to your own copy of the Walkthrough template. Choose it for an inspection to have it offered there.',
         JSON.stringify([where, doneText, dpush.map((x) => x.data.templateId)]));
       await o.ctx.close();
