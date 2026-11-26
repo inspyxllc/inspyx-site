@@ -282,6 +282,25 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     await o.ctx.close();
   });
 
+  await group('two files picked fast: the last one picked counts', async () => {
+    const o = await open(browser, { sync: syncServer(seed()) });
+    // The first file's reading finishes late (after the second's).
+    await o.page.evaluate(() => {
+      const orig = FileReader.prototype.readAsArrayBuffer; let n = 0;
+      FileReader.prototype.readAsArrayBuffer = function (b) {
+        const r = this, k = n++;
+        if (k === 0) { const h = () => r.onload; const t = setInterval(() => {}, 1000); r.addEventListener('load', function stop(e) { if (!r.__late) { e.stopImmediatePropagation(); r.__late = true; const f = h(); setTimeout(() => { clearInterval(t); f && f.call(r); }, 700); } }, { capture: true, once: true }); const real = r.onload; Object.defineProperty(r, 'onload', { configurable: true, get: () => real2, set: (v) => { real2 = v; } }); let real2 = real; }
+        return orig.call(this, b);
+      };
+    });
+    await pick(o.page, 'first.csv', 'Name,Email\nFirst Person,first@x.com\n');
+    await pick(o.page, 'second.csv', 'Name,Email\nSecond Person,second@x.com\nThird Person,third@x.com\n');
+    await o.page.waitForTimeout(1500);
+    ok('the first file, finishing late, doesn’t replace the second', (await o.page.locator('[data-count]').textContent()) === '2 people in this file' &&
+      (await o.page.locator('[data-people] tr').first().locator('.pi-n').textContent()) === 'Second Person', await o.page.locator('[data-count]').textContent());
+    await o.ctx.close();
+  });
+
   await group('switching Clients / Agents keeps his column choices', async () => {
     const o = await open(browser, { sync: syncServer(seed()) });
     await pick(o.page, 'clients.csv', 'Name,Phone,Email\nPat Moore,555-0101,pat@x.com\n');

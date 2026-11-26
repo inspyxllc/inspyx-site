@@ -28,7 +28,7 @@
   var file = null;     // { name, bytes }
   var choice = { kind: null, match: null };
   var read = null;     // the engine's answer shown now
-  var turn = 0, busy = false, done = null;
+  var turn = 0, busy = false, done = null, picked = 0;
 
   /* The People rows held, as the engine takes them (the inspector's inspector_contacts, deleted ones too). */
   function existing() {
@@ -148,12 +148,14 @@
   function take(f) {
     if (!f || busy) return;
     done = null; $('[data-done]').hidden = true;
-    if (f.size > MAX) { file = null; read = null; $('[data-read]').hidden = true; say('too-big'); return; }
+    if (f.size > MAX) { picked++; file = null; read = null; $('[data-read]').hidden = true; say('too-big'); return; }
     var reader = new FileReader();
     // Another file: what was read from the last one goes at once, so nothing can bring in this one unseen (Codex on #106).
     read = null; $('[data-read]').hidden = true;
-    reader.onload = function () { file = { name: f.name, bytes: new Uint8Array(reader.result) }; choice = { kind: null, match: null }; run(); };
-    reader.onerror = function () { say('failed'); };
+    // Only the last file picked counts: an earlier one that finishes reading later is dropped (Codex on #106).
+    var mine = ++picked;
+    reader.onload = function () { if (mine !== picked) return; file = { name: f.name, bytes: new Uint8Array(reader.result) }; choice = { kind: null, match: null }; run(); };
+    reader.onerror = function () { if (mine === picked) say('failed'); };
     reader.readAsArrayBuffer(f);
   }
   $('[data-pick]').addEventListener('change', function (e) { take(e.target.files && e.target.files[0]); e.target.value = ''; });
