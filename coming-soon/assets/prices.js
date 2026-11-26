@@ -17,6 +17,9 @@
   if (!main || !auth) return;
   var DEADLINE = 20000, POLL = 30000, MAX_CENTS = 100000000;
   var KINDS = ['price_services', 'price_modifiers', 'price_discounts', 'price_questions'];   // all four edited here (2026-11-23)
+  // Reinspection (his decision, 2026-11-26): a service like any, at his own price, kept under ONE id for every account,
+  // the key the phone and the reinspection link (I2) know it by (the app's price_list.dart reinspectionServiceId).
+  var REINSPECTION_ID = '5e1f0000-0000-4000-8000-00000000feed';
 
   var $ = function (sel, el) { return (el || document).querySelector(sel); };
   var all = function (sel, el) { return [].slice.call((el || document).querySelectorAll(sel)); };
@@ -84,7 +87,7 @@
   };
   var byPlace = function (a, b) { return (a.position - b.position) || (a.createdAt - b.createdAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); };
   var byMade = function (a, b) { return (a.createdAt - b.createdAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); };
-  var services = function () { return standing('price_services').filter(function (s) { return s.parentId == null; }).sort(byPlace); };
+  var services = function () { return standing('price_services').filter(function (s) { return s.parentId == null && s.id !== REINSPECTION_ID; }).sort(byPlace); };
   var addOnsOf = function (id) { return standing('price_services').filter(function (s) { return s.parentId === id; }).sort(byPlace); };
   var changesOf = function (id) { return standing('price_modifiers').filter(function (m) { return m.serviceId === id; }).sort(byPlace); };
   var discounts = function () { return standing('price_discounts').sort(byMade); };
@@ -214,6 +217,14 @@
     showOne(main, 'data-state', '');
     all('[data-group]', main).forEach(function (g) { g.hidden = false; });
 
+    // Reinspection: off until he turns it on with his own price; on, it says its price, with Edit (and Delete there to
+    // turn it off).
+    var rein = held('price_services', REINSPECTION_ID), reinOn = !!(rein && rein.deletedAt == null && rows['price_services/' + REINSPECTION_ID].deleted_at == null);
+    $('[data-reinsp-on]', main).hidden = reinOn;
+    $('[data-reinsp-edit]', main).hidden = !reinOn;
+    $('[data-reinsp-now]', main).hidden = !reinOn;
+    if (reinOn) $('[data-reinsp-now]', main).textContent = words('reinsp-on') + ' ' + serviceSummary(rein);
+    main.querySelector('[data-reinsp]').classList.toggle('is-on', reinOn);
     var list = $('[data-list="services"]', main), svc = services();
     $('[data-empty="services"]', main).hidden = svc.length > 0;
     list.textContent = '';
@@ -279,8 +290,8 @@
     showOne(b, 'data-arm', armed ? '1' : '0');
   }
 
-  function openService(data, parentId) {
-    editing = { data: data, parentId: data ? data.parentId : parentId };
+  function openService(data, parentId, fixedId) {
+    editing = { data: data, parentId: data ? data.parentId : parentId, fixedId: fixedId || null };
     var addOn = editing.parentId != null;
     showOne(svcForm, 'data-title', (data ? 'edit-' : 'new-') + (addOn ? 'addon' : 'service'));
     showOne(svcForm, 'data-time', addOn ? 'addon' : 'service');
@@ -295,6 +306,12 @@
     // Pre-filled "Sales tax" (his pick A, 2026-11-23); an empty percent is no tax.
     svcForm.elements.taxName.value = data && typeof data.taxName === 'string' ? data.taxName : svcForm.elements.taxName.getAttribute('placeholder');
     svcForm.elements.taxRate.value = data && typeof data.taxRate === 'number' ? String(data.taxRate / 100) : '';
+    // Turning Reinspection on: its name, and his own last price if he had it on before; never an amount from us.
+    if (!data && editing.fixedId) {
+      var before = held('price_services', editing.fixedId);
+      svcForm.elements.name.value = before ? before.name : words('reinsp-name');
+      if (before) { svcForm.elements.fee.value = centsText(before.feeCents); svcForm.elements.hours.value = hoursText(before.minutes); }
+    }
     $('[data-delete]', svcForm).hidden = !data;
     armDelete(svcForm, false);
     showOne(svcForm, 'data-problem', '');
@@ -340,9 +357,9 @@
     // The problem now, or none: an earlier try's must not stay on screen while this one is sent.
     showOne(svcForm, 'data-problem', f.problem || '');
     if (f.problem) return;
-    var was = editing.data, at = nextAt(was);
+    var was = editing.data, back = !was && editing.fixedId ? held('price_services', editing.fixedId) : null, at = nextAt(was || back);
     var data = {
-      id: was ? was.id : newId(),
+      id: was ? was.id : (editing.fixedId || newId()),
       ownerAccountId: me,
       parentId: editing.parentId == null ? null : editing.parentId,
       name: f.name,
@@ -352,13 +369,16 @@
       minimumFeeCents: editing.parentId == null ? f.minimumFeeCents : null,
       taxName: editing.parentId == null ? f.taxName : null,
       taxRate: editing.parentId == null ? f.taxRate : null,
-      position: was ? was.position : nextPosition(editing.parentId == null ? null : editing.parentId),
-      createdAt: was ? was.createdAt : at,
+      position: was ? was.position : back ? back.position : nextPosition(editing.parentId == null ? null : editing.parentId),
+      createdAt: was ? was.createdAt : back ? back.createdAt : at,
       updatedAt: at,
       deletedAt: null,
     };
     finish(svcDialog, [wire('price_services', data)], 'saved');
   });
+
+  $('[data-reinsp-on]', main).addEventListener('click', function () { openService(null, null, REINSPECTION_ID); });
+  $('[data-reinsp-edit]', main).addEventListener('click', function () { openService(held('price_services', REINSPECTION_ID), null); });
 
   $('[data-delete]', svcForm).addEventListener('click', function () {
     var b = $('[data-delete]', svcForm);

@@ -190,6 +190,57 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     await ctx.close();
   });
 
+  await group('reinspection: his own price, one id, off and on again', async () => {
+    const RID = '5e1f0000-0000-4000-8000-00000000feed';
+    const s = server(); seed(s);
+    const { page, ctx, calls } = await open(browser, { server: s });
+    await page.waitForSelector('[data-reinsp-on]');
+    ok('off until he turns it on: the card offers it, and it isn’t in his list', await page.locator('[data-reinsp-on]').isVisible() && !(await page.locator('[data-reinsp-edit]').isVisible()) &&
+      !(await vis(page, '[data-list="services"] > li > .prc-row [data-v="name"]')).includes('Reinspection'));
+    await page.click('[data-reinsp-on]');
+    const f = '[data-form="service"]';
+    ok('turning it on: the form says Reinspection, and no price from us', (await page.locator(f + ' input[name="name"]').inputValue()) === 'Reinspection' &&
+      (await page.locator(f + ' input[name="fee"]').inputValue()) === '' && (await page.locator(f + ' input[name="hours"]').inputValue()) === '');
+    const before = calls.length;
+    await page.click(f + ' button[type="submit"]');
+    ok('no price: it asks for his, and sends nothing', (await vis(page, f + ' [data-problem]')).join() === 'Write the fee as dollars, like 450 or 450.50.' && pushed(calls.slice(before)).length === 0);
+    await page.fill(f + ' input[name="fee"]', '175');
+    await page.fill(f + ' input[name="hours"]', '1');
+    await page.click(f + ' button[type="submit"]');
+    await until(async () => !(await page.locator('[data-dialog="service"]').isVisible()));
+    const on = pushed(calls).filter((r) => r.id === RID);
+    ok('on: one row, under the one id every account uses, his price and time, after his services', on.length === 1 && on[0].kind === 'price_services' &&
+      on[0].data.name === 'Reinspection' && on[0].data.feeCents === 17500 && on[0].data.minutes === 60 && on[0].data.parentId === null && on[0].data.position === 2 &&
+      on[0].deleted_at === null, JSON.stringify(on[0] && on[0].data));
+    if (process.env.SHOTS) await page.locator('[data-reinsp]').screenshot({ path: require('path').join(process.env.SHOTS, 'reinsp-on-wide.png') });
+    ok('the card says it’s on, with his price; still not in the list twice', await until(async () => await page.locator('[data-reinsp-now]').isVisible()) &&
+      (await page.locator('[data-reinsp-now]').textContent()).indexOf('On: clients can book it.') === 0 && (await page.locator('[data-reinsp-now]').textContent()).indexOf('$175') > 0 &&
+      !(await vis(page, '[data-list="services"] > li > .prc-row [data-v="name"]')).includes('Reinspection'));
+    // Off: Delete from its Edit.
+    await page.click('[data-reinsp-edit]');
+    await page.click(f + ' [data-delete]'); await page.click(f + ' [data-delete]');
+    await until(async () => !(await page.locator('[data-dialog="service"]').isVisible()));
+    const gone = s.held.get('price_services/' + RID);
+    ok('off: the row deleted, the card offers it again', !!gone && gone.deleted_at !== null && await until(async () => await page.locator('[data-reinsp-on]').isVisible()));
+    // The phone's clock ahead: the deleted row's time is in the future; on again must still be newer.
+    const ahead = Object.assign({}, gone.data, { updatedAt: Date.now() + 60000, deletedAt: Date.now() + 60000 });
+    s.put(s.row('price_services', ahead));
+    await page.reload(); await page.waitForSelector('[data-reinsp-on]');
+    await page.click('[data-reinsp-on]');
+    ok('on again: his last price and time, ready', (await page.locator(f + ' input[name="fee"]').inputValue()).replace(/[^0-9.]/g, '') === '175' && (await page.locator(f + ' input[name="hours"]').inputValue()) === '1');
+    await page.click(f + ' button[type="submit"]');
+    await until(async () => !(await page.locator('[data-dialog="service"]').isVisible()));
+    const back = s.held.get('price_services/' + RID);
+    ok('the same row back: one id, made when it first was, newer than the deleted one (even with the phone’s clock ahead)', !!back && back.deleted_at === null &&
+      back.data.createdAt === on[0].data.createdAt && back.updated_at > ahead.updatedAt, JSON.stringify(back && [back.updated_at, ahead.updatedAt]));
+    await ctx.close();
+    const ph = await open(browser, { server: s, w: PHONE });
+    await ph.page.waitForSelector('[data-reinsp]');
+    if (process.env.SHOTS) await ph.page.locator('[data-reinsp]').screenshot({ path: require('path').join(process.env.SHOTS, 'reinsp-on-phone.png') });
+    ok('on a phone: the card fits, nothing off the side', await ph.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await ph.ctx.close();
+  });
+
   await group('changing and deleting', async () => {
     const s = server(); seed(s);
     const { page, ctx, calls } = await open(browser, { server: s });
