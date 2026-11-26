@@ -227,7 +227,7 @@
 </label>
 <label>Location <input type="text" data-field="location" autocomplete="off"></label>
 <div class="insp-details">
-<label>Details <textarea rows="3" data-field="note" data-details></textarea></label>
+<label>Details <textarea rows="3" data-field="note" data-details data-ai-src="details"></textarea></label>
 <div class="ai" data-ai hidden>
 <button type="button" class="ai-open" data-ai-open aria-expanded="false"><img src="/assets/spex-s.svg" alt="" width="22" height="22">Edit with AI</button>
 <div class="ai-actions" data-ai-actions hidden role="group" aria-label="Edit with AI">
@@ -261,8 +261,36 @@
 <p class="ai-error" data-ai-error hidden role="alert"></p>
 </div>
 </div>
-<label>What it means <textarea rows="2" data-field="finding_implication"></textarea></label>
-<label>What to do <textarea rows="2" data-field="finding_recommendation"></textarea></label>
+<div class="insp-aifield">
+<label>What it means <textarea rows="2" data-field="finding_implication" data-ai-src="implication"></textarea></label>
+<div class="ai ai-field" data-ai data-ai-field="implication" hidden>
+<button type="button" class="ai-open" data-ai-open aria-expanded="false"><img src="/assets/spex-s.svg" alt="" width="22" height="22">Edit with AI</button>
+<div class="ai-actions" data-ai-actions hidden role="group" aria-label="Edit with AI"><button type="button" data-ai-action="shorter">Make it shorter</button><button type="button" data-ai-action="grammar">Fix grammar</button></div>
+<p class="ai-working" data-ai-working hidden role="status">Spex is writing its version…</p>
+<div class="ai-version" data-ai-version hidden>
+<p class="ai-label">Spex’s version</p>
+<p class="ai-text" data-ai-text></p>
+<div class="ai-choose"><button type="button" class="ai-keep" data-ai-keep>Keep</button><button type="button" class="ai-discard" data-ai-discard>Discard</button></div>
+<p class="ai-note">Keep puts it in “What it means”, where you can still change it.</p>
+</div>
+<p class="ai-error" data-ai-error hidden role="alert"></p>
+</div>
+</div>
+<div class="insp-aifield">
+<label>What to do <textarea rows="2" data-field="finding_recommendation" data-ai-src="recommendation"></textarea></label>
+<div class="ai ai-field" data-ai data-ai-field="recommendation" hidden>
+<button type="button" class="ai-open" data-ai-open aria-expanded="false"><img src="/assets/spex-s.svg" alt="" width="22" height="22">Edit with AI</button>
+<div class="ai-actions" data-ai-actions hidden role="group" aria-label="Edit with AI"><button type="button" data-ai-action="recommend">Add a recommendation</button><button type="button" data-ai-action="shorter">Make it shorter</button><button type="button" data-ai-action="grammar">Fix grammar</button></div>
+<p class="ai-working" data-ai-working hidden role="status">Spex is writing its version…</p>
+<div class="ai-version" data-ai-version hidden>
+<p class="ai-label">Spex’s version</p>
+<p class="ai-text" data-ai-text></p>
+<div class="ai-choose"><button type="button" class="ai-keep" data-ai-keep>Keep</button><button type="button" class="ai-discard" data-ai-discard>Discard</button></div>
+<p class="ai-note">Keep puts it in “What to do”, where you can still change it.</p>
+</div>
+<p class="ai-error" data-ai-error hidden role="alert"></p>
+</div>
+</div>
 <label>Who should fix it <input type="text" data-field="finding_recommended_trade" autocomplete="off"></label>
 <p class="insp-photos" data-photos hidden><span data-v="photos"></span> <span data-v="photos-word"></span> on your phone</p>
 <div class="tpl" data-tpl hidden>

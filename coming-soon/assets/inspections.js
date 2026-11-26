@@ -259,6 +259,7 @@
     renderPeople(id);
     renderFlags(id);
     renderTemplateButtons(id);
+    refreshAI();   // a field changed on the phone changes what it offers
     renderAgreement(id);
     chapterChoices(id);
     renderSearch(id);
@@ -793,14 +794,41 @@
     aiOpen = false;
     auth.editFinding(null, RELAY).then(function (a) {
       aiOpen = !!(a && a.admitted);
-      all('[data-ai]').forEach(function (el) { el.hidden = !aiOpen; });
+      refreshAI();
     }, function () { aiOpen = null; });   // unreachable: asked again on the next visit
   }
   var cut = function (v, n) { v = Fill ? Fill.dartTrim(text(v)) : text(v).trim(); return v.length > n ? v.slice(0, n) : v; };
+  /* Which actions each field offers, and when (the contract v1.1, EDIT_WITH_AI.md "Which fields, which actions"; his yes
+     to Add a recommendation on "What to do", 2026-11-26): the Details all four, also when empty; "What it means" shorter
+     and grammar, only with words; "What to do" Add a recommendation always, shorter and grammar only with words. */
+  var AI_FIELDS = {
+    details: { always: ['clearer', 'shorter', 'recommend', 'grammar'], withWords: [] },
+    implication: { always: [], withWords: ['shorter', 'grammar'] },
+    recommendation: { always: ['recommend'], withWords: ['shorter', 'grammar'] }
+  };
+  function aiOffers(field, hasWords) {
+    var f = AI_FIELDS[field];
+    return f ? f.always.concat(hasWords ? f.withWords : []) : [];
+  }
+  /* Each Edit with AI box shows only the actions its field offers now; one that offers none is hidden. */
+  function refreshAI(root) {
+    all('[data-ai]', root).forEach(function (box) {
+      var field = box.getAttribute('data-ai-field') || 'details';
+      var src = box.parentNode && box.parentNode.querySelector ? box.closest('li').querySelector('[data-ai-src="' + field + '"]') : null;
+      var words = src ? (Fill ? Fill.dartTrim(src.value) : src.value.trim()) !== '' : false;
+      var offers = aiOffers(field, words);
+      all('[data-ai-action]', box).forEach(function (b) { b.hidden = offers.indexOf(b.getAttribute('data-ai-action')) < 0; });
+      box.hidden = aiOpen !== true || offers.length === 0;
+    });
+  }
   function wireAI(el, finding, item, stop) {
-    var box = el.querySelector('[data-ai]'), details = el.querySelector('[data-details]');
+    all('[data-ai]', el).forEach(function (box) { wireAIBox(el, box, finding, item, stop); });
+    refreshAI(el);
+  }
+  function wireAIBox(el, box, finding, item, stop) {
+    var field = box.getAttribute('data-ai-field') || 'details';
+    var details = el.querySelector('[data-ai-src="' + field + '"]');
     var q = function (sel) { return box.querySelector(sel); };
-    box.hidden = aiOpen !== true;
     var shown = function (which) {
       q('[data-ai-actions]').hidden = which !== 'actions';
       q('[data-ai-working]').hidden = which !== 'working';
@@ -810,19 +838,25 @@
       q('[data-ai-open]').disabled = which === 'working';
       details.disabled = which === 'working';   // no half-applied text while Spex works
     };
-    q('[data-ai-open]').addEventListener('click', function () { shown(q('[data-ai-actions]').hidden ? 'actions' : 'none'); });
+    // Words typed in or emptied change what the field offers.
+    details.addEventListener('input', function () { refreshAI(el); });
+    q('[data-ai-open]').addEventListener('click', function () { refreshAI(el); shown(q('[data-ai-actions]').hidden ? 'actions' : 'none'); });
     all('[data-ai-action]', box).forEach(function (b) {
       b.addEventListener('click', function () {
         var title = el.querySelector('[data-field="finding_title"]');
-        // The details are never cut: Keep replaces them whole, so a cut would delete what was past the limit
+        // The field's words are never cut: Keep replaces them whole, so a cut would delete what was past the limit
         // (Codex on #90). Over the relay's limit, Spex isn't asked. The title, item and stop are only context.
         var words = Fill ? Fill.dartTrim(details.value) : details.value.trim();
         if (words.length > AI_MAX_TEXT) {
           q('[data-ai-error]').textContent = word('ai-too-long');
           return shown('error');
         }
-        var request = { action: b.getAttribute('data-ai-action'),
+        var action = b.getAttribute('data-ai-action');
+        if (aiOffers(field, words !== '').indexOf(action) < 0) return shown('none');   // not offered now: never asked
+        var request = { action: action,
           title: cut(title ? title.value : val('item', finding, 'finding_title'), 200), text: words };
+        // The Details go as v1, with no field; the other two name theirs (v1.1).
+        if (field !== 'details') request.field = field;
         var itemName = cut(val('item', item, 'label'), 100), stopName = cut(val('section', stop, 'name'), 100);
         if (itemName) request.item = itemName;
         if (stopName) request.stop = stopName;
@@ -830,7 +864,7 @@
         shown('working');
         auth.editFinding(request, RELAY).then(function (a) {
           if (a && typeof a.text === 'string') {
-            if (details.value !== asked) { shown('none'); return; }   // the details changed meanwhile: nothing to offer
+            if (details.value !== asked) { shown('none'); return; }   // the field changed meanwhile: nothing to offer
             q('[data-ai-text]').textContent = a.text;
             box.setAttribute('data-for', asked);
             return shown('version');
@@ -841,7 +875,7 @@
       });
     });
     q('[data-ai-keep]').addEventListener('click', function () {
-      // Only over the words Spex was given: details changed since are never overwritten.
+      // Only over the words Spex was given: a field changed since is never overwritten. Keep fills this field alone.
       if (details.value !== box.getAttribute('data-for')) { shown('none'); return; }
       details.value = q('[data-ai-text]').textContent;
       shown('none');

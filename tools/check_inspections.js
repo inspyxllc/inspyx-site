@@ -304,52 +304,52 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const asked = [];
       const { page, ctx, errs, away, relay, calls } = await open(browser, { server: s, w, hash: '#' + INSP, edit: (r) => { asked.push(r); return answer; }, editDelay: 300 });
       const k = '[data-key="item/' + FIND + '.note"]';
-      const finding = page.locator('.insp-finding').first();
-      ok(label + ': the finding shows its details; Edit with AI is offered once the relay says so', await until(async () => (await finding.locator('[data-ai-open]').isVisible())) && await boxValue(page, 'item', FIND, 'note') === ROUGH, errs.concat(away).join(' | '));
+      const finding = page.locator('.insp-finding').first(), dbox = finding.locator('.insp-details > [data-ai]');
+      ok(label + ': the finding shows its details; Edit with AI is offered once the relay says so', await until(async () => (await dbox.locator('[data-ai-open]').isVisible())) && await boxValue(page, 'item', FIND, 'note') === ROUGH, errs.concat(away).join(' | '));
       const hello = relay.find((m) => m.hello) || {};
       ok(label + ': the hello is Spex Chat\'s, signed in as the inspector', !!hello.hello && hello.hello.mode === 'chat' && hello.hello.access_token === 'test-access-1' && hello.hello.client === 'inspyx-web');
       const shotAI = async (name) => { if (process.env.SHOTS) { await page.waitForTimeout(500); await finding.screenshot({ path: require('path').join(process.env.SHOTS, 'ai-' + label + '-' + name + '.png') }); } };
-      await finding.locator('[data-ai-open]').click();
+      await dbox.locator('[data-ai-open]').click();
       await shotAI('1-actions');
-      ok(label + ': it opens the four actions, with the how-to', same(await finding.locator('[data-ai-action]').allTextContents(), ['Make it clearer', 'Make it shorter', 'Add a recommendation', 'Fix grammar']) && await finding.locator('.ai-how').isVisible());
-      await finding.locator('[data-ai-action="recommend"]').click();
-      ok(label + ': while Spex works, the details can\'t be edited', await page.locator(k).isDisabled() && await finding.locator('[data-ai-working]').isVisible());
-      await until(async () => await finding.locator('[data-ai-version]').isVisible());
+      ok(label + ': it opens the four actions, with the how-to', same(await dbox.locator('[data-ai-action]').allTextContents(), ['Make it clearer', 'Make it shorter', 'Add a recommendation', 'Fix grammar']) && await dbox.locator('.ai-how').isVisible());
+      await dbox.locator('[data-ai-action="recommend"]').click();
+      ok(label + ': while Spex works, the details can\'t be edited', await page.locator(k).isDisabled() && await dbox.locator('[data-ai-working]').isVisible());
+      await until(async () => await dbox.locator('[data-ai-version]').isVisible());
       const req = asked[0] || {};
       ok(label + ': the request is the contract\'s: the action, the title, the details, the item and the stop',
         same(Object.keys(req).sort(), Object.keys(PROTO.edit_request.chat.edit).sort()) && req.action === 'recommend' && req.title === 'Missing GFCI protection' && req.text === ROUGH && req.item === 'Kitchen outlets' && req.stop === 'Kitchen', JSON.stringify(req));
       await shotAI('2-version');
       ok(label + ': Spex\'s version shows beside the inspector\'s; nothing changed yet',
-        (await finding.locator('[data-ai-text]').textContent()) === answer.text && await page.locator(k).inputValue() === ROUGH && s.value('item', FIND, 'note') === ROUGH && !(await page.locator(k).isDisabled()));
-      await finding.locator('[data-ai-discard]').click();
+        (await dbox.locator('[data-ai-text]').textContent()) === answer.text && await page.locator(k).inputValue() === ROUGH && s.value('item', FIND, 'note') === ROUGH && !(await page.locator(k).isDisabled()));
+      await dbox.locator('[data-ai-discard]').click();
       await page.waitForTimeout(900);
-      ok(label + ': Discard changes nothing', await page.locator(k).inputValue() === ROUGH && s.value('item', FIND, 'note') === ROUGH && !(await finding.locator('[data-ai-version]').isVisible()));
-      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="clearer"]').click();
-      await until(async () => await finding.locator('[data-ai-version]').isVisible());
-      await finding.locator('[data-ai-keep]').click();
+      ok(label + ': Discard changes nothing', await page.locator(k).inputValue() === ROUGH && s.value('item', FIND, 'note') === ROUGH && !(await dbox.locator('[data-ai-version]').isVisible()));
+      await dbox.locator('[data-ai-open]').click(); await dbox.locator('[data-ai-action="clearer"]').click();
+      await until(async () => await dbox.locator('[data-ai-version]').isVisible());
+      await dbox.locator('[data-ai-keep]').click();
       ok(label + ': Keep puts Spex\'s version in Details, and it saves as typing does', await page.locator(k).inputValue() === answer.text &&
         await until(async () => s.value('item', FIND, 'note') === answer.text), String(s.value('item', FIND, 'note')).slice(0, 60));
       await shotAI('3-kept');
       const kept = answer.text;
       answer = PROTO.edit_refused.relay.result;
-      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="shorter"]').click();
-      ok(label + ': a refusal shows its sentence as given; the details untouched', await until(async () => (await finding.locator('[data-ai-error]').textContent()) === answer.error) && await page.locator(k).inputValue() === kept);
+      await dbox.locator('[data-ai-open]').click(); await dbox.locator('[data-ai-action="shorter"]').click();
+      ok(label + ': a refusal shows its sentence as given; the details untouched', await until(async () => (await dbox.locator('[data-ai-error]').textContent()) === answer.error) && await page.locator(k).inputValue() === kept);
       await shotAI('4-refused');
       // Typed over while Spex worked: its version is never offered over the new words.
       answer = { text: 'Something else.' };
-      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="grammar"]').click();
+      await dbox.locator('[data-ai-open]').click(); await dbox.locator('[data-ai-action="grammar"]').click();
       await page.waitForTimeout(80);
       await page.evaluate((sel) => { const t = document.querySelector(sel); t.disabled = false; t.value = 'typed meanwhile'; }, k);
       await page.waitForTimeout(600);
-      ok(label + ': details changed while Spex worked: its version isn\'t offered', !(await finding.locator('[data-ai-version]').isVisible()) && await page.locator(k).inputValue() === 'typed meanwhile');
+      ok(label + ': details changed while Spex worked: its version isn\'t offered', !(await dbox.locator('[data-ai-version]').isVisible()) && await page.locator(k).inputValue() === 'typed meanwhile');
       // Over the relay's limit: never cut and sent (Keep would delete the rest; Codex on #90): Spex isn't asked.
       const long = 'x'.repeat(PROTO.edit.max_text_chars) + ' the last observation';
       await page.evaluate(([sel, v]) => { const t = document.querySelector(sel); t.disabled = false; t.value = v; }, [k, long]);
       const before = asked.length;
-      await finding.locator('[data-ai-open]').click(); await finding.locator('[data-ai-action="grammar"]').click();
+      await dbox.locator('[data-ai-open]').click(); await dbox.locator('[data-ai-action="grammar"]').click();
       await page.waitForTimeout(400);
       ok(label + ': details over the limit: Spex isn\'t asked, it says so, the details are whole', asked.length === before &&
-        /longer than Spex can edit/.test(await finding.locator('[data-ai-error]').textContent()) && await page.locator(k).inputValue() === long);
+        /longer than Spex can edit/.test(await dbox.locator('[data-ai-error]').textContent()) && await page.locator(k).inputValue() === long);
       ok(label + ': no errors, nothing else leaves the site', errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
       ok(label + ': nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
       await ctx.close();
@@ -420,6 +420,74 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       ok(label + ': and it is gone from the page', await until(async () => (await page.locator('.insp-stop').count()) === 1));
       ok(label + ': its how-to, in three steps', await page.locator('.st-how:not(.fl-how)').isVisible() && (await page.locator('.st-how:not(.fl-how) .st-how-step').count()) === 3);
       if (process.env.SHOTS) await page.locator('.insp-one').screenshot({ path: require('path').join(process.env.SHOTS, 'structure-' + label + '.png') });
+      ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
+      await ctx.close();
+    });
+  }
+
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('Edit with AI on “What it means” and “What to do”, ' + label, async () => {
+      const s = server(); seed(s);
+      const later = (entity, id, field, value) => s.push('phone-aaaaaaaaaaaaaaaaaa', { inspection: INSP, entity, id, field, value, at: Date.now() + 1000 });
+      later('item', FIND, 'finding_title', 'Missing GFCI protection');
+      const asked = [];
+      let answer = { text: 'Water can reach the wall.' };
+      const { page, ctx, errs, away } = await open(browser, { server: s, w, hash: '#' + INSP, edit: (r) => { asked.push(r); return answer; }, editDelay: 200 });
+      const finding = page.locator('.insp-finding').first();
+      const box = (f) => finding.locator('[data-ai-field="' + f + '"]');
+      const kI = '[data-key="item/' + FIND + '.finding_implication"]', kR = '[data-key="item/' + FIND + '.finding_recommendation"]', kD = '[data-key="item/' + FIND + '.note"]';
+      await until(async () => await finding.locator('.insp-details > [data-ai] [data-ai-open]').isVisible());
+      const shownActions = async (f) => (await box(f).locator('[data-ai-action]').evaluateAll((els) => els.filter((e) => !e.hidden).map((e) => e.getAttribute('data-ai-action'))));
+      // Empty fields: "What it means" offers nothing; "What to do" offers only Add a recommendation.
+      ok(label + ': an empty “What it means” offers no Edit with AI', !(await box('implication').isVisible()));
+      ok(label + ': an empty “What to do” offers Add a recommendation only', await box('recommendation').isVisible() &&
+        same(await shownActions('recommendation'), ['recommend']), JSON.stringify(await shownActions('recommendation')));
+      // With words: each offers exactly what the contract says for it.
+      await page.locator(kI).fill('water damage');
+      await page.locator(kR).fill('get it fixed asap by somebody');
+      ok(label + ': with words, “What it means” offers the contract’s actions for it', await until(async () => await box('implication').isVisible()) &&
+        same((await shownActions('implication')).sort(), PROTO.edit.field_actions.implication.slice().sort()), JSON.stringify(await shownActions('implication')));
+      ok(label + ': and “What to do” its own', same((await shownActions('recommendation')).sort(), PROTO.edit.field_actions.recommendation.slice().sort()), JSON.stringify(await shownActions('recommendation')));
+      await until(async () => s.value('item', FIND, 'finding_recommendation') === 'get it fixed asap by somebody', 4000);
+      // "What it means", Shorter: the request names its field and carries its words; Keep fills that field alone.
+      await box('implication').locator('[data-ai-open]').click();
+      await box('implication').locator('[data-ai-action="shorter"]').click();
+      await until(async () => await box('implication').locator('[data-ai-version]').isVisible());
+      const r1 = asked[0] || {};
+      ok(label + ': the request names “implication”, with that field’s words and the title', r1.field === 'implication' && r1.action === 'shorter' && r1.text === 'water damage' &&
+        r1.title === 'Missing GFCI protection' && PROTO.edit.fields.indexOf(r1.field) >= 0, JSON.stringify(r1));
+      if (process.env.SHOTS) { await page.waitForTimeout(400); await finding.screenshot({ path: require('path').join(process.env.SHOTS, 'aifields-' + label + '-1-meaning.png') }); }
+      await box('implication').locator('[data-ai-keep]').click();
+      ok(label + ': Keep fills “What it means” alone, and it saves', await page.locator(kI).inputValue() === answer.text &&
+        await until(async () => s.value('item', FIND, 'finding_implication') === answer.text) &&
+        await page.locator(kR).inputValue() === 'get it fixed asap by somebody' && await page.locator(kD).inputValue() === '');
+      // "What to do", Add a recommendation.
+      answer = { text: 'Have an electrician add GFCI protection.' };
+      await box('recommendation').locator('[data-ai-open]').click();
+      await box('recommendation').locator('[data-ai-action="recommend"]').click();
+      await until(async () => await box('recommendation').locator('[data-ai-version]').isVisible());
+      const r2 = asked[1] || {};
+      ok(label + ': “What to do” names its field, with its words', r2.field === 'recommendation' && r2.action === 'recommend' && r2.text === 'get it fixed asap by somebody', JSON.stringify(r2));
+      if (process.env.SHOTS) { await page.waitForTimeout(400); await finding.screenshot({ path: require('path').join(process.env.SHOTS, 'aifields-' + label + '-2-todo.png') }); }
+      await box('recommendation').locator('[data-ai-keep]').click();
+      ok(label + ': Keep fills “What to do” alone, and it saves', await page.locator(kR).inputValue() === answer.text &&
+        await until(async () => s.value('item', FIND, 'finding_recommendation') === answer.text) && await page.locator(kI).inputValue() === 'Water can reach the wall.');
+      // The Details still go as v1: no field.
+      answer = { text: 'The outlet has no GFCI protection.' };
+      await page.locator(kD).fill('no gfci');
+      await finding.locator('.insp-details > [data-ai] [data-ai-open]').click();
+      await finding.locator('.insp-details > [data-ai] [data-ai-action="clearer"]').click();
+      await until(async () => asked.length === 3);
+      ok(label + ': the Details still ask as before, with no field', !('field' in asked[2]) && asked[2].text === 'no gfci', JSON.stringify(asked[2]));
+      // Emptied: "What to do" falls back to Add a recommendation only, which works on an empty field.
+      await page.locator(kR).fill('');
+      ok(label + ': “What to do” emptied: Add a recommendation only', await until(async () => same(await shownActions('recommendation'), ['recommend'])));
+      answer = { text: 'Have an electrician add GFCI protection.' };
+      await box('recommendation').locator('[data-ai-open]').click();
+      await box('recommendation').locator('[data-ai-action="recommend"]').click();
+      await until(async () => asked.length === 4);
+      ok(label + ': and asks with the empty field (Spex writes it from the title)', asked[3].field === 'recommendation' && asked[3].text === '' && asked[3].action === 'recommend', JSON.stringify(asked[3]));
       ok(label + ': no errors, nothing else leaves the site, nothing off the side', errs.length === 0 && away.length === 0 &&
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
       await ctx.close();

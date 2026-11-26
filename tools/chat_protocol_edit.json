@@ -1,5 +1,5 @@
 {
- "_doc": "Copied from the app repo backend/spex_relay/tests/fixtures/chat_protocol.json (branch claude/edit-with-ai, PR #726): the keys the website's Edit with AI uses. Refresh when the contract changes.",
+ "_doc": "Copied from the app repo backend/spex_relay/tests/fixtures/chat_protocol.json (contract v1.1: #745, and #746 for Add a recommendation on \"What to do\"): the keys the website's Edit with AI uses. Refresh when the contract changes.",
  "hello": {
   "hello": {
    "access_token": "<token>",
@@ -36,8 +36,25 @@
    "chat-edit-bad-action",
    "chat-edit-too-long",
    "chat-edit-changed-facts",
-   "chat-edit-more-than-grammar"
+   "chat-edit-more-than-grammar",
+   "chat-edit-not-for-field"
   ],
+  "fields": [
+   "details",
+   "implication",
+   "recommendation"
+  ],
+  "field_actions": {
+   "implication": [
+    "shorter",
+    "grammar"
+   ],
+   "recommendation": [
+    "shorter",
+    "grammar",
+    "recommend"
+   ]
+  },
   "max_title_chars": 200,
   "max_text_chars": 4000,
   "max_place_chars": 100
