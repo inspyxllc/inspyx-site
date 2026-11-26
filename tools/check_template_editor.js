@@ -426,6 +426,103 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     await o2.ctx.close();
   });
 
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('find and replace, ' + label, async () => {
+      const r1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+      const biz = bizServer([r1, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)]]);
+      const o = await open(browser, { w, biz, files });
+      const { page } = o;
+      await page.waitForSelector('[data-open="' + MINE + '"]');
+      await page.locator('[data-open="' + MINE + '"]').click();
+      await until(async () => (await page.locator('.te-stop').count()) > 0);
+      const Q = 'the house', BY = 'the home ($&)';
+      // What Replace all must do, worked out here from the template itself: every box of words it shows.
+      const low = Q.toLowerCase(), re = new RegExp(Q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), rep = (t) => t.replace(re, () => BY);
+      const edits = []; let n = 0;
+      const hit = (t) => typeof t === 'string' && t.toLowerCase().indexOf(low) >= 0;
+      if (hit(O1.name)) { n++; edits.push({ op: 'template', name: rep(O1.name) }); }
+      for (const st of O1.stops) {
+        if (hit(st.name)) { n++; edits.push({ op: 'stop', ref: st.ref, name: rep(st.name) }); }
+        for (const it of st.items) {
+          if (hit(it.label)) { n++; edits.push({ op: 'item', ref: it.ref, label: rep(it.label) }); }
+          for (const l of it.lines) {
+            const e = { op: 'line', item: it.ref, kind: l.kind, position: l.position }; let any = false;
+            if (hit(l.name)) { n++; e.name = rep(l.name); any = true; }
+            if (l.kind !== 'information' && hit(l.text)) { n++; e.text = rep(l.text); any = true; }
+            if (l.kind === 'deficiency' && hit(l.recommendation)) { n++; e.recommendation = rep(l.recommendation); any = true; }
+            if (l.kind === 'information' && hit(l.options.join('\n'))) { n++; e.options = rep(l.options.join('\n')).split('\n'); any = true; }
+            if (any) edits.push(e);
+          }
+        }
+      }
+      await page.fill('[data-find]', Q);
+      ok(label + ': Find offers Replace, counting every box of words that holds it, in the whole template', await page.locator('[data-replace-box]').isVisible() &&
+        (await page.locator('[data-replace-go]').textContent()).trim() === 'Replace all (' + n + ')', (await page.locator('[data-replace-go]').textContent()) + ' vs ' + n);
+      await page.fill('[data-replace]', BY);
+      // He folds a stop that has matches away: Replace all still covers the whole template.
+      await page.locator('.te-stop[open] > summary').first().click();
+      ok(label + ': a folded stop’s matches still count', (await page.locator('[data-replace-go]').textContent()).trim() === 'Replace all (' + n + ')');
+      await page.locator('[data-replace-go]').click();
+      ok(label + ': it replaces them all, says how many, marks them as changes', (await said(page)) === 'Replaced ' + n + '. Review them, then Save.' &&
+        (await page.locator('[data-count]').textContent()).trim() === n + ' changes');
+      await page.locator('[data-save]').click();
+      await until(async () => /^Saved/.test(await said(page)), 8000);
+      const want = TE.apply(V1, edits);
+      ok(label + ': saved: exactly those changes, by the phone’s rules (a $ in the words stays a $)', posts(o).length === 1 && posts(o)[0].bytes.toString('utf8') === want.text &&
+        want.text.indexOf('the home ($&)') >= 0, String(n));
+      ok(label + ': no errors, nothing else leaves the site' + (w === PHONE ? ', nothing off the side' : ''), o.errs.length === 0 && o.away.length === 0 &&
+        (w !== PHONE || await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)), JSON.stringify([o.errs, o.away]));
+      await o.ctx.close();
+    });
+  }
+
+  for (const [label, w, docked] of [['1280', WIDE, false], ['1500, docked', 1500, true], ['phone', PHONE, false]]) {
+    await group('the item as the report prints it, ' + label, async () => {
+      const r1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+      const biz = bizServer([r1, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)]]);
+      const o = await open(browser, { w, biz, files });
+      const { page } = o;
+      await page.waitForSelector('[data-open="' + MINE + '"]');
+      await page.locator('[data-open="' + MINE + '"]').click();
+      await until(async () => (await page.locator('.te-stop').count()) > 0);
+      await openStop(page.locator('.te-stop').first());
+      const item = page.locator('.te-item[data-item="' + ITEM.ref + '"]'), pv = page.locator('[data-preview]');
+      if (docked) {
+        ok(label + ': beside the editor, waiting for an item', await pv.isVisible() && await page.locator('[data-preview-empty]').isVisible() && !(await page.locator('[data-preview-close]').isVisible()));
+        await item.locator('.te-item-head input').click();
+      } else {
+        ok(label + ': not shown until asked', !(await pv.isVisible()));
+        await item.locator('[data-see]').click();
+      }
+      const defs = ITEM.lines.filter((l) => l.kind === 'deficiency'), infos = ITEM.lines.filter((l) => l.kind === 'information');
+      ok(label + ': it shows the item as the report prints it: its section, "Stop, Item", its fields, a card per finding with its category',
+        await pv.isVisible() && (await page.locator('.te-pv-item').textContent()) === STOP.name + ', ' + ITEM.label &&
+        (await page.locator('.te-pv-card').count()) === defs.length && (await page.locator('.te-pv-kv').count()) === infos.length &&
+        (await page.locator('.te-pv-card .te-pv-pill').first().textContent()) === O1.ratings.find((r) => r.id === defs[0].rating).label);
+      const box = item.locator('.te-line[data-line="' + ITEM.ref + '|deficiency|' + defs[0].position + '"] textarea').first();
+      await box.fill('Water stands by the [side] wall.');
+      ok(label + ': it follows his typing, and marks the blanks Spex fills', (await page.locator('.te-pv-card').first().locator('.te-pv-prose').first().textContent()) === 'Water stands by the [side] wall.' &&
+        (await page.locator('.te-pv-card').first().locator('mark').textContent()) === '[side]');
+      // A finding deleted: its card goes from the preview at once.
+      const cards = await page.locator('.te-pv-card').count();
+      await item.locator('.te-line[data-line="' + ITEM.ref + '|deficiency|' + defs[0].position + '"] [data-del-line]').click();
+      ok(label + ': a finding deleted leaves the preview at once', (await page.locator('.te-pv-card').count()) === cards - 1);
+      // A category renamed by Replace all: its pill says so at once.
+      const pill = O1.ratings.find((r) => r.id === defs[1].rating).label;
+      await page.fill('[data-find]', pill); await page.fill('[data-replace]', 'Fix soon');
+      await page.locator('[data-replace-go]').click();
+      ok(label + ': a category renamed by Replace all: the lists and the preview say the new name', (await page.locator('.te-pv-card .te-pv-pill').first().textContent()) === 'Fix soon' &&
+        (await item.locator('select[data-k*="rating"] option[value="' + defs[1].rating + '"]').first().textContent()) === 'Fix soon', await page.locator('.te-pv-card .te-pv-pill').first().textContent());
+      ok(label + ': nothing off the side', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'te-d-preview-' + label.replace(/[^a-z0-9]+/g, '-') + '.png') });
+      if (w === WIDE) ok(label + ': beside the editor in the list’s place, never over it', await page.locator('.te-list').isHidden() &&
+        await page.evaluate(() => document.querySelector('[data-preview]').getBoundingClientRect().left >= document.querySelector('[data-edit]').getBoundingClientRect().right - 1));
+      if (!docked) { await page.locator('[data-preview-close]').click(); ok(label + ': Close puts it away' + (w === WIDE ? ', and the list comes back' : ''), !(await pv.isVisible()) && (w !== WIDE || await page.locator('.te-list').isVisible())); }
+      ok(label + ': no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
+      await o.ctx.close();
+    });
+  }
+
   // His design bar (the lead, 2026-11-26): measured at 375, 393 and 430 wide, and in large text, with real long names.
   const LONG = 'Smith & Daughters Home Inspection — Full Residential Walkthrough with Pool, Spa and Outbuildings';
   const longText = TE.apply(V1, [{ op: 'template', name: LONG }, { op: 'stop', ref: STOP.ref, name: 'Mechanical closet, water heater, air handler and condensate drain' },

@@ -231,6 +231,10 @@
       tools.appendChild(button(words('delete-item'), 'data-del-item', 'danger'));
       it.appendChild(tools);
     }
+    if (open.outline.ratings) {
+      var see = button(words('see-report'), 'data-see', 'see');
+      (it.querySelector('.te-tools') || it.appendChild(el('div', 'te-tools'))).appendChild(see);
+    }
     ['information', 'limitation', 'deficiency'].forEach(function (kind) {
       var lines = i.lines.filter(function (l) { return l.kind === kind; });
       var g = groupEl(kind);
@@ -321,6 +325,7 @@
     find();
     changed();
     renderList();
+    pvItem = null; renderPreview();
   }
 
   /* ---- what he does to the parts: each a step of the edit list, done on the page at once ---- */
@@ -345,6 +350,8 @@
     stopLabels(); changed();
   }
   stops.addEventListener('click', function (e) {
+    var see = e.target.closest('[data-see]');
+    if (see) { pvItem = see.closest('.te-item'); pvOpen = true; renderPreview(); if (!wideQ.matches) $('[data-preview-close]').focus(); return; }
     var t = e.target.closest('button');
     if (!t || busy || !open || open.readOnly) return;
     cancelLoads();
@@ -466,6 +473,11 @@
     out.forEach(function (e) { delete e.added; });
     return out;
   }
+  /* A category renamed (typed, or by Replace all): every finding's list says the new name at once. */
+  function syncCategory(box) {
+    var id = JSON.parse(box.getAttribute('data-k')).id, name = box.value.trim() || box.getAttribute('data-was');
+    all('select[data-k] option[value="' + CSS.escape(id) + '"]', stops).forEach(function (o) { o.textContent = name; });
+  }
   /* The bar's height plus the gap under it (above a phone's tab bar), as room under the editor. */
   function roomForBar() {
     var room = 0;
@@ -480,6 +492,8 @@
     bar.hidden = n === 0;
     $('[data-count]').textContent = plural('changes', n);
     roomForBar();
+    // Every change (typed, chosen, added, moved, deleted, replaced): the preview shows what Save would keep (Codex on #105).
+    if (preview && !preview.hidden) renderPreview();
     return n;
   }
   edit.addEventListener('input', function (e) {
@@ -487,11 +501,7 @@
     cancelLoads();
     if (e.target.tagName === 'TEXTAREA') grow(e.target);
     if (e.target.closest('.te-stop-head')) stopLabels();
-    if (e.target.closest('[data-cats]')) {
-      // A category renamed: every finding's list says the new name at once.
-      var id = JSON.parse(e.target.getAttribute('data-k')).id, name = e.target.value.trim() || e.target.getAttribute('data-was');
-      all('select[data-k] option[value="' + CSS.escape(id) + '"]', stops).forEach(function (o) { o.textContent = name; });
-    }
+    if (e.target.closest('[data-cats]')) syncCategory(e.target);
     changed(); if (e.target.value) say(null);
   });
   window.addEventListener('resize', function () { all('.te-stop[open]', stops).forEach(growIn); });
@@ -506,6 +516,71 @@
     changed();
   });
   window.addEventListener('beforeunload', function (e) { if (open && changed()) { e.preventDefault(); e.returnValue = ''; } });
+
+  /* ---- the item as the report prints it (piece D): docked beside the editor on a wide screen, opened by "See it
+     in the report" on a smaller one. It reads the boxes as they are now, so it follows every change as typed. ---- */
+  var preview = $('[data-preview]'), pvBody = $('[data-preview-body]'), pvEmpty = $('[data-preview-empty]');
+  var wideQ = window.matchMedia ? window.matchMedia('(min-width: 1440px)') : { matches: false };
+  var midQ = window.matchMedia ? window.matchMedia('(min-width: 1000px)') : { matches: false };
+  var pvItem = null, pvOpen = false;
+  function blanks(text) {
+    // [blanks] marked: Spex fills them in at the inspection.
+    var p = el('p', 'te-pv-prose');
+    String(text).split(/(\[[^\]\n]{1,80}\])/).forEach(function (part, n) { p.appendChild(n % 2 ? el('mark', null, part) : document.createTextNode(part)); });
+    return p;
+  }
+  function valueOf(root, sel) { var b = root.querySelector(sel); return b ? b.value.trim() : ''; }
+  function renderPreview() {
+    var docked = !!open && wideQ.matches, shown = !!open && (docked || pvOpen);
+    // Between: opened, it takes the list's place beside the editor (Close brings the list back), never over the editor.
+    var mid = shown && !docked && midQ.matches;
+    preview.hidden = !shown;
+    preview.classList.toggle('is-docked', docked || mid);
+    $('.te-grid').classList.toggle('has-preview', docked);
+    $('.te-grid').classList.toggle('pv-mid', mid);
+    main.classList.toggle('has-preview', docked);
+    $('[data-preview-close]').hidden = docked;
+    if (!shown) return;
+    var it = pvItem && stops.contains(pvItem) ? pvItem : null;
+    pvEmpty.hidden = !!it; pvBody.textContent = '';
+    if (!it) return;
+    var stop = it.closest('.te-stop'), sys = it.querySelector('[data-sys]');
+    if (sys && sys.selectedIndex >= 0) pvBody.appendChild(el('p', 'te-pv-sys', sys.options[sys.selectedIndex].text));
+    pvBody.appendChild(el('h4', 'te-pv-item', [valueOf(stop, '.te-stop-head [data-k]'), valueOf(it, '.te-item-head input[data-k]')].filter(Boolean).join(', ') || words('pv-untitled')));
+    var cats = {}; open.outline.ratings.forEach(function (r) { cats[r.id] = r.category; });
+    all('.te-line', it).forEach(function (line) {
+      var kind = line.closest('[data-group]').getAttribute('data-group'), name = valueOf(line, 'input[data-k]') || words('pv-untitled');
+      if (kind === 'information') {
+        var a = line.querySelector('[data-answer]'), answer = a && a.selectedIndex >= 0 ? a.options[a.selectedIndex].text : '';
+        var choices = a && TE.takesChoices(a.value) ? valueOf(line, '.te-f-options textarea').split('\n').map(function (x) { return x.trim(); }).filter(Boolean).join(' / ') : '';
+        var kv = el('div', 'te-pv-kv'); kv.appendChild(el('dt', null, name));
+        kv.appendChild(el('dd', null, choices ? words('pv-answer', { answer: answer, choices: choices }) : answer));
+        pvBody.appendChild(kv);
+      } else if (kind === 'limitation') {
+        var p = blanks(' ' + valueOf(line, 'textarea[data-k]')); p.classList.add('te-pv-ln');
+        p.insertBefore(el('b', null, words('pv-limitation')), p.firstChild);
+        pvBody.appendChild(p);
+      } else {
+        var r = line.querySelector('select[data-k*="rating"]'), id = r ? r.value : '';
+        var card = el('article', 'te-pv-card cat-' + (cats[id] || 'none')), head = el('header', 'te-pv-card-h');
+        if (id) head.appendChild(el('span', 'te-pv-pill', r.options[r.selectedIndex].text));
+        head.appendChild(el('h5', null, name)); card.appendChild(head);
+        var body = el('div', 'te-pv-card-b'), boxes = line.querySelectorAll('textarea[data-k]');
+        var observed = boxes[0] ? boxes[0].value.trim() : '', todo = boxes[1] ? boxes[1].value.trim() : '';
+        if (observed) { body.appendChild(el('h6', null, words('pv-observed'))); body.appendChild(blanks(observed)); }
+        if (todo) { body.appendChild(el('h6', null, words('pv-recommended'))); body.appendChild(blanks(todo)); }
+        card.appendChild(body); pvBody.appendChild(card);
+      }
+    });
+  }
+  edit.addEventListener('focusin', function (e) {
+    var it = e.target.closest && e.target.closest('.te-item');
+    if (it && it !== pvItem) { pvItem = it; renderPreview(); }
+  });
+  edit.addEventListener('input', function () { if (!preview.hidden) renderPreview(); });
+  edit.addEventListener('change', function () { if (!preview.hidden) renderPreview(); });
+  $('[data-preview-close]').addEventListener('click', function () { pvOpen = false; renderPreview(); });
+  if (wideQ.addEventListener) { wideQ.addEventListener('change', renderPreview); midQ.addEventListener('change', renderPreview); }
 
   /* ---- find ---- */
   function find() {
@@ -522,8 +597,35 @@
     });
     var f = $('[data-found]');
     f.hidden = !q; f.textContent = hits === 0 ? words('found-0') : plural('found', hits);
+    // Replace (piece D): every box of words that holds what he's finding, in the whole template.
+    var can = !!q && !!open && !open.readOnly, n = can ? replaceable(q).length : 0;
+    $('[data-replace-box]').hidden = !can;
+    $('.te-findbar').classList.toggle('with-replace', can);
+    var go = $('[data-replace-go]');
+    go.hidden = !can || n === 0; go.textContent = words('replace-all', { n: n });
+  }
+  var escapeRe = function (t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
+  function replaceable(q) {
+    var low = q.toLowerCase();
+    return all('input[data-k], textarea[data-k]', edit).filter(function (b) { return !b.disabled && b.value.toLowerCase().indexOf(low) >= 0; });
   }
   findIn.addEventListener('input', find);
+  $('[data-replace-go]').addEventListener('click', function () {
+    var q = findIn.value.trim();
+    if (busy || !open || open.readOnly || !q) return;
+    var by = $('[data-replace]').value, re = new RegExp(escapeRe(q), 'gi'), boxes = replaceable(q);
+    if (!boxes.length) return;
+    cancelLoads();
+    // The words put in as typed (a function: a "$" in them is a "$").
+    boxes.forEach(function (b) {
+      b.value = b.value.replace(re, function () { return by; });
+      if (b.tagName === 'TEXTAREA') grow(b);
+      if (b.closest('[data-cats]')) syncCategory(b);
+    });
+    stopLabels(); changed(); renderPreview();
+    findIn.value = by.trim(); find();
+    say(boxes.length === 1 ? 'replaced-1' : 'replaced-n', { n: boxes.length });
+  });
 
   /* ---- open one ---- */
   /* Opens [id] (null: Inspyx's). An answer that comes back late is shown only if it is still the last one asked for,
