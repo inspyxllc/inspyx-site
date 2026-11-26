@@ -87,6 +87,34 @@
     return { push: push, changes: changes, unchanged: unchanged };
   }
 
+  /* The engine's plan (I2: inspyxImport.contacts(..., { existing }).plan, the phone's own planContactImport) as the
+     People rows to send, with the changes Undo needs. Each entry: { action: 'new' | 'fill' | 'bring_back' |
+     'unchanged', id, row: { role, name, phone, email, company, note }, fills: { box: value } }. */
+  function applyPlan(rows, entries, me, now, newId) {
+    var byId = {}; rows.forEach(function (r) { if (r && r.data && r.data.ownerAccountId === me) byId[r.id] = r; });
+    var push = [], changes = [], unchanged = 0;
+    entries.forEach(function (e) {
+      if (e.action === 'unchanged') { unchanged++; return; }
+      if (e.action === 'new') {
+        var nr = e.row, data = { id: newId(), ownerAccountId: me, role: nr.role, name: nr.name, phone: tidy(nr.phone), email: tidy(nr.email),
+          company: tidy(nr.company), note: tidy(nr.note), lastUsedAt: now, createdAt: now, updatedAt: now, deletedAt: null };
+        if (ROLES.indexOf(data.role) < 0 || !data.name) throw new Error('plan: new');
+        var filled = {}; BOXES.forEach(function (b) { if (data[b] !== null) filled[b] = data[b]; });
+        push.push(rowOf(data)); changes.push({ id: data.id, name: data.name, added: true, filled: filled });
+        return;
+      }
+      var held = byId[e.id];
+      if (!held || (e.action === 'fill' && gone(held)) || (e.action === 'bring_back' && !gone(held))) throw new Error('plan: ' + e.action + ' ' + e.id);
+      var d = JSON.parse(JSON.stringify(held.data)), fills = e.fills || {};
+      Object.keys(fills).forEach(function (b) { if (BOXES.indexOf(b) < 0) throw new Error('plan: box ' + b); d[b] = fills[b]; });
+      if (e.action === 'bring_back') { d.role = e.row.role; d.deletedAt = null; }
+      d.updatedAt = changedAt(held, now);
+      push.push(rowOf(d));
+      changes.push({ id: d.id, name: d.name, added: e.action === 'bring_back', filled: fills });
+    });
+    return { push: push, changes: changes, unchanged: unchanged };
+  }
+
   /* Undo of [changes] (plan's), on the People rows held now. Answers the rows to send. */
   function undo(rows, changes, me, now) {
     var byId = {}; rows.forEach(function (r) { if (r && r.data && r.data.ownerAccountId === me) byId[r.id] = r; });
@@ -104,6 +132,6 @@
     return push;
   }
 
-  var api = { plan: plan, undo: undo, dartTrim: dartTrim };
+  var api = { plan: plan, applyPlan: applyPlan, undo: undo, dartTrim: dartTrim };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.InspyxContactsImport = api;
 })(typeof window !== 'undefined' ? window : this);
