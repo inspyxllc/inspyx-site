@@ -308,9 +308,12 @@
     var o = open.outline, ro = open.readOnly;
     ops = [];
     edit.hidden = false;
-    nameIn.value = o.name; nameIn.setAttribute('data-was', o.name); nameIn.disabled = ro;
+    // Inspyx's is shown from the file a copy is made from: its own name and version, never the copy's stand-ins
+    // (the rehearsal, 2026-11-26: it read "Zzwebcopynamezz", version 1).
+    var shownName = ro ? OURS_NAME() : o.name, shownVersion = ro && copyFile ? copyFile.sourceVersion : o.version;
+    nameIn.value = shownName; nameIn.setAttribute('data-was', shownName); nameIn.disabled = ro;
     nameIn.setAttribute('data-k', JSON.stringify({ op: 'template' }));
-    $('[data-ver]').textContent = words('version', { v: o.version });
+    $('[data-ver]').textContent = words('version', { v: shownVersion });
     $('[data-ro]').hidden = !ro;
     $('[data-copy]').hidden = !ro;
     defaultControls();
