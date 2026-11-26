@@ -91,6 +91,7 @@ async function open(browser, o) {
       }
       if (req.method() === 'GET' && tail.indexOf('authenticated/business-templates/') === 0) {
         const name = tail.slice('authenticated/business-templates/'.length);
+        if (o.fileGate && o.fileGate[name]) await o.fileGate[name];
         fileCalls.push({ method: 'GET', name });
         if (!files.has(name)) return route.fulfill({ status: 400, contentType: 'application/json', headers: cors, body: JSON.stringify({ statusCode: '404' }) });
         return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: files.get(name) });
@@ -270,6 +271,41 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await o.ctx.close();
     });
   }
+
+  await group('answers that come back late', async () => {
+    const r1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const biz = bizServer([r1, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)]]), fileGate = {};
+    const o = await open(browser, { w: WIDE, biz, files, fileGate });
+    const { page } = o;
+    await page.waitForSelector('[data-open="' + MINE + '"]');
+    await page.locator('[data-open="' + MINE + '"]').click();
+    await until(async () => (await page.locator('.te-stop').count()) > 0);
+    // The phone saves version 2; the page hears of it, and its file is slow to come.
+    const v2 = TE.apply(V1, [{ op: 'item', ref: O1.stops[1].items[0].ref, label: 'Changed on the phone' }]);
+    const r2 = rowOf(MINE, 'My Walkthrough', v2.text, 2000, 'copied', await TS.contentKey(V1, digest));
+    files.set(fileName(r2), Buffer.from(v2.text)); biz.put(r2);
+    let release; fileGate[fileName(r2)] = new Promise((r) => { release = r; });
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await until(async () => o.fileCalls.some((c) => c.method === 'GET' && c.name === fileName(r2)));
+    await page.fill('[data-name]', 'Typed while it loaded');
+    release();
+    await page.waitForTimeout(400);
+    ok('a reload from the phone that arrives after he started typing doesn’t wipe it: his change stays, still counted',
+      (await page.locator('[data-name]').inputValue()) === 'Typed while it loaded' && (await page.locator('[data-count]').textContent()).trim() === '1 change');
+    await page.locator('[data-discard]').click();
+    // Opened one, then another before the first came: the last one asked for stays.
+    let release2; fileGate[fileName(r2)] = new Promise((r) => { release2 = r; });
+    await page.locator('[data-open="' + MINE + '"]').click();
+    await until(async () => o.fileCalls.filter((c) => c.method === 'GET' && c.name === fileName(r2)).length >= 2);
+    await page.locator('[data-open="ours"]').click();
+    await until(async () => await page.locator('[data-ro]').isVisible());
+    release2();
+    await page.waitForTimeout(400);
+    ok('opened one, then Inspyx’s before the first came: Inspyx’s stays open', await page.locator('[data-ro]').isVisible() &&
+      (await page.locator('[data-edit] [data-k]:not([disabled])').count()) === 0);
+    ok('no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
+    await o.ctx.close();
+  });
 
   // His design bar (the lead, 2026-11-26): measured at 375, 393 and 430 wide, and in large text, with real long names.
   const LONG = 'Smith & Daughters Home Inspection — Full Residential Walkthrough with Pool, Spa and Outbuildings';

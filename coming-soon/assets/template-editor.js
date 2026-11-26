@@ -289,19 +289,27 @@
   findIn.addEventListener('input', find);
 
   /* ---- open one ---- */
-  function choose(id, force) {
+  /* Opens [id] (null: Inspyx's). An answer that comes back late is shown only if it is still the last one asked for,
+     and, for a reload in the background ([quiet]: changed on another device), only if nothing was changed here
+     meanwhile (Codex on #101). */
+  var showing = 0;
+  function choose(id, force, quiet) {
     if (busy && !force) return;
     if (!force && open && changed() && !window.confirm(words('leave'))) return;
-    say(null);
+    var mine = ++showing;
+    var still = function () { return mine === showing && !(quiet && open && changed()); };
+    if (!quiet) say(null);
     if (id === null) {
       return ours().then(function (c) {
+        if (!still()) return;
         open = { id: null, row: null, text: c.text, outline: TE.outline(c.text), readOnly: true };
         renderOpen();
-      }, function () { say('p-failed'); });
+      }, function () { if (still()) say('p-failed'); });
     }
     var row = biz[TPL + '/' + id];
     if (!standing(row)) return;
     return readFile(row).then(function (text) {
+      if (!still()) return;
       if (text === null) { say('p-failed'); return; }
       open = { id: id, row: row, text: text, outline: TE.outline(text), readOnly: false };
       renderOpen();
@@ -418,7 +426,7 @@
       // The open one changed on another device and nothing is changed here: show the newest.
       if (open && open.id && !busy && !changed()) {
         var row = biz[TPL + '/' + open.id];
-        if (standing(row) && row.data.sha256 !== open.row.data.sha256) choose(open.id, true);
+        if (standing(row) && row.data.sha256 !== open.row.data.sha256) choose(open.id, true, true);
       }
       renderList();
     });
