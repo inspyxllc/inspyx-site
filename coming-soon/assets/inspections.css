@@ -332,3 +332,9 @@
 .tpl-how-tick{color:#1E6B3A !important; font-weight:600}
 .tpl-how-finger{animation-name:tpl-finger}
 @keyframes tpl-finger{0%{left:70%; top:90%; opacity:1} 14%,24%{left:60px; top:44px; opacity:1} 30%,100%{left:60px; top:44px; opacity:0}}
+
+/* Edit with AI on "What it means" and "What to do" (2026-11-26, item 12, piece E): the same control, each under its own
+   field, with only the actions that field offers. */
+.insp-aifield{display:grid; gap:8px}
+.ai-field .ai-open{min-height:36px; font-size:14px; padding:0 14px 0 8px}
+.ai-field .ai-open img{width:20px; height:20px}
