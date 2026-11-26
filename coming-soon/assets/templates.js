@@ -221,6 +221,12 @@
     button.disabled = true; button.textContent = words('adding'); said.textContent = '';
     var done = function (key) {
       said.textContent = words(key, { name: t.shown });
+      // In his templates now: a way into the editor, straight to it (/template#<id>; I4, with I2's OK).
+      if (key === 'added' || key === 'already') {
+        var go = document.createElement('a');
+        go.href = '/template#' + encodeURIComponent(t.template_id); go.textContent = words('edit-it');
+        said.appendChild(document.createTextNode(' ')); said.appendChild(go);
+      }
       button.textContent = words('add');
       button.disabled = key === 'added' || key === 'already';
     };
