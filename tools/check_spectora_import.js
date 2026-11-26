@@ -324,6 +324,28 @@ const sigOf = (rows) => JSON.stringify(rows.filter((r) => r.deleted_at == null &
     }
   });
 
+  await group('where to find the key: Spectora\'s developer site, in a new tab, on both pages, at every width', async () => {
+    for (const history of [false, true]) {
+      const sync = syncServer(seed()), spx = spxServer([page200([])]);
+      const o = await open(browser, { sync, spx, history }), { page } = o;
+      await page.locator('[data-src="spectora"]').click();
+      const a = page.locator('[data-spx-dev]');
+      const steps = await page.locator('.pi-spx-steps li').allTextContents();
+      ok((history ? 'history' : 'people') + ': the link is Spectora\'s key page, opens a new tab, gives away nothing', await a.getAttribute('href') === 'https://developer.spectora.com/settings/api-keys' &&
+        await a.getAttribute('target') === '_blank' && /\bnoopener\b/.test(await a.getAttribute('rel')) && /\bnoreferrer\b/.test(await a.getAttribute('rel')));
+      ok((history ? 'history' : 'people') + ': the steps: open the developer site, Create API Key, paste, the promise; no "Settings, then API Keys"', steps.length === 4 && /developer site/.test(steps[0]) && /new tab/.test(steps[0]) &&
+        /Create API Key/.test(steps[1]) && /paste it below/.test(steps[2]) && /isn’t kept/.test(steps[3]) && !/Settings, then API Keys/.test(steps.join(' ')), JSON.stringify(steps));
+      for (const [w, big] of [[375, false], [393, false], [430, false], [375, true]]) {
+        await page.setViewportSize({ width: w, height: 900 });
+        await page.evaluate((b) => { document.body.style.zoom = b ? '1.3' : ''; }, big);
+        const m = await page.evaluate(() => { const r = document.querySelector('[data-spx-dev]').getBoundingClientRect(), l = document.querySelector('.pi-spx-steps').getBoundingClientRect(); return { page: document.documentElement.scrollWidth, vw: innerWidth, link: r.right, list: l.right }; });
+        ok((history ? 'history' : 'people') + ' at ' + w + (big ? ' large' : '') + ': the steps and the link fit', m.page <= m.vw && Math.max(m.link, m.list) <= m.vw + 0.5, JSON.stringify(m));
+        if (process.env.SHOTS) await page.locator('[data-spx]').screenshot({ path: path.join(process.env.SHOTS, 'spx-key-steps-' + (history ? 'hist' : 'people') + '-' + w + (big ? '-large' : '') + '.png') });
+      }
+      await o.ctx.close();
+    }
+  });
+
   await group('no key: said, nothing asked', async () => {
     const sync = syncServer(seed()), spx = spxServer([page200([])]);
     const o = await open(browser, { sync, spx }), { page } = o;
