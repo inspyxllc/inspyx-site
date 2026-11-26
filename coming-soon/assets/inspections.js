@@ -237,6 +237,7 @@
             line.querySelector('[data-v="photos"]').textContent = String(photos);
             line.querySelector('[data-v="photos-word"]').textContent = word(photos === 1 ? 'photo-one' : 'photo-many');
             wireAI(finding, f, i, s);
+            wireTemplate(finding, id, i, f);
             fol.appendChild(finding);
           });
           ol.appendChild(item);
@@ -257,6 +258,7 @@
     });
     renderPeople(id);
     renderFlags(id);
+    renderTemplateButtons(id);
     renderAgreement(id);
     chapterChoices(id);
     renderSearch(id);
@@ -336,7 +338,8 @@
      inspection's own fields come from this page's inspection sync. The rulebook is agreement-fill.js, the phone's
      agreement_outdated.dart in JS. ---- */
   var Fill = window.InspyxFill;
-  var BIZ = { signings: true, signing_details: true, inspection_fees: true, bookings: true, item_flags: true };
+  var BIZ = { signings: true, signing_details: true, inspection_fees: true, bookings: true, item_flags: true,
+    inspection_templates: true, template_default: true };
   var biz = Object.create(null), bizPoint = null, bizPulling = null;
   function pullBusiness() {
     if (bizPulling) return bizPulling;
@@ -448,6 +451,191 @@
     if (!ITEM_ID.test(id)) { el.hidden = true; return; }
     el.setAttribute('data-flag', id);
     el.addEventListener('click', function () { setFlag(inspection, id, !flagged(id)); });
+  }
+
+  /* ---- Save to template (2026-11-26, his list item 12, piece D): a finding written here goes into the inspector's
+     template as a pre-written comment, so the next inspection offers it under the same item. From Inspyx's own
+     template, it goes into the inspector's OWN COPY of it (his decision, 2026-11-26), made here when there is none,
+     which then becomes the template new inspections start from. The template's file and its row travel as the
+     phone's do (the private store, then the business sync); every rule of their shape is template-save.js, the
+     phone's own rules, proven against the phone in the app repo (test/src/data/web_template_save_test.dart). ---- */
+  var TS = window.InspyxTemplateSave;
+  // Ours the website can copy: the app's own copy of each, under assets/template-copies/ (made by the app repo's
+  // test/tool/web_template_copies_test.dart).
+  var COPIES = { 'inspyx.walkthrough': true };
+  var TPL = 'inspection_templates', TPL_DEFAULT = 'template_default';
+  function hex(buf) { return [].map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
+  function digest(text) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(hex); }
+  var tplWords = function (w, values) { var t = word(w); Object.keys(values || {}).forEach(function (k) { t = t.split('{' + k + '}').join(values[k]); }); return t; };
+
+  /* Where a finding of [inspection] under the item [item] could go: null when nowhere (no template, an item added by
+     hand or by Spex, one of ours the website can't copy). */
+  function templateSpot(inspection, item) {
+    var from = val('inspection', inspection, 'source_template_id'), ref = val('item', item, 'checklist_item_ref');
+    if (!TS || typeof from !== 'string' || typeof ref !== 'string' || !ref) return null;
+    if (from.indexOf('inspector.') !== 0 && !COPIES[from]) return null;
+    return { from: from, ref: ref };
+  }
+  function renderTemplateButtons(inspection) {
+    all('[data-tpl]').forEach(function (box) { box.hidden = !templateSpot(inspection, box.getAttribute('data-tpl-item')); });
+  }
+
+  function standingRow(r) { return r && r.deleted_at == null && r.data && r.data.deletedAt == null; }
+  function templateRows() {
+    return Object.keys(biz).filter(function (k) { return k.indexOf(TPL + '/') === 0; }).map(function (k) { return biz[k]; });
+  }
+  /* A template's current file, as text, checked against its row (null: can't be read now). */
+  function readTemplate(row) {
+    var me = auth.who().id, d = row.data;
+    return auth.templateRead(me + '/' + row.id + '/' + d.sha256 + '.json', DEADLINE).then(function (r) {
+      if (r === null) { window.location.replace('/signin'); return null; }
+      if (r.status !== 200 || !r.blob) return null;
+      return r.blob.text().then(function (text) {
+        return digest(text).then(function (h) { return h === d.sha256 ? text : null; });
+      });
+    }, function () { return null; });
+  }
+  /* The template [spot] goes into: { id, name, text, row (null: a new copy), source }, or { problem }. */
+  function templateFor(spot) {
+    var rows = templateRows();
+    if (spot.from.indexOf('inspector.') === 0) {
+      var own = biz[TPL + '/' + spot.from];
+      if (!standingRow(own)) return Promise.resolve({ problem: 'gone' });
+      return readTemplate(own).then(function (text) {
+        return text === null ? { problem: 'failed' } : { id: own.id, name: own.data.name, text: text, row: own };
+      });
+    }
+    // One of ours: his own copy of it (its first source names it), the one new inspections start from first.
+    var copies = rows.filter(function (r) { return standingRow(r) && r.data.source === 'copied'; });
+    var dflt = biz[TPL_DEFAULT + '/default'], chosen = standingRow(dflt) ? dflt.data.templateId : null;
+    copies.sort(function (a, b) { return (b.id === chosen) - (a.id === chosen) || b.updated_at - a.updated_at; });
+    var look = function (k) {
+      if (k >= copies.length) return makeCopy(spot, rows);
+      return readTemplate(copies[k]).then(function (text) {
+        if (text === null) return { problem: 'failed' };
+        return TS.isCopyOf(text, spot.from) ? { id: copies[k].id, name: copies[k].data.name, text: text, row: copies[k] } : look(k + 1);
+      });
+    };
+    return look(0);
+  }
+  function makeCopy(spot, rows) {
+    return window.fetch('/assets/template-copies/' + spot.from + '.json', { cache: 'no-store', credentials: 'omit' }).then(function (res) {
+      if (!res.ok) throw new Error('copy');
+      return res.json();
+    }).then(function (copy) {
+      if (copy.source !== spot.from) return { problem: 'failed' };
+      // Every id he has had, removed ones too: a new one is never an old one (the phone's newTemplateIdFor).
+      var id = TS.newTemplateId(copy.copyName, rows.map(function (r) { return r.id; }));
+      return { id: id, name: copy.copyName, text: TS.makeCopy(copy, id, copy.copyName), row: null, source: copy.sourceName };
+    }).catch(function () { return { problem: 'failed' }; });
+  }
+
+  /* Saves [line] into [target] (from templateFor). Answers 'saved', or a problem's word. */
+  function saveInto(target, spot, line) {
+    var me = auth.who().id;
+    var itemRef = TS.refIn(spot.ref, spot.from, target.id);
+    if (!itemRef) return Promise.resolve('no_item');
+    var made = TS.addLine(target.text, { itemRef: itemRef, title: line.title, details: line.details,
+      recommendation: line.recommendation, code: line.code });
+    if (made.problem) return Promise.resolve(made.problem);
+    var bytes = new TextEncoder().encode(made.text);
+    return Promise.all([digest(made.text), target.row ? TS.contentKey(target.text, digest) : null]).then(function (h) {
+      var sha = h[0], base = h[1];
+      return auth.templateFile(me + '/' + target.id + '/' + sha + '.json', bytes, DEADLINE).then(function (f) {
+        if (f === null) { window.location.replace('/signin'); return null; }
+        var there = f.status === 200 || f.inner === '409' || f.status === 409;
+        if (!there) return f.status === 403 || f.inner === '403' ? 'full' : 'failed';
+        var was = target.row || biz[TPL + '/' + target.id], dflt = biz[TPL_DEFAULT + '/default'];
+        var at = Math.max(Date.now(), was ? was.updated_at + 1 : 0, !target.row && dflt ? dflt.updated_at + 1 : 0);
+        var data = { id: target.id, ownerAccountId: me, name: target.name, version: made.version,
+          source: target.row ? target.row.data.source : 'copied', sha256: sha, byteLength: bytes.length,
+          createdAt: at, updatedAt: at, deletedAt: null };
+        if (base) data.base = base;
+        var push = [{ kind: TPL, id: target.id, updated_at: at, deleted_at: null, data: data }];
+        // A copy made here: new inspections start from it, or the comment would never show (his yes, 2026-11-26).
+        if (!target.row) push.push({ kind: TPL_DEFAULT, id: 'default', updated_at: at, deleted_at: null,
+          data: { id: 'default', ownerAccountId: me, templateId: target.id, updatedAt: at, deletedAt: null } });
+        return auth.ask('sync', { push: push, after: bizPoint, limit: 500 }, DEADLINE).then(function (r) {
+          if (r === null) { window.location.replace('/signin'); return null; }
+          if (r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) return 'failed';
+          r.json.rows.forEach(takeBiz);
+          if (r.json.next) bizPoint = r.json.next;
+          if (r.json.more) pullBusiness();
+          var mine = function (x) { return x.kind === TPL && x.id === target.id; };
+          var skipped = (r.json.skipped || []).filter(mine);
+          if (skipped.length) return skipped.some(function (x) { return x.reason === 'template:full'; }) ? 'full' : 'failed';
+          if ((r.json.applied || []).some(function (a) { return a.applied === false && mine(a); })) return 'changed';
+          push.forEach(takeBiz);
+          return 'saved';
+        });
+      });
+    });
+  }
+
+  function wireTemplate(el, inspection, item, finding) {
+    var box = el.querySelector('[data-tpl]');
+    if (!box) return;
+    box.setAttribute('data-tpl-item', item);
+    var q = function (sel) { return box.querySelector(sel); };
+    var open = q('[data-tpl-open]'), panel = q('[data-tpl-panel]'), where = q('[data-tpl-where]'), done = q('[data-tpl-done]');
+    var target = null, busy = false, turn = 0;
+    var line = function () {
+      var t = text(val('item', finding, 'finding_title')).trim() || text(val('item', finding, 'label')).trim();
+      return { title: t, details: text(val('item', finding, 'note')), recommendation: text(val('item', finding, 'finding_recommendation')),
+        code: val('item', finding, 'severity') };
+    };
+    var itemName = function () { return text(val('item', item, 'label')).trim() || word('unnamed'); };
+    var close = function () { turn++; panel.hidden = true; open.setAttribute('aria-expanded', 'false'); target = null; };
+    var say = function (key, values) { done.hidden = false; done.textContent = tplWords('tpl-' + key, values); done.setAttribute('data-tpl-said', key); };
+    open.addEventListener('click', function () {
+      if (!panel.hidden) { close(); return; }
+      var spot = templateSpot(inspection, item);
+      if (!spot || busy) return;
+      var mine = ++turn, l = line();
+      done.hidden = true;
+      panel.hidden = false;
+      open.setAttribute('aria-expanded', 'true');
+      q('[data-tpl-what]').hidden = true;
+      q('[data-tpl-choose]').hidden = true;
+      q('[data-tpl-nomeaning]').hidden = true;
+      where.textContent = word('tpl-looking');
+      if (!l.title) { where.textContent = word('tpl-no_title'); return; }
+      templateFor(spot).then(function (t) {
+        if (mine !== turn) return;
+        if (t.problem) { where.textContent = tplWords('tpl-' + t.problem, { item: itemName() }); return; }
+        target = t;
+        where.textContent = tplWords(t.row ? 'tpl-into' : 'tpl-into-new', { name: t.name, item: itemName(), source: t.source || '' });
+        q('[data-tpl-v="title"]').textContent = l.title;
+        q('[data-tpl-v="details"]').textContent = TS.dartTrim(l.details) || word('tpl-none');
+        q('[data-tpl-v="todo"]').textContent = TS.dartTrim(l.recommendation) || word('tpl-none');
+        q('[data-tpl-v="category"]').textContent = typeof l.code === 'string' && l.code ? word('sev-' + l.code) || l.code : word('tpl-none');
+        q('[data-tpl-what]').hidden = false;
+        q('[data-tpl-nomeaning]').hidden = text(val('item', finding, 'finding_implication')).trim() === '';
+        q('[data-tpl-choose]').hidden = false;
+        q('[data-tpl-go]').focus();
+      });
+    });
+    q('[data-tpl-cancel]').addEventListener('click', close);
+    q('[data-tpl-go]').addEventListener('click', function () {
+      if (!target || busy) return;
+      var spot = templateSpot(inspection, item), t = target, l = line();
+      if (!spot) return;
+      busy = true;
+      close();
+      open.disabled = true;
+      say('saving');
+      // Changed elsewhere meanwhile: read it again and try once more.
+      var attempt = function (first, into) {
+        return saveInto(into, spot, l).then(function (key) {
+          if (key !== 'changed' || !first) return key;
+          return templateFor(spot).then(function (again) { return again.problem ? again.problem : attempt(false, again); });
+        });
+      };
+      attempt(true, t).then(function (key) {
+        if (key === null) return;
+        say(key, { item: itemName() });
+      }, function () { say('failed'); }).then(function () { busy = false; open.disabled = false; renderOne(); });
+    });
   }
 
   function bizData(kind) {
