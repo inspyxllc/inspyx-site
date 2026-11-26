@@ -158,7 +158,17 @@
     whoToCall: 'Who to call — each repair and its trade, most urgent first',
     standards: 'Standards of practice and limitations',
     signature: 'Inspector signature',
-    date: 'Date'
+    date: 'Date',
+    // A reinspection (content /15, 2026-11-26): report_pages.dart's reinspectionReportTitle, the cover's
+    // "Rechecks the inspection of …", coverRecheckedLabel, coverForAgentLabel and cardRecheckedLabel; the results'
+    // words are test/fixtures/reinspection_words.json's in the app (the report function's view carries each
+    // finding's own).
+    reinspection: 'Reinspection Report',
+    rechecks: 'Rechecks the inspection of',
+    rechecked: 'What was rechecked',
+    forAgent: 'For the agent',
+    recheckedCard: 'Rechecked',
+    results: { fixed: 'Fixed', partly: 'Partly fixed', not_fixed: 'Not fixed', not_checked: 'Not checked' }
   };
 
   var CHIP_LABELS = { SH: 'Safety hazards', MD: 'Recommendations', MN: 'Maintenance' };
@@ -641,7 +651,11 @@
      DO, WHO TO CALL). */
   function findingBody(report, f, big) {
     var L = report.card_labels;
+    var r = f.reinspect;
     return h('div', { class: 'card-b' },
+      // A reinspection: what was found on this finding this time, first, as the PDF's card has it.
+      r ? h('div', { class: 'recheck recheck-' + (r.result || 'not_checked') },
+        field(PDF.recheckedCard, r.label + '.' + (r.note ? ' ' + r.note : ''))) : null,
       field(L.observed, f.observed),
       field(L.why, f.implication),
       field(L.what, f.recommendation),
@@ -764,6 +778,7 @@
 
   function coverBlock(report, sample) {
     var c = report.cover;
+    var R = report.reinspection || null;
     var photo = c.photo ? fileOf(c.photo) : null;
     var insp = c.inspector;
     var face = insp.photo ? fileOf(insp.photo) : null;
@@ -779,10 +794,11 @@
       hero,
       h('div', { class: 'cover-in' },
         logo ? shows(h('img', { class: 'cover-logo', alt: insp.company || '', src: logo.full }), c.logo, 'full') : null,
-        h('p', { class: 'kicker' }, report.title, sample ? h('span', { class: 'tag' }, WORDS.sample) : null),
+        h('p', { class: 'kicker' }, R ? PDF.reinspection : report.title, sample ? h('span', { class: 'tag' }, WORDS.sample) : null),
         h('h1', { class: 'addr' }, c.address || report.title),
         sub ? h('p', { class: 'cover-sub' }, sub) : null,
         c.inspected ? h('p', { class: 'cover-sub' }, PDF.inspectionDate + ' ' + c.inspected) : null,
+        R && R.original_inspected ? h('p', { class: 'cover-sub cover-rechecks' }, PDF.rechecks + ' ' + R.original_inspected) : null,
         c.updated ? h('p', { class: 'cover-sub cover-updated' }, PDF.updated + ' ' + c.updated) : null,
         h('div', { class: 'people' },
           h('div', { class: 'pcard pcard-main' },
@@ -1012,6 +1028,18 @@
 
     var c = report.counts;
     var G = report.glance2;
+    /* A reinspection (content /15): what the recheck found, in the PDF's tiles and colours (Fixed in the
+       maintenance green, Partly fixed in the recommendation amber, Not fixed in the safety red, Not checked in
+       grey), and the inspector's summary for the agent, as text. */
+    var R = report.reinspection || null;
+    var recheck = !R ? null : h('section', { class: 'part', id: 'recheck', tabindex: '-1' },
+      h('h2', { class: 'part-t' }, PDF.rechecked),
+      h('div', { class: 'tiles' },
+        tile(R.counts.fixed, PDF.results.fixed, 'cat-MN'), tile(R.counts.partly, PDF.results.partly, 'cat-MD'),
+        tile(R.counts.not_fixed, PDF.results.not_fixed, 'cat-SH'), tile(R.counts.not_checked, PDF.results.not_checked, 'cat-NT')
+      ),
+      R.summary ? h('div', { class: 'for-agent' }, field(PDF.forAgent, R.summary)) : null
+    );
     var glance = h('section', { class: 'part', id: 'glance', tabindex: '-1' },
       h('h2', { class: 'part-t' }, report.headings.glance),
       h('p', { class: 'lead' }, G.lead),
@@ -1144,7 +1172,7 @@
       bar,
       h('div', { class: 'shell' },
         side,
-        h('main', { class: 'doc', id: 'report', tabindex: '-1' }, coverBlock(report, answer.sample === true), glance, contents, legend, details, sections, call, standards, end)
+        h('main', { class: 'doc', id: 'report', tabindex: '-1' }, coverBlock(report, answer.sample === true), recheck, glance, contents, legend, details, sections, call, standards, end)
       ),
       foot
     ]);
