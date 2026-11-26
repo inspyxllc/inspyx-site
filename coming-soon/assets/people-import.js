@@ -190,7 +190,8 @@
   /* ---- the file ---- */
   function take(f) {
     if (!f || busy) return;
-    done = null; $('[data-done]').hidden = true;
+    // A new file: nothing of the last import is this one's to show or to undo (Codex on #110).
+    done = null; donePast = null; $('[data-done]').hidden = true;
     // Another file: any reading still on its way for the last one is over now, before this one is even read (Codex on
     // #106): it can't bring the last file's preview back.
     turn++; $('[data-go]').disabled = true;
@@ -249,6 +250,8 @@
         if (!r || r.status !== 'ok') { say('failed'); return; }
         read = r;
         var made = CI.applyPlan(book.rows(), planOf(r), me, Date.now(), function () { return window.crypto.randomUUID(); });
+        // Each Bring in is an import of its own: the last one's is not this one's (Codex on #110).
+        donePast = null;
         // A history: its new inspections kept first, under one import id (Undo takes the import back).
         var past = HISTORY ? PS.newRows(r.inspections || [], me, Date.now(), function () { return window.crypto.randomUUID(); }, window.crypto.randomUUID()) : { push: [] };
         if (!made.push.length && !past.push.length) { draw(); return; }
@@ -276,7 +279,15 @@
         say('bringing', { done: 0, n: n });
         return sendAll(made.push, function (k) { say('bringing', { done: k, n: n }); }).then(function (res) {
           var kept = res.kept;
-          if (!kept.length && res.broke) { say('failed'); return; }
+          if (!kept.length && res.broke) {
+            // The inspections were kept, then the people didn't go through: say what was kept, with its Undo (Codex
+            // on #110).
+            if (!donePast) { say('failed'); return; }
+            done = []; read = null; say(null); $('[data-read]').hidden = true; $('[data-done]').hidden = false;
+            $('[data-done-t]').textContent = plural('done-insp', donePast.n) + ' ' + words('people-broke');
+            $('[data-undo]').hidden = false;
+            return;
+          }
           var keptSet = {}; kept.forEach(function (id) { keptSet[id] = true; });
           done = made.changes.filter(function (c) { return keptSet[c.id]; });
           // Kept: what was read is spent (People has changed); a new file, or this one again, reads afresh.

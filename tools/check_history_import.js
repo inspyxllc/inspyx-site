@@ -42,16 +42,17 @@ async function expected(start, name, bytes, pastRows) {
 }
 const keptOf = (rows) => { const o = {}; rows.filter((r) => r.deleted_at == null && r.data.deletedAt == null).forEach((r) => { o[r.data.name] = [r.data.role, r.data.phone, r.data.email, r.data.company, r.data.note]; }); return JSON.stringify(Object.keys(o).sort().map((k) => [k, o[k]])); };
 function syncServer(rows0) {
-  const held = new Map(), pushes = []; let seq = 0;
+  const held = new Map(), pushes = []; let seq = 0, failKind = null;
   for (const r of rows0) held.set(r.kind + '/' + r.id, { row: r, seq: ++seq });
   const answer = (b) => {
+    if (failKind && (b.push || []).some((r) => r.kind === failKind)) return null;
     const applied = [];
     if ((b.push || []).length) pushes.push(b.push.length);
     for (const r of b.push || []) { const k = r.kind + '/' + r.id, h = held.get(k); if (h && h.row.updated_at >= r.updated_at) { applied.push({ kind: r.kind, id: r.id, applied: false }); continue; } held.set(k, { row: r, seq: ++seq }); applied.push({ kind: r.kind, id: r.id, applied: true }); }
     const after = typeof b.after === 'number' ? b.after : 0;
     return { rows: [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row), next: seq, more: false, skipped: [], applied };
   };
-  return { answer, pushes, rows: () => [...held.values()].map((h) => h.row).filter((r) => r.kind === 'inspector_contacts'), past: () => [...held.values()].map((h) => h.row).filter((r) => r.kind === 'past_inspections') };
+  return { answer, pushes, set failKind(k) { failKind = k; }, rows: () => [...held.values()].map((h) => h.row).filter((r) => r.kind === 'inspector_contacts'), past: () => [...held.values()].map((h) => h.row).filter((r) => r.kind === 'past_inspections') };
 }
 async function open(browser, o) {
   const ctx = await browser.newContext({ viewport: { width: o.w || 1280, height: 900 }, locale: 'en-US' });
@@ -63,7 +64,11 @@ async function open(browser, o) {
   if (o.noEngine) await page.route('**/assets/import/inspyx_import.js', (route) => route.fulfill({ status: 404, body: '' }));
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url();
-    if (u.startsWith(SERVER + '/functions/v1/sync')) return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(o.sync.answer(JSON.parse(req.postData() || '{}'))) });
+    if (u.startsWith(SERVER + '/functions/v1/sync')) {
+      const a = o.sync.answer(JSON.parse(req.postData() || '{}'));
+      if (a === null) return route.fulfill({ status: 503, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{}' });
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a) });
+    }
     away.push(u); return route.abort();
   });
   await page.goto(url + 'history-import', { waitUntil: 'domcontentloaded' });
@@ -119,6 +124,39 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await o.ctx.close();
     });
   }
+  await group('a second file’s Undo never touches the first import; the people failing after the inspections are kept', async () => {
+    let sync = syncServer(seed()), o = await open(browser, { sync });
+    await pick(o.page, 'isn_inspections.csv', FIX('isn_inspections.csv'));
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 8000);
+    const firstImport = sync.past()[0].data.importId;
+    // The same inspections with another buyer's agent: nothing new to keep, one new person.
+    const again = FIX('isn_inspections.csv').toString('utf8').replace(/Bob Sells/g, 'Dana Newagent');
+    await pick(o.page, 'again.csv', Buffer.from(again));
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 8000);
+    ok('a second file that keeps no inspection doesn’t say the first one’s were kept', (await o.page.locator('[data-done-t]').textContent()).indexOf('kept on your list') < 0, await o.page.locator('[data-done-t]').textContent());
+    await o.page.locator('[data-undo]').click();
+    await until(async () => (await said(o.page)) === 'Undone: People is as it was.', 8000);
+    ok('its Undo leaves the first import’s inspections kept', sync.past().filter((r) => r.data.importId === firstImport).every((r) => r.data.deletedAt === null) && sync.past().length > 0);
+    await o.ctx.close();
+
+    sync = syncServer(seed()); o = await open(browser, { sync });
+    await pick(o.page, 'isn_inspections.csv', FIX('isn_inspections.csv'));
+    await until(async () => await o.page.locator('[data-read]').isVisible());
+    sync.failKind = 'inspector_contacts';
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 8000);
+    ok('the inspections kept, then the people fail: it says what was kept, with Undo', /inspections kept on your list\. Their people didn’t go through/.test(await o.page.locator('[data-done-t]').textContent()) &&
+      await o.page.locator('[data-undo]').isVisible(), await o.page.locator('[data-done-t]').textContent());
+    sync.failKind = null;
+    await o.page.locator('[data-undo]').click();
+    ok('and Undo takes those inspections back', await until(async () => (await said(o.page)) === 'Undone: People is as it was.', 8000) && sync.past().every((r) => r.data.deletedAt !== null));
+    await o.ctx.close();
+  });
+
   await group('a history with no column known yet; no reader; the links', async () => {
     let o = await open(browser, { sync: syncServer(seed()) });
     await pick(o.page, 'history_no_known_header.csv', FIX('history_no_known_header.csv'));
