@@ -832,6 +832,20 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     await o.ctx.close();
   });
 
+  await group('Undo after another device brought it back, edited it and deleted it again: that device\'s removal stands (Codex on #114)', async () => {
+    const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const { o, biz, page } = await startDel([R1]);
+    await page.locator('[data-delete]').click(); await page.locator('[data-del-yes]').click();
+    await until(async () => await page.locator('[data-gone]').isVisible());
+    const mine = pushedOf(biz, 'inspection_templates').pop();
+    biz.put(TS.removalRow(R1, ME, mine.updated_at + 5000, 'another-edit'));
+    const n = biz.pushed.length;
+    await page.locator('[data-gone-undo]').click();
+    await until(async () => /another device/.test(await page.locator('[data-gone-t]').textContent()));
+    ok('nothing sent; said', biz.pushed.length === n);
+    await o.ctx.close();
+  });
+
   await group('the feed down: nothing sent, said, the template still open', async () => {
     const R1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
     const { o, biz, page } = await startDel([R1]);

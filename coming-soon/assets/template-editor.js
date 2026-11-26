@@ -829,7 +829,7 @@
             var push = [TS.removalRow(row, me, at, base)];
             if (wasDefault) push.push(TS.defaultRow(me, at, null));
             return send(push, id).then(function (k) {
-              return k === 'ok' ? { was: row, base: base, wasDefault: wasDefault } : { problem: k === 'changed' ? 'failed' : k };
+              return k === 'ok' ? { was: row, base: base, wasDefault: wasDefault, at: at } : { problem: k === 'changed' ? 'failed' : k };
             });
           });
         });
@@ -841,7 +841,7 @@
         if (r.problem === 'gone') { clearOpen(); renderList(); showGone(words('p-gone'), false); return; }
         say('p-' + r.problem); return;
       }
-      gone = { was: r.was, base: r.base, name: name, wasDefault: r.wasDefault };
+      gone = { was: r.was, base: r.base, name: name, wasDefault: r.wasDefault, at: r.at };
       clearOpen();
       if (decodeURIComponent((window.location.hash || '').slice(1)) === id) history.replaceState(null, '', window.location.pathname);
       renderList();
@@ -857,8 +857,9 @@
       return pull().then(function (ok) {
         if (!ok) return 'failed';
         var row = biz[TPL + '/' + g.was.id];
-        // Brought back or changed on another device meanwhile: that stands.
-        if (!row || standing(row)) return 'changed';
+        // Only this page's own removal is taken back: brought back, changed, or deleted again on another device
+        // meanwhile, that device's change stands (Codex on #114).
+        if (!row || standing(row) || row.updated_at !== g.at) return 'changed';
         var at = Math.max(Date.now(), row.updated_at + 1);
         return send([TS.restoreRow(g.was, me, at, g.base)], g.was.id);
       });
