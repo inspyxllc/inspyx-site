@@ -610,7 +610,8 @@
       q('[data-tpl-nomeaning]').hidden = true;
       where.textContent = word('tpl-looking');
       if (!l.title) { where.textContent = word('tpl-no_title'); return; }
-      templateFor(spot).then(function (t) {
+      // From a pull that came in whole, as Save is: an unread library is never shown as none ("a new copy, made now").
+      pullBusiness().then(function (ok) { return ok ? templateFor(spot) : { problem: 'failed' }; }).then(function (t) {
         if (mine !== turn) return;
         if (t.problem) { where.textContent = tplWords('tpl-' + t.problem, { item: itemName() }); return; }
         target = t;
