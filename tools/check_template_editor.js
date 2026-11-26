@@ -100,7 +100,7 @@ async function open(browser, o) {
     }
     away.push(u); return route.abort();
   });
-  await page.goto(url + 'template', { waitUntil: 'domcontentloaded' });
+  await page.goto(url + 'template' + (o.hash || ''), { waitUntil: 'domcontentloaded' });
   return { ctx, page, errs, away, fileCalls };
 }
 const posts = (o) => o.fileCalls.filter((c) => c.method === 'POST');
@@ -411,6 +411,20 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await o.ctx.close();
     });
   }
+
+  await group('opened from its address (/template#<id>, the link after an import)', async () => {
+    const r1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const biz = bizServer([r1, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)]]);
+    const o = await open(browser, { w: WIDE, biz, files, hash: '#' + MINE });
+    ok('/template#<his id> opens that template', await until(async () => (await o.page.locator('[data-name]').inputValue()) === 'My Walkthrough' &&
+      !(await o.page.locator('[data-ro]').isVisible())));
+    await o.ctx.close();
+    const o2 = await open(browser, { w: WIDE, biz: bizServer([r1]), files, hash: '#inspector.nowhere' });
+    await o2.page.waitForSelector('[data-open="' + MINE + '"]');
+    await o2.page.waitForTimeout(300);
+    ok('an address naming no template of his opens nothing, and says nothing wrong', await o2.page.locator('[data-edit]').isHidden() && o2.errs.length === 0);
+    await o2.ctx.close();
+  });
 
   // His design bar (the lead, 2026-11-26): measured at 375, 393 and 430 wide, and in large text, with real long names.
   const LONG = 'Smith & Daughters Home Inspection — Full Residential Walkthrough with Pool, Spa and Outbuildings';

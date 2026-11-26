@@ -691,10 +691,17 @@
       renderList();
     });
   }
+  /* /template#<id>: that template opens (from /templates after an import), unless he opened one himself first. */
+  function fromAddress() {
+    var id = decodeURIComponent((window.location.hash || '').slice(1));
+    if (!id || open || showing) return;
+    if (id === OURS) { choose(null); return; }
+    if (standing(biz[TPL + '/' + id])) choose(id);
+  }
   auth.current().then(function (s) {
     if (!s) return;
     main.hidden = false;
-    ours().catch(function () { return null; }).then(refresh);
+    ours().catch(function () { return null; }).then(refresh).then(fromAddress);
   });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') refresh(); });
   setInterval(function () { if (document.visibilityState === 'visible') refresh(); }, FALLBACK);
