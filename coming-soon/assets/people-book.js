@@ -7,7 +7,10 @@
   'use strict';
   var auth = window.InspyxAuth;
   if (!auth) return;
-  var DEADLINE = 20000, KIND = 'inspector_contacts';
+  // One book per sync kind (2026-11-26): People's (inspector_contacts) and, for bringing in past inspections, the kept
+  // past inspections (past_inspections, I2's schema v43). Each holds its kind's rows, deleted ones too.
+  function makeBook(KIND) {
+  var DEADLINE = 20000;
   var ROLES = ['client', 'buyer_agent', 'listing_agent'];
   // The page's own limits, in characters (the sync's rules take any length the phone holds; these keep a typed
   // person tidy).
@@ -100,7 +103,7 @@
     }, function () { return 'failed'; });
   }
 
-  window.InspyxPeopleBook = {
+  return {
     start: function (onChange) {
       var who = auth.who();
       if (!who) return;
@@ -131,4 +134,7 @@
     pull: pull,
     newDraft: function () { return { id: window.crypto.randomUUID(), at: 0, last: 0 }; },
   };
+  }
+  window.InspyxPeopleBook = makeBook('inspector_contacts');
+  window.InspyxPastBook = makeBook('past_inspections');
 })();

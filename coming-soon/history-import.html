@@ -18,6 +18,7 @@
 <script src="/assets/people-book.js" defer></script>
 <script src="/assets/import/inspyx_import.js" defer></script>
 <script src="/assets/contacts-import.js" defer></script>
+<script src="/assets/past-store.js" defer></script>
 <script src="/assets/people-import.js" defer></script>
 </head>
 <body class="has-dash">
@@ -36,21 +37,21 @@
 <main class="pi" data-pi data-mode="history" hidden>
 <p class="pi-back"><a href="/people">← People</a></p>
 <h1>Bring in past inspections</h1>
-<p class="pi-lede">Your inspection history from the app you used before, from its export: Inspyx reads every inspection, and brings the clients and agents it names into People now. Keeping the inspections themselves on your list is coming next.</p>
+<p class="pi-lede">Your inspection history from the app you used before, from its export: Inspyx keeps every inspection on your list, here and on your phone, and brings the clients and agents it names into People. One you already have is never kept twice.</p>
 <figure class="pi-how" aria-label="How it works, in three steps">
 <div class="pi-how-stage" aria-hidden="true">
 <div class="pi-how-scene pi-how-a"><span class="pi-how-file"><b>CSV</b>inspections.csv</span><span class="pi-how-drop">Drop your file here</span></div>
 <div class="pi-how-scene pi-how-b"><span class="pi-how-col"><i>Insp. Date</i><em>Date</em></span><span class="pi-how-col"><i>Property</i><em>Address</em></span><span class="pi-how-col"><i>Buyer</i><em>Client</em></span></div>
-<div class="pi-how-scene pi-how-c"><span class="pi-how-btn">Bring 86 people into People</span><span class="pi-how-done">86 in People. Undo</span></div>
+<div class="pi-how-scene pi-how-c"><span class="pi-how-btn">Keep 214 inspections, bring 86 people in</span><span class="pi-how-done">214 kept, 86 in People. Undo</span></div>
 <span class="pi-how-finger"></span>
 <span class="pi-how-tip" data-n="1">Drop your old app’s inspection export, so Inspyx reads your history</span>
 <span class="pi-how-tip" data-n="2">Check each column’s meaning, so dates, addresses and clients land right</span>
-<span class="pi-how-tip" data-n="3">Bring their people in, so your clients and agents are in People on your phone too</span>
+<span class="pi-how-tip" data-n="3">Keep them, so your history and its people are on your list and your phone</span>
 </div>
 <figcaption class="pi-how-steps">
 <span class="pi-how-step" data-n="1">Drop your export file (CSV or Excel)</span>
 <span class="pi-how-step" data-n="2">Check what each column holds</span>
-<span class="pi-how-step" data-n="3">Bring their clients and agents into People</span>
+<span class="pi-how-step" data-n="3">Keep them, with their clients and agents. Undo is one tap</span>
 </figcaption>
 </figure>
 <label class="pi-drop" data-drop>
@@ -64,6 +65,7 @@
 <p class="pi-note" data-noname hidden>Pick the column that holds the date, the address or the client: an inspection can’t be read without one.</p>
 <div class="pi-cols-wrap"><table class="pi-cols"><thead><tr><th>Column</th><th>First value</th><th>Holds</th></tr></thead><tbody data-cols></tbody></table></div>
 <h2 data-count></h2>
+<div class="pi-sum" data-insp-sum></div>
 <p class="pi-note" data-cut hidden></p>
 <p class="pi-people-n" data-people-n></p>
 <div class="pi-sum" data-sum></div>
@@ -80,6 +82,18 @@
 
 <template data-t="words">
 <span data-w="reading">Reading your file…</span>
+<span data-w="keep-1">1 new to keep</span>
+<span data-w="keep-n">{n} new to keep</span>
+<span data-w="already-1">1 on your list already</span>
+<span data-w="already-n">{n} on your list already</span>
+<span data-w="go-both">Keep {k} inspections and bring {n} people in</span>
+<span data-w="go-insp-1">Keep 1 inspection</span>
+<span data-w="go-insp-n">Keep {n} inspections</span>
+<span data-w="keeping">Keeping your inspections… {done} of {n}</span>
+<span data-w="done-insp-1">1 inspection kept on your list.</span>
+<span data-w="done-insp-n">{n} inspections kept on your list.</span>
+<span data-w="done-past-broke">{k} of {n} inspections are kept; then the connection broke. Undo takes them back; or bring the file in again later, and none is kept twice.</span>
+
 <span data-w="people-n">It names {clients} clients and {agents} agents. Here is what each brings to People:</span>
 <span data-w="too-big">This file is over 10 MB. Export fewer people at a time, or save it as CSV.</span>
 <span data-w="no-engine">This page couldn’t start its file reader. Reload the page.</span>
@@ -96,13 +110,13 @@
 <span data-w="line">Line {line}: {reason}</span>
 <span data-w="go-1">Bring 1 person into People</span>
 <span data-w="go-n">Bring {n} people into People</span>
-<span data-w="go-none">Their people are all in People already</span>
+<span data-w="go-none">Nothing new: you have these already</span>
 <span data-w="not-used">Not used</span>
 <span data-w="role-client">Client</span>
 <span data-w="role-buyer_agent">Buyer’s agent</span>
 <span data-w="role-listing_agent">Listing agent</span>
 <span data-w="bringing">Bringing them in… {done} of {n}</span>
-<span data-w="done">Done: {n} people in People. They’ll be on your phone within a few minutes. Keeping the inspections themselves is coming next.</span>
+<span data-w="done">{n} people in People. They’ll be on your phone within a few minutes.</span>
 <span data-w="done-part">{kept} of {n} are in People. The rest didn’t go through (a change from your phone may be newer): try that file again later; nothing is kept twice.</span>
 <span data-w="failed">That didn’t go through. Nothing more was brought in; what’s listed in People is kept. Try again.</span>
 <span data-w="undoing">Taking them back out…</span>
