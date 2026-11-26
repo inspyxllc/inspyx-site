@@ -110,7 +110,7 @@ function row(id, name, text, at, base) {
     ['no_part', [{ op: 'move-item', ref: item.ref, stop: id + '.nowhere', to: 0 }]],
     ['not_finding', [{ op: 'add-line', key: 'k', item: item.ref, kind: 'limitation', name: 'X', rating: 'safety' }]],
     ['no_rating', [{ op: 'rating-label', id: 'urgent', label: 'Urgent' }]],
-  ].map(([want, edits]) => ({ want, got: E.apply(start, edits).problem || null }));
+  ].map(([want, edits]) => ({ want, got: E.apply(start, edits).problem || null, edits }));
   for (const p of problems) if (p.want !== p.got) throw new Error('problem ' + p.want + ' gave ' + p.got);
 
   const files = {

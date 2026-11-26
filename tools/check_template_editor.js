@@ -60,7 +60,7 @@ function bizServer(rows0) {
     const rows = [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row);
     return { rows, next: seq, more: false, skipped: [], applied };
   };
-  return { answer, pushed, held, put(r) { held.set(r.kind + '/' + r.id, { row: r, seq: ++seq }); }, set down(v) { down = v; } };
+  return { answer, pushed, held, gate: null, put(r) { held.set(r.kind + '/' + r.id, { row: r, seq: ++seq }); }, set down(v) { down = v; } };
 }
 
 async function open(browser, o) {
@@ -75,7 +75,9 @@ async function open(browser, o) {
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url(), cors = { 'access-control-allow-origin': '*' };
     if (u.startsWith(SERVER + '/functions/v1/sync')) {
-      const a = o.biz.answer(JSON.parse(req.postData() || '{}'));
+      const b0 = JSON.parse(req.postData() || '{}');
+      if (o.biz.gate && (b0.push || []).length) await o.biz.gate;
+      const a = o.biz.answer(b0);
       return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(a) });
     }
     if (u.startsWith(SERVER + '/storage/v1/object/')) {
@@ -89,6 +91,7 @@ async function open(browser, o) {
       }
       if (req.method() === 'GET' && tail.indexOf('authenticated/business-templates/') === 0) {
         const name = tail.slice('authenticated/business-templates/'.length);
+        if (o.fileGate && o.fileGate[name]) await o.fileGate[name];
         fileCalls.push({ method: 'GET', name });
         if (!files.has(name)) return route.fulfill({ status: 400, contentType: 'application/json', headers: cors, body: JSON.stringify({ statusCode: '404' }) });
         return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: files.get(name) });
@@ -164,8 +167,15 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
         await page.screenshot({ path: path.join(SHOTS, 'te-edit-' + label + '.png'), fullPage: false });
         await page.screenshot({ path: path.join(SHOTS, 'te-top-' + label + '.png'), fullPage: false, clip: { x: 0, y: 0, width: w, height: 900 } });
       }
+      let open1; biz.gate = new Promise((r) => { open1 = r; });
       await page.locator('[data-save]').click();
+      await until(async () => (await page.locator('[data-edit] [data-k]:not([disabled])').count()) === 0);
+      ok(label + ': while it saves, nothing in the editor can be changed (what he types then would be lost)',
+        (await page.locator('[data-edit] [data-k]').count()) > 0 && (await page.locator('[data-edit] [data-k]:not([disabled])').count()) === 0 && await page.locator('[data-find]').isDisabled() &&
+        (await page.locator('[data-edit] .te-mini:not([disabled]), [data-edit] [data-item-to]:not([disabled])').count()) === 0);
+      open1(); biz.gate = null;
       await until(async () => /^Saved/.test(await said(page)));
+      ok(label + ': saved, every field can be changed again', (await page.locator('[data-edit] [data-k][disabled]').count()) === 0);
       const want = TE.apply(V1, [{ op: 'template', name: 'Oak Street Walkthrough' }, { op: 'stop', ref: STOP.ref, name: 'Outside, all around' },
         { op: 'item', ref: ITEM.ref, label: 'Grading and drainage' }, { op: 'line', item: ITEM.ref, kind: 'deficiency', position: DEF.position,
           text: 'Soil slopes toward the house on the [side] side.', rating: 'safety', recommendation: 'Have a grading contractor correct the slope.' }]);
@@ -251,16 +261,54 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
           : d.length === 0 && await said(page) === 'Your own copy is made. Change anything; Save makes its next version.'),
         JSON.stringify([p.map((x) => x.id), d.map((x) => x.data.templateId), await said(page)]));
       if (!makesDefault) {
+        await page.fill('[data-name]', 'My Walkthrough, changing');
         await page.locator('[data-use]').click();
         await until(async () => /^New inspections now start from/.test(await said(page)));
         const d2 = biz.pushed.filter((r) => r.kind === 'template_default');
         ok('“Use for new inspections” makes it the one they start from, and says so', d2.length === 1 && d2[0].data.templateId === MINE && d2[0].updated_at > 900 &&
           await said(page) === 'New inspections now start from “My Walkthrough”, instead of “Converted one”.' && await page.locator('[data-used]').isVisible(), await said(page));
+        ok('and a change not saved yet stays, still counted', (await page.locator('[data-name]').inputValue()) === 'My Walkthrough, changing' &&
+          (await page.locator('[data-count]').textContent()).trim() === '1 change' && await page.locator('[data-bar]').isVisible());
       }
       ok('no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
       await o.ctx.close();
     });
   }
+
+  await group('answers that come back late', async () => {
+    const r1 = rowOf(MINE, 'My Walkthrough', V1, 1000);
+    const biz = bizServer([r1, dflt(MINE, 1000)]), files = new Map([[fileName(r1), Buffer.from(V1)]]), fileGate = {};
+    const o = await open(browser, { w: WIDE, biz, files, fileGate });
+    const { page } = o;
+    await page.waitForSelector('[data-open="' + MINE + '"]');
+    await page.locator('[data-open="' + MINE + '"]').click();
+    await until(async () => (await page.locator('.te-stop').count()) > 0);
+    // The phone saves version 2; the page hears of it, and its file is slow to come.
+    const v2 = TE.apply(V1, [{ op: 'item', ref: O1.stops[1].items[0].ref, label: 'Changed on the phone' }]);
+    const r2 = rowOf(MINE, 'My Walkthrough', v2.text, 2000, 'copied', await TS.contentKey(V1, digest));
+    files.set(fileName(r2), Buffer.from(v2.text)); biz.put(r2);
+    let release; fileGate[fileName(r2)] = new Promise((r) => { release = r; });
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await until(async () => o.fileCalls.some((c) => c.method === 'GET' && c.name === fileName(r2)));
+    await page.fill('[data-name]', 'Typed while it loaded');
+    release();
+    await page.waitForTimeout(400);
+    ok('a reload from the phone that arrives after he started typing doesn’t wipe it: his change stays, still counted',
+      (await page.locator('[data-name]').inputValue()) === 'Typed while it loaded' && (await page.locator('[data-count]').textContent()).trim() === '1 change');
+    await page.locator('[data-discard]').click();
+    // Opened one, then another before the first came: the last one asked for stays.
+    let release2; fileGate[fileName(r2)] = new Promise((r) => { release2 = r; });
+    await page.locator('[data-open="' + MINE + '"]').click();
+    await until(async () => o.fileCalls.filter((c) => c.method === 'GET' && c.name === fileName(r2)).length >= 2);
+    await page.locator('[data-open="ours"]').click();
+    await until(async () => await page.locator('[data-ro]').isVisible());
+    release2();
+    await page.waitForTimeout(400);
+    ok('opened one, then Inspyx’s before the first came: Inspyx’s stays open', await page.locator('[data-ro]').isVisible() &&
+      (await page.locator('[data-edit] [data-k]:not([disabled])').count()) === 0);
+    ok('no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
+    await o.ctx.close();
+  });
 
   // His design bar (the lead, 2026-11-26): measured at 375, 393 and 430 wide, and in large text, with real long names.
   const LONG = 'Smith & Daughters Home Inspection — Full Residential Walkthrough with Pool, Spa and Outbuildings';

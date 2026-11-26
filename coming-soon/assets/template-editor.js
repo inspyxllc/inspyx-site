@@ -278,6 +278,11 @@
       names.forEach(function (n) { if (n.key !== here) { var o = el('option', null, n.name); o.value = n.key; sel.appendChild(o); } });
     });
   }
+  function defaultControls() {
+    var ro = open.readOnly, used = usedId(), isUsed = ro ? (used === OURS || used === null) : used === open.id;
+    $('[data-use]').hidden = ro || isUsed;
+    $('[data-used]').hidden = !isUsed;
+  }
   function renderOpen() {
     var o = open.outline, ro = open.readOnly;
     ops = [];
@@ -287,9 +292,7 @@
     $('[data-ver]').textContent = words('version', { v: o.version });
     $('[data-ro]').hidden = !ro;
     $('[data-copy]').hidden = !ro;
-    var used = usedId(), isUsed = ro ? (used === OURS || used === null) : used === open.id;
-    $('[data-use]').hidden = ro || isUsed;
-    $('[data-used]').hidden = !isUsed;
+    defaultControls();
     ratingsEl(ro);
     // Drawn again after a save: the stops he had open stay open (by ref), where he was.
     var wasOpen = all('.te-stop[open]', stops).map(function (d) { return d.getAttribute('data-stop'); });
@@ -361,7 +364,7 @@
   });
   stops.addEventListener('change', function (e) {
     var sel = e.target;
-    if (!sel.hasAttribute('data-item-to') || !sel.value) return;
+    if (busy || !sel.hasAttribute('data-item-to') || !sel.value) return;
     var it = sel.closest('.te-item'), target = stops.querySelector('.te-stop[data-stop="' + CSS.escape(sel.value) + '"]');
     if (target) moveItem(it, target, all('.te-item', target).length);
   });
@@ -490,19 +493,27 @@
   findIn.addEventListener('input', find);
 
   /* ---- open one ---- */
-  function choose(id, force) {
+  /* Opens [id] (null: Inspyx's). An answer that comes back late is shown only if it is still the last one asked for,
+     and, for a reload in the background ([quiet]: changed on another device), only if nothing was changed here
+     meanwhile (Codex on #101). */
+  var showing = 0;
+  function choose(id, force, quiet) {
     if (busy && !force) return;
     if (!force && open && changed() && !window.confirm(words('leave'))) return;
-    say(null);
+    var mine = ++showing;
+    var still = function () { return mine === showing && !(quiet && open && changed()); };
+    if (!quiet) say(null);
     if (id === null) {
       return ours().then(function (c) {
+        if (!still()) return;
         open = { id: null, row: null, text: c.text, outline: TE.outline(c.text), readOnly: true };
         renderOpen();
-      }, function () { say('p-failed'); });
+      }, function () { if (still()) say('p-failed'); });
     }
     var row = biz[TPL + '/' + id];
     if (!standing(row)) return;
     return readFile(row).then(function (text) {
+      if (!still()) return;
       if (text === null) { say('p-failed'); return; }
       open = { id: id, row: row, text: text, outline: TE.outline(text), readOnly: false };
       renderOpen();
@@ -510,7 +521,16 @@
   }
 
   /* ---- save: on the newest version there, after a whole pull; once more when another device won the race ---- */
-  function lock(on) { busy = on; all('[data-save],[data-discard],[data-copy],[data-use]', main).forEach(function (b) { b.disabled = on; }); }
+  /* While a save (or a copy, or a switch) is on its way, nothing in the editor can change: the save carries the
+     changes as they were when tapped, and draws the editor again from what it saved (Codex on #101). */
+  function lock(on) {
+    busy = on;
+    all('[data-save],[data-discard],[data-copy],[data-use]', main).forEach(function (b) { b.disabled = on; });
+    all('[data-k], [data-find]', edit).forEach(function (b) { b.disabled = on || (open && open.readOnly && b.hasAttribute('data-k')); });
+    // The steps too: add, move, delete.
+    all('.te-mini, [data-item-to]', edit).forEach(function (b) { b.disabled = on; });
+    edit.classList.toggle('is-busy', on);
+  }
   function saveOnce(list, first) {
     return pull().then(function (ok) {
       if (!ok) return { problem: 'failed' };
@@ -596,7 +616,8 @@
     queue = run.catch(function () { return null; });
     run.then(function (k) {
       if (k !== 'ok') { say('p-' + (k === 'changed' ? 'failed' : k)); return; }
-      renderOpen();
+      // Only what says which one new inspections use: his unsaved changes stay as they are (Codex on #101).
+      defaultControls(); renderList();
       if (before && before !== open.outline.name) say('now-used-instead', { name: open.outline.name, was: before });
       else say('now-used', { name: open.outline.name });
     }, function () { say('p-failed'); }).then(function () { lock(false); });
@@ -610,7 +631,7 @@
       // The open one changed on another device and nothing is changed here: show the newest.
       if (open && open.id && !busy && !changed()) {
         var row = biz[TPL + '/' + open.id];
-        if (standing(row) && row.data.sha256 !== open.row.data.sha256) choose(open.id, true);
+        if (standing(row) && row.data.sha256 !== open.row.data.sha256) choose(open.id, true, true);
       }
       renderList();
     });
