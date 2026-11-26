@@ -320,27 +320,34 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
       }));
       return { ctx, page, asked, urls, said, seen };
     }
+    /* The report's own open, apart from the repair request builder's own question on a person's own link
+       ({key, repair: "get"}, repair.js since inspyx-site#91), which the page asks right after it opens. */
+    const isRepair = (a) => { try { return 'repair' in (JSON.parse(a.body || 'null') || {}); } catch (e) { return false; } };
+    const opens = (asked) => asked.filter((a) => !isRepair(a));
     const noKeyAnywhere = (r) => r.urls.every((u) => !u.includes(KEY)) && r.said.every((t) => !t.includes(KEY)) && !r.seen.href.includes(KEY);
 
     const fresh = await keyed('/r#' + KEY);
     ok('a new link (/r#<key>) opens the report, asked once by POST with only the key in the body',
-      fresh.seen.h1 === sample.report.cover.address && fresh.asked.length === 1 && fresh.asked[0].method === 'POST' &&
-      fresh.asked[0].url === API && same(JSON.parse(fresh.asked[0].body), { key: KEY }), JSON.stringify(fresh.asked).slice(0, 200));
+      fresh.seen.h1 === sample.report.cover.address && opens(fresh.asked).length === 1 && opens(fresh.asked)[0].method === 'POST' &&
+      opens(fresh.asked)[0].url === API && same(JSON.parse(opens(fresh.asked)[0].body), { key: KEY }), JSON.stringify(fresh.asked).slice(0, 200));
+    ok('the repair builder asks once, by POST, with the key and nothing else of the report',
+      fresh.asked.filter(isRepair).length === 1 && fresh.asked.filter(isRepair).every((a) => a.method === 'POST' && a.url === API &&
+        same(JSON.parse(a.body), { key: KEY, repair: 'get' })), JSON.stringify(fresh.asked.filter(isRepair)).slice(0, 200));
     ok('the key leaves the address at once: it reads /r, with nothing after it', fresh.seen.path === '/r' && fresh.seen.hash === '', fresh.seen.href);
     ok('the key is in no address the page asked for, and in nothing it logged', noKeyAnywhere(fresh), fresh.urls.filter((u) => u.includes(KEY)).concat(fresh.said.filter((t) => t.includes(KEY))).join(' | ').slice(0, 200));
     ok('the key is kept for this tab only', fresh.seen.kept === KEY, String(fresh.seen.kept));
     // A reload, in the same tab: the address no longer holds the key, and the report still opens.
-    const askedBefore = fresh.asked.length;
+    const askedBefore = opens(fresh.asked).length;
     await fresh.page.reload({ waitUntil: 'load' });
     await fresh.page.waitForFunction(() => !document.getElementById('app').hasAttribute('aria-busy'), null, { timeout: 8000 }).catch(() => {});
     const again = await fresh.page.evaluate(() => ({ h1: (document.querySelector('h1') || {}).textContent || '', href: location.href }));
-    ok('a reload in the same tab opens it again, asked the same way', again.h1 === sample.report.cover.address && fresh.asked.length === askedBefore + 1 &&
-      fresh.asked[fresh.asked.length - 1].method === 'POST' && !again.href.includes(KEY), JSON.stringify(again));
+    ok('a reload in the same tab opens it again, asked the same way', again.h1 === sample.report.cover.address && opens(fresh.asked).length === askedBefore + 1 &&
+      opens(fresh.asked)[opens(fresh.asked).length - 1].method === 'POST' && !again.href.includes(KEY), JSON.stringify(again));
     await fresh.ctx.close();
 
     const old = await keyed('/r/' + KEY);
     ok('an old link (/r/<key>) still opens, asked by POST the same way, and its address becomes /r',
-      old.seen.h1 === sample.report.cover.address && old.asked.length === 1 && old.asked[0].method === 'POST' && same(JSON.parse(old.asked[0].body), { key: KEY }) &&
+      old.seen.h1 === sample.report.cover.address && opens(old.asked).length === 1 && opens(old.asked)[0].method === 'POST' && same(JSON.parse(opens(old.asked)[0].body), { key: KEY }) &&
       old.seen.path === '/r' && noKeyAnywhere(old), JSON.stringify([old.seen.path, old.asked.length]));
     await old.ctx.close();
 
