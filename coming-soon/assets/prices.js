@@ -237,13 +237,12 @@
     $('[data-reinsp]', main).hidden = !REINSPECTION_ID;
     var rein = REINSPECTION_ID ? held('price_services', REINSPECTION_ID) : null, reinOn = !!(rein && rein.deletedAt == null && rows['price_services/' + REINSPECTION_ID].deleted_at == null);
     $('[data-reinsp-on]', main).hidden = reinOn;
-    $('[data-reinsp-edit]', main).hidden = !reinOn;
     $('[data-reinsp-now]', main).hidden = !reinOn;
-    if (reinOn) $('[data-reinsp-now]', main).textContent = words('reinsp-on') + ' ' + serviceSummary(rein);
+    if (reinOn) $('[data-reinsp-now]', main).textContent = words('reinsp-on');
     main.querySelector('[data-reinsp]').classList.toggle('is-on', reinOn);
-    // Reinspection has its own card above: the ordinary list leaves it out (and only the list: a discount or a price
-    // change can still name it; Codex on #107).
-    var list = $('[data-list="services"]', main), svc = services().filter(function (s) { return s.id !== REINSPECTION_ID; });
+    // On, Reinspection is one of his services like any, in the list with its add-ons and price changes (its card above
+    // only offers it while it is off; Codex on #107).
+    var list = $('[data-list="services"]', main), svc = services();
     $('[data-empty="services"]', main).hidden = svc.length > 0;
     list.textContent = '';
     svc.forEach(function (s) {
@@ -396,7 +395,6 @@
   });
 
   $('[data-reinsp-on]', main).addEventListener('click', function () { if (REINSPECTION_ID) openService(null, null, REINSPECTION_ID); });
-  $('[data-reinsp-edit]', main).addEventListener('click', function () { openService(held('price_services', REINSPECTION_ID), null); });
 
   $('[data-delete]', svcForm).addEventListener('click', function () {
     var b = $('[data-delete]', svcForm);

@@ -219,11 +219,12 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
       on[0].data.name === 'Reinspection' && on[0].data.feeCents === 17500 && on[0].data.minutes === 60 && on[0].data.parentId === null && on[0].data.position === 2 &&
       on[0].deleted_at === null, JSON.stringify(on[0] && on[0].data));
     if (process.env.SHOTS) await page.locator('[data-reinsp]').screenshot({ path: require('path').join(process.env.SHOTS, 'reinsp-on-wide.png') });
-    ok('the card says it’s on, with his price; still not in the list twice', await until(async () => await page.locator('[data-reinsp-now]').isVisible()) &&
-      (await page.locator('[data-reinsp-now]').textContent()).indexOf('On: clients can book it.') === 0 && (await page.locator('[data-reinsp-now]').textContent()).indexOf('$175') > 0 &&
-      !(await vis(page, '[data-list="services"] > li > .prc-row [data-v="name"]')).includes('Reinspection'));
-    // Off: Delete from its Edit.
-    await page.click('[data-reinsp-edit]');
+    ok('on: the card says so; Reinspection is in his services once, as any service (its add-ons and price changes there too)', await until(async () => await page.locator('[data-reinsp-now]').isVisible()) &&
+      (await page.locator('[data-reinsp-now]').textContent()).indexOf('On: clients can book it.') === 0 && !(await page.locator('[data-reinsp-on]').isVisible()) &&
+      (await vis(page, '[data-list="services"] > li > .prc-row [data-v="name"]')).filter((n) => n === 'Reinspection').length === 1 &&
+      (await page.locator('[data-list="services"] > li[data-id="' + RID + '"] [data-add="addon"]').count()) === 1);
+    // Off: Delete from its card in the list.
+    await page.locator('[data-list="services"] > li[data-id="' + RID + '"] [data-edit]').first().click();
     await page.click(f + ' [data-delete]'); await page.click(f + ' [data-delete]');
     await until(async () => !(await page.locator('[data-dialog="service"]').isVisible()));
     const gone = s.held.get('price_services/' + RID);
@@ -242,7 +243,7 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     // A discount just for reinspections: it offers Reinspection, and saving an unrelated change keeps it just for them.
     s.put(s.row('price_discounts', { id: 'disc-reinsp', ownerAccountId: ME, code: 'BACKAGAIN', kind: 'percent', value: 1000, appliesToJson: JSON.stringify([RID]), maxUses: null,
       expiresAt: null, active: true, createdAt: T, updatedAt: T, deletedAt: null }));
-    await page.reload(); await page.waitForSelector('[data-reinsp-edit]:not([hidden])');
+    await page.reload(); await page.waitForSelector('[data-reinsp-now]:not([hidden])');
     await page.locator('[data-list="discounts"] li', { hasText: 'BACKAGAIN' }).locator('[data-edit]').click();
     const dl = page.locator('[data-dialog="discount"]');
     await until(async () => await dl.isVisible());
