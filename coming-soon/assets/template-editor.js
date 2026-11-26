@@ -440,12 +440,20 @@
     out.forEach(function (e) { delete e.added; });
     return out;
   }
+  /* The bar's height plus the gap under it (above a phone's tab bar), as room under the editor. */
+  function roomForBar() {
+    var room = 0;
+    if (!bar.hidden) room = Math.ceil(bar.getBoundingClientRect().height + (parseFloat(getComputedStyle(bar).bottom) || 0) + 12);
+    document.documentElement.style.setProperty('--te-bar', room + 'px');
+  }
+  window.addEventListener('resize', function () { roomForBar(); });
   function changed() {
     var boxes = all('[data-k]', edit), diff = boxes.filter(function (b) { return b.value !== b.getAttribute('data-was'); });
     var n = open && !open.readOnly ? diff.length + ops.length : 0;
     boxes.forEach(function (b) { b.classList.toggle('is-changed', b.value !== b.getAttribute('data-was')); });
     bar.hidden = n === 0;
     $('[data-count]').textContent = plural('changes', n);
+    roomForBar();
     return n;
   }
   edit.addEventListener('input', function (e) {
@@ -572,11 +580,15 @@
   $('[data-use]').addEventListener('click', function () {
     if (busy || !open || open.readOnly) return;
     lock(true); say('using');
-    var id = open.id, me = auth.who().id;
+    var id = open.id, me = auth.who().id, before = null;
     var run = queue.then(function () {
       return pull().then(function (ok) {
         if (!ok) return 'failed';
         var d = biz[TPL_DEFAULT + '/default'], at = Math.max(Date.now(), d ? d.updated_at + 1 : 0);
+        // The one it replaces, named when it says so: never a silent change of the one he chose (the lead, 2026-11-26).
+        var was = standing(d) ? d.data.templateId : null;
+        before = was === null || was === OURS ? (copyFile ? copyFile.sourceName : null)
+          : (standing(biz[TPL + '/' + was]) ? biz[TPL + '/' + was].data.name : null);
         return send([{ kind: TPL_DEFAULT, id: 'default', updated_at: at, deleted_at: null,
           data: { id: 'default', ownerAccountId: me, templateId: id, updatedAt: at, deletedAt: null } }]);
       });
@@ -585,7 +597,8 @@
     run.then(function (k) {
       if (k !== 'ok') { say('p-' + (k === 'changed' ? 'failed' : k)); return; }
       renderOpen();
-      say('now-used', { name: open.outline.name });
+      if (before && before !== open.outline.name) say('now-used-instead', { name: open.outline.name, was: before });
+      else say('now-used', { name: open.outline.name });
     }, function () { say('p-failed'); }).then(function () { lock(false); });
   });
 

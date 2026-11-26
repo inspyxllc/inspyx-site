@@ -70,6 +70,7 @@ async function open(browser, o) {
   page.setDefaultTimeout(8000);
   const errs = [], away = [], fileCalls = [], files = o.files;
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
   page.on('dialog', (d) => d.dismiss());
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url(), cors = { 'access-control-allow-origin': '*' };
@@ -231,11 +232,12 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
   for (const [what, picked, makesDefault] of [['new inspections start from ours: his copy becomes the one they start from', 'inspyx.walkthrough', true],
     ['a default he picked himself is kept', 'inspector.converted-one', false], ['no default at all: his copy becomes it', null, true]]) {
     await group('make your own copy: ' + what, async () => {
-      const biz = bizServer(picked ? [dflt(picked, 900)] : []), files = new Map();
+      const conv = rowOf('inspector.converted-one', 'Converted one', V1.split(MINE).join('inspector.converted-one').split('"My Walkthrough"').join('"Converted one"'), 800, 'converted');
+      const biz = bizServer(picked ? [dflt(picked, 900)].concat(picked === 'inspector.converted-one' ? [conv] : []) : []), files = new Map();
       const o = await open(browser, { w: WIDE, biz, files });
       const { page } = o;
       await page.waitForSelector('[data-open="ours"]');
-      ok('no own template yet: it says so, and how to get one', await page.locator('[data-mine-none]').isVisible());
+      if (picked !== 'inspector.converted-one') ok('no own template yet: it says so, and how to get one', await page.locator('[data-mine-none]').isVisible());
       await page.locator('[data-open="ours"]').click();
       await until(async () => await page.locator('[data-copy]').isVisible());
       await page.locator('[data-copy]').click();
@@ -253,9 +255,61 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
         await until(async () => /^New inspections now start from/.test(await said(page)));
         const d2 = biz.pushed.filter((r) => r.kind === 'template_default');
         ok('“Use for new inspections” makes it the one they start from, and says so', d2.length === 1 && d2[0].data.templateId === MINE && d2[0].updated_at > 900 &&
-          await said(page) === 'New inspections now start from “My Walkthrough”.' && await page.locator('[data-used]').isVisible());
+          await said(page) === 'New inspections now start from “My Walkthrough”, instead of “Converted one”.' && await page.locator('[data-used]').isVisible(), await said(page));
       }
       ok('no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
+      await o.ctx.close();
+    });
+  }
+
+  // His design bar (the lead, 2026-11-26): measured at 375, 393 and 430 wide, and in large text, with real long names.
+  const LONG = 'Smith & Daughters Home Inspection — Full Residential Walkthrough with Pool, Spa and Outbuildings';
+  const longText = TE.apply(V1, [{ op: 'template', name: LONG }, { op: 'stop', ref: STOP.ref, name: 'Mechanical closet, water heater, air handler and condensate drain' },
+    { op: 'item', ref: ITEM.ref, label: 'Grading, drainage, downspout extensions and splash blocks along the foundation' }]).text;
+  for (const w of [375, 393, 430]) for (const big of [false, true]) {
+    await group('measured at ' + w + (big ? ', large text' : ''), async () => {
+      const r = rowOf(MINE, LONG, longText, 1000);
+      const biz = bizServer([r, dflt(MINE, 1000)]), files = new Map([[fileName(r), Buffer.from(longText)]]);
+      const o = await open(browser, { w, h: 812, biz, files });
+      const { page } = o;
+      // Large text: the page drawn a third bigger, as a phone's larger text setting does.
+      if (big) await page.evaluate(() => { document.documentElement.style.zoom = '1.35'; });
+      await page.waitForSelector('[data-open="' + MINE + '"]');
+      await page.locator('[data-open="' + MINE + '"]').click();
+      await until(async () => (await page.locator('.te-stop').count()) > 0);
+      const first = page.locator('.te-stop').first();
+      await openStop(first);
+      await first.locator('[data-k*="\\"op\\":\\"stop\\""]').fill('Mechanical closet, water heater, air handler and condensate drain, renamed');
+      const at = w + (big ? ' large' : '');
+      const fit = await page.evaluate(() => {
+        const cut = [].filter.call(document.querySelectorAll('.te-card b, .te-stop > summary b, .te-lede, .te-how-step, .te-say, .te-how-tip, .te-acts, .te-bar'), (e) => e.offsetParent && e.scrollWidth > e.clientWidth + 1)
+          .map((e) => e.className + ':' + e.scrollWidth + '>' + e.clientWidth);
+        const wide = [].filter.call(document.querySelectorAll('main *'), (e) => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1 && e.offsetParent)
+          .slice(0, 4).map((e) => e.tagName + '.' + e.className + ':' + Math.round(e.getBoundingClientRect().right));
+        return { ok: document.documentElement.scrollWidth <= document.documentElement.clientWidth && !cut.length && !wide.length, cut, wide };
+      });
+      ok(at + ': nothing off the side; no long name cut off (cards, stop titles, tips, the bar)', fit.ok, JSON.stringify([fit.cut, fit.wide]));
+      // The last field of the open stop, focused: above the bar, never under it.
+      const last = first.locator('[data-k]').last();
+      await last.focus();
+      await page.keyboard.press('End');
+      await page.waitForTimeout(300);
+      const clear = await page.evaluate(() => {
+        const bar = document.querySelector('[data-bar]').getBoundingClientRect(), f = document.activeElement.getBoundingClientRect();
+        return { ok: f.bottom <= bar.top + 1, f: Math.round(f.bottom), bar: Math.round(bar.top) };
+      });
+      ok(at + ': a focused field is never under the changes bar', clear.ok, JSON.stringify(clear));
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForTimeout(200);
+      const end = await page.evaluate(() => {
+        const bar = document.querySelector('[data-bar]').getBoundingClientRect();
+        const fields = [].filter.call(document.querySelectorAll('.te-stop[open] [data-k]'), (x) => x.offsetParent);
+        const f = fields[fields.length - 1].getBoundingClientRect();
+        return { ok: f.bottom <= bar.top + 1, f: Math.round(f.bottom), bar: Math.round(bar.top) };
+      });
+      ok(at + ': scrolled to the end, the last field sits above the bar', end.ok, JSON.stringify(end));
+      if (SHOTS && w === 393) await page.screenshot({ path: path.join(SHOTS, 'te-measure-' + w + (big ? '-large' : '') + '.png') });
+      ok(at + ': no errors', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
       await o.ctx.close();
     });
   }
