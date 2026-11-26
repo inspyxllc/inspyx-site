@@ -97,7 +97,9 @@ async function open(browser, o) {
   const errs = [], away = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
-  await page.route('**/assets/import/inspyx_import.js', (route) => o.noEngine ? route.fulfill({ status: 404, body: '' }) : route.fulfill({ status: 200, contentType: 'application/javascript', body: STAND_IN }));
+  // ENGINE=<path to I2's built inspyx_import.js>: the real reader instead of the stand-in.
+  const REAL = process.env.ENGINE ? require('fs').readFileSync(process.env.ENGINE, 'utf8') : null;
+  await page.route('**/assets/import/inspyx_import.js', (route) => o.noEngine ? route.fulfill({ status: 404, body: '' }) : route.fulfill({ status: 200, contentType: 'application/javascript', body: REAL || STAND_IN }));
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url(), cors = { 'access-control-allow-origin': '*' };
     if (u.startsWith(SERVER + '/functions/v1/sync')) {
@@ -128,12 +130,13 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await pick(page, 'clients.csv', CSV);
       await until(async () => await page.locator('[data-read]').isVisible());
       ok(label + ': it reads the file: how many people, each column with its first value and what it holds', (await page.locator('[data-count]').textContent()) === '5 people in this file' &&
-        (await page.locator('[data-cols] tr').count()) === 4 && (await page.locator('[data-col="1"]').inputValue()) === '');
+        (await page.locator('[data-cols] tr').count()) === 4 && (await page.locator('[data-col="0"]').inputValue()) !== '');
       ok(label + ': the line with no name is left out, and says why', (await page.locator('[data-skipped-n]').textContent()) === '1 line left out' &&
         (await page.locator('[data-skipped-list] li').first().textContent()) === 'Line 4: No name on this line.');
       // Mobile isn't guessed: he says it holds the phone.
-      await page.locator('[data-col="1"]').selectOption('phone');
-      await until(async () => (await page.locator('[data-people] tr').first().locator('td').nth(2).textContent()) === '305-555-0142');
+      // Mobile: he says it holds the phone (the reader may have guessed it already).
+      if ((await page.locator('[data-col="1"]').inputValue()) === '') await page.locator('[data-col="1"]').selectOption({ label: 'Phone' });
+      await until(async () => (await page.locator('[data-people] tr').first().locator('.pi-p').textContent()) === '305-555-0142');
       const pills = await page.locator('[data-sum] .pi-pill').allTextContents();
       ok(label + ': he says what a column holds, and it reads the file again: what each person will do', JSON.stringify(pills) ===
         JSON.stringify(['2 new', '1 you have, with boxes to fill', '1 you’d deleted, brought back', '1 you have already, nothing new']), JSON.stringify(pills));
@@ -163,8 +166,8 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     const many = 'Name,Phone\n' + Array.from({ length: 450 }, (_, i) => 'Agent ' + i + ',555-' + i).join('\n') + '\n';
     await pick(o.page, 'agents.csv', many);
     await until(async () => await o.page.locator('[data-read]').isVisible());
-    ok('an agents file is read as agents (its name says so), and he can switch it', (await o.page.locator('[data-kind="agents"]').getAttribute('aria-checked')) === 'true' &&
-      (await o.page.locator('[data-people] tr').first().locator('td').nth(1).textContent()) === 'Buyer’s agent');
+    ok('an agents file is read as agents (its name says so); the switch says it, no role column', (await o.page.locator('[data-kind="agents"]').getAttribute('aria-checked')) === 'true' &&
+      (await o.page.locator('.pi-people thead th').count()) === 4);
     ok('a long file: the first 50 shown, and it says so', (await o.page.locator('[data-people] tr').count()) === 50 && (await o.page.locator('[data-more]').textContent()) === 'Showing the first 50 of 450.');
     await o.page.locator('[data-go]').click();
     await until(async () => await o.page.locator('[data-done]').isVisible(), 10000);
@@ -182,7 +185,8 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
     await pick(o.page, 'big.csv', 'Name\n' + 'x'.repeat(10 * 1024 * 1024 + 10));
     ok('a file over 10 MB: it says so, and reads nothing', await until(async () => (await said(o.page)).indexOf('This file is over 10 MB') === 0) && await o.page.locator('[data-read]').isHidden());
     await pick(o.page, 'people.pdf', '%PDF');
-    ok('a file the reader can’t read: its own words', await until(async () => (await said(o.page)) === 'This kind of file can’t be read here. Export it as CSV.'));
+    ok('a file the reader can’t read: its own words, and nothing to bring in', await until(async () => (await o.page.locator('[data-say]').getAttribute('data-said')) === 'refused' &&
+      (await said(o.page)).length > 10) && await o.page.locator('[data-read]').isHidden(), await said(o.page));
     await o.ctx.close();
 
     o = await open(browser, { sync: syncServer(seed()), noEngine: true });
@@ -200,7 +204,20 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await until(async () => await o.page.locator('[data-read]').isVisible());
       const fit = await o.page.evaluate(() => ({ side: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
         cut: [].filter.call(document.querySelectorAll('.pi-lede, .pi-how-step, .pi-btn, .pi-pill, .pi-drop-t, [data-count]'), (e) => e.offsetParent && e.scrollWidth > e.clientWidth + 1).map((e) => e.className) }));
-      ok(w + (big ? ' large' : '') + ': nothing off the side, nothing cut off (long names scroll inside their table)', fit.side && !fit.cut.length, JSON.stringify(fit));
+      ok(w + (big ? ' large' : '') + ': nothing off the side, nothing cut off', fit.side && !fit.cut.length, JSON.stringify(fit));
+      const row = await o.page.evaluate(() => {
+        const tr = document.querySelector('[data-people] tr'), e = tr.querySelector('.pi-e'), n = tr.querySelector('.pi-n'), cs = getComputedStyle(e);
+        return { stacked: getComputedStyle(tr).display === 'grid', oneLine: cs.whiteSpace === 'nowrap' && cs.textOverflow === 'ellipsis', tip: e.title,
+          nameWraps: n.getBoundingClientRect().width <= tr.getBoundingClientRect().width, noRole: document.querySelectorAll('.pi-people thead th').length === 4,
+          phoneWhole: tr.querySelector('.pi-p').scrollWidth <= tr.querySelector('.pi-p').clientWidth + 1, emailUsesRow: e.getBoundingClientRect().width >= tr.getBoundingClientRect().width * 0.8 };
+      });
+      ok(w + (big ? ' large' : '') + ': each person stacks, the email on one line ending in “…” (never broken mid-word; whole in its tip), no role column',
+        row.stacked && row.oneLine && row.tip.indexOf('@verylongbrokeragename') > 0 && row.nameWraps && row.noRole && row.phoneWhole && row.emailUsesRow, JSON.stringify(row));
+      const cols = await o.page.evaluate(() => [].map.call(document.querySelectorAll('[data-cols] tr'), (tr) => {
+        const r = tr.getBoundingClientRect(), sel = tr.querySelector('select').getBoundingClientRect(), smp = tr.querySelector('.pi-s'), cs = getComputedStyle(smp);
+        return sel.right <= r.right + 1 && (cs.whiteSpace === 'nowrap' && cs.textOverflow === 'ellipsis') && tr.querySelector('.pi-h').getBoundingClientRect().height < 80;
+      }));
+      ok(w + (big ? ' large' : '') + ': each column a card: its picker inside it, its first value on one line (never letter by letter)', cols.length === 4 && cols.every(Boolean), JSON.stringify(cols));
       if (SHOTS && w === 393) await o.page.screenshot({ path: path.join(SHOTS, 'pi-393' + (big ? '-large' : '') + '.png'), fullPage: true });
       await o.ctx.close();
     });

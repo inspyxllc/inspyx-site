@@ -65,4 +65,27 @@
 .pi-done{margin-top:16px; padding:16px; border-radius:16px; background:#E9F7EF}
 .pi-done-t{margin:0; font-weight:700; color:#16703A}
 @media (max-width: 999.98px){ .pi-how{grid-template-columns:minmax(0, 1fr)} }
-@media (max-width: 599.98px){ .pi{padding:4px 14px 110px} .pi-people th:nth-child(5), .pi-people td:nth-child(5){display:none} }
+@media (max-width: 599.98px){ .pi{padding:4px 14px 110px} }
+/* An email or phone is never broken mid-word: it ends in "…" if it can't fit (its whole value in the tip). */
+.pi-people .pi-e, .pi-people .pi-p{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:0; overflow-wrap:normal}
+.pi-people .pi-e{width:38%} .pi-people .pi-p{width:18%}
+@media (max-width: 699.98px){
+  .pi-people thead{display:none}
+  .pi-people, .pi-people tbody, .pi-people tr{display:block}
+  .pi-people tr{display:grid; grid-template-columns:auto minmax(0, 1fr); column-gap:6px; padding:9px 12px; border-bottom:1px solid #EDF0F5}
+  .pi-people td{padding:0; border:0}
+  .pi-people .pi-n{grid-column:1 / -1; font-weight:700; overflow-wrap:anywhere}
+  .pi-people .pi-p, .pi-people .pi-e{grid-column:1 / -1; width:auto; max-width:none; color:var(--ink-soft, #4A5362); font-size:13.5px}
+  .pi-people .pi-p:empty, .pi-people .pi-e:empty{display:none}
+  /* Each column a small card: its header, its first value on one line, what it holds full width. */
+  .pi-cols thead{display:none}
+  .pi-cols, .pi-cols tbody{display:block}
+  .pi-cols tr{display:grid; grid-template-columns:minmax(0, 1fr); gap:4px; padding:10px 12px; border-bottom:1px solid #EDF0F5}
+  .pi-cols td{display:block; padding:0; border:0}
+  .pi-cols .pi-h{overflow-wrap:anywhere}
+  .pi-cols .pi-s{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13.5px}
+  .pi-cols .pi-s:empty{display:none}
+  .pi-cols select{width:100%}
+  .pi-people .pi-c{grid-column:1 / -1; color:var(--ink-soft, #4A5362); font-size:13px; overflow-wrap:anywhere}
+  .pi-people .pi-c:empty{display:none}
+}

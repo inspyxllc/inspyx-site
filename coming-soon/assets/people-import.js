@@ -87,7 +87,7 @@
       r.fields.forEach(function (f) { var o = el('option', null, f.label); o.value = f.field; sel.appendChild(o); });
       sel.value = c.field || '';
       tr.appendChild(el('td', 'pi-h', c.header || ('#' + (c.index + 1))));
-      tr.appendChild(el('td', 'pi-s', c.sample || ''));
+      var sample = el('td', 'pi-s', c.sample || ''); if (c.sample) sample.title = c.sample; tr.appendChild(sample);
       var td = el('td'); td.appendChild(sel); tr.appendChild(td);
       tb.appendChild(tr);
     });
@@ -100,8 +100,13 @@
     });
     var pb = $('[data-people]'); pb.textContent = '';
     people.slice(0, SHOWN).forEach(function (p) {
+      // The whole file has one role (the Clients / Agents switch says it). On a phone each person stacks: name, then
+      // phone · email · company (the lead, 2026-11-26).
       var tr = el('tr');
-      [p.name, words('role-' + p.role) || p.role, p.phone || '', p.email || '', p.company || ''].forEach(function (v) { tr.appendChild(el('td', null, v)); });
+      tr.appendChild(el('td', 'pi-n', p.name));
+      [['pi-p', p.phone], ['pi-e', p.email], ['pi-c', p.company]].forEach(function (x) {
+        var td = el('td', x[0], x[1] || ''); if (x[1]) td.title = x[1]; tr.appendChild(td);
+      });
       pb.appendChild(tr);
     });
     $('[data-more]').hidden = people.length <= SHOWN;

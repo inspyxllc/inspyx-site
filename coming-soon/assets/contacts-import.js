@@ -107,7 +107,13 @@
       if (!held || (e.action === 'fill' && gone(held)) || (e.action === 'bring_back' && !gone(held))) throw new Error('plan: ' + e.action + ' ' + e.id);
       var d = JSON.parse(JSON.stringify(held.data)), fills = e.fills || {};
       Object.keys(fills).forEach(function (b) { if (BOXES.indexOf(b) < 0) throw new Error('plan: box ' + b); d[b] = fills[b]; });
-      if (e.action === 'bring_back') { d.role = e.row.role; d.deletedAt = null; }
+      // Brought back: the whole row the plan names (I2: the phone's store writes this same row), deleted no more.
+      if (e.action === 'bring_back') {
+        if (!e.row || ROLES.indexOf(e.row.role) < 0 || !e.row.name) throw new Error('plan: bring_back row');
+        d.role = e.row.role; d.name = e.row.name;
+        BOXES.forEach(function (b) { d[b] = tidy(e.row[b]); });
+        d.deletedAt = null;
+      }
       d.updatedAt = changedAt(held, now);
       push.push(rowOf(d));
       changes.push({ id: d.id, name: d.name, added: e.action === 'bring_back', filled: fills });
