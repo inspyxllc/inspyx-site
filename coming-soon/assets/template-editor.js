@@ -473,6 +473,11 @@
     out.forEach(function (e) { delete e.added; });
     return out;
   }
+  /* A category renamed (typed, or by Replace all): every finding's list says the new name at once. */
+  function syncCategory(box) {
+    var id = JSON.parse(box.getAttribute('data-k')).id, name = box.value.trim() || box.getAttribute('data-was');
+    all('select[data-k] option[value="' + CSS.escape(id) + '"]', stops).forEach(function (o) { o.textContent = name; });
+  }
   /* The bar's height plus the gap under it (above a phone's tab bar), as room under the editor. */
   function roomForBar() {
     var room = 0;
@@ -487,6 +492,8 @@
     bar.hidden = n === 0;
     $('[data-count]').textContent = plural('changes', n);
     roomForBar();
+    // Every change (typed, chosen, added, moved, deleted, replaced): the preview shows what Save would keep (Codex on #105).
+    if (preview && !preview.hidden) renderPreview();
     return n;
   }
   edit.addEventListener('input', function (e) {
@@ -494,11 +501,7 @@
     cancelLoads();
     if (e.target.tagName === 'TEXTAREA') grow(e.target);
     if (e.target.closest('.te-stop-head')) stopLabels();
-    if (e.target.closest('[data-cats]')) {
-      // A category renamed: every finding's list says the new name at once.
-      var id = JSON.parse(e.target.getAttribute('data-k')).id, name = e.target.value.trim() || e.target.getAttribute('data-was');
-      all('select[data-k] option[value="' + CSS.escape(id) + '"]', stops).forEach(function (o) { o.textContent = name; });
-    }
+    if (e.target.closest('[data-cats]')) syncCategory(e.target);
     changed(); if (e.target.value) say(null);
   });
   window.addEventListener('resize', function () { all('.te-stop[open]', stops).forEach(growIn); });
@@ -518,6 +521,7 @@
      in the report" on a smaller one. It reads the boxes as they are now, so it follows every change as typed. ---- */
   var preview = $('[data-preview]'), pvBody = $('[data-preview-body]'), pvEmpty = $('[data-preview-empty]');
   var wideQ = window.matchMedia ? window.matchMedia('(min-width: 1440px)') : { matches: false };
+  var midQ = window.matchMedia ? window.matchMedia('(min-width: 1000px)') : { matches: false };
   var pvItem = null, pvOpen = false;
   function blanks(text) {
     // [blanks] marked: Spex fills them in at the inspection.
@@ -528,9 +532,12 @@
   function valueOf(root, sel) { var b = root.querySelector(sel); return b ? b.value.trim() : ''; }
   function renderPreview() {
     var docked = !!open && wideQ.matches, shown = !!open && (docked || pvOpen);
+    // Between: opened, it takes the list's place beside the editor (Close brings the list back), never over the editor.
+    var mid = shown && !docked && midQ.matches;
     preview.hidden = !shown;
-    preview.classList.toggle('is-docked', docked);
+    preview.classList.toggle('is-docked', docked || mid);
     $('.te-grid').classList.toggle('has-preview', docked);
+    $('.te-grid').classList.toggle('pv-mid', mid);
     main.classList.toggle('has-preview', docked);
     $('[data-preview-close]').hidden = docked;
     if (!shown) return;
@@ -573,7 +580,7 @@
   edit.addEventListener('input', function () { if (!preview.hidden) renderPreview(); });
   edit.addEventListener('change', function () { if (!preview.hidden) renderPreview(); });
   $('[data-preview-close]').addEventListener('click', function () { pvOpen = false; renderPreview(); });
-  if (wideQ.addEventListener) wideQ.addEventListener('change', renderPreview);
+  if (wideQ.addEventListener) { wideQ.addEventListener('change', renderPreview); midQ.addEventListener('change', renderPreview); }
 
   /* ---- find ---- */
   function find() {
@@ -610,7 +617,11 @@
     if (!boxes.length) return;
     cancelLoads();
     // The words put in as typed (a function: a "$" in them is a "$").
-    boxes.forEach(function (b) { b.value = b.value.replace(re, function () { return by; }); if (b.tagName === 'TEXTAREA') grow(b); });
+    boxes.forEach(function (b) {
+      b.value = b.value.replace(re, function () { return by; });
+      if (b.tagName === 'TEXTAREA') grow(b);
+      if (b.closest('[data-cats]')) syncCategory(b);
+    });
     stopLabels(); changed(); renderPreview();
     findIn.value = by.trim(); find();
     say(boxes.length === 1 ? 'replaced-1' : 'replaced-n', { n: boxes.length });

@@ -191,3 +191,5 @@ html{scroll-padding-bottom:calc(var(--te-bar, 0px) + env(safe-area-inset-bottom,
 .te-pv-card.cat-SH{--c:#B3261E; --t:#FDECEB} .te-pv-card.cat-MD{--c:#A35407; --t:#FDF1E3}
 .te-pv-card.cat-MN{--c:#33691E; --t:#EEF6E6} .te-pv-card.cat-NT{--c:#455A64; --t:#ECEFF1}
 @media (max-width: 599.98px){ .te-preview{top:auto; bottom:76px; max-height:70vh} }
+.te-grid.pv-mid{grid-template-columns:minmax(0, 1fr) 340px}
+.te-grid.pv-mid .te-list{display:none}

@@ -503,9 +503,21 @@ const said = async (page) => (await page.locator('[data-say]').textContent()).tr
       await box.fill('Water stands by the [side] wall.');
       ok(label + ': it follows his typing, and marks the blanks Spex fills', (await page.locator('.te-pv-card').first().locator('.te-pv-prose').first().textContent()) === 'Water stands by the [side] wall.' &&
         (await page.locator('.te-pv-card').first().locator('mark').textContent()) === '[side]');
+      // A finding deleted: its card goes from the preview at once.
+      const cards = await page.locator('.te-pv-card').count();
+      await item.locator('.te-line[data-line="' + ITEM.ref + '|deficiency|' + defs[0].position + '"] [data-del-line]').click();
+      ok(label + ': a finding deleted leaves the preview at once', (await page.locator('.te-pv-card').count()) === cards - 1);
+      // A category renamed by Replace all: its pill says so at once.
+      const pill = O1.ratings.find((r) => r.id === defs[1].rating).label;
+      await page.fill('[data-find]', pill); await page.fill('[data-replace]', 'Fix soon');
+      await page.locator('[data-replace-go]').click();
+      ok(label + ': a category renamed by Replace all: the lists and the preview say the new name', (await page.locator('.te-pv-card .te-pv-pill').first().textContent()) === 'Fix soon' &&
+        (await item.locator('select[data-k*="rating"] option[value="' + defs[1].rating + '"]').first().textContent()) === 'Fix soon', await page.locator('.te-pv-card .te-pv-pill').first().textContent());
       ok(label + ': nothing off the side', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
       if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'te-d-preview-' + label.replace(/[^a-z0-9]+/g, '-') + '.png') });
-      if (!docked) { await page.locator('[data-preview-close]').click(); ok(label + ': Close puts it away', !(await pv.isVisible())); }
+      if (w === WIDE) ok(label + ': beside the editor in the list’s place, never over it', await page.locator('.te-list').isHidden() &&
+        await page.evaluate(() => document.querySelector('[data-preview]').getBoundingClientRect().left >= document.querySelector('[data-edit]').getBoundingClientRect().right - 1));
+      if (!docked) { await page.locator('[data-preview-close]').click(); ok(label + ': Close puts it away' + (w === WIDE ? ', and the list comes back' : ''), !(await pv.isVisible()) && (w !== WIDE || await page.locator('.te-list').isVisible())); }
       ok(label + ': no errors, nothing else leaves the site', o.errs.length === 0 && o.away.length === 0, JSON.stringify([o.errs, o.away]));
       await o.ctx.close();
     });
