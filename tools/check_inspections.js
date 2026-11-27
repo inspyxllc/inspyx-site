@@ -62,7 +62,7 @@ async function open(browser, o) {
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); if (v === null) localStorage.removeItem('inspyx.signin'); else localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, store);
   const page = await ctx.newPage();
   page.setDefaultTimeout(8000);
-  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [], relay = [], fileCalls = [];
+  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [], relay = [], fileCalls = [], payCalls = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
   await page.routeWebSocket(/realtime\/v1\/websocket/, (ws) => {
@@ -103,6 +103,12 @@ async function open(browser, o) {
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows, next: rows.length, more: false }) });
     }
     // The reports-sent function (which inspections have a published report): o.published lists them.
+    // The payments function (the pay link brought up to date): o.payments(body) answers { status }; every call kept.
+    if (u.startsWith(SERVER + '/functions/v1/payments')) {
+      const b = JSON.parse(req.postData() || '{}'); payCalls.push(b);
+      const a = o.payments ? o.payments(b) : { status: 200 };
+      return route.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ link: null }) });
+    }
     if (u.startsWith(SERVER + '/functions/v1/reports-sent')) {
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
         body: JSON.stringify({ reports: (o.published || []).map((id) => ({ inspection_id: id, published_at: 1, locked: false, links: [], emails: [] })), as_of: new Date().toISOString() }) });
@@ -145,7 +151,7 @@ async function open(browser, o) {
   const res = await page.goto(url + 'inspections' + (o.hash || ''), { waitUntil: 'load' });
   await page.waitForTimeout(500);
   const ping = () => sockets[sockets.length - 1].ws.send(JSON.stringify({ topic: 'realtime:insp:' + ME, event: 'broadcast', ref: null, payload: { type: 'broadcast', event: 'changed', payload: { seq: s.seq } } }));
-  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls, relay, fileCalls };
+  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls, relay, fileCalls, payCalls };
 }
 
 const vis = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.hidden && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel);
@@ -481,6 +487,86 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     ok('archived with its booking standing: says it\'s archived, offers nothing', await until(async () => (await vis(r3.page, '[data-acts-archived]')).length === 1) &&
       (await vis(r3.page, '[data-act]')).length === 0 && (await vis(r3.page, '[data-acts-booked]')).length === 0);
     await r3.ctx.close();
+  });
+
+  // Set the fee and record a payment on the web (the lead, 2026-11-27): the phone's rows, then the pay link.
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('fee and payments on the web, ' + label, async () => {
+      const s = server(); seed(s);
+      const C = '6f1c2a3b-0000-4000-8000-0000000000d1';
+      s.phone('person', C, 'role', 'client'); s.phone('person', C, 'name', 'Ana Diaz'); s.phone('person', C, 'email', 'ana@example.com'); s.phone('person', C, 'position', 0);
+      s.phone('inspection', INSP, 'city', 'Miami'); s.phone('inspection', INSP, 'state', 'Florida');
+      const t = actServer([]);
+      const { page, ctx, errs, away, payCalls } = await open(browser, { server: s, w, hash: '#' + INSP, bizServer: t.answer });
+      await until(async () => (await vis(page, '[data-fee-edit]')).join() === 'Set the fee');
+      await page.click('[data-fee-edit]');
+      await page.fill('[data-fee-amount]', 'abc');
+      await page.click('[data-fee-form] button[type="submit"]');
+      ok(label + ': a fee that isn\'t an amount: said, nothing sent', same(await vis(page, '[data-fee-problem]'), ['Type an amount in dollars, like 425 or 425.50.']) && t.pushed.length === 0);
+      await page.fill('[data-fee-amount]', '$1,425.5');
+      await page.click('[data-fee-form] button[type="submit"]');
+      ok(label + ': set: shown, and it says the pay page has it', await until(async () => (await vis(page, '[data-job] [data-v="fee"]')).join() === '$1,425.50' &&
+        same(await vis(page, '[data-job-said]'), ['Saved. Your phone gets it at its next sync, and your client’s pay page has it now.'])), JSON.stringify(await vis(page, '[data-job] [data-v="fee"]')));
+      const fee = t.pushed.filter((r) => r.kind === 'inspection_fees')[0];
+      ok(label + ': the row the phone writes for a fee typed by hand', !!fee && fee.data.inspectionId === INSP && fee.data.ownerAccountId === ME && fee.data.selectionJson === '{}' && fee.data.factsJson === '{}' &&
+        fee.data.totalCents === 142550 && fee.data.minutes === 0 && fee.data.linesJson === JSON.stringify([{ kind: 'service', id: '', name: 'Inspection fee', cents: 142550, minutes: 0 }]) &&
+        fee.data.updatedAt === fee.updated_at && fee.data.createdAt === fee.updated_at && fee.data.deletedAt === null && fee.deleted_at === null, JSON.stringify(fee));
+      const p1 = payCalls[payCalls.length - 1];
+      ok(label + ': the pay link brought up to date as the phone does (never made here)', !!p1 && p1.action === 'link' && p1.inspection_id === INSP && p1.fee_cents === 142550 && p1.offline_paid_cents === 0 &&
+        p1.title === 'Home inspection' && p1.detail === '12 Oak St, Miami, Miami' && p1.client_email === 'ana@example.com' && p1.property_state === 'FL' && p1.create === false && Number.isSafeInteger(p1.as_of), JSON.stringify(p1));
+      // A payment.
+      await page.click('[data-pay-add]');
+      await page.fill('[data-pay-amount]', '0');
+      await page.click('[data-pay-form] button[type="submit"]');
+      ok(label + ': a payment of $0: said', same(await vis(page, '[data-pay-problem]'), ['A payment must be more than $0.']));
+      await page.fill('[data-pay-amount]', '200');
+      await page.selectOption('[data-pay-method]', 'check');
+      await page.fill('[data-pay-note]', 'deposit');
+      await page.click('[data-pay-form] button[type="submit"]');
+      ok(label + ': recorded: part paid, listed with an Undo', await until(async () => (await vis(page, '[data-job] [data-v="paid-pill"]')).join() === 'Part paid' && (await vis(page, '[data-pays] li span')).length === 1) &&
+        (await vis(page, '[data-pays] li span')).join().startsWith('$200.00 check · ') && (await vis(page, '[data-pays] li span')).join().endsWith(' · deposit'), JSON.stringify(await vis(page, '[data-pays] li')));
+      const pay = t.pushed.filter((r) => r.kind === 'inspection_payments')[0];
+      ok(label + ': the payment row as the phone writes it', !!pay && pay.data.amountCents === 20000 && pay.data.method === 'check' && pay.data.note === 'deposit' && pay.data.voidedAt === null &&
+        pay.data.cardLive === null && pay.data.recordedByAccountId === ME && pay.data.recordedAt === pay.updated_at && pay.data.inspectionId === INSP, JSON.stringify(pay));
+      ok(label + ': and the pay link knows what was paid by hand', payCalls[payCalls.length - 1].offline_paid_cents === 20000);
+      if (process.env.SHOTS) await page.locator('[data-job]').screenshot({ path: process.env.SHOTS + '/fee-pay-' + label + '.png' });
+      await page.click('[data-pays] li button');
+      const voided = t.pushed.filter((r) => r.kind === 'inspection_payments').pop();
+      ok(label + ': Undo: the same row, voided, newer; gone from the list; the pay link told', await until(async () => (await vis(page, '[data-pays] li')).length === 0) &&
+        voided.id === pay.id && voided.data.voidedAt === voided.updated_at && voided.updated_at > pay.updated_at && voided.data.amountCents === 20000 && payCalls[payCalls.length - 1].offline_paid_cents === 0);
+      // Change a fee the phone priced from the price list: said; the same row, newer than every fee there.
+      ok(label + ': no errors, nothing off the side', errs.length === 0 && away.length === 0 && await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
+      await ctx.close();
+    });
+  }
+
+  await group('fee and payments: a priced fee changed, refused, failed, the pay link unreachable', async () => {
+    const s = server(); seed(s);
+    const quoted = { kind: 'inspection_fees', id: 'fee1', updated_at: 5, deleted_at: null, data: { id: 'fee1', ownerAccountId: ME, inspectionId: INSP, selectionJson: '{"services":["svc"]}',
+      linesJson: JSON.stringify([{ kind: 'service', id: 'svc', name: 'Home inspection', cents: 47500, minutes: 180 }]), totalCents: 47500, minutes: 180, factsJson: '{"squareFeet":1800}', createdAt: 3, updatedAt: 5, deletedAt: null } };
+    // An older fee, removed (its row time ahead of its data's: the new fee must still go above both).
+    const AHEAD = Date.now() + 86400000;   // another phone's clock a day fast
+    const old = { kind: 'inspection_fees', id: 'fee0', updated_at: AHEAD, deleted_at: 4, data: Object.assign({}, quoted.data, { id: 'fee0', updatedAt: 4, deletedAt: 4 }) };
+    const t = actServer([quoted, old]);
+    let payDown = false;
+    const { page, ctx } = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer, payments: () => ({ status: payDown ? 503 : 200 }) });
+    await until(async () => (await vis(page, '[data-fee-edit]')).join() === 'Change');
+    await page.click('[data-fee-edit]');
+    ok('a priced fee: its amount filled in, and it says this replaces the price', await page.inputValue('[data-fee-amount]') === '475.00' && same(await vis(page, '[data-fee-quoted]'), ['This replaces the price your phone worked out from your price list.']));
+    t.refuse = ['inspection_fees'];
+    await page.fill('[data-fee-amount]', '500');
+    await page.click('[data-fee-form] button[type="submit"]');
+    ok('refused (the phone changed it): said, never "saved"', await until(async () => same(await vis(page, '[data-job-said]'), ['Your phone changed this just now. Look again, then try.'])));
+    t.refuse = []; t.down = true;
+    await page.click('[data-fee-form] button[type="submit"]');
+    ok('no connection: said', await until(async () => same(await vis(page, '[data-job-said]'), ['That didn’t go through. Try again.'])));
+    t.down = false; payDown = true;
+    await page.click('[data-fee-form] button[type="submit"]');
+    ok('saved, the pay link unreachable: said when the pay page catches up', await until(async () => same(await vis(page, '[data-job-said]'), ['Saved. Your client’s pay page catches up when your phone next opens this inspection.'])));
+    const f = t.held.get('inspection_fees/fee1');
+    ok('the standing fee changed in place, by hand now, above every fee there (a removed one too)', f.data.totalCents === 50000 && f.data.selectionJson === '{}' && f.updated_at > AHEAD && f.data.createdAt === 3 &&
+      (await vis(page, '[data-job] [data-v="fee"]')).join() === '$500.00', JSON.stringify(f));
+    await ctx.close();
   });
 
   await group('agreement out of date: nothing to say when it holds, or with no snapshot', async () => {

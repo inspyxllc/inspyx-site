@@ -381,3 +381,22 @@
 .insp-act-dialog .btn{min-height:44px; padding:0 18px; border:0; font:600 15px var(--font); cursor:pointer}
 .insp-act-dialog .btn:disabled{opacity:.6; cursor:default}
 .insp-act-go{background:#B3261E; color:#fff}
+
+/* Set the fee and record a payment on the web (the lead, 2026-11-27: the web can do what the phone does). */
+.insp-job-edit{margin-left:6px; padding:0; border:0; background:none; color:var(--navy, #1F3A60); font:600 14px var(--font); text-decoration:underline; cursor:pointer}
+.insp-job-edit[hidden], .insp-job-form[hidden], .insp-job [hidden]{display:none}
+.insp-job-form{display:grid; gap:8px; margin-top:8px; padding:12px; border-radius:12px; background:#F5F5F7}
+.insp-job-form label{display:grid; gap:4px; font-size:13.5px; color:var(--ink-soft)}
+.insp-job-form input, .insp-job-form select{min-height:40px; padding:6px 10px; border:1px solid #C9C9D0; border-radius:10px; font:15px var(--font); color:var(--ink); background:#fff; box-sizing:border-box; width:100%}
+.insp-job-two{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+@media (max-width: 480px){ .insp-job-two{grid-template-columns:1fr} }
+.insp-job-form-b{display:flex; flex-wrap:wrap; gap:8px}
+.insp-job-help{margin:0; font-size:13px; color:var(--ink-faint)}
+.insp-job-problem{margin:0; font-size:14px; font-weight:600; color:#8C1D18}
+.insp-job-opt{font-weight:400; color:var(--ink-faint)}
+.insp-pays{list-style:none; margin:6px 0 0; padding:0; display:grid; gap:2px; font-size:14px}
+.insp-pays li{display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px}
+.insp-pays button{padding:0 8px; min-height:30px; border:0; border-radius:8px; background:none; color:#8C1D18; font:600 13px var(--font); cursor:pointer}
+.insp-pays button:hover{background:#FBEDEC}
+.insp-job-said{margin:10px 0 0; padding:9px 12px; border-radius:12px; font-size:14.5px; background:#E3F4EA}
+.insp-job-said.bad{background:#FBEDEC; color:#8C1D18}
