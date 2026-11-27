@@ -1,0 +1,52 @@
+/* The booking page (2026-11-21): calm and plain like Prices. One column, three numbered steps, one big button. */
+.bk{display:block; max-width:760px; margin:0 auto; padding:28px var(--gr) 64px var(--gl)}
+.bk h1{font-size:32px; margin-bottom:6px}
+.bk h2{font-size:21px; margin:0 0 10px}
+.bk h3{font-size:16px; margin:16px 0 8px}
+.bk [hidden]{display:none !important}
+.bk-lede{font-size:17px; color:var(--ink-soft); margin:0 0 8px}
+.bk-preview{padding:10px 14px; border-radius:12px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.12); font-size:14px}
+.bk-state{font-size:18px; line-height:1.45; color:var(--ink-soft)}
+.bk-step{margin-top:28px; padding:18px; border-radius:18px; background:var(--card); box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.bk-note{font-size:14.5px; color:var(--ink-soft); margin:0 0 10px}
+.bk-day{margin-bottom:12px}
+.bk-day h3{margin:8px 0 6px; font-size:15px}
+.bk-times{display:flex; flex-wrap:wrap; gap:8px}
+.bk-time{min-height:44px; padding:0 16px; border-radius:12px; border:1px solid rgba(0,0,0,.18); background:#fff; font:600 15px var(--font); cursor:pointer; color:var(--ink)}
+.bk-time[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#fff}
+.bk-svc{display:grid; grid-template-columns:auto 1fr auto; gap:2px 10px; align-items:baseline; padding:12px 0; border-bottom:1px solid rgba(0,0,0,.08); cursor:pointer}
+.bk-svc-name{font-weight:600; font-size:16px}
+.bk-svc-fee{font-size:15px; color:var(--ink-soft); white-space:nowrap}
+.bk-svc-desc{grid-column:2 / 4; font-size:14px; color:var(--ink-soft)}
+.bk-addons{padding:8px 0 4px 28px}
+.bk-check{display:flex; gap:10px; align-items:flex-start; font-size:15px; line-height:1.4; padding:4px 0; cursor:pointer}
+.bk-check input{margin-top:3px; width:18px; height:18px; flex:none}
+.bk-asks{display:grid; gap:10px; margin-top:12px}
+.bk-asks label, .bk-grid label, .bk label.bk-wide{display:grid; gap:4px; font-size:14px; color:var(--ink-soft)}
+.bk input[type=text], .bk input[type=email], .bk input[type=tel], .bk input[type=number], .bk select, .bk textarea{min-height:44px; padding:8px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.2); font:16px var(--font); color:var(--ink); background:#fff; width:100%; box-sizing:border-box}
+.bk-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px}
+.bk-wide{grid-column:1 / -1; margin-top:12px}
+.bk-opt{font-weight:400; color:var(--ink-faint)}
+.bk-consent{margin:16px 0 4px; padding:12px 14px; border-radius:12px; background:rgba(0,0,0,.03)}
+.bk-fine{font-size:13px; color:var(--ink-faint); margin:6px 0 0}
+.bk-quote{margin-top:14px; padding-top:10px; border-top:1px solid rgba(0,0,0,.08)}
+.bk-quote ul{list-style:none; padding:0; margin:0; display:grid; gap:4px}
+.bk-quote li{display:flex; justify-content:space-between; font-size:15px}
+.bk-quote.bk-pending{opacity:.4}
+.bk-total{display:flex; justify-content:space-between; font-size:17px; margin:8px 0 0}
+.bk-say{margin:14px 0 0; font-size:15px; color:#9A3412}
+/* The discount code (the rehearsal, round 2): the inspector's codes (Prices), checked by the server's price. */
+.bk-code{margin-top:14px; display:grid; gap:6px}
+.bk-code + .bk-quote{margin-top:12px}
+.bk-code label{font-size:14px; color:var(--ink-soft)}
+.bk-code-row{display:flex; gap:8px}
+.bk-code-row input{flex:1 1 auto; min-width:0; text-transform:uppercase}
+.bk-apply{flex:none; min-height:44px; padding:0 18px; border:0; border-radius:10px; background:#fff; color:var(--navy); font:600 15px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.bk-apply:disabled{opacity:.55; cursor:default}
+.bk-code-say{margin:0; font-size:14.5px; color:#9A3412}
+.bk-code-say.bk-code-on{color:#166534}
+.bk-none{font-size:15px; color:var(--ink-soft)}
+.bk-book{display:block; width:100%; min-height:56px; margin-top:24px; border:0; border-radius:14px; background:var(--navy); color:#fff; font:700 18px var(--font); cursor:pointer}
+.bk-book:disabled{opacity:.55; cursor:default}
+.bk-done h1{color:var(--ink)}
+@media (max-width:520px){ .bk h1{font-size:26px} .bk-step{padding:14px} }

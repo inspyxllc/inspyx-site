@@ -31,7 +31,388 @@
 .insp-status{max-width:220px}
 .insp-finding{display:grid; gap:10px; padding:14px; border-radius:14px; background:#F5F5F7}
 .insp-photos{font-size:13.5px; color:var(--ink-faint)}
+/* The inspection's people, each with Client view or Agent view (2026-11-24). */
+.insp-people{margin-top:22px; padding:18px; border-radius:20px; background:linear-gradient(135deg, #F2F7FD, #F8F4FF); box-shadow:inset 0 0 0 1px rgba(31,78,121,.10)}
+.insp-people[hidden]{display:none}
+.insp-people h2{font-size:18px; margin-bottom:4px}
+.insp-people-hint{font-size:14px; color:var(--ink-soft); margin-bottom:12px}
+.insp-people-list{list-style:none; padding:0; margin:0; display:grid; gap:8px}
+.insp-people-list li{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border-radius:14px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(0,0,0,.07)}
+.insp-who{display:grid; gap:1px; min-width:0}
+.insp-who strong{font-size:15.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.insp-who span{font-size:13px; color:var(--ink-faint)}
+.insp-look{flex:none; display:inline-flex; align-items:center; gap:7px; min-height:40px; padding:0 14px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-size:14.5px; font-weight:600; text-decoration:none; box-shadow:0 6px 16px rgba(31,78,121,.25)}
+.insp-look:hover{filter:brightness(1.1)}
+.insp-look:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.insp-look svg{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+/* The how-to (his rule: every feature gets one): a finger taps Client view, the new tab opens, the client's view
+   shows with "nothing is counted". 9 s, looping; still on the result with motion turned down. */
+.look-how{display:grid; grid-template-columns:minmax(0, 260px) 1fr; gap:14px 22px; align-items:center; margin:0 0 14px; padding:14px; border-radius:16px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(31,78,121,.08)}
+.look-how-stage{position:relative; height:200px; width:100%; max-width:260px}
+.look-how-scene{position:absolute; inset:0; display:grid; gap:7px; align-content:start; padding:10px; border-radius:12px; background:#F7F9FC; font-size:12px; opacity:0; overflow:hidden}
+.look-how-a{animation:look-a 9s infinite} .look-how-b{animation:look-b 9s infinite} .look-how-c{animation:look-c 9s infinite}
+.look-how-row{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 9px; border-radius:10px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(0,0,0,.07)}
+.look-how-row.dim{opacity:.6}
+.look-how-row span{display:grid}
+.look-how-row b{font-weight:600; color:var(--ink)} .look-how-row i{font-style:normal; font-size:10.5px; color:var(--ink-faint)}
+.look-how-row em{font-style:normal; padding:5px 9px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-weight:600; font-size:11px}
+.look-how-btn{animation:look-press 9s infinite}
+.look-how-bar{display:grid; margin:-10px -10px 2px; padding:8px 10px; background:linear-gradient(120deg, #2E6DA4, #0B1F3A); color:#FFFFFF}
+.look-how-bar b{font-size:12px} .look-how-bar i{font-style:normal; font-size:10.5px; opacity:.8}
+.look-how-line{height:9px; border-radius:5px; background:#E3E9F1} .look-how-line.short{width:60%}
+.look-how-cover{display:grid; gap:3px; padding:8px; border-radius:10px; background:#FFFFFF; box-shadow:0 6px 16px rgba(31,78,121,.12); animation:look-rise 9s infinite}
+.look-how-cover b{font-size:13px; color:var(--ink)} .look-how-cover i{font-style:normal; font-size:10.5px; color:var(--ink-soft)}
+.look-how-cover em{font-style:normal; margin-top:3px; padding:4px; border-radius:7px; background:#3F7FD9; color:#FFFFFF; text-align:center; font-weight:600; font-size:11px}
+.look-how-pill{justify-self:center; padding:3px 9px; border-radius:999px; background:#0B1F3A; color:#FFFFFF; font-size:10px; font-weight:600}
+.look-how-finger{position:absolute; z-index:2; width:24px; height:24px; border-radius:50%; background:rgba(31,78,121,.38); border:2px solid rgba(31,78,121,.8); box-shadow:0 2px 8px rgba(31,78,121,.3); animation:look-finger 9s infinite}
+.look-how-steps{display:grid; gap:9px; counter-reset:step}
+.look-how-step{display:flex; gap:11px; align-items:center; font-size:15px; color:var(--ink-faint); animation:look-s1 9s infinite}
+.look-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:26px; height:26px; border-radius:50%; background:#FFFFFF; color:var(--navy); font-weight:700; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.look-how-step[data-n="2"]{animation-name:look-s2} .look-how-step[data-n="3"]{animation-name:look-s3}
+@keyframes look-a{0%,30%{opacity:1} 33%,100%{opacity:0}}
+@keyframes look-b{0%,30%{opacity:0} 33%,63%{opacity:1} 66%,100%{opacity:0}}
+@keyframes look-c{0%,63%{opacity:0} 66%,97%{opacity:1} 100%{opacity:0}}
+@keyframes look-press{0%,18%{transform:none} 21%{transform:scale(.9)} 24%,100%{transform:none}}
+@keyframes look-rise{0%,66%{opacity:0; transform:translateY(10px)} 74%,100%{opacity:1; transform:none}}
+@keyframes look-finger{0%{left:60%; top:80%; opacity:1} 14%,24%{left:198px; top:14px; opacity:1} 30%{left:198px; top:14px; opacity:0} 100%{left:60%; top:80%; opacity:0}}
+@keyframes look-s1{0%,30%{color:var(--ink); font-weight:600} 33%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes look-s2{0%,30%{color:var(--ink-faint); font-weight:400} 33%,63%{color:var(--ink); font-weight:600} 66%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes look-s3{0%,63%{color:var(--ink-faint); font-weight:400} 66%,100%{color:var(--ink); font-weight:600}}
+@media (prefers-reduced-motion: reduce){
+  .look-how *, .look-how-step{animation:none !important}
+  .look-how-finger, .look-how-a, .look-how-b{display:none}
+  .look-how-c{opacity:1}
+  .look-how-step{color:var(--ink)}
+}
 @media (max-width: 760px){
   .insp{grid-template-columns:1fr; gap:20px; padding:20px 16px 48px}
   .insp-cover{grid-template-columns:1fr}
+  .look-how{grid-template-columns:1fr}
 }
+/* New inspection (2026-11-23, job 4): beside the title. */
+.insp-head{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; justify-content:space-between}
+.insp-new{display:inline-flex; align-items:center; min-height:44px; padding:0 18px; border-radius:999px; text-decoration:none; font:600 15px var(--font)}
+/* Agreements outdated (2026-11-24, his Spectora list item 10): the agreement the client signed no longer says what is
+   true, in the "needs you" amber the app uses (never the green that reads as done). */
+.insp-agr{margin-top:22px; padding:18px; border-radius:20px; background:#FBF0D9; box-shadow:inset 0 0 0 1px rgba(138,90,0,.30)}
+.insp-agr[hidden], .insp-agr [hidden]{display:none}
+.insp-agr h2{display:flex; align-items:center; gap:9px; font-size:18px; color:#8A5A00; margin-bottom:4px}
+.insp-agr h2 svg{width:22px; height:22px; flex:none; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+.insp-agr-hint{font-size:14px; color:var(--ink-soft); margin-bottom:12px}
+.insp-agr-changes{list-style:none; padding:0; margin:0 0 14px; display:grid; gap:6px}
+.insp-agr-changes li{padding:9px 12px; border-radius:12px; background:#FFFFFF; font-size:15px; color:var(--ink); box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); overflow-wrap:anywhere}
+.insp-agr-changes strong{font-weight:600} .insp-agr-changes s{color:var(--ink-faint)} .insp-agr-changes b{font-weight:700}
+.insp-agr-fee{font-size:14px; color:#8A5A00; font-weight:600}
+.insp-agr-send, .insp-agr-go{min-height:44px; padding:0 20px; border:0; border-radius:999px; background:var(--navy); color:#FFFFFF; font:600 15px var(--font); cursor:pointer; box-shadow:0 6px 16px rgba(31,78,121,.25)}
+.insp-agr-send:disabled{opacity:.5; cursor:default}
+.insp-agr-send:focus-visible, .insp-agr-go:focus-visible, .insp-agr-no:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.insp-agr-ask{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px; border-radius:14px; background:#FFFFFF; box-shadow:0 6px 16px rgba(138,90,0,.15)}
+.insp-agr-ask p{flex:1 1 260px; font-size:14.5px; color:var(--ink)}
+.insp-agr-no{min-height:44px; padding:0 16px; border:0; border-radius:999px; background:transparent; color:var(--navy); font:600 15px var(--font); cursor:pointer}
+.insp-agr-wait, .insp-agr-said{font-size:15px; color:var(--ink)}
+.insp-agr-said{margin-top:10px; font-weight:600}
+/* Its how-to: what changed, Send, the client's email, then it waits. 9 s, looping; still on the result with less
+   motion. */
+.agr-how{display:grid; grid-template-columns:minmax(0, 260px) 1fr; gap:14px 22px; align-items:center; margin:16px 0 0; padding:14px; border-radius:16px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(138,90,0,.15)}
+.agr-how-stage{position:relative; height:150px; width:100%; max-width:260px}
+.agr-how-scene{position:absolute; inset:0; display:grid; gap:7px; align-content:start; padding:10px; border-radius:12px; background:#FDF7EA; font-size:12px; opacity:0; overflow:hidden}
+.agr-how-a{animation:look-a 9s infinite} .agr-how-b{animation:look-b 9s infinite} .agr-how-c{animation:look-c 9s infinite}
+.agr-how-title{font-weight:700; color:#8A5A00}
+.agr-how-change{padding:6px 8px; border-radius:8px; background:#FFFFFF; color:var(--ink); box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.agr-how-btn{justify-self:start; font-style:normal; padding:6px 11px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-weight:600; font-size:11px; animation:look-press 9s infinite}
+.agr-how-mail{display:grid; gap:2px; margin-top:20px; padding:10px; border-radius:10px; background:#FFFFFF; box-shadow:0 6px 16px rgba(31,78,121,.12)}
+.agr-how-mail b{font-size:12.5px; color:var(--ink)} .agr-how-mail i{font-style:normal; font-size:11px; color:var(--ink-soft)}
+.agr-how-wait{margin-top:24px; padding:10px; border-radius:10px; background:#FFFFFF; color:var(--ink); font-size:12px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); animation:look-rise 9s infinite}
+.agr-how-finger{position:absolute; z-index:2; width:24px; height:24px; border-radius:50%; background:rgba(31,78,121,.38); border:2px solid rgba(31,78,121,.8); box-shadow:0 2px 8px rgba(31,78,121,.3); animation:agr-finger 9s infinite}
+.agr-how-steps{display:grid; gap:9px; counter-reset:step}
+.agr-how-step{display:flex; gap:11px; align-items:center; font-size:15px; color:var(--ink-faint); animation:look-s1 9s infinite}
+.agr-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:26px; height:26px; border-radius:50%; background:#FFFFFF; color:#8A5A00; font-weight:700; box-shadow:inset 0 0 0 1px rgba(138,90,0,.35)}
+.agr-how-step[data-n="2"]{animation-name:look-s2} .agr-how-step[data-n="3"]{animation-name:look-s3}
+@keyframes agr-finger{0%{left:70%; top:90%; opacity:1} 14%,24%{left:70px; top:66px; opacity:1} 30%{left:70px; top:66px; opacity:0} 100%{left:70%; top:90%; opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .agr-how *, .agr-how-step{animation:none !important}
+  .agr-how-finger, .agr-how-a, .agr-how-b{display:none}
+  .agr-how-c{opacity:1}
+  .agr-how-step{color:var(--ink)}
+}
+@media (max-width: 760px){ .agr-how{grid-template-columns:1fr} }
+/* Edit with AI (2026-11-24): Spex's version of a finding's details, beside the inspector's, Keep or Discard. */
+.insp-details{display:grid; gap:8px}
+.ai[hidden], .ai [hidden]{display:none}
+.ai{display:grid; gap:8px}
+.ai-open{justify-self:start; display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 16px 0 10px; border:0; border-radius:999px; background:#FFFFFF; color:var(--navy); font:600 14.5px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1.5px #BAE6FD, 0 6px 16px rgba(14,165,233,.18)}
+.ai-open:hover{background:#F0F9FF}
+.ai-open:disabled{opacity:.55; cursor:default}
+.ai-open img{width:22px; height:22px; flex:none}
+.ai-open:focus-visible, .ai-actions button:focus-visible, .ai-keep:focus-visible, .ai-discard:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.ai-actions{display:flex; flex-wrap:wrap; gap:8px; padding:10px; border-radius:14px; background:#F6F3FD; box-shadow:inset 0 0 0 1px rgba(91,63,168,.15)}
+.ai-actions > button{min-height:40px; padding:0 14px; border:0; border-radius:999px; background:#FFFFFF; color:var(--ink); font:600 14px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(91,63,168,.25)}
+.ai-actions > button:hover{background:#EFEAFB}
+.ai-working{font-size:14px; color:var(--ink-soft)}
+.ai-version{padding:12px; border-radius:14px; background:#F6F3FD; box-shadow:inset 0 0 0 1px rgba(91,63,168,.25)}
+.ai-label{font-size:12.5px; font-weight:700; letter-spacing:.02em; color:#5B3FA8; text-transform:uppercase; margin-bottom:4px}
+.ai-text{white-space:pre-wrap; font-size:15px; color:var(--ink); margin-bottom:10px; overflow-wrap:anywhere}
+.ai-choose{display:flex; gap:10px}
+.ai-keep{min-height:40px; padding:0 18px; border:0; border-radius:999px; background:var(--navy); color:#FFFFFF; font:600 14.5px var(--font); cursor:pointer}
+.ai-discard{min-height:40px; padding:0 14px; border:0; border-radius:999px; background:transparent; color:var(--navy); font:600 14.5px var(--font); cursor:pointer}
+.ai-note{margin-top:8px; font-size:13px; color:var(--ink-faint)}
+.ai-error{font-size:14px; color:#9B2C2C; font-weight:600}
+.ai-how{flex-basis:100%; display:grid; grid-template-columns:minmax(0, 230px) 1fr; gap:10px 18px; align-items:center; margin-top:4px; padding:10px; border-radius:12px; background:#FFFFFF}
+.ai-how-stage{position:relative; height:120px; width:100%; max-width:230px}
+.ai-how-scene{position:absolute; inset:0; display:grid; gap:6px; align-content:start; padding:8px; border-radius:10px; background:#FAF8FE; font-size:11px; opacity:0; overflow:hidden}
+.ai-how-a{animation:ai-a 10s infinite} .ai-how-b{animation:ai-b 10s infinite} .ai-how-c{animation:ai-c 10s infinite} .ai-how-d{animation:ai-d 10s infinite}
+.ai-how-mine{padding:5px 7px; border-radius:7px; background:#FFFFFF; color:var(--ink-soft); box-shadow:inset 0 0 0 1px rgba(0,0,0,.07)}
+.ai-how-mine.done{color:var(--ink)}
+.ai-how-btn{justify-self:start; font-style:normal; padding:4px 9px; border-radius:999px; background:#FFFFFF; color:var(--navy); font-weight:600; box-shadow:inset 0 0 0 1px #BAE6FD}
+.ai-how-spex{display:grid; gap:2px; padding:5px 7px; border-radius:7px; background:#EFEAFB; color:var(--ink)} .ai-how-spex b{font-size:9.5px; color:#5B3FA8}
+.ai-how-keep{justify-self:start; font-style:normal; padding:3px 12px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-weight:600; animation:ai-press 10s infinite}
+.ai-how-finger{position:absolute; z-index:2; width:20px; height:20px; border-radius:50%; background:rgba(31,78,121,.35); border:2px solid rgba(31,78,121,.8); animation:ai-finger 10s infinite}
+.ai-how-steps{display:grid; gap:7px; counter-reset:step}
+.ai-how-step{display:flex; gap:9px; align-items:center; font-size:13.5px; color:var(--ink-faint); animation:ai-s1 10s infinite}
+.ai-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; background:#FFFFFF; color:#5B3FA8; font-weight:700; box-shadow:inset 0 0 0 1px rgba(91,63,168,.35)}
+.ai-how-step[data-n="2"]{animation-name:ai-s2} .ai-how-step[data-n="3"]{animation-name:ai-s3} .ai-how-step[data-n="4"]{animation-name:ai-s4}
+@keyframes ai-a{0%,23%{opacity:1} 25%,100%{opacity:0}}
+@keyframes ai-b{0%,23%{opacity:0} 25%,48%{opacity:1} 50%,100%{opacity:0}}
+@keyframes ai-c{0%,48%{opacity:0} 50%,73%{opacity:1} 75%,100%{opacity:0}}
+@keyframes ai-d{0%,73%{opacity:0} 75%,97%{opacity:1} 100%{opacity:0}}
+@keyframes ai-press{0%,60%{transform:none} 64%{transform:scale(.9)} 68%,100%{transform:none}}
+@keyframes ai-finger{0%{left:70%; top:90%; opacity:1} 10%,20%{left:40px; top:34px; opacity:1} 24%,52%{left:70%; top:90%; opacity:0} 58%,68%{left:28px; top:72px; opacity:1} 72%,100%{left:28px; top:72px; opacity:0}}
+@keyframes ai-s1{0%,23%{color:var(--ink); font-weight:600} 25%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes ai-s2{0%,23%{color:var(--ink-faint); font-weight:400} 25%,48%{color:var(--ink); font-weight:600} 50%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes ai-s3{0%,48%{color:var(--ink-faint); font-weight:400} 50%,73%{color:var(--ink); font-weight:600} 75%,100%{color:var(--ink-faint); font-weight:400}}
+@keyframes ai-s4{0%,73%{color:var(--ink-faint); font-weight:400} 75%,100%{color:var(--ink); font-weight:600}}
+@media (prefers-reduced-motion: reduce){
+  .ai-how *, .ai-how-step{animation:none !important}
+  .ai-how-finger, .ai-how-a, .ai-how-b, .ai-how-c{display:none}
+  .ai-how-d{opacity:1}
+  .ai-how-step{color:var(--ink)}
+}
+@media (max-width: 760px){ .ai-how{grid-template-columns:1fr} }
+/* The report's structure (2026-11-24, his list item 12): move and delete on each stop, item and finding; add forms. */
+.insp-stop-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.insp-stop-head h2{flex:1 1 240px; margin:0}
+.insp-finding-head{display:flex; justify-content:flex-end; margin-bottom:4px}
+.insp-tools{display:inline-flex; align-items:center; gap:4px; flex:none}
+.insp-tool{min-width:36px; min-height:36px; padding:0 10px; border:0; border-radius:10px; background:#FFFFFF; color:var(--navy);
+  font:600 14px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(31,78,121,.22)}
+.insp-tool:disabled{opacity:.35; cursor:default}
+.insp-tool:focus-visible, .insp-add button:focus-visible, .insp-confirm button:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.insp-del{color:#9B2C2C; box-shadow:inset 0 0 0 1px rgba(155,44,44,.3)}
+.insp-add{display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; margin:10px 0 4px}
+.insp-add label{flex:1 1 220px; display:grid; gap:4px; font-size:13.5px; color:var(--ink-soft)}
+.insp-add input, .insp-add select{font:16px var(--font); padding:9px 11px; border:1px dashed rgba(31,78,121,.35); border-radius:10px; background:#FFFFFF; color:var(--ink)}
+.insp-add button{min-height:42px; padding:0 16px; border:0; border-radius:999px; background:var(--navy); color:#FFFFFF; font:600 14.5px var(--font); cursor:pointer}
+.insp-addstop{margin-top:22px; padding:14px; border-radius:16px; background:#F7F9FC; box-shadow:inset 0 0 0 1px rgba(31,78,121,.10)}
+.insp-confirm{margin:auto; max-width:min(460px, calc(100vw - 32px)); padding:20px; border:0; border-radius:18px; box-shadow:0 24px 60px rgba(15,34,56,.35); font:15px/1.45 var(--font); color:var(--ink)}
+.insp-confirm::backdrop{background:rgba(15,34,56,.45)}
+.insp-confirm-t{font-weight:700; font-size:16px; margin:0 0 6px}
+.insp-confirm-n{margin:0 0 14px; color:var(--ink-soft); font-size:14px}
+.insp-confirm-b{display:flex; gap:10px; flex-wrap:wrap}
+.insp-confirm-b button{min-height:44px; padding:0 18px; border:0; border-radius:999px; font:600 15px var(--font); cursor:pointer; background:#F1F3F6; color:var(--ink)}
+.insp-confirm-b .insp-confirm-go{background:#9B2C2C; color:#FFFFFF}
+/* Its how-to: an item added, two moved, a delete that asks first. 9 s, looping; still with less motion. */
+.st-how{display:grid; grid-template-columns:minmax(0, 260px) 1fr; gap:14px 22px; align-items:center; margin:22px 0 0; padding:14px; border-radius:16px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(31,78,121,.08)}
+.st-how-stage{position:relative; height:130px; width:100%; max-width:260px}
+.st-how-scene{position:absolute; inset:0; display:grid; gap:7px; align-content:start; padding:10px; border-radius:12px; background:#F7F9FC; font-size:12px; opacity:0; overflow:hidden}
+.st-how-a{animation:look-a 9s infinite} .st-how-b{animation:look-b 9s infinite} .st-how-c{animation:look-c 9s infinite}
+.st-how-row{display:flex; justify-content:space-between; padding:6px 9px; border-radius:9px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(0,0,0,.07); color:var(--ink)}
+.st-how-row b{color:var(--navy); letter-spacing:.1em}
+.st-how-row.lift{animation:st-lift 9s infinite}
+.st-how-new{display:flex; gap:6px; align-items:center}
+.st-how-new i{flex:1; font-style:normal; padding:5px 8px; border-radius:8px; border:1px dashed rgba(31,78,121,.35); background:#FFFFFF}
+.st-how-new em{font-style:normal; padding:5px 10px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-weight:600; animation:look-press 9s infinite}
+.st-how-ask{display:grid; gap:8px; margin-top:8px; padding:10px; border-radius:10px; background:#FFFFFF; box-shadow:0 6px 16px rgba(15,34,56,.15)}
+.st-how-ask strong{font-size:11.5px} .st-how-ask span{display:flex; gap:6px}
+.st-how-ask em, .st-how-ask i{font-style:normal; padding:3px 10px; border-radius:999px; font-weight:600}
+.st-how-ask em{background:#9B2C2C; color:#FFFFFF} .st-how-ask i{background:#F1F3F6}
+.st-how-finger{position:absolute; z-index:2; width:22px; height:22px; border-radius:50%; background:rgba(31,78,121,.38); border:2px solid rgba(31,78,121,.8); animation:st-finger 9s infinite}
+.st-how-steps{display:grid; gap:9px; counter-reset:step}
+.st-how-step{display:flex; gap:11px; align-items:center; font-size:15px; color:var(--ink-faint); animation:look-s1 9s infinite}
+.st-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:26px; height:26px; border-radius:50%; background:#FFFFFF; color:var(--navy); font-weight:700; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.st-how-step[data-n="2"]{animation-name:look-s2} .st-how-step[data-n="3"]{animation-name:look-s3}
+@keyframes st-lift{0%,40%{transform:none} 50%,63%{transform:translateY(-36px)} 66%,100%{transform:none}}
+@keyframes st-finger{0%{left:75%; top:90%; opacity:1} 14%,24%{left:205px; top:46px; opacity:1} 30%{opacity:0} 40%,52%{left:225px; top:46px; opacity:1} 58%,100%{left:225px; top:46px; opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .st-how *, .st-how-step{animation:none !important}
+  .st-how-finger, .st-how-a, .st-how-b{display:none}
+  .st-how-c{opacity:1}
+  .st-how-step{color:var(--ink)}
+}
+@media (max-width: 760px){ .st-how{grid-template-columns:1fr} }
+/* Whole-report search (2026-11-24, his list item 12, piece B). */
+.insp-search{margin:0 0 18px; padding:14px; border-radius:16px; background:#F7F9FC; box-shadow:inset 0 0 0 1px rgba(31,78,121,.10)}
+.insp-search-l{display:grid; gap:6px; font-size:14px; font-weight:600; color:var(--ink)}
+.insp-search-l input{font:16px var(--font); padding:11px 14px; border:1px solid rgba(31,78,121,.25); border-radius:12px; background:#FFFFFF; color:var(--ink)}
+.insp-search-n{margin:8px 0 0; font-size:13.5px; color:var(--ink-soft)}
+.insp-search-n:empty{display:none}
+.insp-search-r{list-style:none; padding:0; margin:8px 0 0; display:grid; gap:6px; max-height:360px; overflow:auto}
+.insp-search-r:empty{display:none}
+.insp-search-hit{display:grid; gap:2px; width:100%; text-align:left; padding:9px 12px; border:0; border-radius:12px; background:#FFFFFF; cursor:pointer;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); font:15px var(--font); color:var(--ink)}
+.insp-search-hit:hover{box-shadow:inset 0 0 0 1px rgba(31,78,121,.3)}
+.insp-search-hit:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.insp-search-where{font-size:12.5px; font-weight:600; color:var(--navy)}
+.insp-search-what{overflow-wrap:anywhere}
+.insp-search-what mark, .se-how mark{background:#FDE68A; color:inherit; border-radius:3px; padding:0 1px}
+.is-found{animation:insp-found 1.6s ease-out}
+@keyframes insp-found{0%,40%{box-shadow:0 0 0 4px #FDE68A} 100%{box-shadow:0 0 0 0 rgba(253,230,138,0)}}
+.se-how{display:grid; grid-template-columns:minmax(0, 240px) 1fr; gap:12px 20px; align-items:center; margin:12px 0 0; padding:10px; border-radius:14px; background:#FFFFFF}
+.se-how[hidden]{display:none}
+.se-how-stage{position:relative; height:110px; width:100%; max-width:240px}
+.se-how-scene{position:absolute; inset:0; display:grid; gap:6px; align-content:start; padding:8px; border-radius:10px; background:#F7F9FC; font-size:11.5px; opacity:0; overflow:hidden}
+.se-how-a{animation:look-a 9s infinite} .se-how-b{animation:look-b 9s infinite} .se-how-c{animation:look-c 9s infinite}
+.se-how-box{padding:6px 9px; border-radius:8px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.se-how-box i{display:inline-block; width:1px; height:11px; margin-left:1px; background:var(--ink); vertical-align:middle}
+.se-how-hit{display:grid; padding:5px 8px; border-radius:8px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)} .se-how-hit b{font-size:10px; color:var(--navy)}
+.se-how-field{margin-top:22px; padding:8px 9px; border-radius:8px; background:#FFFFFF; box-shadow:0 0 0 3px #FDE68A}
+.se-how-finger{position:absolute; z-index:2; width:20px; height:20px; border-radius:50%; background:rgba(31,78,121,.35); border:2px solid rgba(31,78,121,.8); animation:se-finger 9s infinite}
+.se-how-steps{display:grid; gap:7px; counter-reset:step}
+.se-how-step{display:flex; gap:9px; align-items:center; font-size:14px; color:var(--ink-faint); animation:look-s1 9s infinite}
+.se-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:24px; height:24px; border-radius:50%; background:#FFFFFF; color:var(--navy); font-weight:700; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.se-how-step[data-n="2"]{animation-name:look-s2} .se-how-step[data-n="3"]{animation-name:look-s3}
+@keyframes se-finger{0%,40%{left:80%; top:90%; opacity:0} 50%,60%{left:110px; top:40px; opacity:1} 64%,100%{left:110px; top:40px; opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .se-how *, .se-how-step{animation:none !important}
+  .se-how-finger, .se-how-a, .se-how-b{display:none}
+  .se-how-c{opacity:1}
+  .se-how-step{color:var(--ink)}
+  .is-found{animation:none; box-shadow:0 0 0 4px #FDE68A}
+}
+@media (max-width: 760px){ .se-how{grid-template-columns:1fr} }
+
+/* Flag for later (2026-11-24, his list item 12, piece C): the inspector's own mark; never in the report. */
+.insp-flag{display:inline-grid; place-items:center; padding:0 8px}
+.insp-flag svg, .insp-flagfilter svg{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
+.insp-flag[aria-pressed="true"]{background:var(--navy); color:#FFFFFF; box-shadow:none}
+.insp-flag[aria-pressed="true"] svg path{fill:currentColor}
+.insp-flagbar{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin:18px 0 6px}
+.insp-flagfilter{display:inline-flex; align-items:center; gap:7px; min-height:40px; padding:0 14px; border:0; border-radius:999px;
+  background:#FFFFFF; color:var(--navy); font:600 14.5px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.insp-flagfilter[aria-pressed="true"]{background:var(--navy); color:#FFFFFF; box-shadow:none}
+.insp-flagfilter[aria-pressed="true"] svg path{fill:currentColor}
+.insp-flagfilter:disabled{opacity:.45; cursor:default}
+.insp-flagfilter:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.insp-flagnote{font-size:13.5px; color:var(--ink-faint)}
+.insp-flagtrouble{font-size:13.5px; color:#9B2C2C; font-weight:600}
+.fl-how-flag, .fl-how-off, .fl-how-on{display:inline-block; width:14px; height:14px; border-radius:4px; box-shadow:inset 0 0 0 1.5px var(--navy)}
+.fl-how-on{background:var(--navy)}
+.fl-how-flag{animation:fl-fill 9s infinite}
+.fl-how-filter{justify-self:start; padding:4px 11px; border-radius:999px; background:var(--navy); color:#FFFFFF; font-weight:600; animation:look-press 9s infinite; animation-delay:-3s}
+.fl-how-report{display:grid; gap:5px; padding:10px; border-radius:10px; background:#FFFFFF; box-shadow:0 6px 16px rgba(15,34,56,.15)}
+.fl-how-report i{font-style:normal; color:var(--ink-soft)} .fl-how-report i:last-child{color:var(--ink-faint)}
+.fl-how-finger{animation-name:fl-finger}
+@keyframes fl-fill{0%,20%{background:transparent} 23%,100%{background:var(--navy)}}
+@keyframes fl-finger{0%{left:75%; top:90%; opacity:1} 14%,24%{left:222px; top:16px; opacity:1} 30%{opacity:0} 38%,52%{left:40px; top:14px; opacity:1} 58%,100%{left:40px; top:14px; opacity:0}}
+.insp-item[hidden], .insp-finding[hidden], .insp-stop[hidden], .insp-flag[hidden], .insp-flagtrouble[hidden]{display:none}
+
+/* Save to template (2026-11-26, his list item 12, piece D). */
+.tpl[hidden], .tpl [hidden]{display:none}
+.tpl{display:grid; gap:8px}
+.tpl-open{justify-self:start; display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:0 16px 0 12px; border:0; border-radius:999px;
+  background:#FFFFFF; color:var(--navy); font:600 14.5px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1.5px rgba(31,78,121,.28)}
+.tpl-open svg{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linejoin:round; stroke-linecap:round}
+.tpl-open:hover{background:#F4F8FC} .tpl-open:disabled{opacity:.55; cursor:default}
+.tpl-open:focus-visible, .tpl-go:focus-visible, .tpl-cancel:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+.tpl-panel{display:grid; gap:10px; padding:14px; border-radius:14px; background:#FFFFFF; box-shadow:inset 0 0 0 1px rgba(31,78,121,.14)}
+.tpl-where{margin:0; font-weight:600; color:var(--ink)}
+.tpl-what{display:grid; grid-template-columns:max-content 1fr; gap:6px 14px; margin:0; font-size:14px}
+.tpl-what dt{color:var(--ink-faint)} .tpl-what dd{margin:0; color:var(--ink); overflow-wrap:anywhere; white-space:pre-wrap}
+.tpl-note{margin:0; font-size:13.5px; color:var(--ink-soft)}
+.tpl-choose{display:flex; gap:8px; flex-wrap:wrap}
+/* Use the new copy for new inspections: asked, ticked for yes (rehearsal round 2, 2026-11-26). */
+.tpl-use{display:flex; align-items:center; gap:10px; min-height:44px; margin:2px 0 10px; font:500 14.5px var(--font); color:var(--ink); cursor:pointer}
+.tpl-use[hidden]{display:none}
+.tpl-use input{width:20px; height:20px; margin:0; accent-color:var(--navy); flex:none}
+.tpl-go, .tpl-cancel{min-height:40px; padding:0 18px; border:0; border-radius:999px; font:600 14.5px var(--font); cursor:pointer}
+.tpl-go{background:var(--navy); color:#FFFFFF} .tpl-cancel{background:#F1F3F6; color:var(--ink)}
+.tpl-done{margin:0; font-size:14px; color:var(--ink-soft)}
+.tpl-done[data-tpl-said="saved"], .tpl-done[data-tpl-said="saved-copy"], .tpl-done[data-tpl-said="saved-copy-default"]{color:#1E6B3A; font-weight:600}
+.tpl-done[data-tpl-said="full"], .tpl-done[data-tpl-said="failed"], .tpl-done[data-tpl-said="changed"], .tpl-done[data-tpl-said="no_item"], .tpl-done[data-tpl-said="gone"]{color:#9B2C2C; font-weight:600}
+.tpl-how{margin-top:6px}
+.tpl-how-btn{justify-self:start; padding:5px 11px; border-radius:999px; background:#FFFFFF; color:var(--navy); font-style:normal; font-weight:600; box-shadow:inset 0 0 0 1.5px rgba(31,78,121,.3); animation:look-press 9s infinite}
+.tpl-how-card{display:grid; gap:5px; padding:10px; border-radius:10px; background:#FFFFFF; box-shadow:0 6px 16px rgba(15,34,56,.15)}
+.tpl-how-card i{font-style:normal; color:var(--ink-soft)}
+.tpl-how-new{color:var(--navy) !important; font-weight:600}
+.tpl-how-tick{color:#1E6B3A !important; font-weight:600}
+.tpl-how-finger{animation-name:tpl-finger}
+@keyframes tpl-finger{0%{left:70%; top:90%; opacity:1} 14%,24%{left:60px; top:44px; opacity:1} 30%,100%{left:60px; top:44px; opacity:0}}
+
+/* Edit with AI on "What it means" and "What to do" (2026-11-26, item 12, piece E): the same control, each under its own
+   field, with only the actions that field offers. */
+.insp-aifield{display:grid; gap:8px}
+.ai-field .ai-open{min-height:36px; font-size:14px; padding:0 14px 0 8px}
+.ai-field .ai-open img{width:20px; height:20px}
+
+/* The job (the rehearsal, round 2, A05, 2026-11-26): the fee, what's paid, the agreement and the house, read only. */
+.insp-job{margin:18px 0 0; padding:16px 18px; border-radius:16px; background:#fff; box-shadow:inset 0 0 0 1px rgba(0,0,0,.07)}
+.insp-job h2{font-size:17px; margin:0 0 10px}
+.insp-job-list{margin:0; display:grid; gap:10px}
+.insp-job-list > div{display:grid; grid-template-columns:110px minmax(0, 1fr); gap:12px; align-items:baseline}
+.insp-job-list dt{font-size:13.5px; color:var(--ink-faint)}
+.insp-job-list dd{margin:0; font-size:15px; line-height:1.45; overflow-wrap:anywhere}
+.insp-job-sub{color:var(--ink-faint)}
+.insp-job-sub:not(:empty)::before{content:" · "}
+.insp-job-note{display:block; font-size:13.5px; color:var(--ink-faint)}
+.insp-pill{display:inline-block; padding:2px 9px; border-radius:999px; font-size:12.5px; font-weight:600; background:#FDF1E3; color:#8A4B08}
+.insp-pill[data-kind="paid"]{background:#E8F4EC; color:#14532D}
+.insp-pill[data-kind="part"]{background:#EEF3FA; color:#1F3A60}
+.insp-job-hint{margin:12px 0 0; font-size:13px; color:var(--ink-faint)}
+.insp-facts{list-style:none; margin:0; padding:0; display:grid; gap:4px}
+.insp-facts b{font-weight:600}
+.insp-reach{display:block; font-size:13px; color:var(--ink-faint); overflow-wrap:anywhere}
+.insp-reach:empty{display:none}
+@media (max-width: 560px){ .insp-job-list > div{grid-template-columns:1fr; gap:2px} }
+/* Cancel this booking and Archive (the rehearsal, round 2): the phone's words and steps. */
+.insp-acts{margin-top:18px; display:grid; gap:8px}
+.insp-acts[hidden], .insp-acts [hidden], .insp-act-dialog [hidden]{display:none}
+.insp-acts-line{margin:0; font-size:14.5px; color:var(--ink-soft)}
+.insp-acts-buttons{display:flex; flex-wrap:wrap; gap:8px}
+.insp-act{min-height:40px; padding:0 14px; border:0; border-radius:10px; background:#fff; color:#8C1D18; font:600 14.5px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(140,29,24,.35)}
+.insp-act:hover, .insp-act:focus-visible{background:#FBEDEC}
+.insp-act-said{margin:0; padding:10px 12px; border-radius:12px; font-size:15px; background:#FBEDEC; color:#8C1D18}
+.insp-act-said.ok{background:#E3F4EA; color:var(--ink)}
+.insp-act-dialog{width:min(520px, calc(100vw - 32px)); margin:auto; padding:0; border:0; border-radius:20px; background:var(--card, #fff); color:var(--ink); box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.insp-act-dialog::backdrop{background:rgba(29,29,31,.35)}
+.insp-act-dialog form{display:grid; gap:12px; padding:22px}
+.insp-act-dialog h2{font-size:20px; margin:0}
+.insp-act-dialog p{margin:0; font-size:15px; line-height:1.45; color:var(--ink-soft)}
+.insp-act-problems p{font-weight:600; color:#8C1D18}
+.insp-act-buttons{display:flex; flex-wrap:wrap; gap:10px}
+.insp-act-dialog .btn{min-height:44px; padding:0 18px; border:0; font:600 15px var(--font); cursor:pointer}
+.insp-act-dialog .btn:disabled{opacity:.6; cursor:default}
+.insp-act-go{background:#B3261E; color:#fff}
+
+/* Set the fee and record a payment on the web (the lead, 2026-11-27: the web can do what the phone does). */
+.insp-job-edit{margin-left:6px; padding:0; border:0; background:none; color:var(--navy, #1F3A60); font:600 14px var(--font); text-decoration:underline; cursor:pointer}
+.insp-job-edit[hidden], .insp-job-form[hidden], .insp-job [hidden]{display:none}
+.insp-job-form{display:grid; gap:8px; margin-top:8px; padding:12px; border-radius:12px; background:#F5F5F7}
+.insp-job-form label{display:grid; gap:4px; font-size:13.5px; color:var(--ink-soft)}
+.insp-job-form input, .insp-job-form select{min-height:40px; padding:6px 10px; border:1px solid #C9C9D0; border-radius:10px; font:15px var(--font); color:var(--ink); background:#fff; box-sizing:border-box; width:100%}
+.insp-job-two{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+@media (max-width: 480px){ .insp-job-two{grid-template-columns:1fr} }
+.insp-job-form-b{display:flex; flex-wrap:wrap; gap:8px}
+.insp-job-help{margin:0; font-size:13px; color:var(--ink-faint)}
+.insp-job-problem{margin:0; font-size:14px; font-weight:600; color:#8C1D18}
+.insp-job-opt{font-weight:400; color:var(--ink-faint)}
+.insp-pays{list-style:none; margin:6px 0 0; padding:0; display:grid; gap:2px; font-size:14px}
+.insp-pays li{display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px}
+.insp-pays button{padding:0 8px; min-height:30px; border:0; border-radius:8px; background:none; color:#8C1D18; font:600 13px var(--font); cursor:pointer}
+.insp-pays button:hover{background:#FBEDEC}
+.insp-job-said{margin:10px 0 0; padding:9px 12px; border-radius:12px; font-size:14.5px; background:#E3F4EA}
+.insp-job-said.bad{background:#FBEDEC; color:#8C1D18}
+/* Send the report (the rehearsal, round 2; the lead, 2026-11-27): one link a person, only when the report is current. */
+.insp-send{margin:18px 0 0; padding:16px 18px; border-radius:16px; background:#fff; box-shadow:inset 0 0 0 1px rgba(0,0,0,.07); display:grid; gap:10px}
+.insp-send[hidden], .insp-send [hidden]{display:none}
+.insp-send h2{font-size:17px; margin:0}
+.insp-send-made, .insp-send-none{margin:0; font-size:14px; color:var(--ink-soft)}
+.insp-send-out{margin:0; padding:10px 12px; border-radius:12px; background:#FBF0D9; color:#6B4700; font-size:15px}
+.insp-send-who{margin:0; padding:0; border:0}
+.insp-send-who legend{font-size:13.5px; color:var(--ink-faint); margin-bottom:4px}
+.insp-send-who ul{list-style:none; margin:0; padding:0; display:grid; gap:2px}
+.insp-send-who label{display:flex; gap:10px; align-items:flex-start; min-height:40px; padding:6px 0; font-size:15px; cursor:pointer; overflow-wrap:anywhere}
+.insp-send-who input{width:18px; height:18px; margin-top:2px; flex:none}
+.insp-send-who small{display:block; color:var(--ink-faint); font-size:13px}
+.insp-send-l{display:grid; gap:4px; font-size:13.5px; color:var(--ink-soft)}
+.insp-send-l input, .insp-send-l textarea{width:100%; box-sizing:border-box; padding:9px 11px; border:1px solid #C9C9D0; border-radius:10px; font:15px/1.45 var(--font); color:var(--ink); background:#fff}
+.insp-send-said{margin:0; padding:10px 12px; border-radius:12px; font-size:15px; background:#FBEDEC; color:#8C1D18}
+.insp-send-said.ok{background:#E3F4EA; color:var(--ink)}

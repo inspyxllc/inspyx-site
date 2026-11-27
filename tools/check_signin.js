@@ -26,7 +26,14 @@ const kept = (n, endsInMs) => JSON.stringify({ access: 'test-access-' + n, renew
 
 // The words of the two pages, as drafted on 2026-11-12. They wait for Moises's approval; once he gives it, they are
 // his words, and a change here needs his word too. The sentences about a failed sign-in are the app's own.
-const SIGNIN_WORDS = ['h1: Welcome back.', 'button: Continue with Google', 'p: or with your email', 'label: Email', 'label: Password',
+const SIGNIN_WORDS = ['h1: Welcome back.', 'button: Continue with Google', 'button: Email me a sign-in link',
+  // The sign-in link (2026-11-23, the lead's order for his test account): drafted words, as above.
+  'label: Email',
+  'p: If an Inspyx account uses that address, a sign-in link is on its way. Open it on this computer or on your phone. It works once and expires in 1 hour.',
+  'p: Inspyx could not reach the sign-in server. Check your connection and try again.',
+  'p: The sign-in server refused the request. Try again later.',
+  'p: You can send another link in 60 seconds.', 'button: Send the link', 'p: Rather type your password? Use your password',
+  'p: or with your email and password', 'label: Email', 'label: Password',
   'p: That email or password was not accepted. Check both and try again.',
   'p: Inspyx could not reach the sign-in server. Check your connection and try again.',
   'p: The sign-in server answered in an unexpected way. No session was created.',
@@ -37,7 +44,8 @@ const SIGNIN_WORDS = ['h1: Welcome back.', 'button: Continue with Google', 'p: o
   'button: Sign in',
   'p: Forgot your password? Reset it',
   'p: New to Inspyx? Join the waitlist'];
-const ACCOUNT_WORDS = ['h1: Account', 'p: Signed in as', 'button: Sign out', 'p: Inspyx could not reach the sign-in server. Check your connection and try again.', 'p: The sign-in server refused the request. Try again later.'];
+// The account page (job 7, W20, 2026-11-23): the sign-in, the password, the business in one place, the plan. Drafted.
+const ACCOUNT_WORDS = ["h1: Account", "p: Your sign-in, your business in one place, and your plan.", "p: Inspyx could not reach the sign-in server. Check your connection and try again.", "p: The sign-in server refused the request. Try again later.", "h2: Sign-in", "p: Signed in as", "label: New password", "label: The same again", "p: Saved. Use it the next time you sign in, here or on your phone.", "p: Use at least 8 characters.", "p: The two don’t match. Type the same password twice.", "p: Inspyx won’t take that password. Try a longer one, or one you haven’t used before.", "p: Inspyx couldn’t be reached. Check your connection and try again.", "p: That didn’t go through. Try again in a minute.", "p: Your sign-in has ended. Sign in again, then change it.", "button: Save the new password", "button: Sign out", "h2: Your business", "p: Everything your phone uses, set up here too.", "h2: Your plan and your account", "p: On your phone: More → Account → Delete your account. Your sign-in stops working, your records on Inspyx are removed, and your plan ends: the unused days you’ve paid for are refunded to your card. It can’t be undone."];
 const read = () => {
   const flat = (t) => t.replace(/\s+/g, ' ').trim();
   const main = document.querySelector('main').cloneNode(true);
@@ -65,6 +73,13 @@ async function open(browser, where, opts) {
     const req = route.request();
     // The dashboard a sign-in lands on asks Inspyx's server one thing, what needs you: nothing, here.
     if (req.url() === SERVER + '/functions/v1/needs') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ needs: [], as_of: new Date().toISOString() }) });
+    // Its setup checklist (tools/check_setup.js checks it) asks two more: the rows (none) and the account's choices
+    // (none). Neither is a sign-in call, so neither is counted.
+    if (req.url() === SERVER + '/functions/v1/sync') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ rows: [], next: null, more: false }) });
+    if (req.url() === SERVER + '/auth/v1/user' && req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ id: 'x', email: 'x@example.com', user_metadata: {} }) });
+    // /today asks the payments function where card payments stand (job 2, #77): answered here, never counted as
+    // another site. Every other request outside sign-in still is.
+    if (req.url() === SERVER + '/functions/v1/payments') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ state: 'none', payouts: false }) });
     if (!req.url().startsWith(SERVER + '/auth/v1/')) { away.push(req.url()); return route.abort(); }
     const call = { method: req.method(), path: req.url().slice(SERVER.length), headers: req.headers(), body: req.postData() };
     calls.push(call);
@@ -113,7 +128,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
           robots: (q('meta[name=robots]') || {}).content, title: document.title, h1: document.querySelectorAll('h1').length,
           em: { type: em.type, auto: em.autocomplete, label: (q('label[for="signin-email"]') || {}).textContent, req: em.required, h: box(em).h },
           pw: { type: pw.type, auto: pw.autocomplete, label: (q('label[for="signin-password"]') || {}).textContent, req: pw.required, h: box(pw).h },
-          method: form.getAttribute('method'), action: form.getAttribute('action'), btn: box(q('[data-signin] button')).h, logo: box(q('.signin .logo')).h, wait: box(q('.help .line')).h,
+          method: form.getAttribute('method'), action: form.getAttribute('action'), btn: box(q('[data-signin] button')).h, logo: box(q('.signin .logo')).h, wait: box(q('main > .help .line')).h,
           said: [...document.querySelectorAll('[data-say]')].filter((p) => !p.hidden).length,
           stage: { hidden: stage.getAttribute('aria-hidden'), box: box(stage), phone: box(q('.phone3')), sides, focusable: stage.querySelectorAll('a, button, input, [tabindex]').length },
           font: getComputedStyle(document.body).fontFamily, foot: [...document.querySelectorAll('footer nav a')].map((a) => a.getAttribute('href')).join(',')
@@ -126,7 +141,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
       const s = r.stage, inside = (b) => b.l >= s.box.l - 2 && b.r <= s.box.r + 2 && b.t >= s.box.t - 2 && b.b <= s.box.b + 2;
       ok('sign-in page, ' + label + ': the picture beside the form is hidden from screen readers, holds nothing to tab to, and is whole (' + (desktop ? 'the phone and its three cards' : 'the phone alone') + ')', s.hidden === 'true' && s.focusable === 0 && inside(s.phone) && s.sides.length === (desktop ? 3 : 0) && s.sides.every(inside), JSON.stringify({ stage: s.box, phone: s.phone, cards: s.sides.length }));
       const words = await page.evaluate(read);
-      ok('sign-in page, ' + label + ': its words are the drafted ones', JSON.stringify(words) === JSON.stringify(SIGNIN_WORDS), JSON.stringify(words.filter((x, i) => x !== SIGNIN_WORDS[i]).slice(0, 2)));
+      ok('sign-in page, ' + label + ': its words are the drafted ones', JSON.stringify(words) === JSON.stringify(SIGNIN_WORDS), JSON.stringify(words.filter((x, i) => x !== SIGNIN_WORDS[i]).slice(0, 2)) + (process.env.SHOW_WORDS ? ' ALL=' + JSON.stringify(words) : ''));
       await ctx.close();
     });
   }
@@ -243,7 +258,10 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const mid = await rest(page);
     await tap();
     await page.evaluate(() => document.querySelector('[data-signin]').requestSubmit());
-    await page.waitForTimeout(400);
+    // The hand-off waits on the page's own work (the secret's digest), which a cold WebKit can take longer than a
+    // fixed pause over: wait for the first, then give a second the same window to show if there were one.
+    for (let waited = 0; hands < 1 && waited < 5000; waited += 50) await page.waitForTimeout(50);
+    await page.waitForTimeout(600);
     ok('Google, tapped twice: one hand-off; while it is on its way the button says "Opening Google…" and neither button takes a tap', hands === 1 && mid.g && mid.b && mid.word === 'Opening Google…' && mid.sign === 'Sign in', JSON.stringify({ hands, mid }));
     await ctx.close();
   });
@@ -265,11 +283,12 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const s = await stored(page), who = await whoOnToday(page);
     ok('a good sign-in: lands on the dashboard, which names who is signed in', (await at(page)) === '/today' && who === 'Signed in as ' + WHO && errs.length === 0 && away.length === 0, JSON.stringify(who) + ' ' + errs.join(' | '));
     ok('a good sign-in: the browser keeps the sign-in and never the password', !!s && JSON.parse(s).access === 'test-access-1' && JSON.parse(s).email === WHO && !s.includes(PASS) && !(await page.evaluate((p) => JSON.stringify(Object.assign({}, localStorage, sessionStorage)) + document.cookie + location.href, PASS)).includes(PASS), 'kept: ' + (s ? s.length + ' characters' : 'nothing'));
-    // The account page, one tap from the dashboard.
-    await page.click('.today-links a[href="/account"]');
+    // The account page, in reach from the dashboard: on a phone, under More in the tab bar (job 5's navigation).
+    await page.click('nav.dash .dash-more summary');
+    await page.click('nav.dash .dash-more a[href="/account"]');
     await page.waitForURL('**/account');
     const acct = await page.evaluate(() => { const m = document.querySelector('[data-account]'); return { hidden: m.hidden, text: m.querySelector('.who').textContent.replace(/\s+/g, ' ').trim() }; });
-    ok('a good sign-in: the account page is one tap from the dashboard, and names who is signed in', (await at(page)) === '/account' && !acct.hidden && acct.text === 'Signed in as ' + WHO && errs.length === 0 && away.length === 0, JSON.stringify(acct) + ' ' + errs.join(' | '));
+    ok('a good sign-in: the account page is in reach from the dashboard (More, then Account, on a phone), and names who is signed in', (await at(page)) === '/account' && !acct.hidden && acct.text === 'Signed in as ' + WHO && errs.length === 0 && away.length === 0, JSON.stringify(acct) + ' ' + errs.join(' | '));
     const words = await page.evaluate(read);
     ok('the account page: its words are the drafted ones', JSON.stringify(words) === JSON.stringify(ACCOUNT_WORDS), JSON.stringify(words));
     const a = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, robots: (document.querySelector('meta[name=robots]') || {}).content, btn: Math.round(document.querySelector('[data-signout]').getBoundingClientRect().height), inline: document.querySelectorAll('[style], style, script:not([src])').length, title: document.title }));
@@ -448,8 +467,8 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const safari = engine.name() === 'webkit';
     const here = () => page.evaluate(() => { const e = document.activeElement; return e.id || e.getAttribute('aria-label') || e.textContent.trim().slice(0, 18); });
     const order = [];
-    for (let i = 0; i < 6; i++) { await page.keyboard.press(safari ? 'Alt+Tab' : 'Tab'); order.push(await here()); }
-    ok('the Tab key goes: logo, Google, email, password, Sign in, then the help lines; never into the picture', order[0] === 'Inspyx, home' && order[1] === 'Continue with Goog' && order[2] === 'signin-email' && order[3] === 'signin-password' && order[4] === 'Sign in' && order[5] === 'Reset it', order.join(' > '));
+    for (let i = 0; i < 7; i++) { await page.keyboard.press(safari ? 'Alt+Tab' : 'Tab'); order.push(await here()); }
+    ok('the Tab key goes: logo, Google, the sign-in link, email, password, Sign in, then the help lines; never into the picture', order[0] === 'Inspyx, home' && order[1] === 'Continue with Goog' && order[2] === 'Email me a sign-in' && order[3] === 'signin-email' && order[4] === 'signin-password' && order[5] === 'Sign in' && order[6] === 'Reset it', order.join(' > '));
     if (safari) {
       await page.focus('#signin-email'); await page.keyboard.press('Tab');
       ok('in Safari the plain Tab key goes from the email box to the password box', (await here()) === 'signin-password', await here());
@@ -479,7 +498,9 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const text = (f) => fs.readFileSync(path.join(root, f), 'utf8');
     const key = (s) => (s.match(/sb_publishable_[A-Za-z0-9_-]+/) || [''])[0], host = (s) => (s.match(/https:\/\/[a-z0-9]+\.supabase\.co/) || [''])[0];
     ok('the sign-in uses the same public key and the same server as the waitlist form, and no other key is in its files', !!key(text('assets/auth.js')) && key(text('assets/auth.js')) === key(text('assets/home.js')) && host(text('assets/auth.js')) === host(text('assets/home.js')) && host(text('assets/auth.js')) === SERVER && !/service_role|sb_secret_|eyJ[A-Za-z0-9_-]{20,}/.test(text('assets/auth.js') + text('assets/signin.js') + text('assets/account.js') + text('signin.html') + text('account.html')));
-    const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => ['/signin', '/account'].every((p) => new RegExp('^' + r.source + '$').test(p)));
+    // The rule for every address ("/(.*)": nosniff and DENY, the same values every rule sends; check_rules.js pins it) is
+    // passed over: the private pages' own rule is the one asked about.
+    const rule = (JSON.parse(text('vercel.json')).headers || []).filter((r) => r.source !== '/(.*)' && ['/signin', '/account'].every((p) => new RegExp('^' + r.source + '$').test(p)));
     const says = (k) => (rule.length === 1 ? (rule[0].headers.find((x) => x.key === k) || {}).value : undefined);
     ok('one server rule covers both pages; it also tells browsers to keep neither page and to guess no file types', rule.length === 1 && says('Cache-Control') === 'no-store' && says('X-Content-Type-Options') === 'nosniff' && says('Content-Security-Policy') === signinRule && !!signinRule, 'rules that cover both: ' + rule.length);
     // Since 2026-11-15 (Moises: "Unhide the web dash") every public page links to the sign-in page. Signing up is
@@ -487,7 +508,7 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     // page for the signed-in, and none of these pages is in the list for search engines.
     const pages = ['index.html', 'pricing.html', 'refunds.html', 'terms.html', 'privacy.html', 'about.html', 'support.html', 'founders.html', '404.html'];
     const unlinked = pages.filter((f) => !/<a href="\/signin">Sign in<\/a>/.test(text(f)));
-    const wrong = pages.filter((f) => /href="\/(signup|account|today|plan|numbers|reports|inspections|calendar|people)"/.test(text(f)));
+    const wrong = pages.filter((f) => /href="\/(signup|account|today|plan|numbers|reports|inspections|calendar|people|prices|agreements|profile)"/.test(text(f)));
     ok('every public page links to the sign-in page ("Sign in"), none to signing up or to a page for the signed-in, and the list of pages for search engines leaves them all out', unlinked.length === 0 && wrong.length === 0 && !/signin|signup|account|today/.test(text('sitemap.xml')), JSON.stringify({ unlinked, wrong }));
     ok('the three scripts say no words: every sentence is in the pages', !/[A-Z][a-z]+ [a-z]+ [a-z]+[.!?]['"`]/.test(['auth', 'signin', 'account'].map((f) => text('assets/' + f + '.js').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')).join('\n')));
   }

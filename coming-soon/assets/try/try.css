@@ -1,0 +1,165 @@
+/* TRY SPEX (inspyx.com home page, 2026-11-23): the overlay with the phone, as he approved it in the mock-ups. Look A's
+   tokens from the app's inspyx_look.dart (tools/check_try.js checks they still match). This file says no words. */
+:root{--a-page:#F2F3F5; --a-card:#FFFFFF; --a-ink:#0E1420; --a-soft:#4A5362; --a-faint:#5E6876; --a-hair:#D9DEE5; --a-fill:#E7E9ED;
+  --a-blue:#1D62D8; --a-blueT:#E8F0FD; --a-done:#157347; --a-doneT:#E3F4EA; --a-needs:#8A5A00; --a-needsT:#FBF0D9; --a-wrong:#B3261E; --a-wrongT:#FCE9E7}
+.try-btn{display:inline-flex; vertical-align:top; align-items:center; gap:12px; margin-top:22px; margin-left:12px; height:60px; padding:0 30px 0 22px; border:0; border-radius:999px;
+  background:linear-gradient(135deg,#1D62D8,#5B8CFF); color:#fff; font:700 19px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; cursor:pointer;
+  box-shadow:0 14px 36px -12px rgba(29,98,216,.75), inset 0 1px 0 rgba(255,255,255,.35); position:relative}
+.try-btn::after{content:""; position:absolute; inset:-6px; border-radius:999px; border:2px solid rgba(91,140,255,.45); animation:try-ring 2.4s ease-out infinite}
+@keyframes try-ring{0%{opacity:.9; transform:scale(.96)} 100%{opacity:0; transform:scale(1.12)}}
+.try-btn i{width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,.2); display:grid; place-items:center}
+.try-btn i::before{content:""; width:9px; height:15px; border-radius:6px; background:#fff; box-shadow:0 0 0 0 #fff}
+.try-btn small{display:block; font-weight:500; font-size:12.5px; opacity:.85; margin-top:-2px}
+
+.ty-try-veil{position:fixed; inset:0; z-index:1000; display:grid; place-items:center; background:rgba(8,12,20,.62); backdrop-filter:blur(10px) saturate(1.1); animation:try-fade .35s ease}
+@keyframes try-fade{from{opacity:0}}
+.ty-try-x{position:absolute; top:22px; right:26px; width:48px; height:48px; border-radius:50%; border:0; background:rgba(255,255,255,.14); color:#fff; font:400 28px/1 sans-serif; cursor:pointer}
+.ty-try-side{position:absolute; left:calc(50% + 40px + 195px * var(--s,1)); top:50%; transform:translateY(-50%); width:300px; color:#fff; font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+.ty-try-side h2{font-size:30px; letter-spacing:-.02em; line-height:1.1}
+.ty-try-side p{margin-top:12px; font-size:16px; line-height:1.5; color:rgba(255,255,255,.78)}
+.ty-try-side ul{margin-top:18px; padding:0; list-style:none; display:grid; gap:10px}
+.ty-try-side li{padding:10px 14px; border-radius:14px; background:rgba(255,255,255,.1); font-size:15px}
+.ty-try-side li b{color:#9CC2FF; font-weight:600}
+.ty-try-meter{margin-top:18px; font-size:13px; color:rgba(255,255,255,.6)}
+
+/* the iPhone */
+.ty-iph{position:relative; width:390px; height:844px; border-radius:62px; padding:13px; background:linear-gradient(145deg,#4A4D52,#1C1D20 40%,#3A3C40);
+  box-shadow:0 0 0 2px #6B6E73, 0 50px 90px -30px rgba(0,0,0,.8), inset 0 0 6px rgba(255,255,255,.25); position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(var(--s,1)); animation:try-rise .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes try-rise{from{transform:translate(-50%,calc(-50% + 40px)) scale(calc(var(--s,1) * .96)); opacity:0} to{transform:translate(-50%,-50%) scale(var(--s,1)); opacity:1}}
+.ty-iph::before{content:""; position:absolute; left:-3px; top:180px; width:4px; height:64px; border-radius:2px; background:#3A3C40; box-shadow:0 84px 0 #3A3C40}
+.ty-iph::after{content:""; position:absolute; right:-3px; top:230px; width:4px; height:96px; border-radius:2px; background:#3A3C40}
+.ty-iph-screen{position:relative; width:100%; height:100%; border-radius:50px; overflow:hidden; background:var(--a-page); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; color:var(--a-ink)}
+.ty-iph-island{position:absolute; top:11px; left:50%; width:122px; height:35px; margin-left:-61px; border-radius:20px; background:#000; z-index:20}
+.ty-iph-status{position:absolute; top:0; left:0; right:0; height:52px; padding:18px 32px 0 40px; display:flex; justify-content:space-between; font:600 16px -apple-system,sans-serif; z-index:19}
+.ty-iph-status span:last-child{letter-spacing:2px; font-size:12px}
+.ty-iph-glare{position:absolute; inset:0; border-radius:50px; pointer-events:none; background:linear-gradient(120deg,rgba(255,255,255,.10),transparent 35%); z-index:30}
+
+/* app screens */
+.ty-scr{position:absolute; inset:0; padding-top:52px; display:flex; flex-direction:column; transition:transform .38s cubic-bezier(.2,.8,.2,1), opacity .3s}
+.ty-scr.ty-off{transform:translateX(30%); opacity:0; pointer-events:none}
+.ty-bar{display:flex; align-items:center; gap:10px; padding:10px 16px 12px; background:var(--a-page)}
+.ty-bar b{font-size:17px; font-weight:650; flex:1; text-align:center}
+.ty-bar .ty-back{color:var(--a-blue); font-size:17px; min-width:60px}
+.ty-bar .ty-more{min-width:60px; text-align:right; color:var(--a-blue)}
+.ty-body{flex:1; overflow:auto; padding:0 14px 190px}
+.ty-house{border-radius:18px; overflow:hidden; background:var(--a-card); box-shadow:0 1px 0 var(--a-hair)}
+.ty-house img{display:block; width:100%; height:128px; object-fit:cover}
+.ty-house > div{padding:10px 14px 12px}
+.ty-house strong{font-size:17px; display:block} .ty-house span{font-size:13.5px; color:var(--a-soft)}
+.ty-prog{margin-top:8px; height:6px; border-radius:3px; background:var(--a-fill)} .ty-prog i{display:block; height:100%; width:38%; border-radius:3px; background:var(--a-blue)}
+.ty-label{margin:16px 4px 8px; font-size:13px; font-weight:600; color:var(--a-faint); text-transform:uppercase; letter-spacing:.04em}
+.ty-list{border-radius:16px; background:var(--a-card); overflow:hidden}
+.ty-row{display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--a-hair); font-size:16px}
+.ty-row:last-child{border-bottom:0}
+.ty-row .ty-ic{width:32px; height:32px; border-radius:9px; background:var(--a-blueT); display:grid; place-items:center; color:var(--a-blue); font-size:16px}
+.ty-row .ty-t{flex:1} .ty-row small{display:block; font-size:12.5px; color:var(--a-faint)}
+.ty-row .ty-chip{font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px}
+.ty-chip.ty-ok{background:var(--a-doneT); color:var(--a-done)} .ty-chip.ty-need{background:var(--a-needsT); color:var(--a-needs)} .ty-chip.ty-todo{background:var(--a-fill); color:var(--a-soft)}
+.ty-row.ty-hl{background:var(--a-blueT); transition:background .6s}
+.ty-rate{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
+.ty-rate span{padding:8px 12px; border-radius:12px; background:var(--a-card); font-size:14px; box-shadow:inset 0 0 0 1px var(--a-hair)}
+.ty-rate span.ty-on{background:var(--a-ink); color:#fff; box-shadow:none}
+.ty-photos{display:flex; gap:8px; margin-top:8px}
+.ty-photos i{width:74px; height:74px; border-radius:12px; background:#C9D2DE center/cover}
+.ty-photos i.ty-add{display:grid; place-items:center; background:var(--a-card); box-shadow:inset 0 0 0 1px var(--a-hair); color:var(--a-blue); font-style:normal; font-size:26px}
+.ty-find{margin-top:8px; padding:12px 14px; border-radius:16px; background:var(--a-card); box-shadow:inset 3px 0 0 var(--a-wrong)}
+.ty-find b{font-size:15.5px} .ty-find p{font-size:13.5px; color:var(--a-soft); margin-top:4px}
+.ty-find .ty-tag{display:inline-block; margin-top:6px; font-size:12px; font-weight:600; color:var(--a-wrong); background:var(--a-wrongT); padding:2px 8px; border-radius:999px}
+.ty-find.ty-new{animation:try-pop .6s cubic-bezier(.2,1.4,.4,1)}
+@keyframes try-pop{from{transform:scale(.9); opacity:0}}
+.ty-cam{background:#000; color:#fff}
+.ty-cam .ty-view{flex:1; margin:0; background:#222 center/cover; position:relative}
+.ty-cam .ty-view::after{content:""; position:absolute; inset:28% 22%; border:2px solid rgba(255,214,10,.9); border-radius:6px}
+.ty-cam .ty-shut{height:auto; padding:18px 0 176px; display:grid; place-items:center}
+.ty-cam .ty-shut i{width:72px; height:72px; border-radius:50%; background:#fff; box-shadow:0 0 0 5px #000, 0 0 0 8px #fff}
+.ty-cam .ty-flash{position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none}
+.ty-cam .ty-flash.ty-go{animation:try-flash .4s}
+@keyframes try-flash{20%{opacity:.9}}
+.ty-rep{background:#fff}
+.ty-rep .ty-cover{height:220px; background:#ccc center/cover; position:relative}
+.ty-rep .ty-cover div{position:absolute; left:0; right:0; bottom:0; padding:40px 16px 14px; background:linear-gradient(transparent,rgba(0,0,0,.65)); color:#fff}
+.ty-rep .ty-cover b{font-size:20px} .ty-rep .ty-cover span{display:block; font-size:13px; opacity:.9}
+.ty-rep .ty-sum{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:14px}
+.ty-rep .ty-sum div{border-radius:14px; padding:10px; background:var(--a-page); text-align:center}
+.ty-rep .ty-sum b{display:block; font-size:22px} .ty-rep .ty-sum span{font-size:12px; color:var(--a-soft)}
+
+/* Spex */
+.ty-spex{position:absolute; left:12px; right:12px; bottom:26px; z-index:15}
+.ty-spex-talk{width:100%; height:58px; border:0; border-radius:20px; background:var(--a-ink); color:#fff; font:650 17px -apple-system,sans-serif; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 12px 30px -12px rgba(0,0,0,.5)}
+.ty-spex-talk i{width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,#5B8CFF,#1D62D8)}
+.ty-spex-live{display:none; border-radius:22px; padding:12px 14px; background:rgba(14,20,32,.92); color:#fff; backdrop-filter:blur(12px); box-shadow:0 16px 36px -14px rgba(0,0,0,.6)}
+.ty-spex.ty-on .ty-spex-talk{display:none} .ty-spex.ty-on .ty-spex-live{display:block}
+.ty-wave{display:flex; align-items:center; gap:4px; height:30px}
+.ty-wave i{flex:1; border-radius:3px; background:linear-gradient(#9CC2FF,#5B8CFF); height:20%; animation:try-wave 1s ease-in-out infinite}
+.ty-wave i:nth-child(2n){animation-delay:.15s} .ty-wave i:nth-child(3n){animation-delay:.3s} .ty-wave i:nth-child(5n){animation-delay:.45s}
+@keyframes try-wave{50%{height:95%}}
+.ty-spex-who{display:flex; justify-content:space-between; font-size:12px; color:rgba(255,255,255,.6); margin-bottom:6px}
+.ty-cap{margin-top:8px; font-size:15px; line-height:1.35; min-height:20px}
+.ty-cap.ty-you{color:#fff} .ty-cap.ty-spexsay{color:#9CC2FF}
+.ty-hint{position:absolute; left:16px; right:16px; bottom:98px; z-index:14; padding:10px 12px; border-radius:14px; background:var(--a-blueT); color:var(--a-blue); font-size:13.5px; text-align:center; transition:opacity .4s}
+.ty-timer{position:absolute; top:58px; right:16px; z-index:16; font:600 12px -apple-system,sans-serif; color:var(--a-soft); background:var(--a-card); padding:3px 9px; border-radius:999px; box-shadow:0 1px 0 var(--a-hair)}
+.ty-busy{position:absolute; inset:0; z-index:40; display:none; place-items:center; padding:40px; text-align:center; background:var(--a-page)}
+.ty-busy.ty-show{display:grid}
+.ty-busy b{font-size:22px} .ty-busy p{margin-top:10px; color:var(--a-soft); font-size:15.5px; line-height:1.45}
+.ty-busy em{display:block; margin-top:22px; font-style:normal; color:var(--a-blue); font-weight:600}
+
+/* a phone-sized visitor: the demo fills the screen */
+@media (max-width: 600px){
+  .ty-try-veil{background:var(--a-page); backdrop-filter:none}
+  .ty-try-side{display:none}
+  .ty-iph{position:fixed; inset:0; width:auto; height:auto; border-radius:0; padding:0; background:none; box-shadow:none; transform:none; animation:none}
+  .ty-iph::before, .ty-iph::after, .ty-iph-island, .ty-iph-glare, .ty-iph-status{display:none}
+  .ty-iph-screen{border-radius:0}
+  .ty-scr{padding-top:58px}
+  .ty-try-x{top:10px; right:10px; z-index:60; background:rgba(14,20,32,.85); width:44px; height:44px}
+  .ty-timer{left:16px; right:auto; top:18px}
+}
+
+/* the real build's additions */
+.ty-try-veil[hidden]{display:none}
+.ty-iph-screen button{font:inherit}
+.ty-row{cursor:pointer; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--a-hair); color:inherit}
+.ty-bar button{background:none; border:0; color:var(--a-blue); font-size:17px; cursor:pointer; padding:6px 0}
+.ty-rate button{padding:8px 12px; border-radius:12px; background:var(--a-card); font-size:14px; box-shadow:inset 0 0 0 1px var(--a-hair); border:0; cursor:pointer; color:var(--a-ink)}
+.ty-rate button.ty-on{background:var(--a-ink); color:#fff; box-shadow:none}
+.ty-photos button.ty-add{width:74px; height:74px; border-radius:12px; display:grid; place-items:center; background:var(--a-card); box-shadow:inset 0 0 0 1px var(--a-hair); color:var(--a-blue); font-size:26px; border:0; cursor:pointer}
+.ty-cam .ty-shut button{width:72px; height:72px; border-radius:50%; background:#fff; box-shadow:0 0 0 5px #000, 0 0 0 8px #fff; border:0; cursor:pointer}
+.ty-cam .ty-close{position:absolute; top:62px; left:16px; z-index:5; color:#fff; background:rgba(0,0,0,.4); border:0; border-radius:999px; padding:6px 12px; cursor:pointer}
+.ty-spex-talk{cursor:pointer}
+.ty-spex-live{cursor:pointer}
+.ty-spex-live .ty-dot{color:#5BE37D}
+.ty-spex.ty-wait .ty-spex-talk{opacity:.7; cursor:progress}
+.ty-try-credits{margin-top:14px; font-size:11.5px; color:rgba(255,255,255,.5); line-height:1.4}
+.ty-try-credits a{color:rgba(255,255,255,.7)}
+.ty-done-card{position:absolute; inset:0; z-index:39; display:none; place-items:center; padding:36px; text-align:center; background:rgba(242,243,245,.96)}
+.ty-done-card.ty-show{display:grid}
+.ty-done-card b{font-size:22px} .ty-done-card p{margin-top:10px; color:var(--a-soft); font-size:15.5px; line-height:1.45}
+.ty-done-card a, .ty-busy a{display:inline-block; margin-top:18px; padding:12px 22px; border-radius:999px; background:var(--a-ink); color:#fff; font-weight:600; text-decoration:none}
+.ty-busy button, .ty-done-card button{margin-top:12px; background:none; border:0; color:var(--a-blue); font-weight:600; font-size:15px; cursor:pointer}
+@media (prefers-reduced-motion: reduce){ .try-btn::after, .ty-wave i, .ty-iph, .ty-try-veil, .ty-find.ty-new{animation:none !important} .ty-scr{transition:none} }
+
+.ty-prog{height:6px; overflow:hidden} .ty-prog-fill{display:block; height:100%; border-radius:3px; background:var(--a-blue)}
+
+/* The app's walk row: ring, name and progress, chevron. The list scrolls clear of the hint and the Talk button. */
+.ty-ring{flex:none; width:26px; height:26px}
+.ty-chev{flex:none; color:var(--a-faint); font-size:22px; line-height:1}
+/* Under the hint and the Talk button, the screen fades to the page's colour: no row shows half-hidden behind them. */
+.ty-iph-screen::after{content:""; position:absolute; left:0; right:0; bottom:0; height:190px; z-index:13; pointer-events:none;
+  background:linear-gradient(rgba(242,243,245,0), var(--a-page) 46%)}
+.ty-iph-screen.ty-cam-on::after{display:none}
+.ty-iph-screen.ty-cam-on .ty-iph-status{color:#fff}
+/* A short window: the side panel tightens and never runs off the screen (it scrolls as a last resort). */
+.ty-try-side{max-height:calc(100vh - 32px); overflow:auto}
+@media (max-height: 760px){
+  .ty-try-side h2{font-size:24px} .ty-try-side p{margin-top:8px; font-size:14.5px}
+  .ty-try-side ul{margin-top:10px; gap:6px} .ty-try-side li{padding:7px 12px; font-size:14px}
+  .ty-try-credits{margin-top:8px}
+}
+/* The item's photos open on the app's photo viewer (2026-11-22: "pull up the photo"). */
+.ty-photos button.ty-shot{width:74px; height:74px; border-radius:12px; border:0; padding:0; background:#C9D2DE center/cover; cursor:pointer}
+.ty-view-scr .ty-view{margin-top:44px; background-color:#000; background-size:contain; background-repeat:no-repeat}
+.ty-view-scr .ty-view::after{display:none}
+.ty-view-scr .ty-photo-nav{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px 176px; font-size:14px}
+.ty-photo-nav button{width:44px; height:44px; flex:none; border-radius:50%; border:0; background:rgba(255,255,255,.16); color:#fff; font-size:26px; line-height:1; cursor:pointer}
+.ty-photo-nav button:disabled{opacity:.3; cursor:default}
+.ty-photo-nav span{text-align:center}

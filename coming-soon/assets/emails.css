@@ -1,0 +1,50 @@
+/* Emails (2026-11-23): booking.css's cards and how-to, plus the message list. */
+.eml-night{margin:6px 0 4px; font-size:14.5px; color:var(--ink-faint)}
+.eml-night[hidden]{display:none}
+.eml-list{list-style:none; padding:0; margin:12px 0 0; display:grid; gap:14px}
+.eml-list[hidden]{display:none}
+.eml-sub{margin-top:-8px; font-size:14.5px; color:var(--ink-faint)}
+.eml-grid{display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:14px 20px; align-items:start; transition:opacity .2s}
+.eml-grid.eml-off{opacity:.45}
+.eml-who{display:grid; gap:2px; margin:0; padding:0; border:0}
+.eml-who legend{margin-bottom:4px; font-size:13.5px; color:var(--ink-soft)}
+.eml-who small{font-size:12.5px; color:var(--ink-faint)}
+.eml-who .tick{display:flex; gap:10px; align-items:center; min-height:38px; font-size:15.5px; color:var(--ink); cursor:pointer}
+.eml-who .tick input{width:20px; height:20px; margin:0}
+.eml-note{padding:10px 12px; border-radius:12px; background:#F5F5F7; font-size:14px; color:var(--ink-soft)}
+.eml-note[hidden]{display:none}
+.eml-preview summary{min-height:44px; display:flex; align-items:center; color:var(--navy); font-weight:600; font-size:14.5px; cursor:pointer}
+.eml-mail{display:grid; gap:8px; padding:14px; border-radius:14px; background:#F9FAFB; box-shadow:inset 0 0 0 1px var(--line)}
+.eml-mail[hidden]{display:none}
+.eml-mail-subject{font-weight:700; color:var(--ink)}
+.eml-mail-text{margin:0; white-space:pre-wrap; font:15px/1.5 var(--font); color:var(--ink-soft)}
+.eml-mail-note{font-size:12.5px; color:var(--ink-faint)}
+.eml-mail-note[hidden], .eml-mail-designed[hidden], .eml-mail-text[hidden]{display:none}
+/* The designed email (the rehearsal, round 2), in its own sandboxed frame (email-frame.js). */
+.eml-mail-designed iframe{display:block; width:100%; height:420px; border:0; border-radius:12px; background:#F4F4F6}
+.eml-mail-wait{font-size:14px; color:var(--ink-faint)}
+.eml-mail-wait[hidden]{display:none}
+.eml-review{margin-top:14px}
+.eml-review[hidden]{display:none}
+.eml-review-say{font-size:15px; color:var(--ink-soft)}
+.eml-review-say[hidden]{display:none}
+.eml-review input{min-height:44px; padding:8px 12px; border:1px solid #C9C9D0; border-radius:12px; background:#fff; color:var(--ink); font:16px var(--font)}
+.eml-bad{font-size:14.5px; color:#8C1D18}
+.eml-bad[hidden]{display:none}
+.eml .say p{margin:12px 0 0; font-size:15px}
+.eml .say [data-say="saved"]{color:#17924F}
+
+/* The how-to: a finger picks a message, sets when, and an envelope flies. */
+.eml-how-card{gap:12px}
+.eml-how-row{display:flex; justify-content:space-between; gap:10px; align-items:center; font-size:12.5px}
+.eml-how-pill{padding:3px 8px; border-radius:8px; background:#F2F2F7; color:var(--ink-soft); font-size:11.5px; white-space:nowrap}
+.eml-how-pill2{animation:eml-pill 9s infinite}
+.eml-how-mail{position:relative; justify-self:center; width:44px; height:30px; border-radius:6px; background:var(--navy); animation:eml-fly 9s infinite}
+.eml-how-mail span{position:absolute; left:6px; right:6px; height:2px; background:rgba(255,255,255,.7)}
+.eml-how-mail span:nth-child(1){top:8px} .eml-how-mail span:nth-child(2){top:14px} .eml-how-mail span:nth-child(3){top:20px}
+.eml-how-finger{animation-name:eml-finger}
+@keyframes eml-finger{0%{left:70%; top:80%} 10%,26%{left:60px; top:52px} 36%,60%{left:200px; top:82px} 70%,100%{left:70%; top:85%}}
+@keyframes eml-pill{0%,40%{background:#F2F2F7; color:var(--ink-soft)} 46%,100%{background:#DCEBFF; color:var(--navy)}}
+@keyframes eml-fly{0%,66%{transform:none; opacity:1} 80%{transform:translate(90px, -40px) rotate(-12deg); opacity:.2} 82%{transform:none; opacity:0} 90%,100%{opacity:1}}
+@media (prefers-reduced-motion: reduce){ .eml-how-mail, .eml-how-pill2{animation:none !important} }
+@media (max-width: 760px){ .eml-grid{grid-template-columns:1fr} }

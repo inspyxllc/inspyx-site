@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Client view</title>
+<!-- Client View / Agent View (2026-11-24, his Spectora list item 1): the inspector sees his own inspection exactly as
+     his client or an agent sees it. Opened from the inspection on the website (inspyx.com/look#i=<id>&as=<view>,
+     signed in) or from the app (inspyx.com/look#t=<ticket>). A one-time ticket asks the report function once;
+     nothing is counted and nothing is sent. Draft words (the lead, 11-24: ordinary words, no money or legal). -->
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#0B1F3A">
+<link rel="stylesheet" href="/assets/report.css">
+<link rel="stylesheet" href="/assets/look.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/look.js" defer></script>
+</head>
+<body class="looking">
+<header class="look-bar" data-look-bar>
+  <span class="look-eye" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+  <div class="look-what">
+    <p class="look-name"><span data-view="client">Client view</span><span data-view="agent" hidden>Agent view</span></p>
+    <p class="look-line"><span data-view="client">What your client sees.</span><span data-view="agent" hidden>What the agent sees.</span> Nothing you do here is counted or sent.</p>
+  </div>
+  <button class="look-close" type="button" data-close>Close</button>
+</header>
+
+<section class="look-state" data-state="wait" role="status"><p class="state state-wait">Opening the view…</p></section>
+<section class="look-state look-card" data-state="signin" hidden>
+  <h1>Sign in to see this view</h1>
+  <p>It shows one of your own inspections, so it needs your Inspyx sign-in.</p>
+  <p><a class="btn btn-wide" href="/signin">Sign in</a></p>
+</section>
+<section class="look-state look-card" data-state="gone" hidden>
+  <h1>This view has closed</h1>
+  <p>Each view opens once. Open it again from the inspection, on the website or in the app.</p>
+</section>
+<section class="look-state look-card" data-state="failed" hidden>
+  <h1>Couldn’t open this view</h1>
+  <p>Check your connection, then try again.</p>
+  <p><button class="btn btn-wide" type="button" data-again>Try again</button></p>
+</section>
+<section class="look-state look-card look-notsent" data-state="not_sent" hidden>
+  <span class="look-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg></span>
+  <h1>Not sent yet</h1>
+  <p><span data-view="client">Nothing has been sent to your client yet.</span><span data-view="agent" hidden>Nothing has been sent to this agent yet.</span>
+     Once you send the report, this is the page they’ll see.</p>
+  <ul class="look-facts" data-facts>
+    <li data-fact="to_sign" hidden><span class="look-dot look-dot-wait" aria-hidden="true"></span>Their agreement is waiting to be signed.</li>
+    <li data-fact="signed" hidden><span class="look-dot look-dot-done" aria-hidden="true"></span>Their agreement is signed.</li>
+    <li data-fact="none" hidden><span class="look-dot" aria-hidden="true"></span>No agreement has been sent to them.</li>
+    <li data-fact="due" hidden><span class="look-dot look-dot-wait" aria-hidden="true"></span><span><span data-due></span> is due.</span></li>
+    <li data-fact="paid" hidden><span class="look-dot look-dot-done" aria-hidden="true"></span>Nothing is due.</li>
+  </ul>
+</section>
+
+<p class="look-pill" data-pill hidden><span><span data-view="client">Client view</span><span data-view="agent" hidden>Agent view</span> · nothing is counted</span></p>
+<div id="app" aria-busy="true" hidden></div>
+<noscript><p class="state">This page needs JavaScript.</p></noscript>
+</body>
+</html>

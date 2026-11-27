@@ -22,16 +22,32 @@ const extra = (p) => {
   return out;
 };
 
-// vercel.json's plain rewrites (a source with no ":" in it), as Vercel serves them: /a is the agent page.
+// vercel.json's rewrites, as Vercel serves them: a plain source (/a is the agent page), or one whose last part is a
+// ":name" standing for one path segment (/book/:slug is the booking page, 2026-11-21).
 const rewritten = (p) => {
   let list = [];
   try { list = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8')).rewrites || []; } catch (e) { list = []; }
-  const hit = list.find((r) => !r.source.includes(':') && r.source === p);
+  const hit = list.find((r) => {
+    if (!r.source.includes(':')) return r.source === p;
+    const m = r.source.match(/^(\/[a-z0-9/-]*?)\/:[a-z]+$/);
+    return m !== null && p.startsWith(m[1] + '/') && /^[^/]+$/.test(p.slice(m[1].length + 1));
+  });
   return hit ? hit.destination : p;
+};
+
+// vercel.json's redirects (plain sources): the old import pages to Bring your business (2026-11-27). Vercel answers
+// 307 for "permanent": false, with the query kept.
+const redirected = (p) => {
+  let list = [];
+  try { list = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8')).redirects || []; } catch (e) { list = []; }
+  const hit = list.find((r) => r.source === p || r.source + '.html' === p);
+  return hit ? { to: hit.destination, code: hit.permanent ? 308 : 307 } : null;
 };
 
 http.createServer((req, res) => {
   const asked = decodeURIComponent(req.url.split('?')[0]);
+  const away = redirected(asked);
+  if (away) { const q = req.url.indexOf('?'); res.writeHead(away.code, { Location: away.to + (q >= 0 ? req.url.slice(q) : '') }); res.end(); return; }
   let p = rewritten(asked);
   if (p.endsWith('/')) p += 'index.html';
   // Only a file inside the folder, after every ".." is resolved: anything else is refused (code scanning's
@@ -43,7 +59,9 @@ http.createServer((req, res) => {
   const file = !fs.existsSync(asFile) && fs.existsSync(asPage) ? asPage : asFile;
   if (!inside(file) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     const missing = path.join(root, '404.html');
-    res.writeHead(404, { 'Content-Type': types['.html'] });
+    // A wrong address gets the rules' headers too, as on Vercel: its header rules run before the file lookup
+    // (routing-utils puts them ahead of "handle: filesystem"), whatever the lookup then finds.
+    res.writeHead(404, Object.assign({ 'Content-Type': types['.html'] }, extra(asked)));
     res.end(fs.existsSync(missing) ? fs.readFileSync(missing) : 'Not found');
     return;
   }

@@ -201,6 +201,165 @@
     });
   }
 
+  /* A picture's file (business setup phase 2c, 2026-11-16): the inspector's photo, logo or signature in the
+     private store business-media, added (never over another: a file is named by its content and never changes) or
+     read, as the signed-in inspector. Only that store, and only a name of its own shape in the signed-in
+     inspector's own folder: <their id>/<headshot|logo|signature>/<sha256>.<jpg|png> (the server's policies hold
+     the same). It answers { status, inner, blob } (blob when read and found; inner, the status Storage put inside its answer),
+     or null when nobody is signed in. The token
+     stays in this file, as in ask; a refused sign-in (401) is renewed once, as in ask. */
+  var PICTURES = SERVER + '/storage/v1/object/';
+  var PICTURE = /^[0-9a-f-]{36}\/(headshot|logo|signature)\/[0-9a-f]{64}\.(jpg|png)$/;
+  function sendPicture(method, url, token, blob, deadline) {
+    // The file's bytes go as bytes (an ArrayBuffer), with its type said in the header.
+    return (blob ? blob.arrayBuffer() : Promise.resolve(undefined)).then(function (bytes) {
+      return sendPictureBytes(method, url, token, bytes, blob ? blob.type : null, deadline);
+    }, function () { throw new Refusal('malformed'); });
+  }
+  function sendPictureBytes(method, url, token, bytes, type, deadline) {
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, deadline || DEADLINE);
+    var headers = { apikey: KEY, Authorization: 'Bearer ' + token };
+    if (bytes) { headers['Content-Type'] = type; headers['x-upsert'] = 'false'; }
+    var silent = function () { clearTimeout(timer); throw new Refusal('network'); };
+    return root.fetch(url, {
+      method: method, headers: headers, body: bytes,
+      signal: ctl ? ctl.signal : undefined, cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer'
+    }).then(function (res) {
+      // A found file comes back as itself; any other answer as its status, and the status Storage may put inside
+      // its JSON (a file there already can come as 400 holding "409").
+      if (res.status === 200 && method === 'GET') {
+        return res.blob().then(function (b) { clearTimeout(timer); return { status: 200, inner: null, blob: b }; }, silent);
+      }
+      return res.text().then(function (text) {
+        clearTimeout(timer);
+        var inner = null;
+        try { var j = JSON.parse(text); inner = j && j.statusCode != null ? String(j.statusCode) : null; } catch (e) { inner = null; }
+        return { status: res.status, inner: inner, blob: null };
+      }, silent);
+    }, silent);
+  }
+  function picture(action, name, blob, deadline) {
+    if (!PICTURE.test(String(name)) || (action !== 'add' && action !== 'read')) return Promise.reject(new Refusal('malformed'));
+    if (action === 'add' && (!blob || (blob.type !== 'image/jpeg' && blob.type !== 'image/png'))) return Promise.reject(new Refusal('malformed'));
+    var once = function (s) {
+      if (name.split('/')[0] !== s.id) return Promise.reject(new Refusal('malformed'));
+      return action === 'add'
+        ? sendPicture('POST', PICTURES + 'business-media/' + name, s.access, blob, deadline)
+        : sendPicture('GET', PICTURES + 'authenticated/business-media/' + name, s.access, null, deadline);
+    };
+    return current().then(function (s) {
+      if (!s) return null;
+      return once(s).then(function (r) {
+        if (r.status !== 401) return r;
+        return current(true).then(function (fresh) { return fresh ? once(fresh) : null; });
+      });
+    });
+  }
+
+  /* A template's file (T4, the template upload page, 2026-11-23): one converted template's version file (its manifest
+     JSON) in the private store business-templates, added (never over another: a file is named by its content), as the
+     signed-in inspector: <their id>/<template id>/<sha256>.json (the app's templateFileName and the server's
+     template_rules.ts hold the same name; the store's policies, the same folder). It answers { status, inner } as
+     picture does, or null when nobody is signed in. The token stays in this file, as in ask; a refused sign-in (401)
+     is renewed once. */
+  var TEMPLATE_FILE = /^[0-9a-f-]{36}\/inspector\.[a-z0-9]+(-[a-z0-9]+)*\/[0-9a-f]{64}\.json$/;
+  function templateFile(name, bytes, deadline) {
+    if (!TEMPLATE_FILE.test(String(name)) || !(bytes instanceof Uint8Array) || !bytes.length) return Promise.reject(new Refusal('malformed'));
+    var once = function (s) {
+      if (name.split('/')[0] !== s.id) return Promise.reject(new Refusal('malformed'));
+      return sendPictureBytes('POST', PICTURES + 'business-templates/' + name, s.access, bytes, 'application/json', deadline);
+    };
+    return current().then(function (s) {
+      if (!s) return null;
+      return once(s).then(function (r) {
+        if (r.status !== 401) return r;
+        return current(true).then(function (fresh) { return fresh ? once(fresh) : null; });
+      });
+    });
+  }
+
+  /* Reading a template's file back (2026-11-26, Save to template, his list item 12, piece D): the same store and the
+     same name rule as templateFile, read as the signed-in inspector from their own folder only. It answers
+     { status, inner, blob } as picture does (blob when found), or null when nobody is signed in. */
+  function templateRead(name, deadline) {
+    if (!TEMPLATE_FILE.test(String(name))) return Promise.reject(new Refusal('malformed'));
+    var once = function (s) {
+      if (name.split('/')[0] !== s.id) return Promise.reject(new Refusal('malformed'));
+      return sendPictureBytes('GET', PICTURES + 'authenticated/business-templates/' + name, s.access, null, null, deadline);
+    };
+    return current().then(function (s) {
+      if (!s) return null;
+      return once(s).then(function (r) {
+        if (r.status !== 401) return r;
+        return current(true).then(function (fresh) { return fresh ? once(fresh) : null; });
+      });
+    });
+  }
+
+  /* Converting a template over the Spex server (T4): the converter (assets/convert/inspyx_convert.js, the app's own
+     converter compiled for the web) is handed the sign-in here, so the page's script never holds it. It answers the
+     converter's own answer (parsed), or null when nobody is signed in. */
+  function convertTemplate(fileName, bytes, url, onProgress) {
+    var conv = root.inspyxConvert;
+    if (!conv || typeof conv.convert !== 'function' || !(bytes instanceof Uint8Array)) return Promise.reject(new Refusal('malformed'));
+    return current().then(function (s) {
+      if (!s) return null;
+      return conv.convert(fileName, bytes, { accessToken: s.access, url: url, onProgress: onProgress }).then(function (text) {
+        return JSON.parse(text);
+      });
+    });
+  }
+
+  /* Edit with AI (2026-11-24, his decision after the Spectora walk; the relay's contract EDIT_WITH_AI.md v1): one
+     finding's details sent to Spex on the Spex Chat connection, signed in inside this file as ask is (the page never
+     holds the token). [request]: { action, title, text, item?, stop? }; with no action, only asks whether Edit with
+     AI is open to this inspector (a hello alone is never billed). Answers:
+       { admitted: true }                   (no action) the relay says "edit": true;
+       { unavailable: true }                no sign-in, a denial, or a relay without "edit";
+       { text: "..." }                      Spex's version of the details;
+       { error: "<sentence>", code: "..." } a refusal, to show as given.
+     It rejects when the relay can't be reached or doesn't answer in time. One socket per call, closed after. */
+  var EDIT_WAIT = 90000;
+  function editFinding(request, url) {
+    if (typeof root.WebSocket !== 'function' || !/^wss:\/\//.test(String(url || ''))) return Promise.resolve({ unavailable: true });
+    return current().then(function (s) {
+      if (!s) return { unavailable: true };
+      return new Promise(function (resolve, reject) {
+        var ws, done = false, id = 'e' + Date.now().toString(36);
+        var timer = setTimeout(function () { finish(null, new Error('timeout')); }, EDIT_WAIT);
+        function finish(answer, err) {
+          if (done) return; done = true; clearTimeout(timer);
+          try { ws.onclose = ws.onerror = ws.onmessage = null; ws.close(); } catch (e) { /* already gone */ }
+          if (err) reject(err); else resolve(answer);
+        }
+        try { ws = new root.WebSocket(url); } catch (e) { clearTimeout(timer); reject(e); return; }
+        var say = function (m) { try { ws.send(JSON.stringify(m)); } catch (e) { finish(null, e); } };
+        ws.onopen = function () { say({ hello: { access_token: s.access, client: 'inspyx-web', mode: 'chat' } }); };
+        ws.onmessage = function (ev) {
+          var m = null;
+          try { m = JSON.parse(ev.data); } catch (e) { return; }
+          var r = m && m.relay;
+          if (!r || typeof r !== 'object') return;
+          if (r.status === 'denied') return finish({ unavailable: true });
+          if (r.status === 'admitted') {
+            if (r.edit !== true) return finish({ unavailable: true });
+            if (!request || !request.action) return finish({ admitted: true });
+            return say({ chat: { id: id, edit: request } });
+          }
+          if (r.status === 'chat' && r.id === id) {
+            var res = r.result || {};
+            if (res.edit && typeof res.edit.text === 'string') return finish({ text: res.edit.text });
+            if (typeof res.error === 'string') return finish({ error: res.error, code: typeof res.code === 'string' ? res.code : '' });
+            return finish(null, new Error('answer'));
+          }
+        };
+        ws.onerror = function () { finish(null, new Error('unreachable')); };
+        ws.onclose = function () { finish(null, new Error('closed')); };
+      });
+    });
+  }
+
   /* Hearing "something changed" (inspection sync, 2026-11-14): the server's pings for the signed-in inspector's
      own inspections, on their private Realtime topic insp:<their id>. The sign-in goes to the server inside this
      file, as in ask: the page gives a function to call on each ping, and gets back a way to stop. Only the
@@ -318,6 +477,54 @@
     });
   }
 
+  /* A sign-in link by email (2026-11-23, his order: "make sure it's done right"). For an inspector who would rather
+     not type a password, and for signing in on another device: the link opens the app on a phone that has it, the
+     website anywhere else.
+     linkRequest asks the account server to email a link to an account that already exists (create_user: false:
+     this never makes an account). Its answer never says whether an account uses the address: the server answers
+     an unknown address (422) and a second request too soon for a real one (429) differently, so all three are the
+     same 'sent' here, and the page waits a minute before another either way. Only a server that can't be reached
+     (network) or fails (server) says otherwise.
+     linkTake reads the link's one-time key from the address's fragment (#token_hash=...&type=magiclink): a fragment
+     never leaves the browser, so the key reaches no server's log and no other site's Referer. It is taken out of the
+     address at once, before anything else happens; linkVerify exchanges it once (POST /verify, no PKCE verifier, so a link
+     asked for on one device works on another). The server makes each key good once and for a limited time.
+     'missing': the page was opened without a key. More trouble: expired (used already, too old, or not a key). */
+  var LINK_KEY = /^[A-Za-z0-9_-]{20,256}$/;
+  function linkRequest(email) {
+    return send('POST', BASE + '/otp', null, { email: email, create_user: false }).then(function (r) {
+      if (r.status === 200 || r.status === 422 || r.status === 429) return 'sent';
+      throw new Refusal('server', r.status);
+    });
+  }
+  function linkKey(fragment) {
+    var h;
+    try { h = new URLSearchParams(String(fragment || '').replace(/^#/, '')); } catch (e) { return { kind: 'expired' }; }
+    var key = h.get('token_hash'), type = h.get('type'), error = h.get('error') || h.get('error_code');
+    if (!key && !error) return { kind: 'missing' };
+    if (error || type !== 'magiclink' || !LINK_KEY.test(key || '')) return { kind: 'expired' };
+    return { kind: 'key', key: key };
+  }
+  // The key, taken out of the address at once; kept by the page (in memory only) so a check that could not reach
+  // the server can be tried again without the link.
+  function linkTake() {
+    var found = linkKey(root.location.hash);
+    if (root.location.hash || root.location.search) {
+      try { root.history.replaceState(null, '', root.location.pathname); } catch (e) { /* the key stays in the address; it is good once */ }
+    }
+    return found;
+  }
+  function linkVerify(key) {
+    if (!LINK_KEY.test(String(key || ''))) return Promise.reject(new Refusal('expired'));
+    return send('POST', BASE + '/verify', null, { type: 'magiclink', token_hash: key }).then(function (r) {
+      if (r.status >= 400 && r.status < 500 && r.status !== 429) throw new Refusal('expired', r.status);
+      if (r.status !== 200) throw new Refusal('server', r.status);
+      var s = whole(r.json);
+      if (!keep(s)) { send('POST', BASE + '/logout?scope=local', s.access).then(function () {}, function () {}); throw new Refusal('storage'); }
+      return s;
+    });
+  }
+
   /* Making an account (2026-11-13; his rules: anyone may sign up, with Google or an email and a password; every
      account also has a password; the Terms tick is required). Nothing here opens sign-up: while the account server
      refuses new accounts, signUp answers 'closed'.
@@ -371,7 +578,43 @@
     });
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword };
+  /* A choice the inspector made on the website, kept with their account so it follows them to every browser
+     (2026-11-22, Moises on the setup checklist: "Hide and allow option to never see again"). Kept in the account's
+     own details (user_metadata), each choice a top-level key of its own whose name starts "web_": the sign-in
+     server merges top-level keys, so one choice never wipes another. choices() answers the "web_" keys held, or
+     null when nobody is signed in; choose(key, value) answers true when kept. A refused sign-in (401) is renewed
+     once, as in ask; anything else the server says throws. */
+  var CHOICE = /^web_[a-z_]{1,40}$/;
+  function asUser(method, body) {
+    var once = function (s) { return send(method, BASE + '/user', s.access, body); };
+    return current().then(function (s) {
+      if (!s) return null;
+      return once(s).then(function (r) {
+        if (r.status !== 401) return r;
+        return current(true).then(function (fresh) { return fresh ? once(fresh) : null; });
+      });
+    });
+  }
+  function choices() {
+    return asUser('GET').then(function (r) {
+      if (r === null) return null;
+      if (r.status !== 200 || !r.json) throw new Refusal('server', r.status);
+      var meta = r.json.user_metadata, out = {};
+      if (meta && typeof meta === 'object') Object.keys(meta).forEach(function (k) { if (CHOICE.test(k)) out[k] = meta[k]; });
+      return out;
+    });
+  }
+  function choose(key, value) {
+    if (!CHOICE.test(key) || typeof value !== 'boolean') return Promise.reject(new Refusal('malformed'));
+    var data = {}; data[key] = value;
+    return asUser('PUT', { data: data }).then(function (r) {
+      if (r === null) return false;
+      if (r.status !== 200) throw new Refusal('server', r.status);
+      return true;
+    });
+  }
+
+  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, templateFile: templateFile, templateRead: templateRead, convertTemplate: convertTemplate, editFinding: editFinding, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, linkRequest: linkRequest, linkKey: linkKey, linkTake: linkTake, linkVerify: linkVerify, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword, choices: choices, choose: choose };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the dashboard (/today, since 2026-11-15). It asks three times:

@@ -1,0 +1,95 @@
+{
+ "_doc": "Copied from the app repo backend/spex_relay/tests/fixtures/chat_protocol.json (contract v1.1: #745, and #746 for Add a recommendation on \"What to do\"): the keys the website's Edit with AI uses. Refresh when the contract changes.",
+ "hello": {
+  "hello": {
+   "access_token": "<token>",
+   "client": "inspyx-ios-chat",
+   "mode": "chat"
+  }
+ },
+ "admitted": {
+  "relay": {
+   "status": "admitted",
+   "mode": "chat",
+   "model": "gemini-3.5-flash-lite",
+   "attachments": true,
+   "rewrite": true,
+   "sms_draft": true,
+   "edit": true
+  }
+ },
+ "denied": {
+  "relay": {
+   "status": "denied",
+   "reason": "not-on-pilot-list"
+  }
+ },
+ "edit": {
+  "actions": [
+   "clearer",
+   "shorter",
+   "recommend",
+   "grammar"
+  ],
+  "codes": [
+   "chat-edit-bad-request",
+   "chat-edit-bad-action",
+   "chat-edit-too-long",
+   "chat-edit-changed-facts",
+   "chat-edit-more-than-grammar",
+   "chat-edit-not-for-field"
+  ],
+  "fields": [
+   "details",
+   "implication",
+   "recommendation"
+  ],
+  "field_actions": {
+   "implication": [
+    "shorter",
+    "grammar"
+   ],
+   "recommendation": [
+    "shorter",
+    "grammar",
+    "recommend"
+   ]
+  },
+  "max_title_chars": 200,
+  "max_text_chars": 4000,
+  "max_place_chars": 100
+ },
+ "edit_request": {
+  "chat": {
+   "id": "<id>",
+   "edit": {
+    "action": "recommend",
+    "title": "Missing GFCI protection",
+    "text": "The outlet beside the kitchen sink has no GFCI protection.",
+    "item": "Kitchen outlets",
+    "stop": "Kitchen"
+   }
+  }
+ },
+ "edit_result": {
+  "relay": {
+   "status": "chat",
+   "id": "<id>",
+   "result": {
+    "edit": {
+     "text": "The outlet beside the kitchen sink has no GFCI protection. A qualified licensed electrician should evaluate and correct this."
+    }
+   }
+  }
+ },
+ "edit_refused": {
+  "relay": {
+   "status": "chat",
+   "id": "<id>",
+   "result": {
+    "error": "Spex's version had a number your words don't, so nothing was changed. Try again, or edit it yourself.",
+    "code": "chat-edit-changed-facts"
+   }
+  }
+ }
+}

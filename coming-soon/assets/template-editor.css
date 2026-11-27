@@ -1,0 +1,206 @@
+/* Edit your templates (/template). Look A, like the dashboard's other pages; the how-to as on /agreements, with a
+   "Do this, so that…" tip by the finger at each step (his feedback on the Booking how-to, 2026-11-22). */
+.te{max-width:1180px; margin:0 auto; padding:8px 20px 120px}
+.te h1{margin:6px 0 4px}
+.te-lede{margin:0 0 6px; color:var(--ink-soft, #4A5362); max-width:64ch}
+.te-state p{margin:10px 0; color:var(--ink-soft, #4A5362)}
+
+/* ---- how it works ---- */
+.te-how{display:grid; grid-template-columns:minmax(0, 340px) 1fr; gap:18px 28px; align-items:center; margin:18px 0 18px; padding:18px; border-radius:22px; background:linear-gradient(135deg, #EEF4FF, #F7F2FF)}
+.te-how-stage{position:relative; height:196px}
+.te-how-scene{position:absolute; inset:10px 10px 46px; display:grid; gap:8px; align-content:start; padding:14px; border-radius:16px; background:#fff; box-shadow:0 10px 30px rgba(31,78,121,.12); font-size:13px; opacity:0}
+.te-how-a{animation:te-a 12s infinite} .te-how-b{animation:te-b 12s infinite} .te-how-c{animation:te-c 12s infinite}
+.te-how-card{display:grid; gap:2px; padding:8px 10px; border-radius:10px; box-shadow:inset 0 0 0 1px #D5DAE3; animation:te-pick 12s infinite}
+.te-how-card.dim{animation:none; opacity:.75}
+.te-how-card b{font-weight:700; color:var(--ink)} .te-how-card em{font-style:normal; font-size:11px; color:#1D62D8}
+.te-how-row{display:block; font-weight:700; color:var(--ink)} .te-how-row.sub{padding-left:12px; font-weight:600; color:#2B3442}
+.te-how-row i, .te-how-row.sub i{font-style:normal}
+.te-how-field{display:block; padding:8px 10px; border-radius:8px; box-shadow:inset 0 0 0 1.5px #1D62D8; color:var(--ink); background:#F7FAFF}
+.te-how-field b{color:#1D62D8}
+.te-how-caret{display:inline-block; width:1px; height:13px; margin-left:1px; vertical-align:middle; background:var(--navy, #1F4E79); animation:te-blink 1s steps(1) infinite}
+.te-how-save{justify-self:end; padding:8px 18px; border-radius:999px; background:#1D62D8; color:#fff; font-weight:700; animation:te-press 12s infinite}
+.te-how-done{padding:8px 10px; border-radius:10px; background:#E9F7EF; color:#16703A; font-weight:600; animation:te-done 12s infinite}
+.te-how-finger{position:absolute; z-index:3; width:26px; height:26px; border-radius:50%; background:rgba(31,78,121,.38); border:2px solid rgba(31,78,121,.8); box-shadow:0 2px 8px rgba(31,78,121,.3); animation:te-finger 12s infinite}
+.te-how-tip{position:absolute; z-index:4; left:10px; right:10px; bottom:4px; padding:7px 10px; border-radius:10px; background:#0E1420; color:#fff; font-size:12.5px; line-height:1.35; opacity:0; transform:translateY(6px)}
+.te-how-tip[data-n="1"]{animation:te-t1 12s infinite} .te-how-tip[data-n="2"]{animation:te-t2 12s infinite} .te-how-tip[data-n="3"]{animation:te-t3 12s infinite}
+.te-how-steps{display:grid; gap:10px; counter-reset:step}
+.te-how-step{display:flex; gap:12px; align-items:center; font-size:16px; color:var(--ink-faint, #8A93A3); animation:te-s1 12s infinite}
+.te-how-step::before{counter-increment:step; content:counter(step); flex:none; display:grid; place-items:center; width:28px; height:28px; border-radius:50%; background:#fff; color:var(--navy, #1F4E79); font-weight:700; box-shadow:inset 0 0 0 1px rgba(31,78,121,.25)}
+.te-how-step[data-n="2"]{animation-name:te-s2} .te-how-step[data-n="3"]{animation-name:te-s3}
+@keyframes te-a{0%,30%{opacity:1} 33%,100%{opacity:0}}
+@keyframes te-b{0%,30%{opacity:0} 33%,63%{opacity:1} 66%,100%{opacity:0}}
+@keyframes te-c{0%,63%{opacity:0} 66%,97%{opacity:1} 100%{opacity:0}}
+@keyframes te-pick{0%,10%{box-shadow:inset 0 0 0 1px #D5DAE3; transform:none} 12%{transform:scale(.96)} 14%,100%{box-shadow:inset 0 0 0 2px #1D62D8; transform:none}}
+@keyframes te-press{0%,72%{transform:none} 74%{transform:scale(.92)} 76%,100%{transform:none}}
+@keyframes te-done{0%,76%{opacity:0; transform:translateY(4px)} 79%,100%{opacity:1; transform:none}}
+@keyframes te-blink{50%{opacity:0}}
+@keyframes te-finger{0%{left:78%; top:80%; opacity:0} 4%{opacity:1} 9%,16%{left:72px; top:30px; opacity:1} 38%,52%{left:150px; top:96px; opacity:1} 70%,78%{left:82%; top:30px; opacity:1} 92%,100%{left:82%; top:30px; opacity:0}}
+@keyframes te-t1{0%,4%{opacity:0; transform:translateY(6px)} 7%,28%{opacity:1; transform:none} 31%,100%{opacity:0}}
+@keyframes te-t2{0%,36%{opacity:0; transform:translateY(6px)} 39%,61%{opacity:1; transform:none} 64%,100%{opacity:0}}
+@keyframes te-t3{0%,68%{opacity:0; transform:translateY(6px)} 71%,95%{opacity:1; transform:none} 98%,100%{opacity:0}}
+@keyframes te-s1{0%,30%{color:var(--ink); font-weight:600} 33%,100%{color:var(--ink-faint, #8A93A3); font-weight:400}}
+@keyframes te-s2{0%,30%{color:var(--ink-faint, #8A93A3); font-weight:400} 33%,63%{color:var(--ink); font-weight:600} 66%,100%{color:var(--ink-faint, #8A93A3); font-weight:400}}
+@keyframes te-s3{0%,63%{color:var(--ink-faint, #8A93A3); font-weight:400} 66%,100%{color:var(--ink); font-weight:600}}
+@media (prefers-reduced-motion: reduce){
+  .te-how *, .te-how-step{animation:none !important}
+  .te-how-finger, .te-how-tip, .te-how-a, .te-how-b{display:none}
+  .te-how-c{opacity:1}
+  .te-how-done{opacity:1}
+  .te-how-step{color:var(--ink)}
+}
+
+/* ---- the list and the editor ---- */
+.te-grid{display:grid; grid-template-columns:280px minmax(0, 1fr); gap:24px; align-items:start}
+.te-list{position:sticky; top:16px; display:grid; gap:8px}
+.te-list h2{margin:8px 0 0; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint, #8A93A3)}
+.te-list ul{list-style:none; margin:0; padding:0; display:grid; gap:8px}
+.te-card{display:grid; gap:3px; width:100%; text-align:left; padding:12px 14px; border:0; border-radius:14px; background:#fff; box-shadow:0 1px 0 rgba(14,20,32,.04), inset 0 0 0 1px #E2E6EE; cursor:pointer; font:inherit; transition:box-shadow .15s, transform .15s}
+.te-card:hover{box-shadow:0 6px 18px rgba(31,78,121,.12), inset 0 0 0 1px #C9D3E3; transform:translateY(-1px)}
+.te-card.is-open{box-shadow:0 6px 18px rgba(29,98,216,.16), inset 0 0 0 2px #1D62D8}
+.te-card b{font-weight:700; color:var(--ink); overflow-wrap:anywhere} .te-card em{font-style:normal; font-size:13px; color:var(--ink-soft, #4A5362)}
+.te-none, .te-more{margin:0; font-size:14px; color:var(--ink-soft, #4A5362)}
+.te-more a{color:#1D62D8; font-weight:600}
+
+.te-edit{display:grid; grid-template-columns:minmax(0, 1fr); gap:14px; min-width:0}
+.te-head{display:grid; gap:8px; padding:16px; border-radius:18px; background:#fff; box-shadow:inset 0 0 0 1px #E2E6EE}
+.te-name span, .te-search span, .te-f > span{display:block; font-size:12px; font-weight:600; color:var(--ink-soft, #4A5362); margin-bottom:4px}
+.te-name input{width:100%; font:700 22px/1.25 var(--font); padding:8px 10px; border-radius:10px; border:1px solid #D5DAE3; color:var(--ink); box-sizing:border-box}
+.te-ver{margin:0; font-size:13px; color:var(--ink-faint, #8A93A3)}
+.te-ro{margin:0; padding:10px 12px; border-radius:12px; background:#FFF7E8; color:#6B4A00; font-size:14px}
+.te-acts{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.te-used{padding:6px 12px; border-radius:999px; background:#E9F7EF; color:#16703A; font-weight:600; font-size:13px}
+.te-btn{max-width:100%; white-space:normal; padding:10px 18px; border:0; border-radius:999px; background:#1D62D8; color:#fff; font:700 15px var(--font); cursor:pointer}
+.te-btn.ghost{background:#fff; color:#1D62D8; box-shadow:inset 0 0 0 1.5px #1D62D8}
+.te-btn:disabled{opacity:.55; cursor:default}
+.te-search input{width:100%; box-sizing:border-box; padding:10px 12px; border-radius:12px; border:1px solid #D5DAE3; font:inherit}
+.te-found{margin:-6px 0 0; font-size:13px; color:var(--ink-soft, #4A5362)}
+
+.te-stops{display:grid; gap:10px}
+.te-stop{border-radius:16px; background:#fff; box-shadow:inset 0 0 0 1px #E2E6EE; overflow:hidden}
+.te-stop > summary{display:flex; justify-content:space-between; gap:12px; align-items:baseline; padding:14px 16px; cursor:pointer; list-style:none}
+.te-stop > summary::-webkit-details-marker{display:none}
+.te-stop > summary::before{content:""; flex:none; width:8px; height:8px; margin-right:4px; border-right:2px solid #1D62D8; border-bottom:2px solid #1D62D8; transform:rotate(-45deg); transition:transform .15s; align-self:center}
+.te-stop[open] > summary::before{transform:rotate(45deg)}
+.te-stop > summary b{flex:1; font-size:17px; color:var(--ink); overflow-wrap:anywhere} .te-stop > summary em{font-style:normal; font-size:13px; color:var(--ink-faint, #8A93A3)}
+.te-stop[open] > summary{border-bottom:1px solid #EDF0F5}
+.te-stop > .te-f{margin:12px 16px 0}
+.te-item{margin:12px 16px; padding:12px; border-radius:14px; background:#F7F9FC; display:grid; gap:10px}
+.te-group{display:grid; gap:8px}
+.te-group h4{margin:4px 0 0; font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint, #8A93A3)}
+.te-deficiency h4{color:#B4321F}
+.te-line{display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.4fr); gap:8px 12px; padding:10px; border-radius:12px; background:#fff; box-shadow:inset 0 0 0 1px #E8ECF2}
+.te-information .te-line{grid-template-columns:minmax(0, 1fr)}
+.te-f input, .te-f textarea, .te-f select{width:100%; box-sizing:border-box; padding:8px 10px; border-radius:10px; border:1px solid #D5DAE3; font:inherit; color:var(--ink); background:#fff; resize:vertical}
+.te-f textarea{line-height:1.45; overflow:hidden; min-height:3.2em}
+.te-f .is-changed{border-color:#1D62D8; background:#F3F8FF; box-shadow:0 0 0 3px rgba(29,98,216,.12)}
+.te-f :disabled{background:#FAFBFC; color:var(--ink); border-color:#EDF0F5}
+.te-bar{position:sticky; bottom:16px; z-index:5; display:flex; gap:12px; align-items:center; justify-content:flex-end; padding:12px 14px; border-radius:18px; background:rgba(255,255,255,.92); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); box-shadow:0 12px 34px rgba(14,20,32,.18)}
+.te-bar [data-count]{margin-right:auto; font-weight:700; color:#1D62D8}
+.te-say{margin:0; padding:10px 12px; border-radius:12px; background:#EEF3FD; color:#0E1420; font-weight:600}
+.te-say[data-said^="p-"]{background:#FDECEA; color:#8A1C10}
+.te-say[data-said^="saved"], .te-say[data-said^="copied"], .te-say[data-said="now-used"]{background:#E9F7EF; color:#16703A}
+
+@media (max-width: 999.98px){
+  .te-how{grid-template-columns:minmax(0, 1fr)}
+  .te-grid{grid-template-columns:minmax(0, 1fr)}
+  .te-list{position:static}
+}
+@media (max-width: 599.98px){
+  .te{padding:4px 14px 110px}
+  .te-line{grid-template-columns:minmax(0, 1fr)}
+  .te-item{margin:10px; padding:10px}
+  .te-stop > .te-f{margin:10px 10px 0}
+  .te-bar{bottom:76px}
+}
+
+/* ---- piece B: add, move, delete; report sections; categories ---- */
+.te-mini{padding:6px 12px; border:0; border-radius:999px; background:#EEF3FD; color:#1D62D8; font:600 13px var(--font); cursor:pointer; white-space:nowrap}
+.te-mini:hover{background:#E1EAFB}
+.te-mini.danger{background:transparent; color:#B4321F}
+.te-mini.danger:hover{background:#FDECEA}
+.te-mini.add{background:#fff; box-shadow:inset 0 0 0 1.5px #C9D3E3; color:#1D62D8}
+.te-mini.add:hover{box-shadow:inset 0 0 0 1.5px #1D62D8}
+.te-mini.wide{display:block; width:calc(100% - 32px); margin:4px 16px 16px; padding:10px; border-radius:12px}
+[data-add-stop].wide{width:100%; margin:0}
+.te-tools{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.te-moveto{padding:5px 8px; border-radius:999px; border:1px solid #D5DAE3; background:#fff; font:600 13px var(--font); color:var(--ink); max-width:220px}
+.te-stop-head{display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:10px; align-items:end; margin:12px 16px 0}
+.te-stop-head .te-f{margin:0}
+.te-item-head{display:grid; grid-template-columns:minmax(0, 1fr); gap:10px; align-items:end}
+.te-item-head.grip{grid-template-columns:auto minmax(0, 1fr)}
+.te-item-head.sys{grid-template-columns:minmax(0, 1fr) minmax(0, 220px)}
+.te-item-head.grip.sys{grid-template-columns:auto minmax(0, 1fr) minmax(0, 220px)}
+.te-grip{align-self:center; width:14px; height:22px; cursor:grab; background-image:radial-gradient(circle, #9AA3B2 1.4px, transparent 1.6px); background-size:7px 7px; opacity:.8}
+.te-grip:active{cursor:grabbing}
+.te-stop > summary{user-select:none; -webkit-user-select:none}
+.te-item.is-dragging, .te-stop.is-dragging{opacity:.45}
+.te-item.is-over{box-shadow:inset 0 3px 0 #1D62D8}
+.te-stop.is-over{box-shadow:inset 0 0 0 2px #1D62D8}
+.te-line{position:relative}
+.te-line [data-del-line]{justify-self:start}
+.te-add-line{display:flex; flex-wrap:wrap; gap:6px}
+.te-cats{padding:14px 16px; border-radius:16px; background:#fff; box-shadow:inset 0 0 0 1px #E2E6EE}
+.te-cats h3{margin:0; font-size:15px}
+.te-cats-lede{margin:4px 0 10px; font-size:13px; color:var(--ink-soft, #4A5362)}
+.te-cats-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px}
+@media (max-width: 599.98px){
+  .te-stop-head{grid-template-columns:minmax(0, 1fr); margin:10px 10px 0}
+  .te-item-head, .te-item-head.grip, .te-item-head.sys, .te-item-head.grip.sys{grid-template-columns:minmax(0, 1fr)}
+  .te-grip{display:none}
+  .te-mini.wide{width:calc(100% - 20px); margin:4px 10px 12px}
+}
+/* Room under the editor for the changes bar (its measured height, set by the page, plus the phone's safe area), so the
+   last field can always scroll above it, and a focused field is scrolled clear of it (the lead, 2026-11-26). */
+.te-edit{padding-bottom:calc(var(--te-bar, 0px) + env(safe-area-inset-bottom, 0px))}
+html{scroll-padding-bottom:calc(var(--te-bar, 0px) + env(safe-area-inset-bottom, 0px))}
+.te-edit.is-busy .te-stops, .te-edit.is-busy .te-head{opacity:.7; transition:opacity .2s}
+
+/* ---- piece C: a field's answer and choices; export ---- */
+.te-information .te-line{grid-template-columns:minmax(0, 1fr) minmax(0, 200px)}
+.te-information .te-line .te-f-options, .te-information .te-line [data-del-line]{grid-column:1 / -1}
+@media (max-width: 599.98px){ .te-information .te-line{grid-template-columns:minmax(0, 1fr)} }
+
+/* ---- piece D: find and replace; the item as the report prints it ---- */
+.te-findbar{display:grid; grid-template-columns:minmax(0, 1fr); gap:10px; align-items:end}
+@media (min-width: 700px){ .te-findbar.with-replace{grid-template-columns:minmax(0, 1.2fr) minmax(0, 1fr) auto} }
+.te-replace-go{white-space:nowrap}
+.te-mini.see{background:#F3EEFF; color:#5B3CC4}
+
+.te-preview{position:fixed; z-index:30; top:16px; right:16px; bottom:16px; width:min(380px, calc(100vw - 32px)); overflow:auto;
+  padding:16px; border-radius:20px; background:#fff; box-shadow:0 24px 60px rgba(14,20,32,.28), inset 0 0 0 1px #E2E6EE}
+.te-preview.is-docked{position:sticky; top:16px; right:auto; bottom:auto; width:auto; max-height:calc(100vh - 32px); z-index:1; box-shadow:inset 0 0 0 1px #E2E6EE}
+.te-grid.has-preview{grid-template-columns:240px minmax(0, 1fr) 340px}
+.te.has-preview{max-width:1560px}
+.te-pv-head{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px}
+.te-pv-head h3{margin:0; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint, #8A93A3)}
+.te-pv-empty, .te-pv-note{margin:6px 0 0; font-size:13px; color:var(--ink-soft, #4A5362)}
+.te-pv-note{margin-top:14px; padding-top:10px; border-top:1px solid #EDF0F5}
+.te-pv-body{display:grid; gap:10px; font:15px/1.5 Georgia, 'Times New Roman', serif; color:#0E1420}
+.te-pv-sys{margin:0; font:700 11px var(--font); letter-spacing:.08em; text-transform:uppercase; color:#1F4E79}
+.te-pv-item{margin:0; font:700 18px/1.3 var(--font); color:var(--ink); overflow-wrap:anywhere}
+.te-pv-kv{display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.3fr); gap:8px; margin:0; padding:6px 0; border-bottom:1px solid #EDF0F5}
+.te-pv-kv dt{font:600 13px var(--font); color:#4A5362; overflow-wrap:anywhere} .te-pv-kv dd{margin:0; font-size:14px; overflow-wrap:anywhere}
+.te-pv-prose{margin:0; overflow-wrap:anywhere} .te-pv-prose mark{padding:0 3px; border-radius:4px; background:#FFF3C4; color:inherit}
+.te-pv-ln b{font:700 13px var(--font); color:#4A5362}
+.te-pv-card{border:1px solid #E2E6EE; border-radius:12px; overflow:hidden}
+.te-pv-card-h{display:grid; gap:6px; justify-items:start; padding:10px 12px; background:var(--t, #F4F6F9)}
+.te-pv-card-h h5{margin:0; font:650 16px/1.3 var(--font); overflow-wrap:anywhere}
+.te-pv-pill{padding:2px 9px; border-radius:999px; background:#fff; color:var(--c, #455A64); font:700 11px var(--font); letter-spacing:.04em; text-transform:uppercase}
+.te-pv-card-b{padding:10px 12px; display:grid; gap:4px}
+.te-pv-card-b h6{margin:6px 0 0; font:700 11px var(--font); letter-spacing:.06em; text-transform:uppercase; color:#4A5362}
+.te-pv-card.cat-SH{--c:#B3261E; --t:#FDECEB} .te-pv-card.cat-MD{--c:#A35407; --t:#FDF1E3}
+.te-pv-card.cat-MN{--c:#33691E; --t:#EEF6E6} .te-pv-card.cat-NT{--c:#455A64; --t:#ECEFF1}
+@media (max-width: 599.98px){ .te-preview{top:auto; bottom:76px; max-height:70vh} }
+.te-grid.pv-mid{grid-template-columns:minmax(0, 1fr) 340px}
+.te-grid.pv-mid .te-list{display:none}
+
+/* Deleting one of his templates (2026-11-26): asked first, said after, with Undo. */
+.te-btn.ghost.danger{color:#B4321F; box-shadow:inset 0 0 0 1.5px #E3A49B}
+.te-btn.ghost.danger:hover{background:#FDECEA}
+.te-btn.danger-solid{background:#B4321F}
+.te-ask{display:grid; gap:10px; margin-top:12px; padding:14px 16px; border-radius:14px; background:#FDECEA; color:#5A140B}
+.te-ask p{margin:0; font-weight:600; line-height:1.45}
+.te-ask .te-ask-note{font-weight:500}
+.te-gone{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin:0 0 14px; padding:12px 14px; border-radius:14px; background:#0E1420; color:#fff}
+.te-gone p{margin:0; flex:1 1 220px; line-height:1.45; font-weight:600}
+.te-gone .te-btn.ghost{background:transparent; color:#fff; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7)}

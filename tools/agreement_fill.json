@@ -1,0 +1,423 @@
+{
+ "_doc": "Agreement blanks filled the same on the phone (lib/src/data/agreement_blanks.dart) and on the server (its signing function's twin). Dates are calendar days in the inspector's zone. empty lists blank names (the Dart enum's). 2026-11-22, Inspyx 4.",
+ "cases": [
+  {
+   "name": "the offered blanks in square brackets",
+   "text": "[Client name] will pay [Fee] for the inspection of [Property address] on [Inspection date].",
+   "facts": {
+    "clientNames": [
+     "Daniel Ortiz"
+    ],
+    "clientPhone": "(305) 555-0142",
+    "clientEmail": "daniel@example.com",
+    "street": "1428 Maple Grove Ln",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "33025",
+    "inspectionDate": "2026-12-02",
+    "today": "2026-11-22",
+    "feeCents": 42500,
+    "services": [
+     "Home inspection"
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 42500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "HI12345",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "Daniel Ortiz will pay $425.00 for the inspection of 1428 Maple Grove Ln, Miramar, FL 33025 on December 2, 2026.",
+    "empty": [],
+    "unknown": []
+   }
+  },
+  {
+   "name": "Spectora's names in double braces",
+   "text": "{{CLIENT_NAME}} at {{ADDRESS}} ({{CITY}}, {{STATE}} {{ZIP}}), {{INSPECTION_DATE}}.\nFees:\n{{FEES}}\nCompany: {{INSPECTION_COMPANY}}, {{INSPECTOR_CREDENTIALS}}",
+   "facts": {
+    "clientNames": [
+     "Daniel Ortiz"
+    ],
+    "clientPhone": "(305) 555-0142",
+    "clientEmail": "daniel@example.com",
+    "street": "1428 Maple Grove Ln",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "33025",
+    "inspectionDate": "2026-12-02",
+    "today": "2026-11-22",
+    "feeCents": 42500,
+    "services": [
+     "Home inspection"
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 42500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "HI12345",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "Daniel Ortiz at 1428 Maple Grove Ln, Miramar, FL 33025 (Miramar, FL 33025), December 2, 2026.\nFees:\nHome inspection: $425.00\nCompany: Rivera Home Inspections, HI12345",
+    "empty": [],
+    "unknown": []
+   }
+  },
+  {
+   "name": "several clients: names joined, first name of the first",
+   "text": "[Client name] ({{CLIENT_FIRST_NAME}})",
+   "facts": {
+    "clientNames": [
+     "  Daniel   Ortiz ",
+     "Marisol Ortiz",
+     "",
+     " Ana Lee"
+    ],
+    "clientPhone": "(305) 555-0142",
+    "clientEmail": "daniel@example.com",
+    "street": "1428 Maple Grove Ln",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "33025",
+    "inspectionDate": "2026-12-02",
+    "today": "2026-11-22",
+    "feeCents": 42500,
+    "services": [
+     "Home inspection"
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 42500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "HI12345",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "Daniel Ortiz, Marisol Ortiz and Ana Lee (Daniel)",
+    "empty": [],
+    "unknown": []
+   }
+  },
+  {
+   "name": "nothing to fill: a line to write on, each empty blank named once",
+   "text": "[Fee] / [Fee] / {{CLIENT_PHONE}} / [License number]",
+   "facts": {
+    "clientNames": [
+     "Daniel Ortiz"
+    ],
+    "clientPhone": "  ",
+    "clientEmail": "daniel@example.com",
+    "street": "1428 Maple Grove Ln",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "33025",
+    "inspectionDate": "2026-12-02",
+    "today": "2026-11-22",
+    "feeCents": null,
+    "services": [
+     "Home inspection"
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 42500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "__________ / __________ / __________ / __________",
+    "empty": [
+     "fee",
+     "clientPhone",
+     "licenseNumber"
+    ],
+    "unknown": []
+   }
+  },
+  {
+   "name": "a name Inspyx doesn't fill: a line, and named once as written",
+   "text": "Code {{ REFERRAL_CODE }} and {{REFERRAL_CODE}} and {{Agent Name}}.",
+   "facts": {
+    "clientNames": [
+     "Daniel Ortiz"
+    ],
+    "clientPhone": "(305) 555-0142",
+    "clientEmail": "daniel@example.com",
+    "street": "1428 Maple Grove Ln",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "33025",
+    "inspectionDate": "2026-12-02",
+    "today": "2026-11-22",
+    "feeCents": 42500,
+    "services": [
+     "Home inspection"
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 42500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "HI12345",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "Code __________ and __________ and __________.",
+    "empty": [],
+    "unknown": [
+     "{{REFERRAL_CODE}}",
+     "{{Agent Name}}"
+    ]
+   }
+  },
+  {
+   "name": "the inspector's own bracketed words stay; the iPhone's curled apostrophe still matches",
+   "text": "[Section 2] Signed on [Today’s date] by [your name].",
+   "facts": {
+    "clientNames": [
+     "Daniel Ortiz"
+    ],
+    "clientPhone": "(305) 555-0142",
+    "clientEmail": "daniel@example.com",
+    "street": "1428 Maple Grove Ln",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "33025",
+    "inspectionDate": "2026-12-02",
+    "today": "2026-11-22",
+    "feeCents": 42500,
+    "services": [
+     "Home inspection"
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 42500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "HI12345",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "[Section 2] Signed on November 22, 2026 by Sam Rivera.",
+    "empty": [],
+    "unknown": []
+   }
+  },
+  {
+   "name": "money: thousands and a discount below zero",
+   "text": "{{FEES}}\nTotal {{PRICE}}",
+   "facts": {
+    "clientNames": [
+     "Daniel Ortiz"
+    ],
+    "clientPhone": "(305) 555-0142",
+    "clientEmail": "daniel@example.com",
+    "street": "1428 Maple Grove Ln",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "33025",
+    "inspectionDate": "2026-12-02",
+    "today": "2026-11-22",
+    "feeCents": 125000,
+    "services": [
+     "Home inspection"
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 129000
+     },
+     {
+      "name": "SAVE40",
+      "cents": -4000
+     },
+     {
+      "name": "  ",
+      "cents": 500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "HI12345",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "Home inspection: $1,290.00\nSAVE40: -$40.00\nTotal $1,250.00",
+    "empty": [],
+    "unknown": []
+   }
+  },
+  {
+   "name": "no inspection day: the day it's signed",
+   "text": "[Inspection date]",
+   "facts": {
+    "clientNames": [
+     "Daniel Ortiz"
+    ],
+    "clientPhone": "(305) 555-0142",
+    "clientEmail": "daniel@example.com",
+    "street": "1428 Maple Grove Ln",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "33025",
+    "inspectionDate": null,
+    "today": "2026-11-22",
+    "feeCents": 42500,
+    "services": [
+     "Home inspection"
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 42500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "HI12345",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "November 22, 2026",
+    "empty": [],
+    "unknown": []
+   }
+  },
+  {
+   "name": "no street: no address; a house with no zip",
+   "text": "[Property address] | {{CITY}} {{ZIP}}",
+   "facts": {
+    "clientNames": [
+     "Daniel Ortiz"
+    ],
+    "clientPhone": "(305) 555-0142",
+    "clientEmail": "daniel@example.com",
+    "street": " ",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "",
+    "inspectionDate": "2026-12-02",
+    "today": "2026-11-22",
+    "feeCents": 42500,
+    "services": [
+     "Home inspection"
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 42500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "HI12345",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "__________ | Miramar __________",
+    "empty": [
+     "propertyAddress",
+     "zip"
+    ],
+    "unknown": []
+   }
+  },
+  {
+   "name": "one pass: what is put in is never read again",
+   "text": "[Client name] owes [Fee]",
+   "facts": {
+    "clientNames": [
+     "[Fee] Person"
+    ],
+    "clientPhone": "(305) 555-0142",
+    "clientEmail": "daniel@example.com",
+    "street": "1428 Maple Grove Ln",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "33025",
+    "inspectionDate": "2026-12-02",
+    "today": "2026-11-22",
+    "feeCents": 42500,
+    "services": [
+     "Home inspection"
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 42500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "HI12345",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "[Fee] Person owes $425.00",
+    "empty": [],
+    "unknown": []
+   }
+  },
+  {
+   "name": "the year, services and contact blanks",
+   "text": "{{CURRENT_YEAR}} {{SERVICES}} {{CLIENT_EMAIL}} {{COMPANY_PHONE}} {{ client name }} {{TODAYS_DATE}}",
+   "facts": {
+    "clientNames": [
+     "Daniel Ortiz"
+    ],
+    "clientPhone": "(305) 555-0142",
+    "clientEmail": "daniel@example.com",
+    "street": "1428 Maple Grove Ln",
+    "city": "Miramar",
+    "state": "FL",
+    "zip": "33025",
+    "inspectionDate": "2026-12-02",
+    "today": "2026-11-22",
+    "feeCents": 42500,
+    "services": [
+     "Home inspection",
+     " Radon test "
+    ],
+    "feeLines": [
+     {
+      "name": "Home inspection",
+      "cents": 42500
+     }
+    ],
+    "inspectorName": "Sam Rivera",
+    "company": "Rivera Home Inspections",
+    "licenseNumber": "HI12345",
+    "companyPhone": "(305) 555-0100"
+   },
+   "want": {
+    "text": "2026 Home inspection, Radon test daniel@example.com (305) 555-0100 Daniel Ortiz November 22, 2026",
+    "empty": [],
+    "unknown": []
+   }
+  }
+ ]
+}

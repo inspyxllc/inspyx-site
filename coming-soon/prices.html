@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Prices</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/dash.css">
+<link rel="stylesheet" href="/assets/prices.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/prices.js" defer></script>
+<script src="/assets/price-changes.js" defer></script>
+</head>
+<body class="has-dash">
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z"></path><path d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" stroke="#0284C7" stroke-width="19"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+<nav class="dash" aria-label="Your dashboard">
+<ul class="dash-items"><li><a href="/today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 6.5 4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5l-1.5-6.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5Z"/></svg><span class="dash-l">What needs you</span><span class="dash-s">To do</span></a></li><li><a href="/inspections"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m9 13 2 2 4-4"/></svg><span class="dash-l">Inspections</span></a></li><li><a href="/calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="dash-l">Calendar</span></a></li><li><a href="/prices" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"/><circle cx="8" cy="8" r="1.5"/></svg><span class="dash-l">Prices</span></a></li><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul>
+<details class="dash-more"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></summary><ul><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul></details>
+</nav>
+
+<main class="prc" data-prc hidden>
+<h1>Prices</h1>
+<p class="prc-lede">The services you sell, with their fees, add-ons and price changes, and your discount codes: the same list as on your phone. Spex quotes from it.</p>
+<p class="prc-live" role="status">
+<span data-live="connecting">Connecting…</span>
+<span data-live="live" hidden>In step with your phone: a change on either shows on the other within a few minutes.</span>
+<span data-live="offline" hidden>Can't reach Inspyx right now. Trying again.</span>
+</p>
+<div class="prc-state" role="status">
+<p data-state="loading">Loading your prices…</p>
+<p data-state="failed" hidden>The prices couldn’t be read. Check your connection; this page keeps trying.</p>
+</div>
+<div class="say" role="alert">
+<p class="ok" data-say="saved" hidden>Saved.</p>
+<p class="ok" data-say="deleted" hidden>Deleted.</p>
+<p data-say="failed" hidden>That couldn’t be saved. Check your connection and try again.</p>
+<p data-say="taken" hidden>Inspyx kept that code out: another of your discount codes already uses it.</p>
+<p data-say="refused" hidden>Inspyx couldn’t keep that change. Check it and try again.</p>
+</div>
+
+<section class="prc-group" data-group="services" hidden>
+<div class="prc-head"><h2>Services</h2><button class="btn small" type="button" data-add="service">Add a service</button></div>
+<section class="prc-reinsp" data-reinsp aria-label="Reinspection">
+<div class="prc-reinsp-t"><strong>Reinspection</strong><span>A return visit to check repairs. Turn it on and set your price; clients can book it like any service.</span></div>
+<p class="prc-reinsp-now" data-reinsp-now hidden></p>
+<div class="prc-reinsp-acts"><button class="btn small" type="button" data-reinsp-on>Offer reinspections</button></div>
+</section>
+<figure class="prc-how" aria-label="How a price change works, in three steps">
+<div class="prc-how-stage" aria-hidden="true">
+<div class="prc-how-scene prc-how-a"><b>Home inspection</b><span>$400 · 3 h</span><em>Add a price change</em></div>
+<div class="prc-how-scene prc-how-b"><span class="prc-how-sel">Square feet</span>
+<span class="prc-how-row prc-how-r1"><i>up to 2,000</i><i>+$0</i></span>
+<span class="prc-how-row prc-how-r2"><i>2,000 and up</i><i>+$50 · +30 min</i></span>
+<em class="prc-how-save">Save</em></div>
+<div class="prc-how-scene prc-how-c"><span>A 2,600 sq ft house</span><b><s>$400</s> <ins>$450</ins></b><span>3 h 30 min</span></div>
+<span class="prc-how-finger"></span>
+</div>
+<figcaption class="prc-how-steps">
+<span class="prc-how-step" data-n="1">On a service, tap Add a price change</span>
+<span class="prc-how-step" data-n="2">Pick what it reads, and what each range adds</span>
+<span class="prc-how-step" data-n="3">Save: a bigger house's quote goes up on its own</span>
+</figcaption>
+</figure>
+<p class="prc-empty" data-empty="services" hidden>No prices yet. Add the services you sell, each with its fee, add-ons and price changes. Spex quotes from this list.</p>
+<ol class="prc-list" data-list="services"></ol>
+</section>
+
+<section class="prc-group" data-group="questions" hidden>
+<div class="prc-head"><h2>Your questions</h2><button class="btn small" type="button" data-add="question">Add a question</button></div>
+<p class="prc-empty" data-empty="questions">Ask your own questions when a price is worked out ("Pool?", "How many outbuildings?"), then give a service a price change on the answer.</p>
+<ol class="prc-list" data-list="questions"></ol>
+</section>
+
+<section class="prc-group" data-group="discounts" hidden>
+<div class="prc-head"><h2>Discount codes</h2><button class="btn small" type="button" data-add="discount">Add a discount code</button></div>
+<p class="prc-empty" data-empty="discounts" hidden>No discount codes. A code takes a percent or an amount off.</p>
+<ol class="prc-list" data-list="discounts"></ol>
+</section>
+
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<dialog class="prc-dialog" data-dialog="service" aria-labelledby="svc-title">
+<form method="dialog" data-form="service" novalidate>
+<h2 id="svc-title"><span data-title="new-service">New service</span><span data-title="edit-service" hidden>Service</span><span data-title="new-addon" hidden>New add-on</span><span data-title="edit-addon" hidden>Add-on</span></h2>
+<label>Name <input type="text" name="name" autocomplete="off" maxlength="200"></label>
+<label>What the client reads (optional) <textarea name="description" rows="2" maxlength="2000"></textarea></label>
+<div class="prc-pair">
+<label>Base fee <input type="text" name="fee" inputmode="decimal" autocomplete="off" placeholder="450"><small data-only="addon" hidden>Below zero for a credit, like -25.</small></label>
+<label><span data-time="service">Time</span><span data-time="addon" hidden>Extra time</span> <input type="text" name="hours" inputmode="decimal" autocomplete="off" placeholder="hours"></label>
+</div>
+<label data-only="service">Minimum fee (optional) <input type="text" name="minimum" inputmode="decimal" autocomplete="off"><small>Spex never quotes below it</small></label>
+<fieldset data-only="service" class="prc-tax"><legend>Sales tax (optional)</legend>
+<div class="prc-pair"><label>Its name <input type="text" name="taxName" maxlength="40" autocomplete="off" placeholder="Sales tax"></label><label>Percent <input type="text" name="taxRate" inputmode="decimal" autocomplete="off" placeholder="7"></label></div>
+<small>Charged on this service after any discount, on its own line. Never on add-ons.</small></fieldset>
+<div class="prc-problems" role="alert">
+<p data-problem="name" hidden>It needs a name.</p>
+<p data-problem="fee" hidden>Write the fee as dollars, like 450 or 450.50.</p>
+<p data-problem="hours" hidden>Write the time in hours, like 2 or 2.5.</p>
+<p data-problem="minimum" hidden>Write the minimum fee as dollars, or leave it empty.</p>
+<p data-problem="tax-rate" hidden>Write the tax as a percent, like 7 or 7.5.</p>
+<p data-problem="tax-name" hidden>Name the tax, like Sales tax.</p>
+</div>
+<div class="prc-actions">
+<button class="btn small" type="submit" value="save">Save</button>
+<button class="btn small quiet" type="button" data-close>Cancel</button>
+<button class="btn small quiet danger" type="button" data-delete hidden><span data-arm="0">Delete</span><span data-arm="1" hidden>Yes, delete</span></button>
+</div>
+<p class="prc-note" data-only="delete-service" hidden>Deleting a service deletes its add-ons and price changes with it.</p>
+</form>
+</dialog>
+
+<dialog class="prc-dialog" data-dialog="discount" aria-labelledby="disc-title">
+<form method="dialog" data-form="discount" novalidate>
+<h2 id="disc-title"><span data-title="new-discount">New discount code</span><span data-title="edit-discount" hidden>Discount code</span></h2>
+<label>Code <input type="text" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40"></label>
+<fieldset class="prc-kind"><legend>Takes off</legend>
+<label class="tick"><input type="radio" name="kind" value="percent" checked> Percent off</label>
+<label class="tick"><input type="radio" name="kind" value="amount"> Amount off</label>
+</fieldset>
+<label><span data-value="percent">Percent</span><span data-value="amount" hidden>Amount</span> <input type="text" name="value" inputmode="decimal" autocomplete="off"></label>
+<fieldset class="prc-applies"><legend>Takes off from</legend>
+<label class="tick"><input type="checkbox" name="all" checked> All services</label>
+<div data-applies></div>
+</fieldset>
+<div class="prc-pair">
+<label>Uses (optional) <input type="text" name="uses" inputmode="numeric" autocomplete="off"></label>
+<label>Ends <input type="date" name="ends"><small>Empty: no end date</small></label>
+</div>
+<label class="tick"><input type="checkbox" name="active" checked> Clients can use it</label>
+<div class="prc-problems" role="alert">
+<p data-problem="code" hidden>It needs a code.</p>
+<p data-problem="code_long" hidden>A code can be at most 30 letters and numbers.</p>
+<p data-problem="code_letters" hidden>A code is letters and numbers only, with no spaces.</p>
+<p data-problem="code_taken" hidden>You already have that code.</p>
+<p data-problem="value" hidden>Write the percent (like 10) or the amount (like 25).</p>
+<p data-problem="amount" hidden>The amount must be more than zero.</p>
+<p data-problem="uses" hidden>Write the uses as a whole number.</p>
+<p data-problem="uses_one" hidden>The uses must be at least 1.</p>
+</div>
+<div class="prc-actions">
+<button class="btn small" type="submit" value="save">Save</button>
+<button class="btn small quiet" type="button" data-close>Cancel</button>
+<button class="btn small quiet danger" type="button" data-delete hidden><span data-arm="0">Delete</span><span data-arm="1" hidden>Yes, delete</span></button>
+</div>
+</form>
+</dialog>
+
+
+<dialog class="prc-dialog" data-dialog="question" aria-labelledby="q-title">
+<form data-form="question" novalidate>
+<h2 id="q-title"><span data-qtitle="new">A new question</span><span data-qtitle="edit" hidden>Your question</span></h2>
+<label>The question<input type="text" name="name" maxlength="60" autocomplete="off"><small>60 letters at most.</small></label>
+<fieldset><legend>Its answer</legend>
+<label class="tick"><input type="radio" name="kind" value="yes_no" checked> Yes or no</label>
+<label class="tick"><input type="radio" name="kind" value="number"> A number</label>
+</fieldset>
+<div class="prc-problems" role="alert"><p data-qproblem="name" hidden>Write the question.</p><p data-qproblem="long" hidden>Keep the question to 60 letters or fewer.</p><p data-qproblem="same" hidden>You already have a question with that name.</p><p data-qproblem="used" hidden>A price change reads this question: remove that first.</p></div>
+<div class="prc-actions"><button class="btn small" type="submit">Save</button><button class="btn small quiet" type="button" data-close>Cancel</button><button class="link danger" type="button" data-qdelete hidden><span data-qarm="0">Delete</span><span data-qarm="1" hidden>Delete it: tap again</span></button></div>
+</form>
+</dialog>
+
+<dialog class="prc-dialog prc-change-dialog" data-dialog="change" aria-labelledby="c-title">
+<form data-form="change" novalidate>
+<h2 id="c-title"><span data-ctitle="new">A new price change</span><span data-ctitle="edit" hidden>Price change</span></h2>
+<p class="prc-note" data-c-service></p>
+<p class="prc-note" data-c-kept hidden>This price change was made on a newer version of the app, in a way this page can’t show yet. It stays exactly as it is; you can delete it here.</p>
+<div data-c-edits>
+<label>What it reads<select name="basis">
+<option value="square_feet">Square feet</option><option value="year_built">Year built</option><option value="age">Age of the house</option><option value="zip">Zip code</option><option value="distance">Distance (miles)</option><option value="foundation">Foundation</option><option value="yes_no_question">Your question (yes or no)</option><option value="number_question">Your question (a number)</option>
+</select></label>
+<label data-c-only="question" hidden>Which question<select name="question"></select><small data-c-noq hidden>Add a question first, under Your questions.</small></label>
+<fieldset data-c-only="mode" hidden><legend>How</legend>
+<label class="tick"><input type="radio" name="mode" value="ranges" checked> In ranges</label>
+<label class="tick"><input type="radio" name="mode" value="per_unit_over"> For each unit past a number</label>
+</fieldset>
+<div data-c-only="ranges" hidden>
+<div class="prc-tiers-head" aria-hidden="true"><span data-c-head="from">From</span><span data-c-head="to">To</span><span>Adds</span><span>Hours</span><span></span></div>
+<ol class="prc-tiers" data-tiers></ol>
+<button class="link" type="button" data-add-tier>Add a range</button>
+<small>A house on a range's end is in that range; past the last range, nothing is added. Leave the last "To" empty for "and up".</small>
+</div>
+<div data-c-only="values" hidden>
+<div class="prc-tiers-head prc-lines-head" aria-hidden="true"><span data-c-head="vals"></span><span>Adds</span><span>Hours</span><span></span></div>
+<ol class="prc-tiers" data-lines></ol>
+<button class="link" type="button" data-add-line>Add a line</button>
+<small data-c-help="zip" hidden>Zip codes on one line share its price: 33601, 33602.</small>
+</div>
+<div data-c-only="per" hidden class="prc-per">
+<label>Past<input type="text" name="over" inputmode="numeric"></label>
+<label>For each<input type="text" name="unit" inputmode="numeric"></label>
+<label>Adds<input type="text" name="perFee" inputmode="decimal"></label>
+<label>Hours<input type="text" name="perHours" inputmode="decimal"></label>
+<small>"Past 3,000, for each 500, adds $25": a house of 3,600 square feet is 2 units past (any part of a unit counts as one), so it adds $50.</small>
+</div>
+</div>
+<div class="prc-problems" role="alert" data-c-problem hidden></div>
+<div class="prc-actions"><button class="btn small" type="submit" data-c-edits>Save</button><button class="btn small quiet" type="button" data-close>Cancel</button><button class="link danger" type="button" data-cdelete hidden><span data-carm="0">Delete</span><span data-carm="1" hidden>Delete it: tap again</span></button></div>
+</form>
+</dialog>
+
+<template data-t="service"><li class="prc-card">
+<div class="prc-row"><div class="prc-what"><strong data-v="name"></strong><span data-v="summary"></span><span class="prc-desc" data-v="description"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></div>
+<div class="prc-sub"><h3>Add-ons</h3><ol class="prc-addons" data-list="addons"></ol><button class="link" type="button" data-add="addon">Add an add-on</button></div>
+<div class="prc-sub" data-changes><h3>Price changes</h3><ol class="prc-changes" data-list="changes"></ol><button class="link" type="button" data-add="change">Add a price change</button></div>
+</li></template>
+<template data-t="addon"><li class="prc-addon"><div class="prc-addon-row"><span class="prc-what"><span data-v="name"></span><span data-v="summary"></span></span><button class="link" type="button" data-edit>Edit</button></div><ol class="prc-changes" data-list="addon-changes"></ol><button class="link prc-addon-change" type="button" data-add="change">Add a price change</button></li></template>
+<template data-t="change"><li class="prc-change"><span data-v="text"></span><button class="link" type="button" data-edit-change>Edit</button></li></template>
+<template data-t="discount"><li class="prc-card prc-code"><div class="prc-row"><div class="prc-what"><strong data-v="code"></strong><span data-v="summary"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></div></li></template>
+<template data-t="applies"><label class="tick"><input type="checkbox" name="applies"> <span data-v="name"></span></label></template>
+
+<template data-t="question"><li class="prc-card prc-q"><div class="prc-row"><div class="prc-what"><strong data-v="name"></strong><span data-v="kind"></span></div><button class="btn small quiet" type="button" data-edit>Edit</button></div></li></template>
+<template data-t="tier"><li class="prc-tier"><input type="text" data-k="from" inputmode="numeric" aria-label="From"><input type="text" data-k="to" inputmode="numeric" aria-label="To"><input type="text" data-k="fee" inputmode="decimal" aria-label="Adds $"><input type="text" data-k="hours" inputmode="decimal" aria-label="Hours"><button class="link" type="button" data-remove aria-label="Remove this line">Remove</button></li></template>
+<template data-t="line"><li class="prc-tier prc-line"><span class="prc-vals" data-vals></span><input type="text" data-k="fee" inputmode="decimal" aria-label="Adds $"><input type="text" data-k="hours" inputmode="decimal" aria-label="Hours"><button class="link" type="button" data-remove aria-label="Remove this line">Remove</button></li></template>
+<template data-t="cwords"><div>
+<span data-w="q-missing">A question not on your list</span><span data-w="q-yes_no">Yes or no</span><span data-w="q-number">A number</span>
+<span data-w="yes">Yes</span><span data-w="no">No</span>
+<span data-w="zip-placeholder">33601, 33602</span>
+<span data-w="f-Slab">Slab</span><span data-w="f-Crawlspace">Crawlspace</span><span data-w="f-Basement">Basement</span><span data-w="f-Pier and beam">Pier and beam</span>
+<span data-w="v-zip">Zip codes</span><span data-w="v-foundation">Foundations</span><span data-w="v-yes_no_question">Answer</span>
+<span data-w="h-year">Built from</span><span data-w="h-year-to">Built to</span>
+<span data-w="p-question">Choose the question.</span>
+<span data-w="p-per">Set the number, the unit and the fee.</span>
+<span data-w="p-over">The number to start after can’t be below zero.</span>
+<span data-w="p-unit">Each unit must be at least 1.</span>
+<span data-w="p-minutes">Time added can’t be below zero.</span>
+<span data-w="p-per-zero">Add a fee or time for each unit.</span>
+<span data-w="p-big">That fee is too large.</span>
+<span data-w="p-none-yesno">Set what a yes or a no adds.</span>
+<span data-w="p-none-ranges">Add at least one range.</span>
+<span data-w="p-none">Add at least one.</span>
+<span data-w="p-yesno">A yes or no question’s lines are "yes" or "no".</span>
+<span data-w="p-zip-empty">Each line needs at least one zip code.</span>
+<span data-w="p-yesno-empty">Each line needs yes or no.</span>
+<span data-w="p-found-empty">Each line needs a foundation.</span>
+<span data-w="p-zip-bad">isn’t a 5-digit zip code.</span>
+<span data-w="p-twice">is on two lines.</span>
+<span data-w="p-start">Each range after the first needs a start.</span>
+<span data-w="p-end">Only the last range can go on with no end.</span>
+<span data-w="p-below">A range can’t start below zero.</span>
+<span data-w="p-backwards">A range can’t end before it starts.</span>
+<span data-w="p-overlap">The ranges overlap: start each one where the one before ends.</span>
+<span data-w="p-number">Write whole numbers for the ranges.</span>
+<span data-w="p-money">Write the fee as dollars, like 25 or 25.50.</span>
+<span data-w="p-hours">Write the hours as a number, like 0.5.</span>
+<span data-w="p-ranges-only">can only be priced in ranges.</span>
+</div></template>
+<template data-t="words">
+<span data-w="off_percent">off</span>
+<span data-w="all_services">all services</span>
+<span data-w="until">until</span>
+<span data-w="use">use</span>
+<span data-w="uses">uses</span>
+<span data-w="up_to">up to</span>
+<span data-w="is_off">Off</span>
+<span data-w="at_least">at least</span>
+<span data-w="addon">add-on</span>
+<span data-w="reinsp-name">Reinspection</span>
+<span data-w="reinsp-on">On: clients can book it. Its price, and Delete to turn it off, are with your services below.</span>
+<span data-w="addons">add-ons</span>
+<span data-w="change">price change</span>
+<span data-w="changes">price changes</span>
+<span data-w="for_each">for each</span>
+<span data-w="past">past</span>
+<span data-w="up_to_range">up to</span>
+<span data-w="and_up">and up</span>
+<span data-w="to">to</span>
+<span data-w="any">any</span>
+<span data-w="square_feet">Square feet</span>
+<span data-w="year_built">Year built</span>
+<span data-w="age">Age of the house</span>
+<span data-w="zip">Zip code</span>
+<span data-w="distance">Distance (miles)</span>
+<span data-w="foundation">Foundation</span>
+<span data-w="yes_no_question">Your question (yes or no)</span>
+<span data-w="number_question">Your question (a number)</span>
+<span data-w="h">h</span>
+<span data-w="min">min</span>
+</template>
+</body>
+</html>

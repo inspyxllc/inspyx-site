@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Payments</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/dash.css">
+<link rel="stylesheet" href="/assets/booking.css">
+<link rel="stylesheet" href="/assets/payments.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/payments.js" defer></script>
+</head>
+<body class="has-dash">
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z"></path><path d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" stroke="#0284C7" stroke-width="19"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+<nav class="dash" aria-label="Your dashboard">
+<ul class="dash-items"><li><a href="/today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 6.5 4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5l-1.5-6.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5Z"/></svg><span class="dash-l">What needs you</span><span class="dash-s">To do</span></a></li><li><a href="/inspections"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m9 13 2 2 4-4"/></svg><span class="dash-l">Inspections</span></a></li><li><a href="/calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="dash-l">Calendar</span></a></li><li><a href="/prices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"/><circle cx="8" cy="8" r="1.5"/></svg><span class="dash-l">Prices</span></a></li><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul>
+<details class="dash-more"><summary aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></summary><ul><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul></details>
+</nav>
+
+<main class="bkg pay" data-pay hidden>
+<h1>Payments</h1>
+<p class="bkg-lede">Get paid by card: your clients pay on their own phone, from the pay link and the report's Pay button, and the money goes to your bank.</p>
+
+<ol class="pay-steps" aria-label="Three steps">
+<li class="pay-step" data-step="plan"><span class="pay-dot" aria-hidden="true">1</span><div><strong>Your Inspyx plan</strong><span>Card payments use your plan's Stripe account.</span><em class="pay-next" data-next="plan" hidden>Next: start your plan from Your account, below.</em></div></li>
+<li class="pay-step" data-step="stripe"><span class="pay-dot" aria-hidden="true">2</span><div><strong>Your business with Stripe</strong><span>Stripe asks a few questions about your business and your bank.</span><em class="pay-next" data-next="setup" hidden>Next: tap Set up below.</em><em class="pay-next" data-next="finish" hidden>Next: tap Finish setup below.</em><em class="pay-next" data-next="again" hidden>Next: tap Check again below.</em></div></li>
+<li class="pay-step" data-step="ready"><span class="pay-dot" aria-hidden="true">3</span><div><strong>Clients pay you by card</strong><span>Pay links work, and locked reports open once paid.</span></div></li>
+</ol>
+
+<section class="bkg-card pay-card" role="status">
+<h2>Get paid by card</h2>
+<p class="pay-words">
+<span data-stands="checking">Checking…</span>
+<span data-stands="no-plan" hidden>Start your plan first, from your account: card payments use the same Stripe account.</span>
+<span data-stands="none" hidden>Not set up. Clients can pay you by card once Stripe has your business details and bank account.</span>
+<span data-stands="needs_info" hidden>Stripe needs a few more details before clients can pay you by card.</span>
+<span data-stands="pending" hidden>Stripe is checking your details. This usually takes a few minutes.</span>
+<span data-stands="stripe-checking" hidden>Stripe is checking your details. This usually takes a minute or two; this page checks again by itself.</span>
+<span data-stands="link-expired" hidden>That setup link ran out. Opening a fresh one…</span>
+<span data-stands="ready" hidden>Ready: clients can pay you by card.</span>
+<span data-stands="failed" hidden>Couldn’t check. Try again.</span>
+<span data-stands="not-set-up" hidden>Card payments aren’t set up yet.</span>
+</p>
+<p class="pay-under" data-payouts hidden>Payouts to your bank start once Stripe has checked it.</p>
+<div class="bkg-actions">
+<a class="btn" href="/account" data-do="plan" hidden>Your account</a>
+<button class="btn" type="button" data-do="setup" hidden>Set up</button>
+<button class="btn" type="button" data-do="finish" hidden>Finish setup</button>
+<button class="btn small" type="button" data-do="again" hidden>Check again</button>
+<p class="pay-page-failed" data-page-failed hidden role="alert">Couldn’t open the page. Try again.</p>
+</div>
+<p class="pay-fee">Stripe charges 2.9% + 30¢ a card payment. Inspyx takes nothing during the pilot.</p>
+</section>
+
+</main>
+</body>
+</html>

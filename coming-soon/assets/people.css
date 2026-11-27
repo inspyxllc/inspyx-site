@@ -28,3 +28,40 @@
   .ppl h1{font-size:28px}
   .ppl-list{grid-template-columns:1fr}
 }
+
+/* Adding a person (job 7, W19). */
+.ppl-top{display:flex; flex-wrap:wrap; gap:12px 20px; align-items:flex-start; justify-content:space-between}
+.ppl-top .ppl-lede{flex:1 1 420px; margin:0}
+.ppl .btn, .ppl-dialog .btn{min-height:44px; padding:0 18px; border:0; font:600 15px var(--font); cursor:pointer}
+.ppl .btn:disabled, .ppl-dialog .btn:disabled{opacity:.6; cursor:default}
+.ppl .say p{margin:10px 0 0; font-size:15px}
+.ppl-company{margin:2px 0 0; font-size:14.5px; color:var(--ink-soft)}
+.ppl-dialog{width:min(560px, calc(100vw - 32px)); max-height:calc(100vh - 32px); overflow:auto; margin:auto; padding:0; border:0; border-radius:20px; background:var(--card); color:var(--ink); box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.ppl-dialog::backdrop{background:rgba(29,29,31,.35)}
+.ppl-dialog form{display:grid; gap:12px; padding:22px}
+.ppl-dialog h2{font-size:21px}
+.ppl-dialog label{display:grid; gap:5px; font-size:14px; color:var(--ink-soft)}
+.ppl-dialog input, .ppl-dialog select, .ppl-dialog textarea{width:100%; min-height:44px; padding:10px 12px; border:1px solid #C9C9D0; border-radius:12px; background:#FFFFFF; color:var(--ink); font:400 16px var(--font); box-sizing:border-box}
+.ppl-dialog input:focus-visible, .ppl-dialog select:focus-visible, .ppl-dialog textarea:focus-visible{outline:2px solid var(--navy); outline-offset:1px}
+.ppl-two{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.ppl-problems p{margin:0; font-size:14.5px; font-weight:600; color:#8C1D18}
+.ppl-actions{display:flex; gap:10px}
+@media (max-width: 480px){ .ppl-two{grid-template-columns:1fr} }
+/* "Saved." on a green tint, never the warning pink (W6); the role box as tall as the others, with its own arrow. */
+.ppl .say p[data-say="saved"]{padding:10px 12px; border-radius:12px; background:#E3F4EA}
+.ppl-dialog select{-webkit-appearance:none; appearance:none; height:44px; padding-right:38px; cursor:pointer;
+  background-image:linear-gradient(45deg, transparent 50%, #4A5362 50%), linear-gradient(135deg, #4A5362 50%, transparent 50%);
+  background-position:calc(100% - 20px) 19px, calc(100% - 15px) 19px; background-size:5px 5px, 5px 5px; background-repeat:no-repeat}
+
+/* Deleting a kept person (the rehearsal, round 2): only people kept in People can go; the inspections keep theirs. */
+.ppl-head{display:flex; gap:8px; align-items:flex-start; justify-content:space-between; min-width:0}
+.ppl-head h3{min-width:0}
+.ppl-del{flex:none; min-height:32px; margin:-6px -8px 0 0; padding:0 10px; border:0; border-radius:10px; background:none; color:#8C1D18; font:600 13.5px var(--font); cursor:pointer}
+.ppl-del:hover, .ppl-del:focus-visible{background:#FBEDEC}
+.ppl-del[hidden]{display:none}
+.ppl-del-what{margin:0; font-size:15px; line-height:1.45; color:var(--ink-soft)}
+.ppl-dialog .btn.danger{background:#B3261E; color:#fff}
+.ppl .say p[data-say="deleted"], .ppl .say p[data-say="deleted-partly"], .ppl .say p[data-say="restored"]{display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; padding:10px 12px; border-radius:12px; background:#E3F4EA}
+.ppl .say p[data-say="deleted"][hidden], .ppl .say p[data-say="deleted-partly"][hidden], .ppl .say p[data-say="restored"][hidden]{display:none}
+.ppl .say p[data-say="taken"], .ppl .say p[data-say="undo-failed"], .ppl .say p[data-say="undo-refused"]{padding:10px 12px; border-radius:12px; background:#FBEDEC; color:#8C1D18}
+.ppl-undo{min-height:32px; padding:0 12px; border:0; border-radius:999px; background:#fff; color:var(--ink); font:600 14px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}

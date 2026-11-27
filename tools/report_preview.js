@@ -111,7 +111,7 @@ const shim = `
   document.addEventListener('click', function (e) {
     var t = e.target && e.target.closest ? e.target : null;
     if (!t) return;
-    if (t.closest('.state-locked a.btn')) {
+    if (t.closest('[data-state="locked"] a[data-pay]')) {
       e.preventDefault();
       say('Preview: on the real page, this opens the pay page for that inspection.');
       return;

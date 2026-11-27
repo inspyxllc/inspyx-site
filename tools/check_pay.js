@@ -1,4 +1,4 @@
-// Self-checks for a client's pay page with the inspector's card fee: /pay (2026-11-17, Inspyx 2).
+// Self-checks for a client's pay page with the inspector's card fee: /pay.
 // NOTHING REAL IS ASKED OR PAID. The pay function is a stand-in this test runs itself, answering as the live one does
 // (backend/supabase/functions/pay in the app's repo), and Stripe.js is a stand-in too: a plain box takes the place of
 // Stripe's card form, and "credit", "debit" or "bad" typed into it picks what Stripe would say. The link is made up;
@@ -14,7 +14,7 @@ const url = process.env.URL || 'http://localhost:4173/';
 const HOME = new URL(url).origin;
 const FN = 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/pay/';
 const STRIPE_JS = 'https://js.stripe.com/v3/';
-// Made up, built at run time so no literal here looks like a secret (the #425 lesson).
+// Made up, built at run time so no literal here looks like a secret.
 const LINK = 'P'.repeat(11) + 'q'.repeat(11);
 const PK = 'pk_' + 'test_' + 'x'.repeat(24);
 const ACCT = 'acct_' + '1Ab2Cd3Ef4';

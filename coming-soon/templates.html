@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" data-gate="in">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspyx — Templates</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/dash.css">
+<link rel="stylesheet" href="/assets/templates.css">
+<script src="/assets/auth.js"></script>
+<script src="/assets/page.js" defer></script>
+<script src="/assets/convert/inspyx_pdf.js" defer></script>
+<script src="/assets/convert/inspyx_convert.js" defer></script>
+<script src="/assets/handoff.js" defer></script>
+<script src="/assets/templates.js" defer></script>
+</head>
+<body class="has-dash">
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z"></path><path d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" stroke="#0284C7" stroke-width="19"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+<nav class="dash" aria-label="Your dashboard">
+<ul class="dash-items"><li><a href="/today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 6.5 4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5l-1.5-6.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5Z"/></svg><span class="dash-l">What needs you</span><span class="dash-s">To do</span></a></li><li><a href="/inspections"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m9 13 2 2 4-4"/></svg><span class="dash-l">Inspections</span></a></li><li><a href="/calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span class="dash-l">Calendar</span></a></li><li><a href="/prices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9Z"/><circle cx="8" cy="8" r="1.5"/></svg><span class="dash-l">Prices</span></a></li><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul>
+<details class="dash-more"><summary><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></summary><ul><li><a href="/booking"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="dash-l">Booking</span></a></li><li><a href="/emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="dash-l">Emails</span></a></li><li><a href="/payments"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="dash-l">Payments</span></a></li><li><a href="/agreements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M8 17c1.5-2 2.5-2 3 0s1.5 1 2.5-1 2-1 3 1"/></svg><span class="dash-l">Agreements</span></a></li><li><a href="/people"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="dash-l">People</span></a></li><li><a href="/account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="dash-l">Account</span></a></li></ul></details>
+</nav>
+
+<main class="tpl" data-tpl>
+<h1>Bring in your template</h1>
+<p class="tpl-lede">Drop the template you use now, and Inspyx turns it into an Inspyx template in your file's own words.</p>
+<p class="tpl-edit-link"><a href="/template">Edit your templates →</a></p>
+
+<!-- How it works: a finger drags a PDF in, Inspyx sorts it, and the template is ready. Still, in its last frame,
+     when the browser asks for less motion. -->
+<figure class="tpl-show" aria-hidden="true" data-show>
+<div class="tpl-stage">
+<div class="tpl-drop-mini"><span class="tpl-mini-arrow"></span></div>
+<div class="tpl-file"><span class="tpl-file-fold"></span><span class="tpl-file-tag">PDF</span><span class="tpl-file-name">My template.pdf</span></div>
+<div class="tpl-finger"></div>
+<div class="tpl-ready">
+<strong>My template</strong>
+<span class="tpl-ready-sum">3 sections, 6 items</span>
+<b class="tpl-sec s1">ROOF</b><b class="tpl-sec s2">KITCHEN</b><b class="tpl-sec s3">PLUMBING</b>
+<em>Add to my templates</em>
+</div>
+<i class="tpl-chip c1">Shingles</i><i class="tpl-chip c2">Flashing</i><i class="tpl-chip c3">Range</i><i class="tpl-chip c4">Sink</i><i class="tpl-chip c5">Water heater</i><i class="tpl-chip c6">Drain</i>
+</div>
+<ol class="tpl-steps">
+<li data-cap="1"><span class="on-mouse">Drag your template's file here, or pick it.</span><span class="on-touch">Tap to pick your template's file.</span></li>
+<li data-cap="2">Inspyx sorts its lines into sections, items and comments.</li>
+<li data-cap="3">Check it, then add it. It's on your phone too.</li>
+</ol>
+</figure>
+
+<label class="tpl-drop" data-drop>
+<input type="file" data-pick accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.html,.htm,.json,.rtf">
+<span class="tpl-drop-icon" aria-hidden="true"></span>
+<span class="tpl-drop-main on-mouse">Drop your file here</span>
+<span class="tpl-drop-main on-touch">Tap to pick your template's file</span>
+<span class="tpl-drop-or on-mouse">or <u>pick the file</u></span>
+<span class="tpl-drop-kinds">PDF, Word, Excel, CSV, text, HTML or JSON</span>
+</label>
+
+<div class="tpl-status" role="status" aria-live="polite">
+<p data-st="reading" hidden><span class="tpl-spin" aria-hidden="true"></span><span>Reading the file…</span></p>
+<p data-st="sorting" hidden><span class="tpl-spin" aria-hidden="true"></span><span data-sorting></span></p>
+</div>
+<div class="tpl-verdict" role="alert">
+<p data-v="scanned" hidden>This PDF is a scan (pictures of pages). Convert it on your phone, where Inspyx reads scans: open Inspyx, tap More → Import → Convert my template.</p>
+<p data-v="rtf" hidden>Inspyx reads RTF files on your phone. Convert it there: open Inspyx, tap More → Import → Convert my template.</p>
+<p data-v="unsupported" hidden>Inspyx can't convert this kind of file here. Use a PDF, Word, Excel, CSV, text, HTML or JSON file.</p>
+<p data-v="unreadable" hidden><span data-unreadable></span></p>
+<p data-v="refused" hidden><span data-refused></span></p>
+<p data-v="failed" hidden>The file couldn't be converted. Check your connection and try again.</p>
+</div>
+
+<section class="tpl-results" data-results hidden></section>
+
+</main>
+<noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
+
+<!-- The page's words for what templates.js builds. The converter's own preview words come with each template. -->
+<template data-t="words">
+<span data-w="sorting">Sorting the lines…</span>
+<span data-w="sorting-of">Sorting the lines… ({done} of {total})</span>
+<span data-w="unreadable">Inspyx couldn't read this file: {why}.</span>
+<span data-w="unreadable-plain">Inspyx couldn't read this file.</span>
+<span data-w="part">Template {n} of {count}: {name}</span>
+<span data-w="add">Add to my templates</span>
+<span data-w="adding">Adding…</span>
+<span data-w="added">Added "{name}". Choose it when you start a new inspection.</span>
+<span data-w="already">"{name}" was already added. Choose it when you start a new inspection.</span>
+<span data-w="edit-it">Edit it →</span>
+<span data-w="add-failed">The template couldn't be added. Nothing changed.</span>
+<span data-w="full">Your templates are full (200). Remove one on your phone, then add this one.</span>
+<span data-w="soon">Adding from the website comes next. For now, convert it on your phone to add it.</span>
+<span data-w="another">Convert another file</span>
+<span data-w="rename">Rename</span>
+<span data-w="show-all">Show all {n}</span>
+</template>
+
+<template data-t="result">
+<article class="tpl-card">
+<p class="tpl-part" data-part hidden></p>
+<div class="tpl-title"><h2 data-name></h2><button type="button" class="tpl-rename" data-rename><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path><path d="M13.5 6.5l4 4"></path></svg></button><input class="tpl-name-edit" data-name-edit type="text" maxlength="120" hidden></div>
+<p class="tpl-summary" data-summary></p>
+<h3 data-sections-label></h3>
+<ol class="tpl-sections" data-sections></ol>
+<details class="tpl-dots" data-dots open hidden><summary><span data-dots-label></span><small data-dots-hint></small></summary><ul data-dot-lines></ul></details>
+<details class="tpl-left" data-left hidden><summary><span data-left-label></span><small data-left-hint></small></summary><ul data-left-lines></ul></details>
+<div class="tpl-save"><button class="btn" type="button" data-add></button><p class="tpl-saved" data-saved role="status"></p></div>
+</article>
+</template>
+</body>
+</html>

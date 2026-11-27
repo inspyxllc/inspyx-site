@@ -22,6 +22,14 @@
 .cat-MD{--c:#A35407; --t:#FDF1E3}
 .cat-MN{--c:#33691E; --t:#EEF6E6}
 .cat-NT{--c:#455A64; --t:#ECEFF1}
+/* A reinspection (content /15): each result in the colour its tile has, as the PDF's card. */
+.recheck-fixed{--c:#33691E; --t:#EEF6E6}
+.recheck-partly{--c:#A35407; --t:#FDF1E3}
+.recheck-not_fixed{--c:#B3261E; --t:#FDECEB}
+.recheck-not_checked{--c:#455A64; --t:#ECEFF1}
+.recheck{margin:0 0 14px; padding:10px 12px 2px; border-radius:10px; background:var(--t); border-left:3px solid var(--c)}
+.recheck .eyebrow{color:var(--c)}
+.for-agent{margin-top:18px}
 .cat-NI{--c:#5E35B1; --t:#EFE9FB}
 .cat-NP{--c:#00695C; --t:#E3F2F0}
 
@@ -253,6 +261,35 @@ dialog::backdrop{background:rgba(16,22,30,.55)}
 .about-ph{display:block; width:min(100%, 420px); aspect-ratio:16 / 10; margin:0 auto 16px; border-radius:14px; object-fit:cover; background:var(--wash)}
 .lockmark{display:grid; place-items:center; width:60px; height:60px; border-radius:50%; background:var(--wash); color:var(--navy)}
 .lockmark .ic{width:26px; height:26px}
+
+/* ---- a report that opens once paid: the inspector's brand, the house, what is inside, and Pay (2026-11-23) */
+.lk{--brand:#1D62D8; min-height:100vh; padding:28px var(--gr) 40px var(--gl); background:#EEF1F6}
+.lk-card{max-width:480px; margin:0 auto; overflow:hidden; border-radius:22px; background:#fff; box-shadow:0 1px 2px rgba(16,24,40,.06), 0 12px 32px rgba(16,24,40,.08)}
+.lk-head{display:flex; align-items:center; gap:14px; padding:20px 22px; background:var(--brand); color:#fff}
+.lk-logo{flex:none; width:46px; height:46px; border-radius:50%; object-fit:cover; background:rgba(255,255,255,.18)}
+.lk-initials{display:grid; place-items:center; font-weight:700; font-size:16px; letter-spacing:.02em; color:#fff; background:rgba(255,255,255,.18)}
+.lk-brand{font-weight:700; font-size:19px; line-height:1.25; overflow-wrap:anywhere}
+.lk-house{display:block; width:100%; aspect-ratio:16 / 9; object-fit:cover; background:var(--wash)}
+.lk-body{display:grid; gap:14px; padding:22px}
+.lk-eyebrow{font-size:12.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--brand)}
+.lk-addr{margin-top:-8px; font:700 26px/1.2 var(--serif); color:var(--ink); overflow-wrap:anywhere}
+.lk-sub{display:block; margin-top:-10px; color:var(--muted)}
+.lk-who{display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--line); border-radius:14px}
+.lk-who .lk-sub{margin-top:0; font-size:14.5px}
+.lk-face{flex:none; width:44px; height:44px; border-radius:50%; object-fit:cover}
+.lk-face.lk-initials{color:var(--brand); background:var(--wash)}
+.lk-who-name{display:block; font-weight:600}
+.lk-inside{padding:14px; border-radius:14px; background:#E8EEF8}
+.lk-inside-t{margin-bottom:8px; font-weight:700}
+.lk-chips{display:flex; flex-wrap:wrap; gap:8px}
+.lk-chip{padding:6px 12px; border-radius:999px; background:#fff; font-size:14.5px; font-weight:600; color:var(--ink)}
+.lk-chip-sh{color:#B3261E; background:#FDECEB}
+.lk-lock{display:flex; align-items:center; gap:12px; margin-top:4px}
+.lk-lockmark{flex:none; display:grid; place-items:center; width:44px; height:44px; border-radius:50%; background:var(--wash); color:var(--brand)}
+.lk-lockmark .ic{width:22px; height:22px}
+.lk-t{font:700 20px/1.25 var(--serif); color:var(--ink); text-wrap:balance}
+.lk .lk-pay{display:block; padding:16px 18px; border-radius:14px; background:var(--brand); border-color:var(--brand); color:#fff; font-size:18px; font-weight:700; text-align:center; text-decoration:none}
+.lk-m{color:var(--muted); text-align:center; font-size:14.5px}
 
 /* ---- wider screens */
 @media (min-width:640px){

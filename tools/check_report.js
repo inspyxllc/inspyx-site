@@ -14,6 +14,7 @@ const playwright = require('playwright');
 const engine = process.env.BROWSER === 'webkit' ? playwright.webkit : playwright.chromium;
 
 const sampleDir = process.argv[2];
+const PROD = process.env.PROD === '1';
 if (!sampleDir) { console.error('usage: node tools/check_report.js <sample folder>'); process.exit(2); }
 const base = process.env.URL || 'http://localhost:4174';
 const sample = JSON.parse(fs.readFileSync(path.join(sampleDir, 'report.json'), 'utf8'));
@@ -78,8 +79,74 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
 
 (async () => {
   const browser = await engine.launch();
-  console.log('engine: ' + engine.name());
 
+  // ---- a reinspection (content /15, 2026-11-26): its cover, the recheck's tiles in the PDF's colours, the summary
+  // for the agent (as text), and each rechecked finding's result first on its card; an ordinary report shows none.
+  // On the sample only: the live site has no sample to open (Codex on #118).
+  if (!PROD) {
+    const plain = await open(browser);
+    const none = await plain.page.evaluate(() => ({
+      kicker: document.querySelector('.kicker').textContent, recheck: !!document.getElementById('recheck'),
+      cards: document.querySelectorAll('.recheck').length, rechecks: !!document.querySelector('.cover-rechecks'),
+    }));
+    ok('an ordinary report: no recheck, its own title', !none.recheck && none.cards === 0 && !none.rechecks && none.kicker.indexOf(report.title) === 0, JSON.stringify(none));
+    await plain.ctx.close();
+
+    const re = clone(sample);
+    const all = [];
+    re.report.sections.forEach((s) => s.items.forEach((it) => it.findings.forEach((f) => all.push(f))));
+    const results = [
+      ['fixed', 'Fixed', ''], ['partly', 'Partly fixed', 'Two of the three clips replaced.'], ['not_fixed', 'Not fixed', ''],
+      [null, 'Not checked', ''], ['fixed', 'Fixed', '<b>clear</b> now'],
+    ];
+    results.forEach((r, i) => { all[i].reinspect = { result: r[0], label: r[1], note: r[2] }; });
+    for (let i = results.length; i < all.length; i++) all[i].reinspect = null;
+    re.report.reinspection = {
+      original_inspected: 'November 6, 2026, 4:09 PM',
+      summary: 'One left to fix: the <script>alert(1)</script> rail.',
+      counts: { fixed: 2, not_fixed: 1, partly: 1, not_checked: 1 },
+    };
+    const o = await open(browser, { answer: () => ({ body: re }) });
+    const got = await o.page.evaluate(() => {
+      const tiles = [].map.call(document.querySelectorAll('#recheck .tile'), (t) => [t.className.replace('tile', '').trim(), t.textContent.trim()]);
+      const cards = [].map.call(document.querySelectorAll('[data-finding-card]'), (c) => {
+        const r = c.querySelector('.recheck');
+        return r ? [c.getAttribute('data-finding-card'), r.className, r.textContent.trim()] : null;
+      }).filter(Boolean);
+      const first = document.querySelector('[data-finding-card] .card-b').firstElementChild;
+      return {
+        kicker: document.querySelector('.kicker').textContent.trim(),
+        rechecks: (document.querySelector('.cover-rechecks') || {}).textContent,
+        heading: (document.querySelector('#recheck .part-t') || {}).textContent,
+        before: !!document.querySelector('#recheck + #glance'),
+        tiles, cards, firstIsRecheck: !!first && first.classList.contains('recheck'),
+        agent: (document.querySelector('#recheck .for-agent') || {}).textContent,
+        scripts: document.querySelectorAll('#recheck script, .recheck b').length,
+        scrollW: document.documentElement.scrollWidth,
+      };
+    });
+    ok('a reinspection: the cover says so and when the inspection it rechecks was', got.kicker.indexOf('Reinspection Report') === 0 &&
+      got.rechecks === 'Rechecks the inspection of November 6, 2026, 4:09 PM', JSON.stringify([got.kicker, got.rechecks]));
+    ok('a reinspection: What was rechecked, before the glance, its tiles in the PDF\'s order, counts and colours', got.heading === 'What was rechecked' && got.before &&
+      same(got.tiles, [['cat-MN', '2Fixed'], ['cat-MD', '1Partly fixed'], ['cat-SH', '1Not fixed'], ['cat-NT', '1Not checked']]), JSON.stringify(got.tiles));
+    ok('a reinspection: the summary for the agent, as text, never as HTML', got.agent === 'For the agentOne left to fix: the <script>alert(1)</script> rail.' && got.scripts === 0, JSON.stringify([got.agent, got.scripts]));
+    ok('a reinspection: each rechecked finding says its result first, and only those', got.firstIsRecheck && same(got.cards, [
+      [all[0].id, 'recheck recheck-fixed', 'RecheckedFixed.'],
+      [all[1].id, 'recheck recheck-partly', 'RecheckedPartly fixed. Two of the three clips replaced.'],
+      [all[2].id, 'recheck recheck-not_fixed', 'RecheckedNot fixed.'],
+      [all[3].id, 'recheck recheck-not_checked', 'RecheckedNot checked.'],
+      [all[4].id, 'recheck recheck-fixed', 'RecheckedFixed. <b>clear</b> now'],
+    ]), JSON.stringify(got.cards));
+    // Against the view's own width: in phone mode a page too wide widens innerWidth with it.
+    ok('a reinspection: nothing scrolls sideways at a phone\'s width; no page errors', got.scrollW <= o.page.viewportSize().width && o.errs.length === 0, JSON.stringify([got.scrollW, o.errs]));
+    await o.ctx.close();
+  }
+
+  console.log('engine: ' + engine.name() + (PROD ? ' (PROD=1: the states only, against ' + base + ')' : ''));
+
+  // PROD=1 (2026-11-23, the lead): against the live site there is no /r/sample, so only "the other states" run, the
+  // function's answers faked in the browser (gone, offline, locked with Pay, the brand, a pay page off Inspyx).
+  if (!PROD) {
   // ---- the page loads clean, under the headers the live page gets
   {
     const res = await (await browser.newContext()).request.get(base + '/r/sample');
@@ -253,27 +320,34 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
       }));
       return { ctx, page, asked, urls, said, seen };
     }
+    /* The report's own open, apart from the repair request builder's own question on a person's own link
+       ({key, repair: "get"}, repair.js since inspyx-site#91), which the page asks right after it opens. */
+    const isRepair = (a) => { try { return 'repair' in (JSON.parse(a.body || 'null') || {}); } catch (e) { return false; } };
+    const opens = (asked) => asked.filter((a) => !isRepair(a));
     const noKeyAnywhere = (r) => r.urls.every((u) => !u.includes(KEY)) && r.said.every((t) => !t.includes(KEY)) && !r.seen.href.includes(KEY);
 
     const fresh = await keyed('/r#' + KEY);
     ok('a new link (/r#<key>) opens the report, asked once by POST with only the key in the body',
-      fresh.seen.h1 === sample.report.cover.address && fresh.asked.length === 1 && fresh.asked[0].method === 'POST' &&
-      fresh.asked[0].url === API && same(JSON.parse(fresh.asked[0].body), { key: KEY }), JSON.stringify(fresh.asked).slice(0, 200));
+      fresh.seen.h1 === sample.report.cover.address && opens(fresh.asked).length === 1 && opens(fresh.asked)[0].method === 'POST' &&
+      opens(fresh.asked)[0].url === API && same(JSON.parse(opens(fresh.asked)[0].body), { key: KEY }), JSON.stringify(fresh.asked).slice(0, 200));
+    ok('the repair builder asks once, by POST, with the key and nothing else of the report',
+      fresh.asked.filter(isRepair).length === 1 && fresh.asked.filter(isRepair).every((a) => a.method === 'POST' && a.url === API &&
+        same(JSON.parse(a.body), { key: KEY, repair: 'get' })), JSON.stringify(fresh.asked.filter(isRepair)).slice(0, 200));
     ok('the key leaves the address at once: it reads /r, with nothing after it', fresh.seen.path === '/r' && fresh.seen.hash === '', fresh.seen.href);
     ok('the key is in no address the page asked for, and in nothing it logged', noKeyAnywhere(fresh), fresh.urls.filter((u) => u.includes(KEY)).concat(fresh.said.filter((t) => t.includes(KEY))).join(' | ').slice(0, 200));
     ok('the key is kept for this tab only', fresh.seen.kept === KEY, String(fresh.seen.kept));
     // A reload, in the same tab: the address no longer holds the key, and the report still opens.
-    const askedBefore = fresh.asked.length;
+    const askedBefore = opens(fresh.asked).length;
     await fresh.page.reload({ waitUntil: 'load' });
     await fresh.page.waitForFunction(() => !document.getElementById('app').hasAttribute('aria-busy'), null, { timeout: 8000 }).catch(() => {});
     const again = await fresh.page.evaluate(() => ({ h1: (document.querySelector('h1') || {}).textContent || '', href: location.href }));
-    ok('a reload in the same tab opens it again, asked the same way', again.h1 === sample.report.cover.address && fresh.asked.length === askedBefore + 1 &&
-      fresh.asked[fresh.asked.length - 1].method === 'POST' && !again.href.includes(KEY), JSON.stringify(again));
+    ok('a reload in the same tab opens it again, asked the same way', again.h1 === sample.report.cover.address && opens(fresh.asked).length === askedBefore + 1 &&
+      opens(fresh.asked)[opens(fresh.asked).length - 1].method === 'POST' && !again.href.includes(KEY), JSON.stringify(again));
     await fresh.ctx.close();
 
     const old = await keyed('/r/' + KEY);
     ok('an old link (/r/<key>) still opens, asked by POST the same way, and its address becomes /r',
-      old.seen.h1 === sample.report.cover.address && old.asked.length === 1 && old.asked[0].method === 'POST' && same(JSON.parse(old.asked[0].body), { key: KEY }) &&
+      old.seen.h1 === sample.report.cover.address && opens(old.asked).length === 1 && opens(old.asked)[0].method === 'POST' && same(JSON.parse(opens(old.asked)[0].body), { key: KEY }) &&
       old.seen.path === '/r' && noKeyAnywhere(old), JSON.stringify([old.seen.path, old.asked.length]));
     await old.ctx.close();
 
@@ -673,6 +747,8 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     await ctx.close();
   }
 
+  }
+
   // ---- the other states
   {
     const gone = await open(browser, { answer: () => ({ status: 404, body: { state: 'gone' } }) });
@@ -704,6 +780,23 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
       l.state === 'locked' && l.text.includes(report.cover.address) && l.text.includes('This report opens once the inspection is paid.') && l.pay === base + '/pay/AAAAAAAAAAAAAAAAAAAAAA' && l.findings === 0 && l.pdf === 0, l.text.replace(/\n+/g, ' / ').slice(0, 120));
     await locked.ctx.close();
 
+    for (const [cents, words] of [[42500, 'Pay $425.00'], [123456, 'Pay $1,234.56'], [null, 'Pay now'], [-5, 'Pay now'], [1.5, 'Pay now'], ['425', 'Pay now']]) {
+      const due = await open(browser, { answer: () => ({ body: { state: 'locked', about, pay_url: '/pay/AAAAAAAAAAAAAAAAAAAAAA', due_cents: cents } }) });
+      const said = await due.page.evaluate(() => (document.querySelector('main a[data-pay]') || {}).textContent);
+      ok('the Pay button says what is due (' + JSON.stringify(cents) + ' -> ' + words + ')', said === words, said);
+      await due.ctx.close();
+    }
+
+    // The locked page wears what the email has (2026-11-23): the inspector's color, and what is inside as counts.
+    const branded = await open(browser, { answer: () => ({ body: { state: 'locked', about: { ...about, color: '#0F766E' }, pay_url: '/pay/AAAAAAAAAAAAAAAAAAAAAA', due_cents: 42500, preview: { sections: 14, findings: 28, photos: 64, safety: 4 } } }) });
+    const bl = await branded.page.evaluate(() => ({ brand: getComputedStyle(document.querySelector('.lk-head')).backgroundColor, chips: Array.from(document.querySelectorAll('.lk-chip')).map((e) => e.textContent), sh: document.querySelectorAll('.lk-chip-sh').length }));
+    ok('a locked page: the inspector\'s color, and what is inside as counts', bl.brand === 'rgb(15, 118, 110)' && JSON.stringify(bl.chips) === JSON.stringify(['14 sections', '28 findings', '64 photos', '4 safety concerns']) && bl.sh === 1, JSON.stringify(bl));
+    await branded.ctx.close();
+    const plainLock = await open(browser, { answer: () => ({ body: { state: 'locked', about: { ...about, color: 'red; background:url(x)' }, pay_url: '/pay/AAAAAAAAAAAAAAAAAAAAAA', preview: { sections: 1, findings: 1, photos: 0, safety: 0 } } }) });
+    const pl = await plainLock.page.evaluate(() => ({ brand: getComputedStyle(document.querySelector('.lk-head')).backgroundColor, chips: Array.from(document.querySelectorAll('.lk-chip')).map((e) => e.textContent) }));
+    ok('a color that isn\'t #RRGGBB is never used, and no safety chip when there are none', pl.brand === 'rgb(29, 98, 216)' && JSON.stringify(pl.chips) === JSON.stringify(['1 section', '1 finding', '0 photos']), JSON.stringify(pl));
+    await plainLock.ctx.close();
+
     const badPay = await open(browser, { answer: () => ({ body: { state: 'locked', about, pay_url: 'https://evil.example/pay' } }) });
     ok('a pay page anywhere but Inspyx is not offered', (await badPay.page.evaluate(() => document.querySelectorAll('main a.btn').length)) === 0);
     await badPay.ctx.close();
@@ -722,6 +815,7 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     await b.ctx.close();
   }
 
+  if (!PROD) {
   // ---- a report with nothing wrong, and one with no PDF yet
   {
     const calm = clone(sample);
@@ -877,6 +971,8 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
         && back.h1 === start.h1 && back.rows === start.rows && back.sheets === 1 && back.open === 1 && errs.length === 0,
       JSON.stringify({ start, locked, back, errs }));
     await ctx.close();
+  }
+
   }
 
   await browser.close();

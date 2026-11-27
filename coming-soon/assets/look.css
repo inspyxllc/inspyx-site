@@ -1,0 +1,52 @@
+/* Client View / Agent View (2026-11-24): the bar that says whose view this is, the floating pill that keeps saying it
+   while the report scrolls under the report page's own sticky bar, and the cards (not sent yet, closed, sign in). */
+.look-bar{
+  display:flex; align-items:center; gap:14px;
+  padding:14px var(--gr) 14px var(--gl);
+  background:radial-gradient(120% 180% at 0% 0%, #2E6DA4 0%, #1F4E79 45%, #0B1F3A 100%);
+  color:#FFFFFF;
+  box-shadow:0 10px 30px rgba(11,31,58,.25);
+}
+.look-eye{flex:none; display:grid; place-items:center; width:40px; height:40px; border-radius:14px;
+  background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.look-eye svg{width:22px; height:22px; fill:none; stroke:#FFFFFF; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.look-what{flex:1; min-width:0}
+.look-name{margin:0; font:700 17px/1.2 var(--sans); letter-spacing:.01em}
+.look-line{margin:2px 0 0; font:400 14px/1.35 var(--sans); color:rgba(255,255,255,.82)}
+.look-close{flex:none; min-height:40px; padding:0 16px; border:0; border-radius:999px; cursor:pointer;
+  background:#FFFFFF; color:#0B1F3A; font:600 14.5px var(--sans)}
+.look-close:focus-visible{outline:3px solid #9CC3EA; outline-offset:2px}
+
+.look-pill{position:fixed; z-index:50; left:50%; bottom:max(16px, env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
+  display:flex; align-items:center; gap:8px; margin:0; padding:8px 14px; border-radius:999px; pointer-events:none;
+  background:rgba(11,31,58,.92); color:#FFFFFF; font:600 13.5px var(--sans); white-space:nowrap; box-shadow:0 8px 24px rgba(11,31,58,.3)}
+.look-pill::before{content:""; width:8px; height:8px; border-radius:50%; background:#5EE0A0; box-shadow:0 0 0 4px rgba(94,224,160,.25)}
+.look-pill[hidden]{display:none}
+
+.look-state[hidden], #app[hidden]{display:none}
+.look-card{max-width:560px; margin:40px auto; padding:28px var(--gr) 28px var(--gl); text-align:center}
+.look-card h1{font:700 26px/1.2 var(--serif); color:var(--navy); margin:12px 0 8px}
+.look-card p{font:400 16.5px/1.5 var(--sans); color:var(--muted); margin:0 0 12px}
+.look-notsent{margin-top:48px; padding:32px 24px; border-radius:24px; background:linear-gradient(180deg, #FFFFFF, #F4F8FD);
+  box-shadow:inset 0 0 0 1px rgba(31,78,121,.12), 0 20px 50px rgba(31,78,121,.12)}
+.look-mark{display:inline-grid; place-items:center; width:56px; height:56px; border-radius:18px; background:#E8F0FA}
+.look-mark svg{width:28px; height:28px; fill:none; stroke:var(--navy); stroke-width:1.8; stroke-linejoin:round}
+.look-facts{list-style:none; margin:18px 0 0; padding:0; display:grid; gap:10px; text-align:left}
+.look-facts[hidden], .look-facts li[hidden]{display:none}
+.look-facts li{display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; background:#FFFFFF;
+  box-shadow:inset 0 0 0 1px var(--line); font:500 15.5px var(--sans); color:var(--ink)}
+.look-dot{flex:none; width:10px; height:10px; border-radius:50%; background:#B8C2CE}
+.look-dot-wait{background:#E0A100}
+.look-dot-done{background:#2E9D5B}
+/* A look's Pay button looks as the client's does, and plainly goes nowhere. */
+.looking .lk-pay[aria-disabled="true"]{cursor:default; opacity:.85}
+
+@media (max-width: 600px){
+  .look-notsent{margin-left:var(--gl); margin-right:var(--gr); margin-top:28px; padding:28px 18px}
+}
+@media (max-width: 520px){
+  .look-bar{gap:10px}
+  .look-line{font-size:13px}
+  .look-card h1{font-size:23px}
+}
+@media (prefers-reduced-motion: reduce){ .look-pill::before{box-shadow:none} }

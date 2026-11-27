@@ -1,4 +1,4 @@
-/* A client's pay page with the inspector's card fee (2026-11-17): inspyx.com/pay#<link>. It reads and pays
+/* A client's pay page with the inspector's card fee: inspyx.com/pay#<link>. It reads and pays
    through the pay function (backend/supabase/functions/pay in the app's repo):
      GET  <link>?view=json[&pi=<payment>]  what is due and the card fee's rate; or paid, confirming, nothing due,
                                            or Checkout after all (the fee no longer applies here);

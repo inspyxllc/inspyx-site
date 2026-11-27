@@ -58,4 +58,11 @@
     }, { passive: true });
     mark();
   }
+
+  // The dashboard's More sheet (job 5): Escape or a tap anywhere else closes it.
+  var more = document.querySelector('nav.dash .dash-more');
+  if (more) {
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && more.open) { more.open = false; more.querySelector('summary').focus(); } });
+    document.addEventListener('click', function (e) { if (more.open && !more.contains(e.target)) more.open = false; });
+  }
 })();

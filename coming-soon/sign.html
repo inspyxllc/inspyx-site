@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign your agreement</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/sign.css">
+<script src="/assets/sign.js" defer></script>
+</head>
+<body>
+<!-- Signing an inspection agreement (2026-11-22, Inspyx 4; signing step 3, part 5): inspyx.com/sign#<key>, the link
+     a client gets by email. The key stays after "#", so it never reaches this server or any page's Referer. The
+     agreement is the one frozen at booking, shown as it is (text only); the client initials each [Initials] spot (one
+     drawing, placed at each spot by a tap), types their name, draws their signature and signs. The sign function
+     (inspyx-mobile, backend/supabase/functions/sign) keeps it and emails the signed PDF. Every word is here; sign.js
+     says none. -->
+<main class="sg" data-sg>
+<p class="sg-state" role="status" data-state="loading">Loading…</p>
+<section class="sg-state" data-state="gone" hidden>
+<h1>This signing link isn’t open</h1>
+<p>It may have been replaced by a newer one. Please contact your inspector.</p>
+</section>
+<p class="sg-state" role="alert" data-state="slow" hidden>Too many tries in a short time. Please wait a few minutes and try again.</p>
+<p class="sg-state" role="alert" data-state="down" hidden>This page can’t be reached right now. Please try again in a minute.</p>
+
+<div data-state="open" hidden>
+<h1>Your inspection agreement</h1>
+<p class="sg-lede"><span data-w-from>From</span> <strong data-v="company"></strong></p>
+<p class="sg-when" data-when hidden><span data-w-inspection>Inspection:</span> <span data-v="when"></span><span data-v="place"></span></p>
+
+<section class="sg-step" aria-labelledby="sg-read">
+<h2 id="sg-read">1. Read the agreement</h2>
+<div class="sg-text" data-text></div>
+</section>
+
+<section class="sg-step" aria-labelledby="sg-init">
+<h2 id="sg-init">2. Your initials</h2>
+<p class="sg-note" data-init-note>Draw your initials once, then tap “Initial here” at each spot in the agreement.</p>
+<div class="sg-pad sg-pad-init"><canvas width="450" height="150" data-pad="initials" aria-label="Draw your initials here"></canvas></div>
+<button type="button" class="sg-clear" data-clear="initials">Clear</button>
+<p class="sg-count" data-v="placed"></p>
+</section>
+
+<section class="sg-step" aria-labelledby="sg-sign">
+<h2 id="sg-sign">3. Sign</h2>
+<label class="sg-name">Your full name <input type="text" autocomplete="name" maxlength="200" id="sg-name" required></label>
+<p class="sg-consent">By typing your name and drawing your signature, you agree to sign this agreement electronically, and that your electronic signature counts the same as one on paper. You can ask your inspector for a paper copy instead.</p>
+<div class="sg-pad"><canvas width="1200" height="400" data-pad="signature" aria-label="Draw your signature here"></canvas></div>
+<button type="button" class="sg-clear" data-clear="signature">Clear</button>
+</section>
+
+<p class="sg-say" role="alert" data-say="initials" hidden>Please initial each spot in the agreement.</p>
+<p class="sg-say" role="alert" data-say="draw-initials" hidden>Please draw your initials first.</p>
+<p class="sg-say" role="alert" data-say="name" hidden>Please type your full name.</p>
+<p class="sg-say" role="alert" data-say="signature" hidden>Please draw your signature.</p>
+<p class="sg-say" role="alert" data-say="too-big" hidden>That drawing is too detailed to keep. Please clear it and draw it again.</p>
+<p class="sg-say" role="alert" data-say="changed" hidden>This agreement was updated. Please reload the page and read it again.</p>
+<p class="sg-say" role="alert" data-say="failed" hidden>That didn’t go through. Please try again.</p>
+<button type="button" class="sg-sign" data-sign>Sign the agreement</button>
+<p class="sg-fine">Signed copies go to you and to <span data-v="company"></span> by email.</p>
+</div>
+
+<section class="sg-state sg-done" data-state="signed" hidden>
+<h1>Signed</h1>
+<p>Thank you. Signed copies go to you and to <span data-v="company"></span> by email.</p>
+<p class="sg-fine" data-v="signedline"></p>
+<h2>What happens next</h2>
+<ol class="sg-next">
+<li>Your signed copy is on its way to your email.</li>
+<li data-next="none"><span data-v="company"></span> has it too. There’s nothing more to do before the inspection.</li>
+<li data-next="pay" hidden><span data-v="company"></span> has it too. One step left: your inspection fee, <strong data-v="due"></strong>. Your report unlocks once it’s paid.<a class="sg-pay" data-pay-link href="/pay">Pay <span data-v="due"></span></a></li>
+<li data-signed-when hidden>Your inspection: <span data-v="when"></span><span data-v="place"></span>.</li>
+</ol>
+<p class="sg-fine">You can close this page.</p>
+</section>
+</main>
+
+<template data-t="words">
+<span data-w="initial-here">Initial here</span>
+<span data-w="initialed">Initialed</span>
+<span data-w="placed">initialed of</span>
+<span data-w="signed-by">Signed by</span>
+<span data-w="on">on</span>
+<span data-w="at"> at </span>
+</template>
+</body>
+</html>
