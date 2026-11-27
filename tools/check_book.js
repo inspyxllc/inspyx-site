@@ -270,6 +270,22 @@ const lastBook = (calls) => calls.filter((c) => c.action === 'book').pop();
     await ctx.close();
   });
 
+  await group('while a booking waits on its price, the code can\'t change under it (Codex on #124)', async () => {
+    const o = {};
+    const { ctx, page, calls } = await open(browser, '/book/rivera', o);
+    await page.waitForSelector('[data-state="open"]:not([hidden])');
+    await fill(page);
+    await page.waitForFunction(() => document.querySelector('[data-v="total"]').textContent === '$600');
+    o.slowQuotesFrom = o.quotes + 1;
+    await page.fill('#bk-code', 'spring25');
+    await page.click('[data-book]');
+    await page.waitForTimeout(200);
+    ok('Book waiting: the code box and Apply are locked', await page.isDisabled('#bk-code') && await page.isDisabled('[data-apply]'));
+    await page.waitForSelector('[data-state="booked"]:not([hidden])');
+    ok('and it books with the code it waited for', lastBook(calls).discountCode === 'SPRING25');
+    await ctx.close();
+  });
+
   await group('a page that isn\'t open', async () => {
     const { ctx, page } = await open(browser, '/book/nobody', { gone: true });
     await page.waitForSelector('[data-state="gone"]:not([hidden])');

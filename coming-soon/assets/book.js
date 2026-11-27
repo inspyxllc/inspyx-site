@@ -302,6 +302,12 @@
     if (d.client.smsOk && !d.client.phone) return 'phone';
     return null;
   }
+  // While a booking is on its way, the code can't change under it (Codex on #124): the booking goes with the code its
+  // price was asked for.
+  function lockBooking(btn, on) {
+    btn.disabled = on;
+    $('#bk-code').disabled = on; $('[data-apply]', main).disabled = on;
+  }
   function book() {
     if (preview) return;
     var first = problem(details());
@@ -313,13 +319,13 @@
     var key = choicesKey();
     var ready = quotedFor === key ? Promise.resolve(true) : (pendingKey === key && pending ? pending : changed());
     var btn = $('[data-book]', main);
-    btn.disabled = true;
+    lockBooking(btn, true);
     ready.then(function (priced) {
-      if (!priced || quotedFor !== choicesKey()) { btn.disabled = false; say('price'); return; }
+      if (!priced || quotedFor !== choicesKey()) { lockBooking(btn, false); say('price'); return; }
       // The form may have changed while the price was on its way (the text box unticked, a new phone): send what it
       // says now, checked again (Codex on site PR 64).
       var d = details(), now = problem(d);
-      if (now) { btn.disabled = false; say(now); return; }
+      if (now) { lockBooking(btn, false); say(now); return; }
       send(d, btn);
     });
   }
@@ -329,7 +335,7 @@
     if (draftKey) body.draftKey = draftKey;
     if (d.client.smsOk) body.smsConsentVersion = SMS_CONSENT_VERSION;
     call(body).then(function (r) {
-      btn.disabled = false;
+      lockBooking(btn, false);
       if (r.status === 200 && r.body.state === 'booked') {
         setAll('when', fullLabel(r.body.startsAt));
         setAll('email', d.client.email);
