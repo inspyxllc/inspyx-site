@@ -342,3 +342,23 @@
 .insp-aifield{display:grid; gap:8px}
 .ai-field .ai-open{min-height:36px; font-size:14px; padding:0 14px 0 8px}
 .ai-field .ai-open img{width:20px; height:20px}
+
+/* Cancel this booking and Archive (the rehearsal, round 2): the phone's words and steps. */
+.insp-acts{margin-top:18px; display:grid; gap:8px}
+.insp-acts[hidden], .insp-acts [hidden], .insp-act-dialog [hidden]{display:none}
+.insp-acts-line{margin:0; font-size:14.5px; color:var(--ink-soft)}
+.insp-acts-buttons{display:flex; flex-wrap:wrap; gap:8px}
+.insp-act{min-height:40px; padding:0 14px; border:0; border-radius:10px; background:#fff; color:#8C1D18; font:600 14.5px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(140,29,24,.35)}
+.insp-act:hover, .insp-act:focus-visible{background:#FBEDEC}
+.insp-act-said{margin:0; padding:10px 12px; border-radius:12px; font-size:15px; background:#FBEDEC; color:#8C1D18}
+.insp-act-said.ok{background:#E3F4EA; color:var(--ink)}
+.insp-act-dialog{width:min(520px, calc(100vw - 32px)); margin:auto; padding:0; border:0; border-radius:20px; background:var(--card, #fff); color:var(--ink); box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.insp-act-dialog::backdrop{background:rgba(29,29,31,.35)}
+.insp-act-dialog form{display:grid; gap:12px; padding:22px}
+.insp-act-dialog h2{font-size:20px; margin:0}
+.insp-act-dialog p{margin:0; font-size:15px; line-height:1.45; color:var(--ink-soft)}
+.insp-act-problems p{font-weight:600; color:#8C1D18}
+.insp-act-buttons{display:flex; flex-wrap:wrap; gap:10px}
+.insp-act-dialog .btn{min-height:44px; padding:0 18px; border:0; font:600 15px var(--font); cursor:pointer}
+.insp-act-dialog .btn:disabled{opacity:.6; cursor:default}
+.insp-act-go{background:#B3261E; color:#fff}
