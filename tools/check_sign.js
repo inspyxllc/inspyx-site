@@ -19,7 +19,7 @@ const SPOT = /\[[ \t\u00a0]*initials[ \t\u00a0]*\]/gi;
 const needed = (t) => Math.min(Math.max((t.match(SPOT) || []).length, 1), 60);
 const TEXT = 'INSPECTION AGREEMENT\nI agree to the scope. [Initials]\nLimits apply. [ initials ]\n<b>not markup</b> & "quotes"';
 const VIEW = (text = TEXT, over = {}) => Object.assign({
-  state: 'open', title: 'Home Inspection Agreement', text, textSha256: 'ab'.repeat(32), initials: needed(text),
+  state: 'open', title: 'Home inspection agreement (starter, test)', text, textSha256: 'ab'.repeat(32), initials: needed(text),
   inspector: { name: 'Pat Rivera', company: 'Rivera Inspections' },
   booking: { startsAt: Date.UTC(2026, 11, 2, 14), endsAt: Date.UTC(2026, 11, 2, 17), timeZone: 'America/New_York', address: '1 Main St Apt 103, Miami, FL 33169', services: ['Home inspection'], totalCents: 45000 },
 }, over);
@@ -99,7 +99,7 @@ const pngInfo = (b64) => {
     const t = await open(browser);
     await t.page.locator('[data-state="open"]').waitFor({ state: 'visible' });
     if (process.env.DEBUG) console.log(JSON.stringify([await t.page.locator('h1').first().textContent(), await t.page.locator('.sg-lede').textContent(), await t.page.locator('[data-when]').textContent()]));
-    ok('the title, the company and the inspection, in New York time', (await t.page.locator('[data-state="open"] h1').textContent()) === 'Home Inspection Agreement'
+    ok('the title, the company and the inspection, in New York time', (await t.page.locator('[data-state="open"] h1').textContent()) === 'Your inspection agreement'
       && (await t.page.locator('.sg-lede').textContent()).includes('Rivera Inspections')
       && /Wednesday, December 2 at 9:00\sAM EST, 1 Main St Apt 103/.test(await t.page.locator('[data-when]').textContent()));
     const text = await t.page.locator('[data-text]').textContent();
@@ -168,6 +168,11 @@ const pngInfo = (b64) => {
       ok('the initials: 450 x 150 (67,500 pixels), 8-bit RGBA, under 50 KB, one a spot', i.png && i.w === 450 && i.h === 150 && i.depth === 8 && i.colour === 6 && !i.trns && i.bytes < 50 * 1024 && b.initials.length === 2, JSON.stringify(i));
       ok('the page scrolled not while drawing (touch-action none)', (await t.page.locator('[data-pad="signature"]').evaluate((el) => getComputedStyle(el).touchAction)) === 'none');
       ok('signed: the thanks, with the company', (await t.page.locator('[data-state="signed"]').textContent()).includes('Rivera Inspections'));
+      // What happens next (the rehearsal, 2026-11-26): the copy on its way, nothing more to do, and the inspection's day.
+      const next = await t.page.locator('.sg-next li:not([hidden])').allTextContents();
+      ok('signed: what happens next, with the inspection\'s day and place', next.length === 3 && next[1].startsWith('Rivera Inspections has it too') &&
+        /^Your inspection: .+, .+\.$/.test(next[2]) && (await t.page.locator('[data-state="signed"]').textContent()).includes('You can close this page.'), JSON.stringify(next));
+      ok('the agreement\'s own name, the inspector\'s, is nowhere on the page or its tab', !(await t.page.textContent('body')).includes('(starter, test)') && !(await t.page.title()).includes('(starter, test)'), await t.page.title());
       ok('no error, nothing else asked', t.errs.length === 0 && t.away.length === 0, t.errs.concat(t.away).join(' | '));
       await t.ctx.close();
     });

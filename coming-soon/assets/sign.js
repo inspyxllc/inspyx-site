@@ -235,15 +235,17 @@
       view = r.body;
       var company = (view.inspector && (view.inspector.company || view.inspector.name)) || '';
       setAll('company', company);
-      if (view.state === 'signed') { done(view.signerName || '', view.signedAt || null); return; }
-      setAll('title', view.title || '');
-      document.title = view.title || document.title;
+      // The inspection's day and place, on the page and in what happens next after signing (the rehearsal,
+      // 2026-11-26: a signed page with no next step). The agreement's own name is the inspector's (his said
+      // "(starter, test)"): the page says "Your inspection agreement", and the text carries its own heading.
       var b = view.booking || {};
       if (typeof b.startsAt === 'number') {
         setAll('when', when(b.startsAt));
         setAll('place', b.address ? ', ' + b.address : '');
         $('[data-when]').hidden = false;
+        $('[data-signed-when]').hidden = false;
       }
+      if (view.state === 'signed') { done(view.signerName || '', view.signedAt || null); return; }
       needed = Math.max(1, Number(view.initials) || 1);
       showText(String(view.text || ''), needed);
       state('open');
