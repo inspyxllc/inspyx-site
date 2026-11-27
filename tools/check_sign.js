@@ -243,6 +243,28 @@ const pngInfo = (b64) => {
     await t.ctx.close();
   });
 
+  await group('step 2: Pay when a fee is owed; "nothing more to do" only when nothing is (the lead, 2026-11-27)', async () => {
+    const signed = { state: 'signed', signerName: 'Sam Client', signedAt: Date.UTC(2026, 10, 22, 14, 14) };
+    const step = async (page) => ({ next: (await page.locator('.sg-next li:visible').allTextContents()).map((x) => x.replace(/\s+/g, ' ').trim()),
+      href: await page.locator('[data-pay-link]').isVisible() ? await page.getAttribute('[data-pay-link]', 'href') : null });
+    let t = await open(browser, { view: VIEW(TEXT, Object.assign({}, signed, { pay: { dueCents: 27550, link: 'https://inspyx.com/pay#Tok_ddddddddddddddddd1' } })) });
+    await t.page.locator('[data-state="signed"]').waitFor({ state: 'visible' });
+    let a = await step(t.page);
+    ok('owed: step 2 says what is owed and offers Pay, to the pay link; never "nothing more to do"',
+      a.next[1] === 'Rivera Inspections has it too. One step left: your inspection fee, $275.50. Your report unlocks once it’s paid.Pay $275.50' &&
+      a.href === 'https://inspyx.com/pay#Tok_ddddddddddddddddd1' && !a.next.join().includes('nothing more'), JSON.stringify(a));
+    if (process.env.SHOTS) await t.page.locator('[data-state="signed"]').screenshot({ path: process.env.SHOTS + '/sign-pay-owed.png' });
+    await t.ctx.close();
+    for (const [label, pay] of [['nothing owed (no pay link)', null], ['paid in full', { dueCents: 0, link: 'https://inspyx.com/pay#Tok_ddddddddddddddddd1' }],
+      ['a link that isn\'t this site\'s pay page', { dueCents: 500, link: 'https://evil.example/pay#Tok_ddddddddddddddddd1' }]]) {
+      t = await open(browser, { view: VIEW(TEXT, Object.assign({}, signed, { pay })) });
+      await t.page.locator('[data-state="signed"]').waitFor({ state: 'visible' });
+      a = await step(t.page);
+      ok(label + ': "nothing more to do", no Pay', a.href === null && a.next[1] === 'Rivera Inspections has it too. There’s nothing more to do before the inspection.', JSON.stringify(a));
+      await t.ctx.close();
+    }
+  });
+
   await group('the page\'s rules (vercel.json, served here as there)', async () => {
     const res = await fetch(url.replace(/\/$/, '') + '/sign');
     const csp = res.headers.get('content-security-policy') || '';
