@@ -35,8 +35,19 @@ const rewritten = (p) => {
   return hit ? hit.destination : p;
 };
 
+// vercel.json's redirects (plain sources): the old import pages to Bring your business (2026-11-27). Vercel answers
+// 307 for "permanent": false, with the query kept.
+const redirected = (p) => {
+  let list = [];
+  try { list = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8')).redirects || []; } catch (e) { list = []; }
+  const hit = list.find((r) => r.source === p || r.source + '.html' === p);
+  return hit ? { to: hit.destination, code: hit.permanent ? 308 : 307 } : null;
+};
+
 http.createServer((req, res) => {
   const asked = decodeURIComponent(req.url.split('?')[0]);
+  const away = redirected(asked);
+  if (away) { const q = req.url.indexOf('?'); res.writeHead(away.code, { Location: away.to + (q >= 0 ? req.url.slice(q) : '') }); res.end(); return; }
   let p = rewritten(asked);
   if (p.endsWith('/')) p += 'index.html';
   // Only a file inside the folder, after every ".." is resolved: anything else is refused (code scanning's

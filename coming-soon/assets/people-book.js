@@ -151,7 +151,7 @@
     failing: function () { return failing; },
     personOf: personOf,
     add: add,
-    // For bringing people in (people-import.js): every row held, deleted ones too; and a batch sent as one exchange,
+    // For bringing people in (Bring your business, bring.js): every row held, deleted ones too; and a batch sent as one exchange,
     // answering which rows were kept ('kept' ids), or null when it didn't go through.
     rows: function () { return Object.keys(rows).map(function (k) { return rows[k]; }); },
     send: send,

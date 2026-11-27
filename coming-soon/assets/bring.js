@@ -9,7 +9,7 @@
      first and the past inspections against People as it would be after them, so nobody is planned twice.
    - Never from a People it couldn't read whole: People and the kept past inspections are read again, and everything
      planned again, right before anything is kept. Past inspections are kept first (under one import id), then people;
-     Undo takes back both, as the import pages do (people-import.js, whose rules this follows).
+     Undo takes back both, as the old import pages did (people-import.js, retired into this page 2026-11-27).
    This file says no words: the page holds every one. */
 (function () {
   'use strict';
@@ -109,16 +109,17 @@
     var runPeople = function () {
       if (source.file && source.kind === 'past') return null;
       var r = source.file
-        ? parse(imp.contacts(source.file.name, source.file.bytes, { kind: source.kind, existing: existingOf(rows), keep_unread: true }))
+        ? parse(imp.contacts(source.file.name, source.file.bytes, withMatch({ kind: source.kind, existing: existingOf(rows), keep_unread: true })))
         : source.isn ? parse(imp.isn('people', source.isn, { existing: existingOf(rows) }))
         : parse(imp.spectora('people', { clients: source.clients, agents: source.agents, clients_cut: source.cuts.clients, agents_cut: source.cuts.agents }, { existing: existingOf(rows) }));
       return r;
     };
     var r1 = runPeople();
     if (r1 && r1.status !== 'ok') return { refused: r1.message };
-    var unread = [];
+    var unread = [], cols = null;
     if (r1) {
       unread = r1.unread || [];
+      if (source.file) cols = { columns: r1.columns || [], fields: r1.fields || [], ok: !!r1.has_name };
       var a = CI.applyPlan(rows, r1.plan || [], me, now, newId);
       people = { push: a.push, changes: a.changes, plan: r1.plan || [] };
       left = left.concat(r1.skipped || []);
@@ -127,7 +128,7 @@
     }
     if (source.file ? source.kind === 'past' : true) {
       var r2 = source.file
-        ? parse(imp.inspections(source.file.name, source.file.bytes, { existing: existingOf(rows), existing_past: past, keep_unread: true }))
+        ? parse(imp.inspections(source.file.name, source.file.bytes, withMatch({ existing: existingOf(rows), existing_past: past, keep_unread: true })))
         : source.isn ? parse(imp.isn('inspections', source.isn, { existing: existingOf(rows), existing_past: past }))
         : parse(imp.spectora('inspections', { records: source.records, cut: source.cuts.records }, { existing: existingOf(rows), existing_past: past }));
       if (r2.status !== 'ok') { if (!r1) return { refused: r2.message }; }
@@ -138,7 +139,7 @@
         left = left.concat(r2.skipped || []).concat((r2.people && r2.people.skipped) || []);
         // A file past the reader's limit is read to there, and says so (Codex on #133): never cut quietly.
         if (r2.cut && r2.cut_message) cuts.push(r2.cut_message);
-        if (source.file) unread = r2.unread || [];
+        if (source.file) { unread = r2.unread || []; cols = { columns: r2.columns || [], fields: r2.fields || [], ok: !!r2.can_file }; }
         history = PS.newRows(r2.inspections || [], me, now, newId, importId);
         history.read = r2.inspections || [];
       }
@@ -151,8 +152,55 @@
         left = left.concat(r3.skipped || []);
       }
     }
-    return { people: people, history: history, prices: prices, left: left, cuts: cuts, unread: unread };
+    return { people: people, history: history, prices: prices, left: left, cuts: cuts, unread: unread, cols: cols };
   }
+
+  // His matches for the file's columns (the old import pages' table, 2026-11-27): field -> column, or null for none.
+  function withMatch(opts) { if (source.file && source.match) opts.match = source.match; return opts; }
+
+  /* ---- what each column holds: shown for any file ("Check the columns"), open by itself when a file reads badly ---- */
+  var shownCols = null;
+  function drawColumns(c, rowsRead) {
+    var box = $('[data-cols-box]');
+    shownCols = c;
+    if (!c || !c.columns.length) { box.hidden = true; return; }
+    box.hidden = false;
+    // Read badly: nothing can be filed (no name column for people; no date, address or client for past inspections),
+    // or nothing came out of it at all.
+    var bad = !c.ok || rowsRead === 0;
+    if (bad) box.open = true;
+    $('[data-cols-bad]').hidden = !bad;
+    $('[data-cols-bad]').textContent = bad ? words(source.kind === 'past' ? 'cols-bad-past' : 'cols-bad-people') : '';
+    var tb = $('[data-cols]'); tb.textContent = '';
+    c.columns.forEach(function (col) {
+      var tr = el('tr'), sel = el('select');
+      sel.setAttribute('data-col', String(col.index)); sel.setAttribute('aria-label', col.header || ('#' + (col.index + 1)));
+      var none = el('option', null, words('not-used')); none.value = ''; sel.appendChild(none);
+      c.fields.forEach(function (f) { var o = el('option', null, f.label); o.value = f.field; sel.appendChild(o); });
+      sel.value = col.field || '';
+      tr.appendChild(el('td', 'pi-h', col.header || ('#' + (col.index + 1))));
+      var sample = el('td', 'pi-s', col.sample || ''); if (col.sample) sample.title = col.sample; tr.appendChild(sample);
+      var td = el('td'); td.appendChild(sel); tr.appendChild(td);
+      tb.appendChild(tr);
+    });
+  }
+  main.addEventListener('change', function (e) {
+    var sel = e.target.closest('[data-col]');
+    if (!sel || !source || !source.file || !shownCols || busy) return;
+    // The whole match as it stands, his change in it: every field to its column or to none, so a column he set to
+    // "Not used" stays so when he changes another; built on his latest choice (the old pages' rule, Codex on #106).
+    var m = {};
+    if (source.match) Object.keys(source.match).forEach(function (f) { m[f] = source.match[f]; });
+    else {
+      shownCols.fields.forEach(function (f) { m[f.field] = null; });
+      shownCols.columns.forEach(function (c) { if (c.field) m[c.field] = c.index; });
+    }
+    Object.keys(m).forEach(function (f) { if (m[f] === +sel.getAttribute('data-col')) m[f] = null; });
+    if (sel.value) m[sel.value] = +sel.getAttribute('data-col');
+    source.match = m;
+    ++picked; done = null; $('[data-done]').hidden = true;
+    preview();
+  });
 
   /* ---- the preview ---- */
   function shown(p) {
@@ -163,6 +211,8 @@
     var un = $('[data-unread]'), cols = (source.file && p.unread) || [];
     un.textContent = cols.length === 0 ? '' : cols.length === 1 ? words('unread-1', { columns: cols[0] }) : words('unread-n', { n: cols.length, columns: cols.join(', ') });
     un.hidden = cols.length === 0;
+    var rowsRead = source.kind === 'past' ? (p.history ? p.history.read.length : 0) : p.people.plan.length;
+    drawColumns(source.file ? p.cols : null, rowsRead);
     var roles = { clients: 0, agents: 0 };
     p.people.changes.forEach(function (c) {
       var row = p.people.push.filter(function (r) { return r.id === c.id; })[0], role = row && row.data && row.data.role;
@@ -221,7 +271,7 @@
     }).catch(function () { if (mine === picked) say('failed'); });
   }
 
-  /* ---- the key box: only what he typed or pasted is ever sent (people-import.js's rule: a browser's autofill once put
+  /* ---- the key box: only what he typed or pasted is ever sent (the old import page's rule: a browser's autofill once put
      his saved password in such a box) ---- */
   var keyBox = $('[data-key]'), keyHis = '', keyTainted = false, pasted = null;
   var HIS = /^(insertText|insertFromPaste|insertFromDrop|insertFromYank|insertCompositionText|insertLineBreak|delete|historyUndo|historyRedo)/;

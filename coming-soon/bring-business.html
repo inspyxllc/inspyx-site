@@ -100,6 +100,12 @@
 <section class="br-preview" data-preview hidden>
 <h2 data-found></h2>
 <p class="br-unread" data-unread hidden></p>
+<details class="br-cols" data-cols-box hidden>
+<summary>Check the columns</summary>
+<p class="br-cols-bad" data-cols-bad hidden></p>
+<p class="br-cols-help">What each column holds. Change one, and the preview follows.</p>
+<div class="pi-cols-wrap"><table class="pi-cols"><thead><tr><th>Column</th><th>First value</th><th>Holds</th></tr></thead><tbody data-cols></tbody></table></div>
+</details>
 <div class="br-cards">
 <article class="br-card" data-card="people"><h3>Clients and agents</h3><p class="br-count" data-count-people></p><ul class="br-list" data-list-people></ul></article>
 <article class="br-card" data-card="past"><h3>Past inspections</h3><p class="br-count" data-count-past></p><ul class="br-list" data-list-past></ul></article>
@@ -141,6 +147,9 @@
 <span data-w="found-file">Found in {file}</span>
 <span data-w="to-converter">This is {what}: Inspyx can turn it into your template.</span>
 <span data-w="template-sheet">This is a template spreadsheet: Inspyx can turn it into your template.</span>
+<span data-w="not-used">Not used</span>
+<span data-w="cols-bad-people">Inspyx can't tell which column holds the names. Choose it below.</span>
+<span data-w="cols-bad-past">Inspyx can't tell which columns hold the date, the address or the client. Choose them below.</span>
 <span data-w="unread-1">A column Inspyx doesn't read: {columns}. It goes in each one's notes, unless they already have notes.</span>
 <span data-w="unread-n">{n} columns Inspyx doesn't read: {columns}. They go in each one's notes, unless they already have notes.</span>
 <span data-w="people-count">{clients} {clientsWord} · {agents} {agentsWord}</span>
