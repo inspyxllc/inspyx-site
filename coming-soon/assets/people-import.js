@@ -210,7 +210,7 @@
     if (!f || busy) return;
     // A new file: nothing of the last import is this one's to show or to undo (Codex on #110).
     done = null; donePast = null; $('[data-done]').hidden = true; spx = null; spxSay(null); spxLock(false);
-    var kb = $('[data-spx-key]'); if (kb) kb.value = ''; spxHide(true);
+    keyClear(); spxHide(true);
     // Another file: any reading still on its way for the last one is over now, before this one is even read (Codex on
     // #106): it can't bring the last file's preview back.
     turn++; $('[data-go]').disabled = true;
@@ -295,18 +295,39 @@
      is emptied. */
   function spxHide(on) {
     var k = $('[data-spx-key]'), eye = $('[data-spx-eye]');
-    if (k) k.type = on ? 'password' : 'text';
+    if (k) { if (on) k.setAttribute('data-masked', ''); else k.removeAttribute('data-masked'); }
     if (eye) { eye.setAttribute('aria-pressed', on ? 'false' : 'true'); eye.setAttribute('aria-label', words(on ? 'eye-show' : 'eye-hide')); }
   }
   var spxEye = $('[data-spx-eye]');
-  if (spxEye) spxEye.addEventListener('click', function () { var k = $('[data-spx-key]'); spxHide(k && k.type === 'text'); });
+  if (spxEye) spxEye.addEventListener('click', function () { var k = $('[data-spx-key]'); spxHide(k && !k.hasAttribute('data-masked')); });
+  /* Only a key he typed or pasted is ever sent (the rehearsal, round 2: Chrome autofilled his saved password into this
+     box). keyHis is the box's value as his own typing, pasting, dropping or undoing last left it; a value put there any
+     other way (a browser's autofill or suggestion) is refused, the box emptied, and nothing sent. */
+  var keyHis = '';
+  var HIS = /^(insertText|insertFromPaste|insertFromDrop|insertFromYank|insertCompositionText|insertLineBreak|delete|historyUndo|historyRedo)/;
+  var keyBox = $('[data-spx-key]');
+  function keyClear() { if (keyBox) keyBox.value = ''; keyHis = ''; }
+  if (keyBox) {
+    keyBox.addEventListener('input', function (e) { if (e.isTrusted && typeof e.inputType === 'string' && HIS.test(e.inputType)) keyHis = keyBox.value; });
+    // Empty as the page opens, and again a moment later and on coming back to it (a browser can fill a box late).
+    keyClear();
+    setTimeout(function () { if (keyBox.value !== keyHis) keyClear(); }, 400);
+    window.addEventListener('pageshow', keyClear);
+  }
+  function keyAutofilled() {
+    if (!keyBox) return false;
+    var auto = false;
+    try { auto = keyBox.matches(':autofill'); } catch (e) { try { auto = keyBox.matches(':-webkit-autofill'); } catch (e2) { auto = false; } }
+    return auto || keyBox.value !== keyHis;
+  }
   var spxStop = $('[data-spx-stop]');
-  if (spxStop) spxStop.addEventListener('click', function () { picked++; spxLock(false); spxSay('spx-stopped'); var k = $('[data-spx-key]'); if (k) k.value = ''; spxHide(true); });
+  if (spxStop) spxStop.addEventListener('click', function () { picked++; spxLock(false); spxSay('spx-stopped'); keyClear(); spxHide(true); });
   var spxForm = $('[data-spx]');
   if (spxForm) spxForm.addEventListener('submit', function (e) {
     e.preventDefault();
     var box = $('[data-spx-key]'), key = box ? box.value.trim() : '';
     if (busy) return;
+    if (key && keyAutofilled()) { key = ''; keyClear(); spxSay('spx-autofilled'); if (box) box.focus(); return; }
     if (!key) { spxSay('spx-no-key'); if (box) box.focus(); return; }
     if (!window.inspyxImport || typeof window.inspyxImport.spectoraStep !== 'function' || typeof window.inspyxImport.spectora !== 'function') { spxSay('no-engine'); return; }
     // A new read: nothing of the last import (or file) is this one's to show, keep or undo.
@@ -324,7 +345,7 @@
       // The key is forgotten now, whatever happened.
       key = '';
       if (mine !== picked || (end && end.over)) return;
-      if (box) box.value = '';
+      keyClear();
       spxHide(true); spxLock(false);
       stop = end && end.message;
       var any = HISTORY ? got.records.length : got.clients.length + got.agents.length;
@@ -335,7 +356,7 @@
       return run();
     });
   });
-  window.addEventListener('pagehide', function () { var b = $('[data-spx-key]'); if (b) b.value = ''; spxHide(true); });
+  window.addEventListener('pagehide', function () { keyClear(); spxHide(true); });
 
   /* ---- keep them: People read whole and planned again now, then sent 200 at a time ---- */
   /* Sends [push] 200 at a time. Answers { kept: ids the server kept, broke: true when a batch didn't go through } (what

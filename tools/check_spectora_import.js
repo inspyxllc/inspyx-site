@@ -308,9 +308,13 @@ const sigOf = (rows) => JSON.stringify(rows.filter((r) => r.deleted_at == null &
       const o = await open(browser, { sync, spx, history }), { page } = o;
       await page.locator('[data-src="spectora"]').click();
       const box = page.locator('[data-spx-key]'), eye = page.locator('[data-spx-eye]');
-      const at = async () => box.evaluate((e) => ({ type: e.type, ac: e.getAttribute('autocomplete'), sp: e.getAttribute('spellcheck'), cor: e.getAttribute('autocorrect'), cap: e.getAttribute('autocapitalize'), form: e.form && e.form.getAttribute('autocomplete') }));
+      // Hidden by a mask, never a password box: password managers fill password boxes (Chrome put his saved password
+      // here: the rehearsal, round 2). type is reported 'password' when masked, 'text' when shown, as before.
+      const at = async () => box.evaluate((e) => ({ type: getComputedStyle(e).webkitTextSecurity === 'disc' ? 'password' : 'text', real: e.type, name: (e.name + ' ' + e.id).toLowerCase(),
+        ac: e.getAttribute('autocomplete'), sp: e.getAttribute('spellcheck'), cor: e.getAttribute('autocorrect'), cap: e.getAttribute('autocapitalize'), form: e.form && e.form.getAttribute('autocomplete') }));
       const a = await at();
-      ok((history ? 'history' : 'people') + ': a hidden box, autocomplete off, no spell check, no autocorrect or capitals', a.type === 'password' && a.ac === 'off' && a.sp === 'false' && a.cor === 'off' && a.cap === 'off' && a.form === 'off', JSON.stringify(a));
+      ok((history ? 'history' : 'people') + ': a hidden box (masked, not a password box, no password-like name), autocomplete off, no spell check, no autocorrect or capitals',
+        a.type === 'password' && a.real === 'text' && !/pass|pwd/.test(a.name) && a.ac === 'off' && a.sp === 'false' && a.cor === 'off' && a.cap === 'off' && a.form === 'off', JSON.stringify(a));
       await box.fill(KEY);
       await eye.click();
       ok((history ? 'history' : 'people') + ': the eye shows it, and says it hides it now', (await at()).type === 'text' && await eye.getAttribute('aria-pressed') === 'true' && await eye.getAttribute('aria-label') === 'Hide the key' && await box.inputValue() === KEY);
@@ -322,6 +326,47 @@ const sigOf = (rows) => JSON.stringify(rows.filter((r) => r.deleted_at == null &
       ok((history ? 'history' : 'people') + ': read: the box empty and hidden again', (await at()).type === 'password' && await box.inputValue() === '' && await eye.getAttribute('aria-pressed') === 'false');
       await o.ctx.close();
     }
+  });
+
+  await group('a box the browser filled in is never sent (the rehearsal, round 2: his saved password, autofilled)', async () => {
+    for (const history of [false, true]) {
+      const sync = syncServer(seed()), spx = spxServer(history ? [page200(R)] : [page200(C), page200(A)]);
+      const o = await open(browser, { sync, spx, history }), { page } = o;
+      await page.locator('[data-src="spectora"]').click();
+      // What a browser's autofill does: the value set, an input event with no typing behind it.
+      await page.locator('[data-spx-key]').evaluate((e) => { e.value = 'MySavedPassword!1'; e.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.locator('[data-spx-go]').click();
+      await page.waitForTimeout(300);
+      ok((history ? 'history' : 'people') + ': autofilled: nothing sent, the box emptied, and it says why', spx.calls.length === 0 && await page.locator('[data-spx-key]').inputValue() === '' &&
+        (await page.locator('[data-spx-say]').textContent()).trim() === 'Your browser filled that box in, so nothing was sent. Paste your Spectora API key (it’s never one of your passwords).');
+      // Typed over an autofilled value still counts only as typed: paste the key and it goes.
+      await page.locator('[data-spx-key]').focus();
+      await page.keyboard.insertText(KEY);
+      await page.locator('[data-spx-go]').click();
+      ok((history ? 'history' : 'people') + ': pasted: it goes', await until(async () => spx.calls.length >= 1, 4000));
+      await o.ctx.close();
+      // Filled before he ever touched it (as the page opens): emptied a moment later, before anything can be sent.
+      const o2 = await open(browser, { sync: syncServer(seed()), spx: spxServer([page200([])]), history });
+      await o2.page.locator('[data-spx-key]').evaluate((e) => { e.value = 'MySavedPassword!1'; });
+      await o2.page.waitForTimeout(500);
+      await o2.page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+      ok((history ? 'history' : 'people') + ': a value put there on opening, or on coming back, is emptied', await o2.page.locator('[data-spx-key]').inputValue() === '');
+      await o2.ctx.close();
+    }
+  });
+
+  await group('no key-style box anywhere on the site is a password box; password boxes are the sign-in ones only', async () => {
+    const fs = require('fs'), path = require('path'), dir = path.join(__dirname, '..', 'coming-soon');
+    const bad = [];
+    for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.html'))) {
+      const html = fs.readFileSync(path.join(dir, f), 'utf8');
+      for (const m of html.matchAll(/<input\b[^>]*>/g)) {
+        const tag = m[0], pw = /type="password"/.test(tag);
+        if (pw && !/autocomplete="(current-password|new-password)"/.test(tag)) bad.push(f + ': ' + tag.slice(0, 80));
+        if (pw && !['signin.html', 'signup.html', 'reset.html', 'account.html'].includes(f)) bad.push(f + ' (a password box off the sign-in pages): ' + tag.slice(0, 80));
+      }
+    }
+    ok('only sign-in pages hold password boxes, each saying which password it is', bad.length === 0, bad.join(' | '));
   });
 
   await group('where to find the key: Spectora\'s developer site, in a new tab, on both pages, at every width', async () => {
