@@ -54,6 +54,12 @@
 <datalist id="bk-found-list"><option value="Slab"><option value="Crawlspace"><option value="Basement"></datalist>
 <div data-questions></div>
 </div>
+<div class="bk-code" data-code hidden>
+<label for="bk-code">Discount code <span class="bk-opt">(if you have one)</span></label>
+<div class="bk-code-row"><input type="text" id="bk-code" maxlength="60" autocomplete="off" autocapitalize="characters" spellcheck="false"><button type="button" class="bk-apply" data-apply>Apply</button></div>
+<p class="bk-code-say bk-code-on" role="status" data-code-say="on" hidden>Code <strong data-v="code"></strong> applied.</p>
+<p class="bk-code-say" role="status" data-code-say="off" hidden>Code <strong data-v="code"></strong> doesn’t take anything off what you picked. Check it, or ask your inspector.</p>
+</div>
 <div class="bk-quote" data-quote hidden>
 <ul data-lines></ul>
 <p class="bk-total"><span>Total</span> <strong data-v="total"></strong></p>
