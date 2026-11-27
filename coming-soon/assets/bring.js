@@ -53,6 +53,9 @@
   function sameAccount() {
     var w = auth.who();
     if (w && opened && w.id === opened) return true;
+    // The key goes before anything else: nothing of the first account's read is sent as the second (Codex on #133).
+    picked++;
+    if (keyBox) { keyBox.value = ''; }
     window.location.reload();
     return false;
   }
@@ -251,6 +254,9 @@
     var list = what === 'inspections' ? 'records' : what, before = null;
     var reading = what === 'inspections' ? 'reading-past' : what === 'services' ? 'reading-prices' : 'reading-people';
     var page = function (n, attempt) {
+      // Every request, retries too, as the account the page opened for: a sign-in switched in another tab mid-read ends
+      // the read before the key is sent again (Codex on #133).
+      if (mine !== picked || !sameAccount()) return Promise.resolve({ over: true });
       var body = { key: key, what: what, page: n };
       if (before) body.before = before;
       return auth.ask('spectora-import', body, ASK_DEADLINE).then(function (r) {
