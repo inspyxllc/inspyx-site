@@ -386,7 +386,7 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     ok('Horizon\'s CRM Clients: said for what it is, read as clients, its unread column named',
       (await o.page.locator('[data-file-what]').textContent()) === "Horizon's CRM Clients" && await chosen() === 'clients' &&
       await o.page.locator('[data-unread]').isVisible() &&
-      (await o.page.locator('[data-unread]').textContent()) === "A column Inspyx doesn't read, kept in each one's notes: Date Added",
+      (await o.page.locator('[data-unread]').textContent()) === "A column Inspyx doesn't read: Date Added. It goes in each one's notes, unless they already have notes.",
       await o.page.locator('[data-unread]').textContent());
     if (SHOTS) { await o.page.setViewportSize({ width: 1280, height: 1100 }); await o.page.locator('[data-file-kind]').scrollIntoViewIfNeeded(); await o.page.screenshot({ path: SHOTS + '/58-bring-horizon-clients.png' }); }
     await o.page.locator('[data-go]').click();

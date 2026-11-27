@@ -158,7 +158,8 @@
   function shown(p) {
     $('[data-preview]').hidden = false;
     $('[data-found]').textContent = source.file ? words('found-file', { file: source.file.name }) : words('found', { platform: source.platform });
-    // The columns nothing reads (switch PR 8): kept in each one's notes, and named here.
+    // The columns nothing reads (switch PR 8): named here, and where they go: each one's notes, unless that person
+    // already has notes (People never writes over a note: Codex on #136).
     var un = $('[data-unread]'), cols = (source.file && p.unread) || [];
     un.textContent = cols.length === 0 ? '' : cols.length === 1 ? words('unread-1', { columns: cols[0] }) : words('unread-n', { n: cols.length, columns: cols.join(', ') });
     un.hidden = cols.length === 0;
