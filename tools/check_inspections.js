@@ -557,6 +557,19 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await r.ctx.close();
   });
 
+  await group('send the report: an agent added while it is open comes unticked (Codex on #130)', async () => {
+    const s = server(); seed(s);
+    const C = '6f1c2a3b-0000-4000-8000-0000000000d1', A = '6f1c2a3b-0000-4000-8000-0000000000d2';
+    s.phone('person', C, 'role', 'client'); s.phone('person', C, 'name', 'Ana Diaz'); s.phone('person', C, 'email', 'ana@example.com'); s.phone('person', C, 'position', 0);
+    const r = await open(browser, { server: s, hash: '#' + INSP, published: [{ id: INSP, at: Date.now() + 60000 }] });
+    await until(async () => (await r.page.$$('[data-send-who] input')).length === 1);
+    s.phone('person', A, 'role', 'buyer_agent'); s.phone('person', A, 'name', 'Avery Agent'); s.phone('person', A, 'email', 'avery@realty.example'); s.phone('person', A, 'position', 1);
+    r.ping();
+    ok('the agent appears unticked; the client stays ticked', await until(async () => same(await r.page.$$eval('[data-send-who] input', (xs) => xs.map((x) => x.checked)), [true, false])),
+      JSON.stringify(await r.page.$$eval('[data-send-who] input', (xs) => xs.map((x) => x.checked))));
+    await r.ctx.close();
+  });
+
   await group('send the report: an answer that comes after switching inspections stays with its own (Codex on #130)', async () => {
     const s = server(); seed(s);
     const C = '6f1c2a3b-0000-4000-8000-0000000000d1';

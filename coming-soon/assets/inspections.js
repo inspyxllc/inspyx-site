@@ -1213,7 +1213,7 @@
         return { id: p, role: val('person', p, 'role'), name: text(val('person', p, 'name')).trim(), email: text(val('person', p, 'email')).trim() };
       }).filter(function (x) { return SEND_EMAIL.test(x.email); });
   }
-  var sendFor = null, sendOff = {}, sendBusy = false, sendSaid = null;
+  var sendFor = null, sendOff = {}, sendSeen = {}, sendBusy = false, sendSaid = null;
   function sendSay(which, vals) {
     sendSaid = which;
     all('[data-send-said]').forEach(function (p) { p.hidden = p.getAttribute('data-send-said') !== which; });
@@ -1225,12 +1225,14 @@
     if (!rep) return;
     if (sendFor !== id) {
       // Another inspection: its own words, every person ticked but the agents (the client is who a report goes to).
-      sendFor = id; sendOff = {}; sendSay(null);
+      sendFor = id; sendOff = {}; sendSeen = {}; sendSay(null);
       var place = text(val('inspection', id, 'address')).trim() || text(val('inspection', id, 'title')).trim();
       $('[data-send-subject]').value = place ? word('send-subject').replace('{place}', place) : word('send-subject-none');
       $('[data-send-message]').value = word('send-message').replace('{place}', place || word('send-the-property'));
-      sendPeople(id).forEach(function (x) { if (x.role !== 'client') sendOff[x.id] = true; });
     }
+    // Each person as they first appear, by their role: the client ticked, an agent not, whether there from the start or
+    // added on the phone while this is open (Codex on #130); his own ticks are kept.
+    sendPeople(id).forEach(function (x) { if (!sendSeen[x.id]) { sendSeen[x.id] = true; if (x.role !== 'client') sendOff[x.id] = true; } });
     var outdated = lastChange(id) > rep.at;
     show('data-send-state', outdated ? 'outdated' : 'ready');
     var t = $('[data-send-made]') || $('[data-v="made"]');
