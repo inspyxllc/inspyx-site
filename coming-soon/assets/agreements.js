@@ -355,63 +355,98 @@
     });
   });
 
-  var BLANK = /\[(Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today's date|Buyer's agent|Listing agent)\]|\{\{([^{}\r\n]*)\}\}|(\[[ \t\u00a0]*[Ii][Nn][Ii][Tt][Ii][Aa][Ll][Ss][ \t\u00a0]*\])/g;
+  // Without the phone's reader (it didn't load): the offered blanks as the editor writes them, by their names.
+  var BLANK = /\[(Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today's date|Buyer's agent|Listing agent)\]/g;
+  var NAMED = { 'Client name': 'clientName', 'Property address': 'propertyAddress', 'Inspection date': 'inspectionDate', Fee: 'fee',
+    'Your name': 'inspectorName', 'Your company': 'company', 'License number': 'licenseNumber', "Today's date": 'today',
+    "Buyer's agent": 'buyerAgent', 'Listing agent': 'listingAgent' };
+  // A spot the client initials, as the signing page counts one (sign/core.ts SPOT).
+  var SPOT = /\[[ \t\u00a0]*initials[ \t\u00a0]*\]/gi;
+  // Every blank in [para] as the app reads it: {start, end, blank (its name, or null when Inspyx can't fill it), raw}.
+  function blanksIn(para) {
+    var r = reader(), out = [], m;
+    if (r && typeof r.agreementBlanks === 'function') {
+      try { out = JSON.parse(r.agreementBlanks(para)); } catch (e) { out = []; }
+    } else {
+      BLANK.lastIndex = 0;
+      while ((m = BLANK.exec(para))) out.push({ start: m.index, end: BLANK.lastIndex, blank: NAMED[m[1]] });
+    }
+    SPOT.lastIndex = 0;
+    while ((m = SPOT.exec(para))) out.push({ start: m.index, end: SPOT.lastIndex, spot: true });
+    return out.sort(function (a, b) { return a.start - b.start; });
+  }
   var DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   // What each blank reads as in the preview, and whose it is: his own from his profile, a sample client's, or missing.
+  // What each blank reads as in the preview, and whose it is: his own from his profile, a sample client's (and sample
+  // agents'), or missing. By the blank's name in the app (agreement_blanks.dart's AgreementBlank).
   function fill(blank) {
     var p = rows['inspector_profile/profile'], d = p && p.deleted_at === null ? p.data : {};
     var mine = function (v, missing) { var t = typeof v === 'string' ? dartTrim(v) : ''; return t ? [t, 'yours'] : [words(missing), 'missing']; };
+    var sample = function (key) { return [words(key), 'sample']; };
+    var first = function (key) { return [words(key).split(' ')[0], 'sample']; };
+    var rest = function (key) { return [words(key).split(' ').slice(1).join(' '), 'sample']; };
     switch (blank) {
-      case 'Client name': return [words('sample-client'), 'sample'];
-      case 'Property address': return [words('sample-address'), 'sample'];
-      case 'Inspection date': return [words('sample-date'), 'sample'];
-      case 'Fee': return [words('sample-fee'), 'sample'];
-      case "Buyer's agent": return [words('sample-buyer-agent'), 'sample'];
-      case 'Listing agent': return [words('sample-listing-agent'), 'sample'];
-      case 'Your name': return mine(d.inspectorName, 'missing-name');
-      case 'Your company': return mine(d.companyName, 'missing-company');
-      case 'License number': return mine(d.licenseNumber, 'missing-license');
+      case 'clientName': return sample('sample-client');
+      case 'clientFirstName': return first('sample-client');
+      case 'clientPhone': return sample('sample-phone');
+      case 'clientEmail': return sample('sample-email');
+      case 'propertyAddress': return sample('sample-address');
+      case 'street': return sample('sample-street');
+      case 'city': return sample('sample-city');
+      case 'state': return sample('sample-state');
+      case 'zip': return sample('sample-zip');
+      case 'inspectionDate': return sample('sample-date');
+      case 'fee': return sample('sample-fee');
+      case 'services': return sample('sample-services');
+      case 'feeLines': return sample('sample-fee-lines');
+      case 'inspectorName': return mine(d.inspectorName, 'missing-name');
+      case 'company': return mine(d.companyName, 'missing-company');
+      case 'licenseNumber': return mine(d.licenseNumber, 'missing-license');
+      case 'companyPhone': return mine(d.companyPhone, 'missing-company-phone');
+      case 'year': return [String(new Date().getFullYear()), 'yours'];
+      case 'buyerAgent': return sample('sample-buyer-agent');
+      case 'buyerAgentFirstName': return first('sample-buyer-agent');
+      case 'buyerAgentLastName': return rest('sample-buyer-agent');
+      case 'buyerAgentPhone': return sample('sample-buyer-agent-phone');
+      case 'buyerAgentEmail': return sample('sample-buyer-agent-email');
+      case 'listingAgent': return sample('sample-listing-agent');
+      case 'listingAgentFirstName': return first('sample-listing-agent');
+      case 'listingAgentLastName': return rest('sample-listing-agent');
+      case 'listingAgentPhone': return sample('sample-listing-agent-phone');
+      case 'listingAgentEmail': return sample('sample-listing-agent-email');
       default: return [DAY.format(new Date()), 'yours'];
     }
   }
+
   // The words as the client reads them: paragraphs, each blank filled and marked.
   function paint() {
-    var paper = $('[data-paper]', form), cant = unknownNow();
+    var paper = $('[data-paper]', form);
     paper.textContent = '';
     form.elements.words.value.split(/\n{2,}/).forEach(function (para) {
       if (dartTrim(para) === '') return;
-      var el = document.createElement('p'), last = 0, m;
-      BLANK.lastIndex = 0;
-      while ((m = BLANK.exec(para))) {
-        el.appendChild(document.createTextNode(para.slice(last, m.index)));
-        // A spot the client initials: a box, as on the signing page.
-        if (m[3] !== undefined) {
-          var spot = document.createElement('mark');
-          spot.className = 'agr-initials';
-          spot.textContent = words('initials');
-          el.appendChild(spot);
-          last = BLANK.lastIndex;
-          continue;
+      var el = document.createElement('p'), last = 0;
+      blanksIn(para).forEach(function (b) {
+        if (b.start < last) return;
+        el.appendChild(document.createTextNode(para.slice(last, b.start)));
+        var mark = document.createElement('mark');
+        if (b.spot) {
+          // A spot the client initials: a box, as on the signing page.
+          mark.className = 'agr-initials';
+          mark.textContent = words('initials');
+        } else if (b.blank === null) {
+          // One Inspyx can't fill: marked, as the inspector wrote it.
+          mark.className = 'agr-fill';
+          mark.setAttribute('data-fill', 'unknown');
+          mark.textContent = para.slice(b.start, b.end);
+        } else {
+          var f = fill(b.blank);
+          mark.className = 'agr-fill';
+          mark.setAttribute('data-fill', f[1]);
+          mark.textContent = f[0];
         }
-        // A {{blank}}: marked when Inspyx can't fill it, else left as written (the phone fills those).
-        if (m[1] === undefined) {
-          var named = '{{' + dartTrim(m[2]) + '}}';
-          if (cant.indexOf(named) < 0 && cant.indexOf(m[0]) < 0) { el.appendChild(document.createTextNode(m[0])); last = BLANK.lastIndex; continue; }
-          var odd = document.createElement('mark');
-          odd.className = 'agr-fill';
-          odd.setAttribute('data-fill', 'unknown');
-          odd.textContent = m[0];
-          el.appendChild(odd);
-          last = BLANK.lastIndex;
-          continue;
-        }
-        var f = fill(m[1]), mark = document.createElement('mark');
-        mark.className = 'agr-fill';
-        mark.setAttribute('data-fill', f[1]);
-        mark.textContent = f[0];
         el.appendChild(mark);
-        last = BLANK.lastIndex;
-      }
+        last = b.end;
+      });
       el.appendChild(document.createTextNode(para.slice(last)));
       paper.appendChild(el);
     });

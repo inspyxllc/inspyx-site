@@ -426,6 +426,14 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     await page.click(F + ' [data-tab="preview"]');
     const agents = await page.$$eval(F + ' [data-paper] mark', (ms) => ms.map((m) => m.getAttribute('data-fill') + ':' + m.textContent));
     ok('the agents fill in the preview (a sample one each)', agents.includes('sample:Alicia Gomez') && agents.includes('sample:Robert Chen'), JSON.stringify(agents));
+    // The preview shows what the client signs: every blank the phone and the signing page fill, however it is written.
+    await page.click(F + ' [data-tab="write"]');
+    await page.fill(W, '🏠 {{CLIENT_FIRST_NAME}}, {{ client_phone }}; {{LISTING_AGENT_EMAIL}} / {{BUYERS_AGENT_LAST_NAME}}; {{FEES}} {{ NOPE }} [my note]');
+    await page.click(F + ' [data-tab="preview"]');
+    const named = await page.$$eval(F + ' [data-paper] mark', (ms) => ms.map((m) => m.getAttribute('data-fill') + ':' + m.textContent));
+    ok('known {{names}} fill as the phone fills them; one Inspyx can\'t fill is marked; his own [words] stay',
+      JSON.stringify(named) === JSON.stringify(['sample:Jordan', 'sample:(813) 555-0142', 'sample:robert.chen@example.com', 'sample:Gomez', 'sample:Home inspection: $425.00', 'unknown:{{ NOPE }}'])
+      && (await page.textContent(F + ' [data-paper] p')).includes('[my note]'), JSON.stringify(named));
     await page.click(F + ' [data-tab="write"]');
     await page.fill(W, was0);
     // Words already written Inspyx's way: the browser's own paste, untouched (nothing put in by the page).
