@@ -287,6 +287,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const push = b.push || [];
       push.forEach((r) => t.pushed.push(JSON.parse(JSON.stringify(r))));
       if (push.length && t.down) return {};
+      if (!push.length && t.pullDown) return {};
       const applied = push.map((r) => {
         const k = r.kind + '/' + r.id, h = held.get(k), ok = !t.refuse.includes(r.kind) && (!h || r.updated_at > h.updated_at);
         if (ok) held.set(k, r);
@@ -343,6 +344,26 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await ctx.close();
     });
   }
+
+  await group('no action before the bookings are in; a booking that arrives while Archive is asked stops it (Codex on #125)', async () => {
+    const s = server(); seed(s);
+    const t = actServer([]);
+    t.pullDown = true;
+    const { page, ctx, ping } = await open(browser, { server: s, hash: '#' + OTHER, bizServer: t.answer });
+    await until(async () => (await vis(page, '[data-detail]')).length > 0);
+    await page.waitForTimeout(500);
+    ok('the bookings can\'t be read: nothing offered (a booked job would look unbooked)', (await vis(page, '[data-acts]')).length === 0 && (await vis(page, '[data-act]')).length === 0);
+    t.pullDown = false; ping();
+    ok('read: Archive offered (no booking)', await until(async () => same(await vis(page, '[data-act]'), ['Archive'])));
+    await page.click('[data-act="archive"]');
+    t.held.set('bookings/bk9', { kind: 'bookings', id: 'bk9', updated_at: 7, deleted_at: null, data: { id: 'bk9', status: 'booked', inspectionId: OTHER, startsAt: 1, endsAt: 2, client: { name: 'Bo Lee' }, updatedAt: 7, deletedAt: null } });
+    ping();
+    await page.waitForTimeout(500);
+    await page.click('[data-act-dialog] button[type="submit"]');
+    ok('a booking came in meanwhile: not archived, it says to cancel the booking instead', await until(async () => same(await vis(page, '[data-act-problem]'), ['This job has a booking now. Close this and use Cancel this booking.'])) &&
+      !t.pushed.some((r) => r.kind === 'archived_inspections'));
+    await ctx.close();
+  });
 
   await group('archive a job, and a cancel whose archive didn\'t go', async () => {
     const s = server(); seed(s);

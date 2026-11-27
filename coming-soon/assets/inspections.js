@@ -343,6 +343,7 @@
   var BIZ = { signings: true, signing_details: true, inspection_fees: true, bookings: true, item_flags: true,
     inspection_templates: true, template_default: true };
   var biz = Object.create(null), bizPoint = null, bizPulling = null;
+  var bizLoaded = false;   // the whole business feed came in once: until then, no booking is known to be absent
   function pullBusiness() {
     if (bizPulling) return bizPulling;
     var loop = function () {
@@ -355,7 +356,7 @@
     };
     // Answers whether the whole feed came in: a save to a template must not take a library it couldn't read for an
     // empty one (Codex on inspyx-site #98).
-    bizPulling = loop().then(function (ok) { bizPulling = null; renderList(); renderOne(); return ok === true; },
+    bizPulling = loop().then(function (ok) { bizPulling = null; if (ok === true) bizLoaded = true; renderList(); renderOne(); return ok === true; },
       function () { bizPulling = null; return false; });
     return bizPulling;
   }
@@ -773,7 +774,9 @@
   }
   function renderActs(id) {
     var box = $('[data-acts]'), gone = archived(id), booking = gone ? null : standingBooking(id), client = clientOf(id);
-    box.hidden = false;
+    // Until the bookings are in, a booked job can't be told from one with none (Codex on #125): nothing is offered.
+    box.hidden = !bizLoaded;
+    if (!bizLoaded) return;
     $('[data-acts-archived]').hidden = !gone;
     $('[data-act="cancel"]').hidden = gone || !booking;
     $('[data-act="archive"]').hidden = gone || !!booking;
@@ -809,6 +812,8 @@
     busy(true); problem('');
     var done = function (which) { busy(false); actDialog.close(); actSaid = { id: a.id, which: which, name: a.client }; renderList(); renderOne(); };
     if (a.which === 'archive') {
+      // A booking that came in since the dialog opened: archiving alone would leave the client booked (Codex on #125).
+      if (standingBooking(a.id)) { busy(false); problem('archive-booked'); renderOne(); return; }
       sendBiz([archiveRow(a.id)]).then(function (o) { if (o === 'saved') done('archived'); else { busy(false); problem('archive-' + o); } });
       return;
     }
