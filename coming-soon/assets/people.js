@@ -178,7 +178,9 @@
     // The names Undo would bring back are the kept rows' own, not the card's (which may be an inspection's: Codex on
     // #123).
     var ids = one.kept.slice();
-    delOne = { name: one.name, kept: ids, names: book.people().filter(function (p) { return ids.indexOf(p.id) >= 0; }).map(function (p) { return p.name; }) };
+    var named = Object.create(null);
+    book.people().forEach(function (p) { if (ids.indexOf(p.id) >= 0) named[p.id] = p.name; });
+    delOne = { name: one.name, kept: ids, named: named };
     who(delDialog, one.name);
     delForm.querySelector('[data-del-jobs]').hidden = one.jobs.length === 0;
     delProblem('');
@@ -196,7 +198,8 @@
       // Some kept and one refused: those kept are deleted, and Undo is theirs (Codex on #123).
       if (r.outcome !== 'saved' && r.kept.length === 0) { delProblem(r.outcome); return; }
       delDialog.close();
-      gone = { name: one.name, kept: r.kept, names: one.names, partly: r.outcome !== 'saved' };
+      // Undo's names are only those of the rows deleted: a refused row's name never blocks it (Codex on #123, r2).
+      gone = { name: one.name, kept: r.kept, names: r.kept.map(function (id) { return one.named[id]; }).filter(function (n) { return typeof n === 'string'; }), partly: r.outcome !== 'saved' };
       who(main, one.name); said(gone.partly ? 'deleted-partly' : 'deleted'); draw();
     });
   });

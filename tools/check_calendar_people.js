@@ -566,6 +566,20 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     // The other row still stands under that name: the phone's one-per-name rule (restoreContact) keeps it deleted.
     ok('Undo then: the row still standing holds the name, so this one stays deleted, as on the phone', await until(async () => same(await vis(page, '[data-say]'), ['Someone else is kept as Jo Banks now, so this one stays deleted.'])) &&
       book.get('k4').data.deletedAt !== null);
+    // 1b. Two names on one card (the same email), one refused: Undo brings back the deleted one; the refused one's name
+    //     (still kept) never blocks it (Codex on #123, r2).
+    book.set('k8', Object.assign(row('k8', 'listing_agent', 'Lee Parks', { email: 'lee@example.com' }), { changed_at: 'zz', updated_at: T + 7 }));
+    book.set('k9', Object.assign(row('k9', 'listing_agent', 'Leon Parks', { email: 'LEE@example.com' }), { changed_at: 'zz', updated_at: T + 7 }));
+    await page.evaluate(() => window.InspyxPeopleBook.pull());
+    await until(async () => (await vis(page, '.ppl-one h3')).some((n) => /^Le/.test(n)));
+    const both = (await vis(page, '.ppl-one h3')).find((n) => /^Le(e|on) Parks$/.test(n));
+    o.refuseIds = new Set(['k9']);
+    await card(both).locator('[data-del]').click();
+    await page.click('[data-del-form] button[type="submit"]');
+    await until(async () => book.get('k8').data.deletedAt !== null);
+    o.refuseIds = new Set();
+    await page.click('[data-say="deleted-partly"] [data-undo]');
+    ok('two names on one card, one refused: Undo brings the deleted one back', await until(async () => book.get('k8').data.deletedAt === null), JSON.stringify(await vis(page, '[data-say]')));
     // 2. Undo checks the kept row's own name, not the card's.
     await card('Dana Reyes-Lopez').locator('[data-del]').click();
     await page.click('[data-del-form] button[type="submit"]');
