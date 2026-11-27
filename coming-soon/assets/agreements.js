@@ -272,11 +272,22 @@
   });
 
   function tab(which) {
-    all('[data-tab]', form).forEach(function (t) { t.setAttribute('aria-selected', String(t.getAttribute('data-tab') === which)); });
+    // The tab pattern (WAI-ARIA): the chosen tab is the one Tab reaches; arrow keys move between them.
+    all('[data-tab]', form).forEach(function (t) { var on = t.getAttribute('data-tab') === which; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; });
     showOne(form, 'data-pane', which);
     if (which === 'preview') paint();
   }
   all('[data-tab]', form).forEach(function (t) { t.addEventListener('click', function () { tab(t.getAttribute('data-tab')); }); });
+  all('[data-tab]', form).forEach(function (t) {
+    t.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return;
+      var tabs = all('[data-tab]', form), i = tabs.indexOf(t);
+      var next = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
+      e.preventDefault();
+      tab(tabs[next].getAttribute('data-tab'));
+      tabs[next].focus();
+    });
+  });
 
   var BLANK = /\[(Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today's date)\]/g;
   var DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });

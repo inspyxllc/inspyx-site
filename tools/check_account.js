@@ -46,7 +46,12 @@ const vis = (page, sel) => page.$$eval(sel, (els) => els.filter((e) => e.getClie
   await group('the page', async () => {
     const { page, ctx, errs, away } = await open(browser, () => 200);
     ok('names who is signed in', (await vis(page, '.who')).join() === 'Signed in as ' + WHO);
-    ok('the business in one place: company, prices, agreements, booking, emails, payments, then the plan', JSON.stringify(await page.$$eval('.acct-links a', (as) => as.map((a) => a.getAttribute('href')))) === JSON.stringify(['/profile', '/prices', '/agreements', '/booking', '/emails', '/payments', '/plan']));
+    ok('the business in one place: company, prices, agreements, booking, emails, payments, templates, people, past inspections (the rehearsal, round 2), then the plan', JSON.stringify(await page.$$eval('.acct-links a', (as) => as.map((a) => a.getAttribute('href')))) === JSON.stringify(['/profile', '/prices', '/agreements', '/booking', '/emails', '/payments', '/template', '/people', '/history-import', '/plan']));
+    // Each one leads to a page this site has (a link that goes nowhere fails here).
+    for (const href of ['/template', '/people', '/history-import']) {
+      const r = await fetch(new URL(href, page.url()).href);
+      ok(href + ' is a page here', r.status === 200, String(r.status));
+    }
     ok('says where an account is deleted, and that it can\'t be undone', (await vis(page, '.acct-help')).some((t) => t.startsWith('On your phone: More → Account → Delete your account.') && t.endsWith('It can’t be undone.')));
     ok('opens with no errors and asks nobody', errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
     if (SHOTS) await page.screenshot({ path: SHOTS + '/50-account-wide.png', fullPage: true });
