@@ -117,8 +117,9 @@
   }
 
   /* Deletes the rows [ids] ([deleted] true), or brings them back (false), as the phone's deleteContact and
-     restoreContact do: the same row, marked or unmarked, newer than the copy held. Answers 'saved' (every one kept),
-     'refused' (one the server holds newer: the phone changed it) or 'failed'. */
+     restoreContact do: the same row, marked or unmarked, newer than the copy held. Answers { outcome, kept }: outcome
+     'saved' (every one kept), 'refused' (one the server holds newer: the phone changed it) or 'failed'; kept, the
+     ids the server did keep (some, when refused: Codex on #123). */
   function mark(ids, deleted) {
     var now = Date.now(), push = [];
     ids.forEach(function (id) {
@@ -129,8 +130,11 @@
       data.updatedAt = at; data.deletedAt = deleted ? at : null;
       push.push({ kind: KIND, id: id, updated_at: at, deleted_at: deleted ? at : null, data: data });
     });
-    if (push.length === 0) return Promise.resolve('refused');
-    return send(push).then(function (r) { return r === null ? 'failed' : r.kept.length === push.length ? 'saved' : 'refused'; });
+    if (push.length === 0) return Promise.resolve({ outcome: 'refused', kept: [] });
+    return send(push).then(function (r) {
+      if (r === null) return { outcome: 'failed', kept: [] };
+      return { outcome: r.kept.length === push.length ? 'saved' : 'refused', kept: r.kept };
+    });
   }
 
   return {

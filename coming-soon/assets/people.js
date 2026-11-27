@@ -174,8 +174,11 @@
   var who = function (root, name) { [].slice.call(root.querySelectorAll('[data-v="who"]')).forEach(function (b) { b.textContent = name; }); };
   delDialog.addEventListener('cancel', function (e) { if (delPending) e.preventDefault(); });
   function askDelete(one) {
-    if (delPending || pending) return;
-    delOne = { name: one.name, kept: one.kept.slice() };
+    if (delPending || pending || undoing) return;
+    // The names Undo would bring back are the kept rows' own, not the card's (which may be an inspection's: Codex on
+    // #123).
+    var ids = one.kept.slice();
+    delOne = { name: one.name, kept: ids, names: book.people().filter(function (p) { return ids.indexOf(p.id) >= 0; }).map(function (p) { return p.name; }) };
     who(delDialog, one.name);
     delForm.querySelector('[data-del-jobs]').hidden = one.jobs.length === 0;
     delProblem('');
@@ -188,29 +191,33 @@
     if (delPending || !delOne) return;
     var go = delForm.querySelector('button[type="submit"]'), keep = delForm.querySelector('[data-del-keep]'), one = delOne;
     go.disabled = true; keep.disabled = true; delPending = true; delProblem('');
-    book.mark(one.kept, true).then(function (outcome) {
+    book.mark(one.kept, true).then(function (r) {
       go.disabled = false; keep.disabled = false; delPending = false;
-      if (outcome !== 'saved') { delProblem(outcome); return; }
+      // Some kept and one refused: those kept are deleted, and Undo is theirs (Codex on #123).
+      if (r.outcome !== 'saved' && r.kept.length === 0) { delProblem(r.outcome); return; }
       delDialog.close();
-      gone = one;
-      who(main, one.name); said('deleted'); draw();
+      gone = { name: one.name, kept: r.kept, names: one.names, partly: r.outcome !== 'saved' };
+      who(main, one.name); said(gone.partly ? 'deleted-partly' : 'deleted'); draw();
     });
   });
   var undoing = false;
   all('[data-undo]').forEach(function (b) {
     b.addEventListener('click', function () {
       if (!gone || undoing) return;
-      var one = gone, lower = one.name.toLowerCase();
-      // One person is kept per name (restoreContact's ContactNameTaken): someone kept under it since stands.
-      if (book.people().some(function (p) { return p.name.toLowerCase() === lower; })) { gone = null; who(main, one.name); said('taken'); return; }
+      var one = gone, lower = one.names.map(function (n) { return n.toLowerCase(); });
+      // One person is kept per name (restoreContact's ContactNameTaken): someone kept under a name it would bring
+      // back stands.
+      if (book.people().some(function (p) { return lower.indexOf(p.name.toLowerCase()) >= 0; })) { gone = null; who(main, one.name); said('taken'); return; }
       undoing = true;
       all('[data-undo]').forEach(function (u) { u.disabled = true; });
-      book.mark(one.kept, false).then(function (outcome) {
+      book.mark(one.kept, false).then(function (r) {
         undoing = false;
         all('[data-undo]').forEach(function (u) { u.disabled = false; });
+        // Only this Undo's own state (Codex on #123): a delete made since stands with its own Undo.
+        if (gone !== one) { draw(); return; }
         who(main, one.name);
-        if (outcome === 'saved') { gone = null; said('restored'); }
-        else if (outcome === 'refused') { gone = null; said('undo-refused'); }
+        if (r.outcome === 'saved') { gone = null; said('restored'); }
+        else if (r.outcome === 'refused') { gone = null; said('undo-refused'); }
         else said('undo-failed');
         draw();
       });

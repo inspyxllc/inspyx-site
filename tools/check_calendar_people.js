@@ -120,7 +120,7 @@ async function open(browser, o) {
       // Newest wins, as the server: an older push than the held copy is answered "not applied".
       const applied = (b.push || []).map((r) => {
         if (refused || r.kind !== 'inspector_contacts') return { kind: r.kind, id: r.id, applied: !refused };
-        const h = book.get(r.id), newer = !h || r.updated_at > h.updated_at;
+        const h = book.get(r.id), newer = (!h || r.updated_at > h.updated_at) && !(o.refuseIds && o.refuseIds.has(r.id));
         if (newer) book.set(r.id, Object.assign({}, r, { changed_at: 'b' }));
         return { kind: r.kind, id: r.id, applied: newer };
       });
@@ -539,6 +539,56 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
       await ctx.close();
     });
   }
+
+  await group('people: Delete and Undo, the edges (Codex on #123)', async () => {
+    const s = server(); seed(s);
+    const T = 1795000000000;
+    const row = (idv, role, name, more) => ({ kind: 'inspector_contacts', id: idv, updated_at: T, deleted_at: null, changed_at: 'a',
+      data: Object.assign({ id: idv, ownerAccountId: ME, role, name, phone: null, email: null, company: null, note: null, lastUsedAt: T, createdAt: T, updatedAt: T, deletedAt: null }, more) });
+    const book = new Map([
+      ['k2', row('k2', 'client', 'Dana Reyes', { email: 'dana@example.com', company: 'Reyes Family Trust' })],   // shown as the inspection's "Dana Reyes-Lopez"
+      ['k4', row('k4', 'listing_agent', 'Jo Banks', { email: 'jo@example.com' })],
+      ['k5', row('k5', 'listing_agent', 'Jo Banks', { email: 'JO@example.com', company: 'Banks Realty' })],
+      ['k6', row('k6', 'buyer_agent', 'Rita Gomez', { email: 'rita@example.com' })],
+    ]);
+    const o = { server: s, path: 'people', book, refuseIds: new Set() };
+    const { page, ctx, errs } = await open(browser, o);
+    await until(async () => (await vis(page, '.ppl-one h3')).includes('Rita Gomez'));
+    const card = (name) => page.locator('.ppl-one', { has: page.locator('h3', { hasText: new RegExp('^' + name + '$') }) });
+    // 1. Kept twice, one row refused: the other is deleted, and its Undo offered.
+    o.refuseIds = new Set(['k5']);
+    await card('Jo Banks').locator('[data-del]').click();
+    await page.click('[data-del-form] button[type="submit"]');
+    ok('one of two rows refused: the one kept is deleted, it says so, and Undo is offered', await until(async () => same(await vis(page, '[data-say]'), ['Deleted part of Jo Banks: your phone changed the rest just now, so it stays. Undo'])) &&
+      book.get('k4').data.deletedAt !== null && book.get('k5').data.deletedAt === null && !(await page.isVisible('[data-del-dialog]')), JSON.stringify(await vis(page, '[data-say]')));
+    o.refuseIds = new Set();
+    await page.click('[data-say="deleted-partly"] [data-undo]');
+    // The other row still stands under that name: the phone's one-per-name rule (restoreContact) keeps it deleted.
+    ok('Undo then: the row still standing holds the name, so this one stays deleted, as on the phone', await until(async () => same(await vis(page, '[data-say]'), ['Someone else is kept as Jo Banks now, so this one stays deleted.'])) &&
+      book.get('k4').data.deletedAt !== null);
+    // 2. Undo checks the kept row's own name, not the card's.
+    await card('Dana Reyes-Lopez').locator('[data-del]').click();
+    await page.click('[data-del-form] button[type="submit"]');
+    await until(async () => book.get('k2').data.deletedAt !== null);
+    book.set('k7', Object.assign(row('k7', 'client', 'dana reyes'), { changed_at: 'zz', updated_at: T + 5 }));
+    await page.evaluate(() => window.InspyxPeopleBook.pull());
+    await page.click('[data-say="deleted"] [data-undo]');
+    ok('someone kept since under the row\'s own name ("Dana Reyes"): Undo refused', await until(async () => same(await vis(page, '[data-say]'), ['Someone else is kept as Dana Reyes-Lopez now, so this one stays deleted.'])) &&
+      book.get('k2').data.deletedAt !== null);
+    // 3. A Delete can't start while an Undo is on its way, and an Undo's answer clears only its own.
+    await card('Rita Gomez').locator('[data-del]').click();
+    await page.click('[data-del-form] button[type="submit"]');
+    await until(async () => book.get('k6').data.deletedAt !== null);
+    o.slowPush = 1200;
+    await page.click('[data-say="deleted"] [data-undo]');
+    await page.waitForTimeout(150);
+    await card('Jo Banks').locator('[data-del]').click();
+    ok('while an Undo is on its way: no other Delete starts', !(await page.isVisible('[data-del-dialog]')));
+    o.slowPush = 0;
+    ok('the Undo lands', await until(async () => book.get('k6').data.deletedAt === null && same(await vis(page, '[data-say]'), ['Brought back Rita Gomez.']), 5000));
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
 
   await group('people: no one yet', async () => {
     const s = server(); s.insp(A, '12 Oak St', '12 Oak St', { created_at: ny('2026-11-01T10:00:00') });
