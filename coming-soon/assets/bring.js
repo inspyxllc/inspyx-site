@@ -119,7 +119,7 @@
     var unread = [], cols = null;
     if (r1) {
       unread = r1.unread || [];
-      if (source.file) cols = { columns: r1.columns || [], fields: r1.fields || [], ok: !!r1.has_name };
+      if (source.file) cols = { columns: r1.columns || [], fields: r1.fields || [], ok: !!r1.has_name, byValues: !!r1.by_values };
       var a = CI.applyPlan(rows, r1.plan || [], me, now, newId);
       people = { push: a.push, changes: a.changes, plan: r1.plan || [] };
       left = left.concat(r1.skipped || []);
@@ -139,7 +139,7 @@
         left = left.concat(r2.skipped || []).concat((r2.people && r2.people.skipped) || []);
         // A file past the reader's limit is read to there, and says so (Codex on #133): never cut quietly.
         if (r2.cut && r2.cut_message) cuts.push(r2.cut_message);
-        if (source.file) { unread = r2.unread || []; cols = { columns: r2.columns || [], fields: r2.fields || [], ok: !!r2.can_file }; }
+        if (source.file) { unread = r2.unread || []; cols = { columns: r2.columns || [], fields: r2.fields || [], ok: !!r2.can_file, byValues: !!r2.by_values }; }
         history = PS.newRows(r2.inspections || [], me, now, newId, importId);
         history.read = r2.inspections || [];
       }
@@ -168,9 +168,12 @@
     // Read badly: nothing can be filed (no name column for people; no date, address or client for past inspections),
     // or nothing came out of it at all.
     var bad = !c.ok || rowsRead === 0;
-    if (bad) box.open = true;
-    $('[data-cols-bad]').hidden = !bad;
-    $('[data-cols-bad]').textContent = bad ? words(source.kind === 'past' ? 'cols-bad-past' : 'cols-bad-people') : '';
+    // Told by their values, not their headers (the lead, 2026-11-27): read already, the table open for him to confirm.
+    var confirm = !bad && c.byValues;
+    if (bad || confirm) box.open = true;
+    $('[data-cols-bad]').hidden = !bad && !confirm;
+    $('[data-cols-bad]').classList.toggle('is-confirm', confirm);
+    $('[data-cols-bad]').textContent = bad ? words(source.kind === 'past' ? 'cols-bad-past' : 'cols-bad-people') : confirm ? words('cols-by-values') : '';
     var tb = $('[data-cols]'); tb.textContent = '';
     c.columns.forEach(function (col) {
       var tr = el('tr'), sel = el('select');

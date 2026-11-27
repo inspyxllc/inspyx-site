@@ -435,6 +435,15 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
       await o.page.locator('[data-cols-box]').isVisible() && !(await o.page.locator('[data-cols-box]').evaluate((d) => d.open)) &&
       JSON.stringify(await o.page.$$eval('[data-cols] tr', (trs) => trs.map((t) => [t.cells[0].textContent, t.cells[1].textContent, t.querySelector('select').value]))) ===
       JSON.stringify([['Name', 'Dana Reyes', 'fullName'], ['Email', 'dana@example.com', 'email']]));
+    // Headers nothing knows, values that do (the lead's example, 2026-11-27): read by what they hold, the table open to confirm.
+    await pick('who.csv', 'Who,Reach,Mail\nDana Reyes,813-555-0101,dana@example.com\nLee Park,727-555-0100,lee@example.com\n');
+    await until(async () => ((await o.page.locator('[data-count-people]').textContent()) || '') === '2 clients');
+    ok('"Who / Reach / Mail": read by its values, 2 clients, the table open to confirm, Bring in 2',
+      JSON.stringify(await o.page.$$eval('[data-cols] select', (ss) => ss.map((x) => x.value))) === JSON.stringify(['fullName', 'phone', 'email']) &&
+      await o.page.locator('[data-cols-box]').evaluate((d) => d.open) &&
+      (await o.page.locator('[data-cols-bad]').textContent()) === 'Inspyx read these columns by what they hold. Check them, then bring them in.' &&
+      (await o.page.locator('[data-go]').textContent()) === 'Bring in 2' && await o.page.locator('[data-go]').isEnabled());
+    if (SHOTS) { await o.page.locator('[data-cols-box]').scrollIntoViewIfNeeded(); await o.page.screenshot({ path: SHOTS + '/62-bring-columns-by-values.png' }); }
     // Headers nothing knows, and values that don't say either (names in small letters, a code): nobody can come in yet.
     await pick('export.csv', 'Col A,Col B,Col C\ndana reyes,813-555-0101,k-1\nlee park,,k-2\n');
     await until(async () => await o.page.locator('[data-cols-box]').evaluate((d) => d.open));
