@@ -218,19 +218,22 @@
       var row = p.people.push.filter(function (r) { return r.id === c.id; })[0], role = row && row.data && row.data.role;
       if (role === 'client') roles.clients++; else roles.agents++;
     });
-    $('[data-count-people]').textContent = words('people-count', { clients: roles.clients, agents: roles.agents,
-      clientsWord: words(roles.clients === 1 ? 'client-1' : 'client-n'), agentsWord: words(roles.agents === 1 ? 'agent-1' : 'agent-n') });
+    // Only what was found (the lead, 2026-11-27): no "0 clients", no empty card.
+    $('[data-count-people]').textContent = [roles.clients ? words('count-of', { n: roles.clients, what: words(roles.clients === 1 ? 'client-1' : 'client-n') }) : '',
+      roles.agents ? words('count-of', { n: roles.agents, what: words(roles.agents === 1 ? 'agent-1' : 'agent-n') }) : ''].filter(Boolean).join(' · ');
+    $('[data-card="people"]').hidden = roles.clients + roles.agents === 0;
     var lp = $('[data-list-people]'); lp.textContent = '';
     p.people.changes.slice(0, SHOWN).forEach(function (c) { lp.appendChild(el('li', null, c.name)); });
     var pastN = p.history ? p.history.push.length : 0;
-    $('[data-count-past]').textContent = pastN ? plural('past', pastN) : words('none-here');
+    $('[data-count-past]').textContent = pastN ? plural('past', pastN) : '';
+    $('[data-card="past"]').hidden = pastN === 0;
     var lpa = $('[data-list-past]'); lpa.textContent = '';
     (p.history ? p.history.push : []).slice(0, SHOWN).forEach(function (r) {
       var d = r.data || {}; lpa.appendChild(el('li', null, [dayText(d.date) || d.dateInFile, d.address].filter(Boolean).join(' · ')));
     });
     var priceN = p.prices.push.length, pc = $('[data-card="prices"]');
-    pc.classList.toggle('is-later', !!source.file);
-    $('[data-count-prices]').textContent = source.file ? words('prices-file') : priceN ? plural('prices', priceN) : words('none-here');
+    $('[data-count-prices]').textContent = priceN ? plural('prices', priceN) : '';
+    pc.hidden = priceN === 0;
     var lpr = $('[data-list-prices]'); lpr.textContent = '';
     p.prices.lines.slice(0, SHOWN).forEach(function (x) { lpr.appendChild(el('li', null, x.name + ' · ' + MONEY.format(x.fee_cents / 100))); });
     var left = p.left.concat(p.history ? p.history.problems.map(function (x) { return { line: x.line, reason: x.problem }; }) : []);
@@ -242,7 +245,8 @@
       left.slice(0, 200).forEach(function (x) { ul.appendChild(el('li', null, x.where ? words('where', x) : words('line', x))); });
     }
     var n = p.people.push.length + pastN + priceN;
-    var go = $('[data-go]'); go.textContent = n ? words('bring-n', { n: n }) : words('bring-0'); go.disabled = busy;
+    // Nothing to bring: Bring in can't be tapped (the lead, 2026-11-27).
+    var go = $('[data-go]'); go.textContent = n ? words('bring-n', { n: n }) : words('bring-0'); go.disabled = busy || n === 0;
     go.setAttribute('data-n', String(n));
     plan = { n: n, sig: signature(p) };
   }
@@ -559,7 +563,8 @@
   function lock(on) {
     busy = on;
     [].slice.call(main.querySelectorAll('button, textarea, input')).forEach(function (b) { b.disabled = on; });
-    if (!on) { seen(); keyBox.disabled = false; }
+    // Unlocked, Bring in stays off when the plan shown brings nothing.
+    if (!on) { seen(); keyBox.disabled = false; $('[data-go]').disabled = !plan || !plan.n; }
   }
   function finished(people, past, nothing, prices, refused) {
     $('[data-preview]').hidden = true; say(null);
