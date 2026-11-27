@@ -79,10 +79,10 @@
 <label>Name <input type="text" name="name" autocomplete="off"></label>
 <button class="btn small quiet agr-starter" type="button" data-starter hidden>Start from the draft starter agreement</button>
 <div class="agr-tabs" role="tablist">
-<button type="button" role="tab" data-tab="write" aria-selected="true">Write</button>
-<button type="button" role="tab" data-tab="preview" aria-selected="false">Preview what your client signs</button>
+<button type="button" role="tab" id="agr-tab-write" data-tab="write" aria-selected="true" aria-controls="agr-pane-write">Write</button>
+<button type="button" role="tab" id="agr-tab-preview" data-tab="preview" aria-selected="false" aria-controls="agr-pane-preview" tabindex="-1">Preview what your client signs</button>
 </div>
-<div data-pane="write">
+<div data-pane="write" role="tabpanel" id="agr-pane-write" aria-labelledby="agr-tab-write">
 <label>Words <textarea name="words" rows="16"></textarea></label>
 <p class="agr-help">Put a blank where the words should change with each inspection: tap one to add it where you're typing.</p>
 <div class="agr-blanks" data-blanks>
@@ -97,7 +97,7 @@
 </div>
 <p class="agr-help">Clients read and sign this exact text. Editing it later doesn't change an agreement already signed.</p>
 </div>
-<div data-pane="preview" hidden>
+<div data-pane="preview" role="tabpanel" id="agr-pane-preview" aria-labelledby="agr-tab-preview" hidden>
 <p class="agr-help">What your client reads and signs, with this agreement's blanks filled in: <mark class="agr-fill" data-fill="yours">yours</mark> from Your company, <mark class="agr-fill" data-fill="sample">a sample client</mark> for the rest, <mark class="agr-fill" data-fill="missing">missing from Your company</mark>.</p>
 <article class="agr-paper" data-paper aria-label="The agreement as your client sees it"></article>
 </div>

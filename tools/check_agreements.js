@@ -364,6 +364,17 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     ok('a blank tapped goes where he is typing', (await page.inputValue(F + ' textarea[name="words"]')) === 'Fee: [Fee]. Thanks.');
     await page.click(F + ' [data-tab="preview"]');
     ok('the preview follows what he wrote', (await page.textContent(F + ' [data-paper] p')) === 'Fee: $425.00. Thanks.');
+    // The tabs are a tab list a screen reader can follow (the rehearsal, round 2): each names its panel, the chosen one
+    // is the one Tab reaches, and the arrow keys move between them.
+    const wiring = await page.$$eval(F + ' [role="tab"]', (ts) => ts.map((t) => { const p = document.getElementById(t.getAttribute('aria-controls'));
+      return [t.getAttribute('aria-selected'), t.tabIndex, !!p && p.getAttribute('role') === 'tabpanel' && p.getAttribute('aria-labelledby') === t.id, !!p && !p.hidden]; }));
+    ok('the tabs: each names its panel; the chosen one shows and is the one Tab reaches', JSON.stringify(wiring) === JSON.stringify([['false', -1, true, false], ['true', 0, true, true]]), JSON.stringify(wiring));
+    await page.focus(F + ' [data-tab="preview"]');
+    await page.keyboard.press('ArrowLeft');
+    const moved = await page.evaluate(() => [document.activeElement.getAttribute('data-tab'), document.activeElement.getAttribute('aria-selected')]);
+    ok('ArrowLeft moves to Write, and chooses it', JSON.stringify(moved) === '["write","true"]' && await page.isVisible(F + ' textarea[name="words"]'), JSON.stringify(moved));
+    await page.keyboard.press('ArrowRight');
+    ok('ArrowRight back to the preview', await page.evaluate(() => document.activeElement.getAttribute('data-tab')) === 'preview' && await page.isVisible(F + ' [data-paper]'));
     page.once('dialog', (d) => d.accept());
     await page.click(F + ' [data-starter]');
     ok('the starter over words he typed: asked first, then put in', (await page.inputValue(F + ' textarea[name="words"]')).startsWith('Home Inspection Agreement'));
