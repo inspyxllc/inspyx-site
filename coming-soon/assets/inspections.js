@@ -883,13 +883,18 @@
   }
   function jobSave(rows, done) {
     var id = chosen();
-    if (!id || jobBusy) return;
+    if (!id || jobBusy || !bizLoaded) return;
     jobBusy = true; jobSay(null);
     sendBiz(rows).then(function (o) {
       if (o !== 'saved') { jobBusy = false; jobSay(o === 'refused' ? 'job-refused' : 'job-failed'); renderOne(); return; }
       if (done) done();
       renderOne();
-      return refreshPayLink(id).then(function (ok) { jobBusy = false; jobSay(ok ? 'job-saved' : 'job-saved-later'); });
+      // Every page of the feed in before the pay link's totals are worked out (Codex on #131): a fee or a payment on a
+      // later page is never left out of them.
+      return pullBusiness().then(function (whole) {
+        if (!whole) { jobBusy = false; jobSay('job-saved-later'); return; }
+        return refreshPayLink(id).then(function (ok) { jobBusy = false; jobSay(ok ? 'job-saved' : 'job-saved-later'); });
+      });
     });
   }
   function amountProblem(cents, payment) {
@@ -898,9 +903,11 @@
     if (cents > FEE_MAX) return 'amount-big';
     return null;
   }
+  // A form is its inspection's: opened for it, closed when another is opened, never submitted for another (Codex on #131).
+  function formFor(f) { return f.getAttribute('data-for'); }
   $('[data-fee-edit]').addEventListener('click', function () {
     var id = chosen(), fee = id && feeOf(id), f = $('[data-fee-form]');
-    f.hidden = false; $('[data-fee-problem]').hidden = true;
+    f.setAttribute('data-for', id || ''); f.hidden = false; $('[data-fee-problem]').hidden = true;
     $('[data-fee-amount]').value = fee ? (fee.totalCents / 100).toFixed(2) : '';
     $('[data-fee-quoted]').hidden = !(fee && !fee.byHand);
     $('[data-fee-amount]').focus();
@@ -909,12 +916,13 @@
   $('[data-fee-form]').addEventListener('submit', function (e) {
     e.preventDefault();
     var id = chosen(), cents = centsOf($('[data-fee-amount]').value), bad = amountProblem(cents, false), pb = $('[data-fee-problem]');
+    if (formFor($('[data-fee-form]')) !== id) { $('[data-fee-form]').hidden = true; return; }
     pb.hidden = !bad; if (bad) { pb.textContent = word(bad); return; }
     jobSave([feeRow(id, cents)], function () { $('[data-fee-form]').hidden = true; });
   });
   $('[data-pay-add]').addEventListener('click', function () {
     var f = $('[data-pay-form]');
-    f.hidden = false; $('[data-pay-problem]').hidden = true;
+    f.setAttribute('data-for', chosen() || ''); f.hidden = false; $('[data-pay-problem]').hidden = true;
     $('[data-pay-amount]').value = ''; $('[data-pay-note]').value = ''; $('[data-pay-method]').value = 'cash';
     $('[data-pay-amount]').focus();
   });
@@ -922,6 +930,7 @@
   $('[data-pay-form]').addEventListener('submit', function (e) {
     e.preventDefault();
     var id = chosen(), cents = centsOf($('[data-pay-amount]').value), bad = amountProblem(cents, true), pb = $('[data-pay-problem]');
+    if (formFor($('[data-pay-form]')) !== id) { $('[data-pay-form]').hidden = true; return; }
     pb.hidden = !bad; if (bad) { pb.textContent = word(bad); return; }
     jobSave([paymentRow(id, cents, $('[data-pay-method]').value, $('[data-pay-note]').value.trim())], function () { $('[data-pay-form]').hidden = true; });
   });
@@ -929,6 +938,9 @@
     var list = $('[data-pays]'), rows = handPayments(id), usd = Fill ? Fill.agreementUsd : function (c) { return '$' + (c / 100).toFixed(2); };
     var shape = JSON.stringify(rows.map(function (r) { return [r.id, r.data.amountCents, r.data.method, r.data.recordedAt]; }));
     $('[data-fee-edit]').textContent = word(feeOf(id) ? 'fee-change' : 'fee-set');
+    // Nothing set until the whole business feed is in (a fee or payment not yet read would be left out: Codex on #131).
+    $('[data-fee-edit]').hidden = !bizLoaded; $('[data-pay-add]').hidden = !bizLoaded;
+    ['[data-fee-form]', '[data-pay-form]'].forEach(function (q) { var f = $(q); if (!f.hidden && (formFor(f) !== id || !bizLoaded)) f.hidden = true; });
     if (list.getAttribute('data-shape') === shape) return;
     list.setAttribute('data-shape', shape); list.textContent = '';
     rows.forEach(function (r) {

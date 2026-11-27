@@ -540,6 +540,27 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     });
   }
 
+  await group('fee and payments: nothing before the business feed is in; a form stays with its inspection (Codex on #131)', async () => {
+    const s = server(); seed(s);
+    const t = actServer([]);
+    t.pullDown = true;
+    const { page, ctx, ping } = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer });
+    await until(async () => (await vis(page, '[data-detail]')).length > 0);
+    await page.waitForTimeout(500);
+    ok('the business feed can\'t be read: no Set the fee, no Record a payment', (await vis(page, '[data-fee-edit]')).length === 0 && (await vis(page, '[data-pay-add]')).length === 0);
+    t.pullDown = false; ping();
+    await until(async () => (await vis(page, '[data-pay-add]')).length === 1);
+    await page.click('[data-pay-add]');
+    await page.fill('[data-pay-amount]', '150');
+    await page.evaluate((o) => { location.hash = '#' + o; }, OTHER);
+    await page.waitForTimeout(400);
+    ok('another inspection opened: the form closes', (await vis(page, '[data-pay-form]')).length === 0);
+    await page.evaluate(() => { const f = document.querySelector('[data-pay-form]'); f.hidden = false; f.requestSubmit(); });
+    await page.waitForTimeout(300);
+    ok('and a draft made for the first is never recorded on the second', !t.pushed.some((r) => r.kind === 'inspection_payments'));
+    await ctx.close();
+  });
+
   await group('fee and payments: a priced fee changed, refused, failed, the pay link unreachable', async () => {
     const s = server(); seed(s);
     const quoted = { kind: 'inspection_fees', id: 'fee1', updated_at: 5, deleted_at: null, data: { id: 'fee1', ownerAccountId: ME, inspectionId: INSP, selectionJson: '{"services":["svc"]}',
