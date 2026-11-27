@@ -61,6 +61,9 @@ mark.agr-fill{padding:0 3px; border-radius:4px; color:inherit}
 mark.agr-fill[data-fill="yours"]{background:#E3F4EA}
 mark.agr-fill[data-fill="sample"]{background:#E8F0FD}
 mark.agr-fill[data-fill="missing"]{background:#FBF0D9; color:#8A5A00; font-weight:600}
+mark.agr-fill[data-fill="unknown"]{background:#FBF0D9; color:#8A5A00; font-weight:600; outline:1px dashed #C98A1A}
+.agr-brought{margin:6px 0 0; font-size:13px; font-weight:600; color:#1F7A4D}
+.agr-brought.agr-look, .agr-unknown{margin:6px 0 0; font-size:13px; font-weight:600; color:#8A5A00}
 .agr-empty[hidden], [data-pane][hidden], .agr-starter[hidden]{display:none}
 .agr-blanks{margin-bottom:6px}
 

@@ -174,6 +174,8 @@
     armDelete(false);
     showOne(form, 'data-problem', '');
     say('');
+    brought = { filled: 0, signatures: 0, unknown: [] };
+    showBrought();
     dialog.showModal();
     form.elements.name.focus();
   }
@@ -257,6 +259,7 @@
     if (dartTrim(w.value) !== '' && !window.confirm(words('replace'))) return;
     if (dartTrim(form.elements.name.value) === '') form.elements.name.value = $('[data-s="name"]', starter).textContent;
     w.value = $('[data-s="words"]', starter).textContent;
+    showUnknown();
     tab('preview');
   }
   $('[data-starter]', form).addEventListener('click', useStarter);
@@ -268,7 +271,64 @@
       var w = form.elements.words, at = w.selectionStart == null ? w.value.length : w.selectionStart;
       w.setRangeText(b.getAttribute('data-blank'), at, w.selectionEnd == null ? at : w.selectionEnd, 'end');
       w.focus();
+      showUnknown();
     });
+  });
+
+  // ---- another app's blanks (switch, 2026-11-27) -----------------------------------------------------------------
+  // Words pasted in from Spectora, ISN, Horizon or Palmtech have their blanks written Inspyx's way by the phone's own
+  // code (inspyx_import.js: placeholder_translate.dart), and the dialog says what was done. A client's initial spot
+  // becomes an [Initials] box; a signature spot is taken out (the client signs once, at the end, as always). The blanks
+  // Inspyx can't fill are named under the words, as the phone's editor names them, and marked in the preview.
+  var brought = { filled: 0, signatures: 0, unknown: [] };
+  var reader = function () {
+    var r = window.inspyxImport;
+    return r && typeof r.placeholders === 'function' && typeof r.unknownBlanks === 'function' ? r : null;
+  };
+  var put = function (key, n, list) { return words(key).replace('{n}', String(n)).replace('{list}', list || ''); };
+  function broughtLine() {
+    var b = brought, parts = [];
+    if (b.filled > 0) parts.push(b.filled === 1 ? words('filled-1') : put('filled-n', b.filled));
+    if (b.unknown.length > 0) parts.push(put('not-known', b.unknown.length, b.unknown.join(', ')));
+    var head = parts.join(' · ');
+    if (b.signatures === 0) return head;
+    var sign = b.signatures === 1 ? words('sign-1') : put('sign-n', b.signatures);
+    return head ? head + '. ' + sign : sign;
+  }
+  function showBrought() {
+    var el = $('[data-brought]', form), line = broughtLine();
+    el.textContent = line;
+    el.hidden = !line;
+    el.classList.toggle('agr-look', brought.unknown.length > 0);
+    showUnknown();
+  }
+  // The blanks in the words that Inspyx can't fill, each once; none while the phone's reader hasn't loaded.
+  function unknownNow() {
+    var r = reader();
+    if (!r) return [];
+    try { var u = JSON.parse(r.unknownBlanks(form.elements.words.value)); return Array.isArray(u) ? u : []; } catch (e) { return []; }
+  }
+  function showUnknown() {
+    var el = $('[data-unknown]', form), u = unknownNow();
+    el.textContent = u.length === 0 ? '' : u.length === 1 ? put('cant-fill-1', 1, u[0]) : put('cant-fill-n', u.length, u.join(', '));
+    el.hidden = u.length === 0;
+  }
+  form.elements.words.addEventListener('input', showUnknown);
+  form.elements.words.addEventListener('paste', function (e) {
+    var r = reader(), cd = e.clipboardData;
+    if (!r || !cd) return;
+    var text = cd.getData('text/plain');
+    if (!text) return;
+    var t;
+    try { t = JSON.parse(r.placeholders(text, 'agreement')); } catch (err) { return; }
+    if (!t || t.status !== 'ok' || !t.changes.length) return;
+    e.preventDefault();
+    var w = form.elements.words, from = w.selectionStart == null ? w.value.length : w.selectionStart;
+    w.setRangeText(t.text, from, w.selectionEnd == null ? from : w.selectionEnd, 'end');
+    t.changes.forEach(function (c) { if (c.to !== '' && t.unknown.indexOf(c.to) < 0) brought.filled++; });
+    brought.signatures += t.signatures_moved;
+    t.unknown.forEach(function (u) { if (brought.unknown.indexOf(u) < 0) brought.unknown.push(u); });
+    showBrought();
   });
 
   function tab(which) {
@@ -289,7 +349,7 @@
     });
   });
 
-  var BLANK = /\[(Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today's date)\]/g;
+  var BLANK = /\[(Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today's date)\]|\{\{([^{}\r\n]*)\}\}/g;
   var DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   // What each blank reads as in the preview, and whose it is: his own from his profile, a sample client's, or missing.
   function fill(blank) {
@@ -308,7 +368,7 @@
   }
   // The words as the client reads them: paragraphs, each blank filled and marked.
   function paint() {
-    var paper = $('[data-paper]', form);
+    var paper = $('[data-paper]', form), cant = unknownNow();
     paper.textContent = '';
     form.elements.words.value.split(/\n{2,}/).forEach(function (para) {
       if (dartTrim(para) === '') return;
@@ -316,6 +376,18 @@
       BLANK.lastIndex = 0;
       while ((m = BLANK.exec(para))) {
         el.appendChild(document.createTextNode(para.slice(last, m.index)));
+        // A {{blank}}: marked when Inspyx can't fill it, else left as written (the phone fills those).
+        if (m[1] === undefined) {
+          var named = '{{' + dartTrim(m[2]) + '}}';
+          if (cant.indexOf(named) < 0 && cant.indexOf(m[0]) < 0) { el.appendChild(document.createTextNode(m[0])); last = BLANK.lastIndex; continue; }
+          var odd = document.createElement('mark');
+          odd.className = 'agr-fill';
+          odd.setAttribute('data-fill', 'unknown');
+          odd.textContent = m[0];
+          el.appendChild(odd);
+          last = BLANK.lastIndex;
+          continue;
+        }
         var f = fill(m[1]), mark = document.createElement('mark');
         mark.className = 'agr-fill';
         mark.setAttribute('data-fill', f[1]);

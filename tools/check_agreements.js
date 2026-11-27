@@ -388,6 +388,50 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     await ctx.close();
   });
 
+  await group('another app\'s blanks, pasted in (switch, 2026-11-27)', async () => {
+    const s = server(); seed(s);
+    const { page, ctx, calls, errs } = await open(browser, { server: s });
+    const W = F + ' textarea[name="words"]';
+    // A paste as the browser makes one: the copied words ride on the event, and only the page can put them in.
+    const paste = (text) => page.$eval(W, (t, v) => {
+      const dt = new DataTransfer(); dt.setData('text/plain', v);
+      t.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    }, text);
+    await page.click('[data-add="agreement"]');
+    await page.fill(F + ' input[name="name"]', 'From ISN');
+    await page.fill(W, 'Intro. ');
+    await page.$eval(W, (t) => t.setSelectionRange(7, 7));
+    ok('nothing about blanks before anything is brought in', (await vis(page, F + ' [data-brought]')).length === 0 && (await vis(page, F + ' [data-unknown]')).length === 0);
+    await paste('%clientdisplayname% hires us for %inspectionaddress%. Initial %clientinitial1% and %clientinitial2%. Agent %agentname%. Signed: %clientsignature%');
+    const words = await page.inputValue(W);
+    ok('the paste goes in with its blanks written Inspyx\'s way, where he was typing; initial spots are boxes, the signature spot is out',
+      words === 'Intro. [Client name] hires us for [Property address]. Initial [Initials] and [Initials]. Agent {{agentname}}. Signed: ', JSON.stringify(words));
+    ok('the dialog says what was done, the signature spot apart',
+      (await vis(page, F + ' [data-brought]')).join() === "4 blanks filled in automatically · 1 we didn't recognize: {{agentname}}. The client's signature spot was taken out: they sign at the end, as always.",
+      (await vis(page, F + ' [data-brought]')).join());
+    ok('the one Inspyx can\'t fill is named under the words, as the phone names it', (await vis(page, F + ' [data-unknown]')).join() === "Inspyx can't fill {{agentname}}. Put your own words in its place.", (await vis(page, F + ' [data-unknown]')).join());
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/56-agreements-brought-write.png' });
+    await page.click(F + ' [data-tab="preview"]');
+    const marks = await page.$$eval(F + ' [data-paper] mark', (ms) => ms.map((m) => m.getAttribute('data-fill') + ':' + m.textContent));
+    ok('in the preview it is marked as one Inspyx can\'t fill; the others are filled', marks.includes('unknown:{{agentname}}') && marks.includes('sample:Jordan Smith'), JSON.stringify(marks));
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/57-agreements-brought-preview.png' });
+    await page.click(F + ' [data-tab="write"]');
+    await page.fill(W, (await page.inputValue(W)).replace('{{agentname}}', 'Sam'));
+    ok('once he puts his own words in its place, the name under the words goes', (await vis(page, F + ' [data-unknown]')).length === 0);
+    // Words already written Inspyx's way: the browser's own paste, untouched (nothing put in by the page).
+    await page.$eval(W, (t) => t.setSelectionRange(t.value.length, t.value.length));
+    const was = await page.inputValue(W);
+    await paste(' [Fee] {{INSPECTION_COMPANY}}');
+    ok('words already written Inspyx\'s way are left to the browser\'s own paste', (await page.inputValue(W)) === was);
+    const before = calls.length;
+    await page.click(F + ' button[type="submit"]');
+    ok('saved with the blanks as written in', await until(async () => pushed(calls.slice(before)).some((r) => r.kind === 'legal_documents' && r.data.body.includes('[Initials] and [Initials]') && !r.data.body.includes('%'))));
+    await page.click('[data-add="agreement"]');
+    ok('a new agreement starts with nothing said about blanks', (await vis(page, F + ' [data-brought]')).length === 0);
+    ok('no errors', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
   await group('the how-to', async () => {
     const s = server(); seed(s);
     const { page, ctx } = await open(browser, { server: s });

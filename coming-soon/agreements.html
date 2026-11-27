@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="/assets/agreements.css">
 <script src="/assets/auth.js"></script>
 <script src="/assets/page.js" defer></script>
+<script src="/assets/import/inspyx_import.js" defer></script>
 <script src="/assets/agreements.js" defer></script>
 </head>
 <body class="has-dash">
@@ -84,6 +85,8 @@
 </div>
 <div data-pane="write" role="tabpanel" id="agr-pane-write" aria-labelledby="agr-tab-write">
 <label>Words <textarea name="words" rows="16"></textarea></label>
+<p class="agr-brought" data-brought aria-live="polite" hidden></p>
+<p class="agr-unknown" data-unknown hidden></p>
 <p class="agr-help">Put a blank where the words should change with each inspection: tap one to add it where you're typing.</p>
 <div class="agr-blanks" data-blanks>
 <button type="button" data-blank="[Client name]">Client name</button>
@@ -98,7 +101,7 @@
 <p class="agr-help">Clients read and sign this exact text. Editing it later doesn't change an agreement already signed.</p>
 </div>
 <div data-pane="preview" role="tabpanel" id="agr-pane-preview" aria-labelledby="agr-tab-preview" hidden>
-<p class="agr-help">What your client reads and signs, with this agreement's blanks filled in: <mark class="agr-fill" data-fill="yours">yours</mark> from Your company, <mark class="agr-fill" data-fill="sample">a sample client</mark> for the rest, <mark class="agr-fill" data-fill="missing">missing from Your company</mark>.</p>
+<p class="agr-help">What your client reads and signs, with this agreement's blanks filled in: <mark class="agr-fill" data-fill="yours">yours</mark> from Your company, <mark class="agr-fill" data-fill="sample">a sample client</mark> for the rest, <mark class="agr-fill" data-fill="missing">missing from Your company</mark>, <mark class="agr-fill" data-fill="unknown">a blank Inspyx can't fill</mark>.</p>
 <article class="agr-paper" data-paper aria-label="The agreement as your client sees it"></article>
 </div>
 <p class="agr-help">Inspyx can't promise an agreement meets your state's rules: have your attorney read it before clients sign it.</p>
@@ -152,6 +155,13 @@ Signed by the Client on [Today's date].</span></div>
 <span data-w="missing-company">your company</span>
 <span data-w="missing-license">your license number</span>
 <span data-w="signed-by">Signed by</span>
+<span data-w="filled-1">1 blank filled in automatically</span>
+<span data-w="filled-n">{n} blanks filled in automatically</span>
+<span data-w="not-known">{n} we didn't recognize: {list}</span>
+<span data-w="sign-1">The client's signature spot was taken out: they sign at the end, as always.</span>
+<span data-w="sign-n">{n} client signature spots were taken out: they sign once, at the end, as always.</span>
+<span data-w="cant-fill-1">Inspyx can't fill {list}. Put your own words in its place.</span>
+<span data-w="cant-fill-n">Inspyx can't fill {n} blanks: {list}. Put your own words in their place.</span>
 <span data-w="replace">Replace the words you've written with the starter agreement?</span>
 <span data-w="signs">Clients sign this one</span>
 <span data-w="edited">Edited</span>
