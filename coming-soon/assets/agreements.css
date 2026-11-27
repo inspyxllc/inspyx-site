@@ -62,6 +62,7 @@ mark.agr-fill[data-fill="yours"]{background:#E3F4EA}
 mark.agr-fill[data-fill="sample"]{background:#E8F0FD}
 mark.agr-fill[data-fill="missing"]{background:#FBF0D9; color:#8A5A00; font-weight:600}
 mark.agr-fill[data-fill="unknown"]{background:#FBF0D9; color:#8A5A00; font-weight:600; outline:1px dashed #C98A1A}
+mark.agr-initials{display:inline-block; min-width:64px; padding:0 6px; border:1.5px solid #2563EB; border-radius:4px; background:transparent; color:#2563EB; font-size:12px; font-weight:600; text-align:center}
 .agr-brought{margin:6px 0 0; font-size:13px; font-weight:600; color:#1F7A4D}
 .agr-brought.agr-look, .agr-unknown{margin:6px 0 0; font-size:13px; font-weight:600; color:#8A5A00}
 .agr-empty[hidden], [data-pane][hidden], .agr-starter[hidden]{display:none}

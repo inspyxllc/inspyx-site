@@ -149,7 +149,7 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     const { page, ctx, calls } = await open(browser, { server: s });
     await page.click('[data-add="agreement"]');
     ok('the form opens empty, as New agreement, with no delete and no choosing', (await vis(page, F + ' h2')).join() === 'New agreement' && !(await page.locator(F + ' [data-delete]').isVisible()) && !(await page.locator(F + ' [data-only="choose"]').isVisible()));
-    ok('it says what clients read, offers the blanks the phone fills as buttons, and to have an attorney read it', (await vis(page, F + ' .agr-help')).length === 3 && (await vis(page, F + ' [data-blank]')).join('|') === 'Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today\'s date' && (await vis(page, F + ' .agr-help'))[2].includes('attorney'));
+    ok('it says what clients read, offers the blanks the phone fills as buttons, and to have an attorney read it', (await vis(page, F + ' .agr-help')).length === 3 && (await vis(page, F + ' [data-blank]')).join('|') === 'Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today\'s date|Buyer\'s agent|Listing agent' && (await vis(page, F + ' .agr-help'))[2].includes('attorney'));
     const before = calls.length;
     const problem = async () => (await vis(page, F + ' [data-problem]')).join();
     await page.click(F + ' button[type="submit"]');
@@ -404,20 +404,30 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     ok('nothing about blanks before anything is brought in', (await vis(page, F + ' [data-brought]')).length === 0 && (await vis(page, F + ' [data-unknown]')).length === 0);
     await paste('%clientdisplayname% hires us for %inspectionaddress%. Initial %clientinitial1% and %clientinitial2%. Agent %agentname%. Signed: %clientsignature%');
     const words = await page.inputValue(W);
-    ok('the paste goes in with its blanks written Inspyx\'s way, where he was typing; initial spots are boxes, the signature spot is out',
-      words === 'Intro. [Client name] hires us for [Property address]. Initial [Initials] and [Initials]. Agent {{agentname}}. Signed: ', JSON.stringify(words));
+    ok('the paste goes in with its blanks written Inspyx\'s way, where he was typing; initial spots are boxes, the signature spot is out, its "Signed:" too',
+      words === 'Intro. [Client name] hires us for [Property address]. Initial [Initials] and [Initials]. Agent {{agentname}}. ', JSON.stringify(words));
     ok('the dialog says what was done, the signature spot apart',
       (await vis(page, F + ' [data-brought]')).join() === "4 blanks filled in automatically · 1 we didn't recognize: {{agentname}}. The client's signature spot was taken out: they sign at the end, as always.",
       (await vis(page, F + ' [data-brought]')).join());
-    ok('the one Inspyx can\'t fill is named under the words, as the phone names it', (await vis(page, F + ' [data-unknown]')).join() === "Inspyx can't fill {{agentname}}. Put your own words in its place.", (await vis(page, F + ' [data-unknown]')).join());
+    ok('one line about it: the line under the words steps aside while the one above names it', (await vis(page, F + ' [data-unknown]')).length === 0);
     if (SHOTS) await page.screenshot({ path: SHOTS + '/56-agreements-brought-write.png' });
     await page.click(F + ' [data-tab="preview"]');
     const marks = await page.$$eval(F + ' [data-paper] mark', (ms) => ms.map((m) => m.getAttribute('data-fill') + ':' + m.textContent));
     ok('in the preview it is marked as one Inspyx can\'t fill; the others are filled', marks.includes('unknown:{{agentname}}') && marks.includes('sample:Jordan Smith'), JSON.stringify(marks));
+    ok('each spot to initial is a box in the preview', (await page.$$eval(F + ' [data-paper] mark.agr-initials', (ms) => ms.map((m) => m.textContent))).join() === 'Initials,Initials');
     if (SHOTS) await page.screenshot({ path: SHOTS + '/57-agreements-brought-preview.png' });
     await page.click(F + ' [data-tab="write"]');
     await page.fill(W, (await page.inputValue(W)).replace('{{agentname}}', 'Sam'));
-    ok('once he puts his own words in its place, the name under the words goes', (await vis(page, F + ' [data-unknown]')).length === 0);
+    const was0 = await page.inputValue(W);
+    ok('once he puts his own words in its place, the line names it no more',
+      (await vis(page, F + ' [data-brought]')).join() === "4 blanks filled in automatically. The client's signature spot was taken out: they sign at the end, as always." && (await vis(page, F + ' [data-unknown]')).length === 0,
+      (await vis(page, F + ' [data-brought]')).join());
+    await page.fill(W, 'Agents: [Buyer\'s agent] and [Listing agent]. {{ ESCROW_OFFICER }}');
+    await page.click(F + ' [data-tab="preview"]');
+    const agents = await page.$$eval(F + ' [data-paper] mark', (ms) => ms.map((m) => m.getAttribute('data-fill') + ':' + m.textContent));
+    ok('the agents fill in the preview (a sample one each)', agents.includes('sample:Alicia Gomez') && agents.includes('sample:Robert Chen'), JSON.stringify(agents));
+    await page.click(F + ' [data-tab="write"]');
+    await page.fill(W, was0);
     // Words already written Inspyx's way: the browser's own paste, untouched (nothing put in by the page).
     await page.$eval(W, (t) => t.setSelectionRange(t.value.length, t.value.length));
     const was = await page.inputValue(W);
