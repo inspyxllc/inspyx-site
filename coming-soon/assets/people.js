@@ -55,7 +55,8 @@
       var email = EMAIL.test(p.email) ? p.email : '', phone = digits(p.phone).length >= 7 ? p.phone : '';
       var k = p.role + '|' + (email ? 'e:' + email.toLowerCase() : phone ? 'p:' + digits(phone).slice(-10) : 'n:' + folded(p.name));
       var one = by[k];
-      if (!one) { one = by[k] = { name: p.name, email: email, phone: phone, company: p.company, at: -1, jobs: [] }; groups[p.role].push(one); return; }
+      if (!one) { one = by[k] = { name: p.name, email: email, phone: phone, company: p.company, at: -1, jobs: [], kept: [p.id] }; groups[p.role].push(one); return; }
+      one.kept = (one.kept || []).concat(p.id);
       if (!one.email) one.email = email;
       if (!one.phone) one.phone = phone;
       if (p.company) one.company = p.company;
@@ -107,6 +108,13 @@
         if (one.email) { email.href = 'mailto:' + one.email; email.textContent = one.email; }
         phone.hidden = !one.phone;
         if (one.phone) { phone.href = 'tel:' + (/^\s*\+/.test(one.phone) ? '+' : '') + digits(one.phone); phone.textContent = one.phone; }
+        // Delete: only someone kept in People (every row they are kept as); the inspections keep their own people.
+        var del = li.querySelector('[data-del]');
+        del.hidden = !one.kept;
+        if (one.kept) {
+          del.setAttribute('aria-label', del.textContent.trim() + ' ' + one.name);
+          del.addEventListener('click', function () { askDelete(one); });
+        }
         var jobs = li.querySelector('.ppl-jobs');
         one.jobs.forEach(function (j) {
           var job = tpl('job'), day = job.querySelector('[data-v="day"]');
@@ -153,8 +161,69 @@
     go.disabled = true; close.disabled = true; pending = true;
     book.add(p, draft).then(function (outcome) {
       go.disabled = false; close.disabled = false; pending = false;
-      if (outcome === 'saved') { dialog.close(); said('saved'); draw(); return; }
+      if (outcome === 'saved') { dialog.close(); gone = null; said('saved'); draw(); return; }
       problem(outcome);
+    });
+  });
+
+  // ---- deleting a kept person (the rehearsal, round 2), as the phone's deleteContact: the row is marked, never
+  // removed, so Undo brings it back (restoreContact), unless someone else is kept under that name by then.
+  var delDialog = document.querySelector('[data-del-dialog]'), delForm = document.querySelector('[data-del-form]');
+  var delOne = null, delPending = false, gone = null;
+  var delProblem = function (which) { [].slice.call(delForm.querySelectorAll('[data-del-problem]')).forEach(function (p) { p.hidden = p.getAttribute('data-del-problem') !== which; }); };
+  var who = function (root, name) { [].slice.call(root.querySelectorAll('[data-v="who"]')).forEach(function (b) { b.textContent = name; }); };
+  delDialog.addEventListener('cancel', function (e) { if (delPending) e.preventDefault(); });
+  function askDelete(one) {
+    if (delPending || pending || undoing) return;
+    // The names Undo would bring back are the kept rows' own, not the card's (which may be an inspection's: Codex on
+    // #123).
+    var ids = one.kept.slice();
+    var named = Object.create(null);
+    book.people().forEach(function (p) { if (ids.indexOf(p.id) >= 0) named[p.id] = p.name; });
+    delOne = { name: one.name, kept: ids, named: named };
+    who(delDialog, one.name);
+    delForm.querySelector('[data-del-jobs]').hidden = one.jobs.length === 0;
+    delProblem('');
+    delDialog.showModal();
+    delForm.querySelector('[data-del-keep]').focus();
+  }
+  delForm.querySelector('[data-del-keep]').addEventListener('click', function () { if (!delPending) delDialog.close(); });
+  delForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (delPending || !delOne) return;
+    var go = delForm.querySelector('button[type="submit"]'), keep = delForm.querySelector('[data-del-keep]'), one = delOne;
+    go.disabled = true; keep.disabled = true; delPending = true; delProblem('');
+    book.mark(one.kept, true).then(function (r) {
+      go.disabled = false; keep.disabled = false; delPending = false;
+      // Some kept and one refused: those kept are deleted, and Undo is theirs (Codex on #123).
+      if (r.outcome !== 'saved' && r.kept.length === 0) { delProblem(r.outcome); return; }
+      delDialog.close();
+      // Undo's names are only those of the rows deleted: a refused row's name never blocks it (Codex on #123, r2).
+      gone = { name: one.name, kept: r.kept, names: r.kept.map(function (id) { return one.named[id]; }).filter(function (n) { return typeof n === 'string'; }), partly: r.outcome !== 'saved' };
+      who(main, one.name); said(gone.partly ? 'deleted-partly' : 'deleted'); draw();
+    });
+  });
+  var undoing = false;
+  all('[data-undo]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (!gone || undoing) return;
+      var one = gone, lower = one.names.map(function (n) { return n.toLowerCase(); });
+      // One person is kept per name (restoreContact's ContactNameTaken): someone kept under a name it would bring
+      // back stands.
+      if (book.people().some(function (p) { return lower.indexOf(p.name.toLowerCase()) >= 0; })) { gone = null; who(main, one.name); said('taken'); return; }
+      undoing = true;
+      all('[data-undo]').forEach(function (u) { u.disabled = true; });
+      book.mark(one.kept, false).then(function (r) {
+        undoing = false;
+        all('[data-undo]').forEach(function (u) { u.disabled = false; });
+        // Only this Undo's own state (Codex on #123): a delete made since stands with its own Undo.
+        if (gone !== one) { draw(); return; }
+        who(main, one.name);
+        if (r.outcome === 'saved') { gone = null; said('restored'); }
+        else if (r.outcome === 'refused') { gone = null; said('undo-refused'); }
+        else said('undo-failed');
+        draw();
+      });
     });
   });
 
