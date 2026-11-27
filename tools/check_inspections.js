@@ -183,6 +183,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const s = server(); seed(s);
       const { page, ctx, errs, away, calls, sockets, res } = await open(browser, { server: s, w, hash: '#' + INSP });
       const c = calls[0] || { headers: {}, body: {} };
+      ok(label + ': asks for pages of 5000 (the server\'s most since 2026-11-27)', calls.every((x) => x.body.limit === 5000), JSON.stringify(calls.map((x) => x.body.limit)));
       ok(label + ': opens with no errors, asks only the sync function, as the signed-in inspector, from the start', errs.length === 0 && away.length === 0 && c.headers.authorization === 'Bearer test-access-1' && /^web-[0-9a-f]{18}$/.test(c.body.device) && c.body.after === null, errs.concat(away).join(' | '));
       const csp = res.headers()['content-security-policy'] || '';
       ok(label + ': served with the signed-in pages\' rule, plus this site (its template copies), the live socket to Inspyx\'s server and Spex\'s relay socket (Edit with AI), nothing else', /connect-src 'self' https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/chat---spex-relay-yu5bdad2fa-uc\.a\.run\.app;/.test(csp) && /script-src 'self'(;|$)/.test(csp) && res.headers()['cache-control'] === 'no-store', csp.slice(0, 120));

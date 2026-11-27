@@ -72,7 +72,7 @@
   }
 
   function exchange() {
-    return auth.ask('inspection-sync', { device: me, push: [], after: point, limit: 1000 }, DEADLINE).then(function (r) {
+    return auth.ask('inspection-sync', { device: me, push: [], after: point, limit: 5000 }, DEADLINE).then(function (r) {
       if (r === null) { root.location.replace('/signin'); return false; }
       if (r.status !== 200 || !r.json || !Array.isArray(r.json.fields)) throw new Error('sync');
       r.json.fields.forEach(take);

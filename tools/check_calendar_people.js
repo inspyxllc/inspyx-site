@@ -239,6 +239,7 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     const s = server(); seed(s);
     const { page, ctx, errs, away, calls, sockets, res, ping } = await open(browser, { server: s, path: 'calendar' });
     ok('calendar: opens with no errors, asks only the sync function, as the signed-in inspector, and sends nothing', errs.length === 0 && away.length === 0 && sendsNothing(calls) && calls[0].body.after === null, errs.concat(away).join(' | '));
+    ok('calendar: asks for pages of 5000 (the server\'s most since 2026-11-27: 11 pages for 51,542 fields, not 53)', calls.every((c) => c.body.limit === 5000), JSON.stringify(calls.map((c) => c.body.limit)));
     ok('calendar: served with the live pages\' rule (the signed-in rule plus the live socket)', liveRule(res));
     ok('calendar: opens on this month, November 2026', (await vis(page, '[data-month]')).join() === 'November 2026' && new URL(page.url()).hash === '');
     ok('calendar: the week starts on Sunday, and the 1st (a Sunday) needs no blank before it',
