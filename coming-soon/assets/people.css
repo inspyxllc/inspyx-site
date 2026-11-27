@@ -52,3 +52,16 @@
 .ppl-dialog select{-webkit-appearance:none; appearance:none; height:44px; padding-right:38px; cursor:pointer;
   background-image:linear-gradient(45deg, transparent 50%, #4A5362 50%), linear-gradient(135deg, #4A5362 50%, transparent 50%);
   background-position:calc(100% - 20px) 19px, calc(100% - 15px) 19px; background-size:5px 5px, 5px 5px; background-repeat:no-repeat}
+
+/* Deleting a kept person (the rehearsal, round 2): only people kept in People can go; the inspections keep theirs. */
+.ppl-head{display:flex; gap:8px; align-items:flex-start; justify-content:space-between; min-width:0}
+.ppl-head h3{min-width:0}
+.ppl-del{flex:none; min-height:32px; margin:-6px -8px 0 0; padding:0 10px; border:0; border-radius:10px; background:none; color:#8C1D18; font:600 13.5px var(--font); cursor:pointer}
+.ppl-del:hover, .ppl-del:focus-visible{background:#FBEDEC}
+.ppl-del[hidden]{display:none}
+.ppl-del-what{margin:0; font-size:15px; line-height:1.45; color:var(--ink-soft)}
+.ppl-dialog .btn.danger{background:#B3261E; color:#fff}
+.ppl .say p[data-say="deleted"], .ppl .say p[data-say="restored"]{display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; padding:10px 12px; border-radius:12px; background:#E3F4EA}
+.ppl .say p[data-say="deleted"][hidden], .ppl .say p[data-say="restored"][hidden]{display:none}
+.ppl .say p[data-say="taken"], .ppl .say p[data-say="undo-failed"], .ppl .say p[data-say="undo-refused"]{padding:10px 12px; border-radius:12px; background:#FBEDEC; color:#8C1D18}
+.ppl-undo{min-height:32px; padding:0 12px; border:0; border-radius:999px; background:#fff; color:var(--ink); font:600 14px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}

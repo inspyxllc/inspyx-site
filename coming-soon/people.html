@@ -38,7 +38,12 @@
 <p class="ppl-import"><a href="/people-import">Bring in your people from another app →</a> · <a href="/history-import">or your past inspections →</a></p>
 <button class="btn" type="button" data-add-person>Add a person</button>
 </div>
-<div class="say" role="status"><p class="ok" data-say="saved" hidden>Saved. It’s in People on your phone too, at its next sync.</p></div>
+<div class="say" role="status"><p class="ok" data-say="saved" hidden>Saved. It’s in People on your phone too, at its next sync.</p>
+<p class="ok" data-say="deleted" hidden><span>Deleted <b data-v="who"></b> from People, here and on your phone.</span> <button type="button" class="ppl-undo" data-undo>Undo</button></p>
+<p class="ok" data-say="restored" hidden>Brought back <b data-v="who"></b>.</p>
+<p data-say="taken" hidden>Someone else is kept as <b data-v="who"></b> now, so this one stays deleted.</p>
+<p data-say="undo-failed" hidden><span>That didn’t go through. Check your connection and try again.</span> <button type="button" class="ppl-undo" data-undo>Undo</button></p>
+<p data-say="undo-refused" hidden>Your phone changed <b data-v="who"></b> just now. Look for them on your phone to bring them back.</p></div>
 <p class="ppl-live" role="status">
 <span data-live="connecting">Connecting…</span>
 <span data-live="live" hidden>Live: a change on your phone shows here within seconds.</span>
@@ -86,7 +91,23 @@
 </form>
 </dialog>
 
-<template data-t="person"><li class="ppl-one"><h3 data-v="name"></h3><p class="ppl-company" data-v="company" hidden></p><p class="ppl-reach"><a data-v="email" hidden></a><a data-v="phone" hidden></a></p><ul class="ppl-jobs"></ul></li></template>
+<dialog class="ppl-dialog" data-del-dialog aria-labelledby="ppl-del-title">
+<form method="dialog" data-del-form>
+<h2 id="ppl-del-title">Delete <span data-v="who"></span>?</h2>
+<p class="ppl-del-what">They leave People, here and on your phone. You can undo it.</p>
+<p class="ppl-del-what" data-del-jobs hidden>They stay on their inspections, so they still show here with those.</p>
+<div class="ppl-problems" role="alert">
+<p data-del-problem="failed" hidden>That didn’t go through. Check your connection and try again.</p>
+<p data-del-problem="refused" hidden>Your phone changed them just now. Close this and try again.</p>
+</div>
+<div class="ppl-actions">
+<button class="btn danger" type="submit">Delete</button>
+<button class="btn quiet" type="button" data-del-keep>Keep them</button>
+</div>
+</form>
+</dialog>
+
+<template data-t="person"><li class="ppl-one"><div class="ppl-head"><h3 data-v="name"></h3><button type="button" class="ppl-del" data-del hidden><span>Delete</span></button></div><p class="ppl-company" data-v="company" hidden></p><p class="ppl-reach"><a data-v="email" hidden></a><a data-v="phone" hidden></a></p><ul class="ppl-jobs"></ul></li></template>
 <template data-t="job"><li><a href="#"><strong data-v="title"></strong><span data-v="day"></span></a></li></template>
 </body>
 </html>
