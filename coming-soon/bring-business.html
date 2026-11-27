@@ -81,21 +81,24 @@
 
 <div class="br-or"><span>or bring in a file</span></div>
 <label class="pi-drop br-drop" data-drop>
-<input type="file" accept=".csv,.tsv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-pick>
+<input type="file" accept=".csv,.tsv,.txt,.xlsx,.json,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-pick>
 <span class="pi-drop-t">Drop a file here, or choose it</span>
 <span class="pi-drop-s">Your clients, agents or past inspections, as your old app exported them (CSV or Excel, up to 10 MB). Templates and report PDFs come here next.</span>
 </label>
 <div class="br-file-kind" data-file-kind role="radiogroup" aria-label="What this file holds" hidden>
 <span data-file-name></span>
+<span class="br-file-what" data-file-what hidden></span>
 <button type="button" class="pi-chip" role="radio" data-fk="clients">Clients</button>
 <button type="button" class="pi-chip" role="radio" data-fk="agents">Agents</button>
 <button type="button" class="pi-chip" role="radio" data-fk="past">Past inspections</button>
 </div>
 
 <p class="pi-say" data-say role="status" hidden></p>
+<p class="br-to-converter" data-to-converter hidden><a class="btn small" href="/templates">Open Templates</a></p>
 
 <section class="br-preview" data-preview hidden>
 <h2 data-found></h2>
+<p class="br-unread" data-unread hidden></p>
 <div class="br-cards">
 <article class="br-card" data-card="people"><h3>Clients and agents</h3><p class="br-count" data-count-people></p><ul class="br-list" data-list-people></ul></article>
 <article class="br-card" data-card="past"><h3>Past inspections</h3><p class="br-count" data-count-past></p><ul class="br-list" data-list-past></ul></article>
@@ -135,6 +138,9 @@
 <span data-w="stopped">Stopped: nothing is brought in, and your key is forgotten.</span>
 <span data-w="found">Found in your {platform} account</span>
 <span data-w="found-file">Found in {file}</span>
+<span data-w="to-converter">This is {what}: the converter turns it into an Inspyx template. Open Templates and convert this file there.</span>
+<span data-w="unread-1">A column Inspyx doesn't read, kept in each one's notes: {columns}</span>
+<span data-w="unread-n">{n} columns Inspyx doesn't read, kept in each one's notes: {columns}</span>
 <span data-w="people-count">{clients} {clientsWord} · {agents} {agentsWord}</span>
 <span data-w="client-1">client</span><span data-w="client-n">clients</span>
 <span data-w="agent-1">agent</span><span data-w="agent-n">agents</span>
