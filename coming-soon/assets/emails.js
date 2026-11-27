@@ -160,9 +160,42 @@
       if (!r || r.status !== 200 || !r.json || typeof r.json.subject !== 'string' || typeof r.json.text !== 'string') { $('[data-mail-failed]', li).hidden = false; return; }
       $('[data-mail-subject]', li).textContent = r.json.subject;
       $('[data-mail-text]', li).textContent = r.json.text;
+      // The designed email when the function made one (the one that goes); its plain words otherwise.
+      var designed = typeof r.json.html === 'string' && r.json.html !== '';
+      $('[data-mail-text]', li).hidden = designed;
+      $('[data-mail-note="plain"]', li).hidden = designed;
+      $('[data-mail-note="designed"]', li).hidden = !designed;
+      $('[data-mail-designed]', li).hidden = !designed;
+      if (designed) showDesigned(li, r.json.html);
       $('[data-mail]', li).hidden = false;
     }, function () { $('[data-mail-wait]', li).hidden = true; $('[data-mail-failed]', li).hidden = false; });
   }
+
+  /* The designed email in its own sandboxed frame (/email-frame: scripts, but its own opaque origin, so it reaches
+     nothing of this page): sent the html once it says it's ready, and sized to the height it reports. */
+  var frames = [];   // { frame, html, ready }
+  function showDesigned(li, html) {
+    var box = $('[data-mail-designed]', li), f = frames.filter(function (x) { return x.box === box; })[0];
+    if (!f) {
+      var frame = document.createElement('iframe');
+      frame.setAttribute('sandbox', 'allow-scripts');
+      frame.setAttribute('referrerpolicy', 'no-referrer');
+      frame.title = $('summary', li).textContent;
+      f = { box: box, frame: frame, html: html, ready: false };
+      frames.push(f);
+      box.appendChild(frame);
+      frame.src = '/email-frame';
+      return;
+    }
+    f.html = html;
+    if (f.ready) f.frame.contentWindow.postMessage({ emailFrame: 'show', html: html }, '*');
+  }
+  window.addEventListener('message', function (e) {
+    var f = frames.filter(function (x) { return x.frame.contentWindow === e.source; })[0], d = e.data;
+    if (!f || !d || typeof d.emailFrame !== 'string') return;
+    if (d.emailFrame === 'ready') { f.ready = true; f.frame.contentWindow.postMessage({ emailFrame: 'show', html: f.html }, '*'); }
+    if (d.emailFrame === 'height' && typeof d.height === 'number' && isFinite(d.height)) f.frame.style.height = Math.min(Math.max(Math.ceil(d.height), 120), 4000) + 'px';
+  });
 
   var reviewDraft = false;   // the link box holds a change not yet saved
   $('[data-review-url]', main).addEventListener('input', function () { reviewDraft = true; });
