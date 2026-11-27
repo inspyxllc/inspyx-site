@@ -231,7 +231,7 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     await o.page.locator('[data-fk="clients"]').click();
     await until(async () => await o.page.locator('[data-preview]').isVisible());
     ok('a clients file: found in the file, counted, nothing kept yet', (await o.page.locator('[data-found]').textContent()) === 'Found in clients.csv' &&
-      (await o.page.locator('[data-count-people]').textContent()) === '3 clients · 0 agents' && sync.pushes.length === 0, await o.page.locator('[data-count-people]').textContent());
+      (await o.page.locator('[data-count-people]').textContent()) === '3 clients' && sync.pushes.length === 0, await o.page.locator('[data-count-people]').textContent());
     await o.page.locator('[data-go]').click();
     await until(async () => await o.page.locator('[data-done]').isVisible(), 10000);
     ok('brought in: Daniel and Zoe new, Ana filled (once)', JSON.stringify(names(sync.people())) === JSON.stringify(['ana reyes', 'daniel ortiz', 'zoe park']), JSON.stringify(names(sync.people())));
@@ -322,7 +322,7 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     await until(async () => await o.page.locator('[data-preview]').isVisible());
     await o.page.waitForTimeout(3000);
     ok('and the read Spectora answers late never lands: the preview is the file\'s', (await o.page.locator('[data-found]').textContent()) === 'Found in clients.csv' &&
-      (await o.page.locator('[data-count-people]').textContent()) === '1 client · 0 agents', await o.page.locator('[data-count-people]').textContent());
+      (await o.page.locator('[data-count-people]').textContent()) === '1 client', await o.page.locator('[data-count-people]').textContent());
     await o.ctx.close();
   });
 
@@ -423,6 +423,85 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
       !!arrived && arrived.name === 'Company Templates.json' && arrived.text === '{"sections":[]}', JSON.stringify(arrived));
 
     await o.ctx.close();
+  });
+
+  // The old import pages' column table, in this page since 2026-11-27 (the lead's pick A).
+  await group('what each column holds: for any file; open by itself when a file reads badly; a change re-reads it', async () => {
+    let sync = syncServer(seed()), spx = spxServer(), o = await open(browser, { sync, spx });
+    const pick = (name, text) => o.page.setInputFiles('[data-pick]', { name, mimeType: 'text/csv', buffer: Buffer.from(text, 'utf8') });
+    await pick('clients.csv', 'Name,Email\nDana Reyes,dana@example.com\n');
+    await until(async () => await o.page.locator('[data-preview]').isVisible());
+    ok('a file read well: "Check the columns" is there, closed, each column with its first value and what it holds',
+      await o.page.locator('[data-cols-box]').isVisible() && !(await o.page.locator('[data-cols-box]').evaluate((d) => d.open)) &&
+      JSON.stringify(await o.page.$$eval('[data-cols] tr', (trs) => trs.map((t) => [t.cells[0].textContent, t.cells[1].textContent, t.querySelector('select').value]))) ===
+      JSON.stringify([['Name', 'Dana Reyes', 'fullName'], ['Email', 'dana@example.com', 'email']]));
+    // Headers nothing knows, values that do (the lead's example, 2026-11-27): read by what they hold, the table open to confirm.
+    await pick('who.csv', 'Who,Reach,Mail\nDana Reyes,813-555-0101,dana@example.com\nLee Park,727-555-0100,lee@example.com\n');
+    await until(async () => ((await o.page.locator('[data-count-people]').textContent()) || '') === '2 clients');
+    ok('"Who / Reach / Mail": read by its values, 2 clients, the table open to confirm, Bring in 2',
+      JSON.stringify(await o.page.$$eval('[data-cols] select', (ss) => ss.map((x) => x.value))) === JSON.stringify(['fullName', 'phone', 'email']) &&
+      await o.page.locator('[data-cols-box]').evaluate((d) => d.open) &&
+      (await o.page.locator('[data-cols-bad]').textContent()) === 'Inspyx read these columns by what they hold. Check them, then bring them in.' &&
+      (await o.page.locator('[data-go]').textContent()) === 'Bring in 2' && await o.page.locator('[data-go]').isEnabled());
+    if (SHOTS) { await o.page.locator('[data-cols-box]').scrollIntoViewIfNeeded(); await o.page.screenshot({ path: SHOTS + '/62-bring-columns-by-values.png' }); }
+    // Headers nothing knows, and values that don't say either (names in small letters, a code): nobody can come in yet.
+    await pick('export.csv', 'Col A,Col B,Col C\ndana reyes,813-555-0101,k-1\nlee park,,k-2\n');
+    await until(async () => await o.page.locator('[data-cols-box]').evaluate((d) => d.open));
+    ok('a file read badly: the table opens by itself and says what to choose', (await o.page.locator('[data-cols-bad]').textContent()) === "Inspyx can't tell which column holds the names. Choose it below.");
+    ok('nothing found: no empty cards, no zero counts, and Bring in can\'t be tapped (the lead, 2026-11-27)',
+      await o.page.locator('[data-card="people"]').isHidden() && await o.page.locator('[data-card="past"]').isHidden() && await o.page.locator('[data-card="prices"]').isHidden() &&
+      await o.page.locator('[data-go]').isDisabled());
+    if (SHOTS) { await o.page.locator('[data-cols-box]').scrollIntoViewIfNeeded(); await o.page.screenshot({ path: SHOTS + '/60-bring-columns-bad.png' }); }
+    // Two choices back to back, the second before the first is read again: both count (Codex on #106).
+    await o.page.evaluate(() => {
+      const pickIn = (i, v) => { const sel = document.querySelector('[data-col="' + i + '"]'); sel.value = v; sel.dispatchEvent(new Event('change', { bubbles: true })); };
+      pickIn(0, 'fullName'); pickIn(1, 'phone');
+    });
+    await until(async () => (await o.page.locator('[data-count-people]').textContent()).startsWith('2 clients') && (await o.page.locator('[data-cols-bad]').isHidden()));
+    await o.page.waitForTimeout(500);
+    ok('his choice re-reads the file: two clients, the bad line gone, his choices kept', (await o.page.locator('[data-count-people]').textContent()).startsWith('2 clients') &&
+      (await o.page.locator('[data-col="0"]').inputValue()) === 'fullName' && (await o.page.locator('[data-col="1"]').inputValue()) === 'phone');
+    if (SHOTS) { await o.page.locator('[data-cols-box]').scrollIntoViewIfNeeded(); await o.page.screenshot({ path: SHOTS + '/61-bring-columns-fixed.png' }); }
+    // Clients to Agents and back (and the chip already chosen): his column choices stay (Codex on #138).
+    await o.page.locator('[data-fk="agents"]').click();
+    await until(async () => ((await o.page.locator('[data-count-people]').textContent()) || '') === '2 agents');
+    await o.page.locator('[data-fk="agents"]').click();
+    await o.page.waitForTimeout(300);
+    await o.page.locator('[data-fk="clients"]').click();
+    await until(async () => ((await o.page.locator('[data-count-people]').textContent()) || '') === '2 clients');
+    ok('switching Clients and Agents keeps his column choices', (await o.page.locator('[data-col="0"]').inputValue()) === 'fullName' &&
+      (await o.page.locator('[data-col="1"]').inputValue()) === 'phone');
+    // A column he sets to "Not used" stays so when he changes another (the reader would guess it again; Codex on #106).
+    await o.page.locator('[data-col="2"]').selectOption('');
+    await until(async () => (await o.page.locator('[data-col="2"]').inputValue()) === '');
+    await o.page.locator('[data-col="1"]').selectOption('mobile');
+    await until(async () => (await o.page.locator('[data-col="1"]').inputValue()) === 'mobile');
+    ok('a column he set to "Not used" stays so when he changes another', (await o.page.locator('[data-col="2"]').inputValue()) === '');
+    await o.page.locator('[data-col="2"]').selectOption('notes');
+    await until(async () => (await o.page.locator('[data-col="2"]').inputValue()) === 'notes');
+    await o.page.locator('[data-col="1"]').selectOption('phone');
+    await until(async () => (await o.page.locator('[data-col="1"]').inputValue()) === 'phone');
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 10000);
+    const lee = sync.people().find((r) => r.data.name === 'lee park'), dana = sync.people().find((r) => r.data.name === 'dana reyes');
+    ok('brought in as he matched it: Dana with her phone and her code in her notes, Lee', !!lee && !!dana && dana.data.phone === '813-555-0101' && /k-1/.test(dana.data.note || ''), JSON.stringify(dana && dana.data));
+    await o.ctx.close();
+    // A past inspections file read badly: the table opens with the history's own words.
+    sync = syncServer(seed()); spx = spxServer(); o = await open(browser, { sync, spx });
+    await pick('jobs.csv', 'When,Where,Who\n2025-04-02,12 Palm Way,Dana Reyes\n');
+    await until(async () => await o.page.locator('[data-file-kind]').isVisible());
+    await o.page.locator('[data-fk="past"]').click();
+    await until(async () => ((await o.page.locator('[data-cols-bad]').textContent()) || '').includes('the date'));
+    ok('past inspections read badly: it says to choose the date, the address or the client', (await o.page.locator('[data-cols-bad]').textContent()) === "Inspyx can't tell which columns hold the date, the address or the client. Choose them below.");
+    ok('no errors', o.errs.length === 0, o.errs.join(' | '));
+    await o.ctx.close();
+  });
+
+  await group('the old import pages lead here (the lead, 2026-11-27)', async () => {
+    for (const old of ['people-import', 'history-import', 'people-import.html']) {
+      const r = await fetch(url + old, { redirect: 'manual' });
+      ok('/' + old + ' redirects to /bring-business', r.status === 307 && r.headers.get('location') === '/bring-business', r.status + ' ' + r.headers.get('location'));
+    }
   });
 
   await group('own pass: another account signed in from another tab', async () => {

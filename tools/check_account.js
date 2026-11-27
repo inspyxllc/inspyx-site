@@ -46,9 +46,9 @@ const vis = (page, sel) => page.$$eval(sel, (els) => els.filter((e) => e.getClie
   await group('the page', async () => {
     const { page, ctx, errs, away } = await open(browser, () => 200);
     ok('names who is signed in', (await vis(page, '.who')).join() === 'Signed in as ' + WHO);
-    ok('the business in one place: company, prices, agreements, booking, emails, payments, templates, people, past inspections (the rehearsal, round 2), then the plan', JSON.stringify(await page.$$eval('.acct-links a', (as) => as.map((a) => a.getAttribute('href')))) === JSON.stringify(['/profile', '/prices', '/agreements', '/booking', '/emails', '/payments', '/template', '/people', '/history-import', '/plan']));
+    ok('the business in one place: company, prices, agreements, booking, emails, payments, templates, people, past inspections (the rehearsal, round 2), then the plan', JSON.stringify(await page.$$eval('.acct-links a', (as) => as.map((a) => a.getAttribute('href')))) === JSON.stringify(['/profile', '/prices', '/agreements', '/booking', '/emails', '/payments', '/template', '/people', '/bring-business', '/plan']));
     // Each one leads to a page this site has (a link that goes nowhere fails here).
-    for (const href of ['/template', '/people', '/history-import']) {
+    for (const href of ['/template', '/people', '/bring-business']) {
       const r = await fetch(new URL(href, page.url()).href);
       ok(href + ' is a page here', r.status === 200, String(r.status));
     }
