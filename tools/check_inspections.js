@@ -527,6 +527,36 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     });
   }
 
+  await group('send the report: a change while the links are made stops it; a remade report is heard without a reload (Codex on #130)', async () => {
+    const s = server(); seed(s);
+    const C = '6f1c2a3b-0000-4000-8000-0000000000d1';
+    s.phone('person', C, 'role', 'client'); s.phone('person', C, 'name', 'Ana Diaz'); s.phone('person', C, 'email', 'ana@example.com'); s.phone('person', C, 'position', 0);
+    const pub = [{ id: INSP, at: Date.now() + 60000 }];
+    let changed = false;
+    const r = await open(browser, { server: s, hash: '#' + INSP, published: pub,
+      report: async (b) => {
+        if (b.action === 'link' && !changed) {
+          changed = true;
+          s.push('phone-bbbbbbbbbbbbbbbbbb', { inspection: INSP, entity: 'item', id: ITEM, field: 'note', value: 'Changed during', at: pub[0].at + 1000 });
+          await new Promise((d) => setTimeout(d, 1500));   // the page hears the change before this answer
+        }
+        return { status: 200, json: {} };
+      } });
+    await until(async () => (await vis(r.page, '[data-send-go]')).length === 1);
+    await r.page.click('[data-send-go]');
+    await r.page.waitForTimeout(100);
+    r.ping();
+    const sawOutdated = await until(async () => (await vis(r.page, '[data-send-state="outdated"]')).length === 1);
+    await r.page.waitForTimeout(2200);   // past the held link answer: whatever would go has gone
+    ok('a change while the links were made: never sent', sawOutdated && !r.reportCalls.some((c) => c.action === 'send'),
+      JSON.stringify(r.reportCalls.map((c) => c.action)));
+    // Remade on the phone: published again, later; heard on the next ping, no reload.
+    pub[0].at = pub[0].at + 120000;
+    r.ping();
+    ok('remade: Send is back without a reload', await until(async () => (await vis(r.page, '[data-send-state="ready"]')).length === 1, 5000));
+    await r.ctx.close();
+  });
+
   await group('send the report: an answer that comes after switching inspections stays with its own (Codex on #130)', async () => {
     const s = server(); seed(s);
     const C = '6f1c2a3b-0000-4000-8000-0000000000d1';

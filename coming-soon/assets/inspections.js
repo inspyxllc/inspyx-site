@@ -1290,6 +1290,8 @@
     });
     chain.then(function (ok) {
       if (!ok) { stop('failed'); return; }
+      // Checked again just before it goes: a change that came in while the links were being made (Codex on #130).
+      if (lastChange(id) > reports[id].at) { stop('outdated'); return; }
       return auth.ask('report', { action: 'send', inspection_id: id, recipients: keys, subject: subject, message: message }, DEADLINE).then(function (r) {
         if (r === null) { window.location.replace('/signin'); return; }
         if (r.status === 429) { stop('daily'); return; }
@@ -1460,17 +1462,17 @@
   $('[data-flagfilter]').addEventListener('click', function () { flagOnly = !flagOnly; renderOne(); });
   var finding = null;
   $('[data-find]').addEventListener('input', function () { clearTimeout(finding); finding = setTimeout(renderList, 120); });
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); pullPublished(); } });
   // The business pull rides the same clock (Codex on inspyx-site #89): a fee changed on the phone or an updated
   // agreement signed reaches an open tab within a minute, never only on a tab switch. It asks from where it left off.
-  setInterval(function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } }, FALLBACK);
+  setInterval(function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); pullPublished(); } }, FALLBACK);
 
   if (!auth.who()) { window.location.replace('/signin'); return; }
   main.hidden = false;
   auth.listen(function (ping) {
     if (ping && ping.signedOut) { window.location.replace('/signin'); return; }
     if (ping && ping.joined) { listening = true; showLive('live'); }
-    else pullBusiness();
+    else { pullBusiness(); pullPublished(); }
     sync();
   });
   sync();
