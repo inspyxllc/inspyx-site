@@ -4,5 +4,5 @@ The phone's own people reader and import planner (inspyx-mobile `tool/web_import
 web. Do not edit: build it again from inspyx-mobile main with `tool/web_import/build.sh`, then copy
 `build/web_import/inspyx_import.js` here and update the lines below.
 
-- Built from inspyx-mobile commit `94bd1a97` (main, merge of #755: adds `spectora` and `spectoraStep`, the Spectora reader and the app's own retry rule), 2026-11-26.
-- sha256 `cbb4bf3bf0c852861a4b1f4b99b19c8ecaaa5a85efbf89c8754ff24d4b9c9a1b`, 272,415 bytes.
+- Built from inspyx-mobile branch `claude/web-import-pasted-key` at `c7214810` (PR #803: adds `pastedKey`, the one "Paste your key" box), 2026-11-27. REBUILD FROM MAIN once #803 merges, before this page ships.
+- sha256 `13a35d29471e58b44253ffebc72da61ed319eadf09f7d1ba23525da638fac624`, 276,684 bytes.
