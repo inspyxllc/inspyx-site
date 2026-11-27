@@ -84,6 +84,21 @@ async function open(browser, o) {
     }
     away.push(u); return route.abort();
   });
+  // A body that stalls: the first save gets its headers, then a body that never ends.
+  if (o.stallSave) {
+    await page.addInitScript(() => {
+      const real = window.fetch;
+      let stalled = false;
+      window.fetch = function (input, init) {
+        if (!stalled && init && init.method === 'POST' && /"repair":"save"/.test(String(init.body))) {
+          stalled = true;
+          const body = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode('{"state":')); } });
+          return Promise.resolve(new Response(body, { status: 200, headers: { 'content-type': 'application/json' } }));
+        }
+        return real.apply(this, arguments);
+      };
+    });
+  }
   const res = await page.goto(url + (o.at || ('r#' + (o.key || KEY))), { waitUntil: 'load' });
   return { ctx, page, errs, away, asked, res };
 }
@@ -164,6 +179,24 @@ const shot = async (page, sel, name) => {
       await d.ctx.close();
     });
   }
+
+  await group('a save that stalls mid-body', async () => {
+    const s = server();
+    const { page, ctx, asked } = await open(browser, { server: s, stallSave: true });
+    await page.locator('[data-rr-add="C1.1"]').click();
+    await page.locator('[data-rr-open]').click();
+    await page.locator('[data-rr-item="C1.1"] [data-rr-ask="credit"]').click();
+    await page.locator('[data-rr-amount="C1.1"]').fill('500');
+    await page.locator('[data-rr-share]').click();
+    // Share waits for that save, and shares only what is saved: the stalled one is given up at its deadline
+    // (20 s), and the page is free again: the next Share saves anew, then shares.
+    await new Promise((r) => setTimeout(r, 22000));
+    await page.locator('[data-rr-share]').click();
+    let shared = false;
+    for (let i = 0; i < 100 && !shared; i++) { shared = asked.some((b) => b.repair === 'save') && asked.some((b) => b.repair === 'share'); if (!shared) await new Promise((r) => setTimeout(r, 100)); }
+    ok('is given up at its deadline, and the page is free again: the next Share saves, then shares', shared, JSON.stringify(asked.map((b) => b.repair)));
+    await ctx.close();
+  });
 
   await group('Share right after a change: what is shared is what is on the page', async () => {
     const s = server();

@@ -80,6 +80,33 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
 (async () => {
   const browser = await engine.launch();
 
+  // ---- an answer that stalls mid-body: its headers come, its body never ends. It is given up at its deadline and
+  // the page says it couldn't open, with Try again, never waiting for good. On the sample only.
+  if (!PROD) {
+    const stalled = await open(browser, {
+      init: () => {
+        const real = window.fetch;
+        let stalled = false;
+        window.fetch = function (input, init) {
+          const u = typeof input === 'string' ? input : input.url;
+          if (!stalled && /report\.json/.test(u)) {
+            stalled = true;
+            const body = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode('{"state":')); } });
+            return Promise.resolve(new Response(body, { status: 200, headers: { 'content-type': 'application/json' } }));
+          }
+          return real.apply(this, arguments);
+        };
+      },
+    });
+    let failedShown = false;
+    for (let i = 0; i < 300 && !failedShown; i++) {
+      failedShown = await stalled.page.evaluate(() => document.querySelector('[data-state="failed"]') !== null);
+      if (!failedShown) await new Promise((r) => setTimeout(r, 100));
+    }
+    ok('an answer that stalls mid-body is given up at its deadline: the report says it couldn\'t open', failedShown);
+    await stalled.ctx.close();
+  }
+
   // ---- a reinspection (content /15, 2026-11-26): its cover, the recheck's tiles in the PDF's colours, the summary
   // for the agent (as text), and each rechecked finding's result first on its card; an ordinary report shows none.
   // On the sample only: the live site has no sample to open (Codex on #118).
@@ -412,26 +439,36 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     ok('a clip opens as a player: its still as the poster, its controls, its sound on, and it does not play on its own',
       v1.shown && !v1.img && v1.controls && v1.src === MOVIES + 'clip_audio.mp4?token=t' && v1.poster.length > 0 && v1.preload === 'none' && v1.playsinline &&
       v1.muted === false && v1.paused && v1.t === 0 && !v1.autoplay, JSON.stringify(v1));
-    const played = await page.evaluate(async () => {
-      const v = document.querySelector('.viewer-video');
-      await v.play();
-      await new Promise((done) => setTimeout(done, 1500));
-      return { t: v.currentTime, paused: v.paused, d: Math.round(v.duration), err: v.error && v.error.code };
-    });
-    ok('tapped, it plays (H.264 with AAC, as the phone makes it)', played.t > 0.5 && !played.paused && played.d === 6 && !played.err, JSON.stringify(played));
+    // Playing needs the sample's own movies (media/ in the sample folder); a sample without them skips, and says so.
+    const MOVIES_HERE = fs.existsSync(path.join(sampleDir, 'media'));
+    if (MOVIES_HERE) {
+      const played = await page.evaluate(async () => {
+        const v = document.querySelector('.viewer-video');
+        await v.play();
+        await new Promise((done) => setTimeout(done, 1500));
+        return { t: v.currentTime, paused: v.paused, d: Math.round(v.duration), err: v.error && v.error.code };
+      });
+      ok('tapped, it plays (H.264 with AAC, as the phone makes it)', played.t > 0.5 && !played.paused && played.d === 6 && !played.err, JSON.stringify(played));
+    } else {
+      console.log('SKIP  tapped, it plays (the sample has no media/ folder)');
+    }
     // Stepping on stops it and lets go of it.
     await page.keyboard.press('ArrowRight');
     await page.waitForTimeout(300);
     const v2 = await page.evaluate(() => { const v = document.querySelector('.viewer-video'); return { shown: !v.hidden, src: v.getAttribute('src'), paused: v.paused, muted: v.muted, img: !document.querySelector('.viewer-img').hidden }; });
     ok('stepping on stops the clip and lets go of it; the next one, slowed and silent, waits muted',
       v2.shown && v2.src === MOVIES + 'slowmo.mp4?token=t' && v2.paused && v2.muted === true && !v2.img, JSON.stringify(v2));
-    const slow = await page.evaluate(async () => {
-      const v = document.querySelector('.viewer-video');
-      await v.play();
-      await new Promise((done) => setTimeout(done, 1200));
-      return { t: v.currentTime, d: Math.round(v.duration), err: v.error && v.error.code, gone: !document.querySelector('.viewer-video-gone').hidden };
-    });
-    ok('a movie with no sound plays cleanly, muted, at its slowed length', slow.t > 0.3 && slow.d === 80 && !slow.err && !slow.gone, JSON.stringify(slow));
+    if (MOVIES_HERE) {
+      const slow = await page.evaluate(async () => {
+        const v = document.querySelector('.viewer-video');
+        await v.play();
+        await new Promise((done) => setTimeout(done, 1200));
+        return { t: v.currentTime, d: Math.round(v.duration), err: v.error && v.error.code, gone: !document.querySelector('.viewer-video-gone').hidden };
+      });
+      ok('a movie with no sound plays cleanly, muted, at its slowed length', slow.t > 0.3 && slow.d === 80 && !slow.err && !slow.gone, JSON.stringify(slow));
+    } else {
+      console.log('SKIP  a movie with no sound plays cleanly (the sample has no media/ folder)');
+    }
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
     const closed = await page.evaluate(() => { const v = document.querySelector('.viewer-video'); return { src: v.getAttribute('src'), paused: v.paused, open: document.querySelectorAll('dialog[open]').length }; });
@@ -446,7 +483,11 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
     await page.click('.viewer-live');
     await page.waitForTimeout(600);
     const l2 = await page.evaluate(() => { const v = document.querySelector('.viewer-video'); return { video: !v.hidden, playing: !v.paused, muted: v.muted, controls: v.controls, img: !document.querySelector('.viewer-img').hidden }; });
-    ok('pressed, its movie plays over the still, with its sound', l2.video && l2.playing && l2.muted === false && !l2.controls && !l2.img, JSON.stringify(l2));
+    if (MOVIES_HERE) {
+      ok('pressed, its movie plays over the still, with its sound', l2.video && l2.playing && l2.muted === false && !l2.controls && !l2.img, JSON.stringify(l2));
+    } else {
+      console.log('SKIP  pressed, its movie plays over the still (the sample has no media/ folder)');
+    }
     await page.waitForFunction(() => document.querySelector('.viewer-video').hidden, null, { timeout: 8000 }).catch(() => {});
     const l3 = await page.evaluate(() => ({ img: !document.querySelector('.viewer-img').hidden, video: !document.querySelector('.viewer-video').hidden, btn: !document.querySelector('.viewer-live').hidden }));
     ok('when it ends, the still comes back, ready to play again', l3.img && !l3.video && l3.btn, JSON.stringify(l3));

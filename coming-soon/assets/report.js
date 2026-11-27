@@ -409,8 +409,8 @@
     freshening = true;
     lastTry = Date.now();
     onceFresh = then ? [then] : [];
-    fetch(src.url, howToAsk(src))
-      .then(function (res) { return res.ok ? res.json() : null; })
+    ask(src.url, howToAsk(src))
+      .then(function (r) { return r.ok ? r.json : null; })
       .then(function (answer) {
         if (!answer || answer.state !== 'open' || !answer.files) return;
         files = answer.files;
@@ -1356,6 +1356,23 @@
   /* The report function is asked by POST, the key in the body: with no cookies and no word of where the
      request came from. A sample is a plain file kept beside the page, fetched the way the page's own files
      are. */
+  /* Every request of this page. One deadline covers the whole answer, its headers AND its body: one that stalls
+     partway is ended with the rest. Settles to {status, ok, json} (json null when the body isn't JSON), or fails as
+     no answer; it settles itself, so a body read that ignores the abort can't hold it. */
+  var DEADLINE = 20000;
+  function ask(url, init) {
+    var stop = typeof AbortController === 'function' ? new AbortController() : null;
+    return new Promise(function (resolve, reject) {
+      var done = false, timer = null;
+      var end = function (r) { if (done) return; done = true; if (timer) clearTimeout(timer); if (r) resolve(r); else reject(new Error('no answer')); };
+      timer = setTimeout(function () { if (stop) stop.abort(); end(null); }, DEADLINE);
+      fetch(url, Object.assign({}, init, stop ? { signal: stop.signal } : {})).then(function (res) {
+        res.json().then(function (j) { end({ status: res.status, ok: res.ok, json: j }); },
+          function () { end({ status: res.status, ok: res.ok, json: null }); });
+      }, function () { end(null); });
+    });
+  }
+
   function howToAsk(src) {
     var body = src.body || (src.key ? { key: src.key } : null);
     return body
@@ -1370,11 +1387,11 @@
   function load() {
     var src = source();
     if (!src) return show(message('gone'));
-    fetch(src.url, howToAsk(src))
-      .then(function (res) {
-        if (res.status === 404 || res.status === 410) return { state: 'gone' };
-        if (!res.ok) throw new Error('status ' + res.status);
-        return res.json();
+    ask(src.url, howToAsk(src))
+      .then(function (r) {
+        if (r.status === 404 || r.status === 410) return { state: 'gone' };
+        if (!r.ok || r.json === null) throw new Error('status ' + r.status);
+        return r.json;
       })
       .then(render, function () { show(message('failed', retry())); });
   }
