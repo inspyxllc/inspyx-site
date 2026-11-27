@@ -13,9 +13,16 @@
 (function () {
   'use strict';
   var auth = window.InspyxAuth, book = window.InspyxPeopleBook, CI = window.InspyxContactsImport;
-  var pastBook = window.InspyxPastBook, PS = window.InspyxPastStore;
+  var pastBook = window.InspyxPastBook, PS = window.InspyxPastStore, priceBook = window.InspyxPriceBook;
   var main = document.querySelector('[data-br]');
-  if (!auth || !book || !CI || !pastBook || !PS || !main) return;
+  if (!auth || !book || !CI || !pastBook || !PS || !priceBook || !main) return;
+  var DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  /* A past inspection's day as the dashboard says it ("Nov 3, 2026"); a day the file wrote its own way stays so. */
+  function dayText(d) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || '');
+    return m ? DAY.format(new Date(+m[1], +m[2] - 1, +m[3])) : d;
+  }
+  var MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
   var MAX = 10 * 1024 * 1024, BATCH = 200, SHOWN = 8, LIMIT = 100, ASK_DEADLINE = 60000;
   var ISN_WEB = false;   // isn-import live: then ISN keys are read here too
   var STAND_IN = '00000000-0000-0000-0000-000000000000';
@@ -58,8 +65,25 @@
     return order.map(function (id) { return byId[id]; });
   }
   function fresh() {
-    return Promise.all([book.pull(), pastBook.pull()].map(function (p) { return Promise.resolve(p); })).then(function () {
-      return book.loaded() && !book.failing() && pastBook.loaded() && !pastBook.failing();
+    var books = [book, pastBook, priceBook];
+    return Promise.all(books.map(function (b) { return Promise.resolve(b.pull()); })).then(function () {
+      return books.every(function (b) { return b.loaded() && !b.failing(); });
+    });
+  }
+  /* The price list's standing services: their names (any case is the same service) and the next place on the list. */
+  function standingPrices() {
+    return priceBook.rows().filter(function (r) { return r.deleted_at == null && r.data && r.data.deletedAt == null; }).map(function (r) { return r.data; });
+  }
+  /* The rows the price list keeps for [lines] (price_list_store.dart's insertService, as Prices writes a new one): a
+     service of its own, no minimum or tax, after the ones there. */
+  function priceRows(lines, me, now, newId) {
+    var top = standingPrices().filter(function (s) { return s.parentId == null; });
+    var place = top.reduce(function (m, s) { return Math.max(m, typeof s.position === 'number' ? s.position : -1); }, -1);
+    return lines.map(function (p) {
+      var data = { id: newId(), ownerAccountId: me, parentId: null, name: p.name, description: p.description == null ? null : p.description,
+        feeCents: p.fee_cents, minutes: p.minutes, minimumFeeCents: null, taxName: null, taxRate: null, position: ++place,
+        createdAt: now, updatedAt: now, deletedAt: null };
+      return { kind: 'price_services', id: data.id, updated_at: now, deleted_at: null, data: data };
     });
   }
 
@@ -98,7 +122,15 @@
         history.read = r2.inspections || [];
       }
     }
-    return { people: people, history: history, left: left };
+    var prices = { push: [], lines: [] };
+    if (!source.file && source.services) {
+      var r3 = parse(imp.spectora('prices', { records: source.services, cut: source.cuts.services }, { existing_prices: standingPrices().map(function (s) { return s.name; }) }));
+      if (r3.status === 'ok') {
+        prices = { push: priceRows(r3.prices || [], me, now, newId), lines: r3.prices || [] };
+        left = left.concat(r3.skipped || []);
+      }
+    }
+    return { people: people, history: history, prices: prices, left: left };
   }
 
   /* ---- the preview ---- */
@@ -118,8 +150,13 @@
     $('[data-count-past]').textContent = pastN ? plural('past', pastN) : words('none-here');
     var lpa = $('[data-list-past]'); lpa.textContent = '';
     (p.history ? p.history.push : []).slice(0, SHOWN).forEach(function (r) {
-      var d = r.data || {}; lpa.appendChild(el('li', null, [d.date || d.dateInFile, d.address].filter(Boolean).join(' · ')));
+      var d = r.data || {}; lpa.appendChild(el('li', null, [dayText(d.date) || d.dateInFile, d.address].filter(Boolean).join(' · ')));
     });
+    var priceN = p.prices.push.length, pc = $('[data-card="prices"]');
+    pc.classList.toggle('is-later', !!source.file);
+    $('[data-count-prices]').textContent = source.file ? words('prices-file') : priceN ? plural('prices', priceN) : words('none-here');
+    var lpr = $('[data-list-prices]'); lpr.textContent = '';
+    p.prices.lines.slice(0, SHOWN).forEach(function (x) { lpr.appendChild(el('li', null, x.name + ' · ' + MONEY.format(x.fee_cents / 100))); });
     var left = p.left.concat(p.history ? p.history.problems.map(function (x) { return { line: x.line, reason: x.problem }; }) : []);
     var det = $('[data-left]'); det.hidden = !left.length;
     if (left.length) {
@@ -127,7 +164,7 @@
       var ul = $('[data-left-list]'); ul.textContent = '';
       left.slice(0, 200).forEach(function (x) { ul.appendChild(el('li', null, x.where ? words('where', x) : words('line', x))); });
     }
-    var n = p.people.push.length + pastN;
+    var n = p.people.push.length + pastN + priceN;
     var go = $('[data-go]'); go.textContent = n ? words('bring-n', { n: n }) : words('bring-0'); go.disabled = busy;
     go.setAttribute('data-n', String(n));
     plan = { n: n };
@@ -186,6 +223,7 @@
   /* ---- read Spectora: every page of each list, waiting or stopping as the app does ---- */
   function readList(key, what, got, mine) {
     var list = what === 'inspections' ? 'records' : what, before = null;
+    var reading = what === 'inspections' ? 'reading-past' : what === 'services' ? 'reading-prices' : 'reading-people';
     var page = function (n, attempt) {
       var body = { key: key, what: what, page: n };
       if (before) body.before = before;
@@ -196,7 +234,7 @@
         if (mine !== picked || a.over) return { over: true };
         if (Array.isArray(a.records)) {
           got[list] = got[list].concat(a.records);
-          say(what === 'inspections' ? 'reading-past' : 'reading-people');
+          say(reading);
           if (what === 'inspections' && !before && typeof a.before === 'string') before = a.before;
           if (a.cut === true) { got.cuts[list] = true; return null; }
           if (a.has_next === true) { if (n >= LIMIT) { got.cuts[list] = true; return null; } return page(n + 1, 0); }
@@ -226,9 +264,9 @@
     var key = pasted.key;
     done = null; $('[data-done]').hidden = true; $('[data-preview]').hidden = true; source = null;
     var mine = ++picked;
-    var got = { platform: 'Spectora', clients: [], agents: [], records: [], cuts: { clients: false, agents: false, records: false } };
+    var got = { platform: 'Spectora', clients: [], agents: [], records: [], services: [], cuts: { clients: false, agents: false, records: false, services: false } };
     say('checking'); lockKey(true);
-    var whats = ['clients', 'agents', 'inspections'];
+    var whats = ['clients', 'agents', 'inspections', 'services'];
     var next = function (i) {
       if (i >= whats.length) return Promise.resolve(null);
       return readList(key, whats[i], got, mine).then(function (end) { return end ? end : next(i + 1); });
@@ -237,7 +275,7 @@
       key = '';
       if (mine !== picked || (end && end.over)) return;
       keyClear(); lockKey(false);
-      var any = got.clients.length + got.agents.length + got.records.length;
+      var any = got.clients.length + got.agents.length + got.records.length + got.services.length;
       if (end && end.message && (!any || end.bad)) { say(null, null, end.message); return; }
       source = got;
       return preview().then(function () { if (end && end.message) say(null, null, end.message); });
@@ -311,14 +349,15 @@
     [].slice.call(main.querySelectorAll('button, textarea, input')).forEach(function (b) { b.disabled = on; });
     if (!on) { seen(); keyBox.disabled = false; }
   }
-  function finished(people, past, nothing) {
+  function finished(people, past, nothing, prices) {
     $('[data-preview]').hidden = true; say(null);
     var ul = $('[data-done-list]'); ul.textContent = '';
     if (nothing) ul.appendChild(el('li', null, words('done-nothing')));
     if (people) ul.appendChild(el('li', null, plural('done-people', people)));
     if (past) ul.appendChild(el('li', null, plural('done-past', past)));
+    if (prices) ul.appendChild(el('li', null, plural('done-prices', prices)));
     $('[data-done]').hidden = false;
-    $('[data-undo]').hidden = !(done && ((done.people && done.people.length) || done.past));
+    $('[data-undo]').hidden = !(done && ((done.people && done.people.length) || done.past || (done.prices && done.prices.length)));
   }
   $('[data-go]').addEventListener('click', function () {
     if (busy || !source || !plan) return;
@@ -328,23 +367,27 @@
       if (!ok) { say('no-people'); return; }
       var p = planAll(function () { return window.crypto.randomUUID(); }, window.crypto.randomUUID());
       if (p.refused) { say(null, null, p.refused); return; }
-      var n = p.people.push.length + (p.history ? p.history.push.length : 0);
+      var n = p.people.push.length + (p.history ? p.history.push.length : 0) + p.prices.push.length;
       // What he saw is not what would be kept now (People changed meanwhile): shown again, nothing kept.
       if (n !== plan.n) { shown(p); return; }
       if (!n) { done = null; finished(0, 0, true); return; }
-      done = { people: [], past: null };
+      done = { people: [], past: null, prices: [] };
       var past = p.history && p.history.push.length ? p.history.push : [];
       var all = n;
       say('bringing', { done: 0, n: all });
       return sendAll(past, pastBook, function (k) { say('bringing', { done: k, n: all }); }).then(function (pr) {
         if (past.length && pr.kept.length) done.past = { importId: past[0].data.importId, n: pr.kept.length };
-        if (pr.broke) { finished(0, pr.kept.length); if (!pr.kept.length) say('failed'); return; }
+        if (pr.broke) { finished(0, pr.kept.length, false, 0); if (!pr.kept.length) say('failed'); return; }
         return sendAll(p.people.push, book, function (k) { say('bringing', { done: pr.kept.length + k, n: all }); }).then(function (res) {
           var keptSet = {}; res.kept.forEach(function (id) { keptSet[id] = true; });
           done.people = p.people.changes.filter(function (c) { return keptSet[c.id]; });
-          if (!done.people.length && !done.past && res.broke) { say('failed'); return; }
-          finished(done.people.length, done.past ? done.past.n : 0);
-          if (res.broke) say('failed');
+          if (res.broke) { finished(done.people.length, done.past ? done.past.n : 0, false, 0); if (!done.people.length && !done.past) say('failed'); else say('failed'); return; }
+          var keptSoFar = pr.kept.length + res.kept.length;
+          return sendAll(p.prices.push, priceBook, function (k) { say('bringing', { done: keptSoFar + k, n: all }); }).then(function (rp) {
+            done.prices = rp.kept;
+            finished(done.people.length, done.past ? done.past.n : 0, false, done.prices.length);
+            if (rp.broke) say('failed');
+          });
         });
       });
     }).catch(function () { say('failed'); }).then(function () { if (mine === picked) lock(false); });
@@ -357,6 +400,11 @@
     lock(true); say('undoing');
     fresh().then(function (ok) {
       if (!ok) { say('undo-failed'); return; }
+      return (done.prices && done.prices.length ? priceBook.mark(done.prices, true) : Promise.resolve({ outcome: 'saved', kept: [] })).then(function (pm) {
+        if (done.prices && done.prices.length) {
+          done.prices = done.prices.filter(function (id) { return pm.kept.indexOf(id) < 0; });
+          if (done.prices.length) { say('undo-failed'); return; }
+        }
       var pastUndo = done.past ? sendAll(PS.undoImport(pastBook.rows(), done.past.importId, me, Date.now()), pastBook) : Promise.resolve({ kept: [], broke: false });
       return pastUndo.then(function (pr) {
         if (done.past) {
@@ -373,6 +421,7 @@
           else say('undo-failed');
         });
       });
+      });
     }).catch(function () { say('undo-failed'); }).then(function () { lock(false); });
   });
 
@@ -381,5 +430,6 @@
     main.hidden = false;
     book.start(function () {});
     pastBook.start(function () {});
+    priceBook.start(function () {});
   });
 })();

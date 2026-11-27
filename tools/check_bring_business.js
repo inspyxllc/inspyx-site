@@ -26,6 +26,10 @@ let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
 const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
 const until = async (fn, ms) => { const end = Date.now() + (ms || 8000); for (;;) { try { if (await fn()) return true; } catch (e) { /* not yet */ } if (Date.now() > end) return false; await new Promise((r) => setTimeout(r, 60)); } };
+/* Spectora's services (made up): two kept, one hidden in Spectora (left off, as the app does), one with no price. */
+const svc = (id, a) => ({ id, type: 'service', attributes: a });
+const SERVICES = [svc('s1', { name: 'Home Inspection', amount: 350, duration: 2.5, hidden: false }), svc('s2', { name: 'Radon', amount: '150.0', hidden: false }),
+  svc('s3', { name: 'Old Mold', amount: 99, hidden: true }), svc('s4', { name: 'Free consult' })];
 const FIXTURE = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'spectora_records.json'), 'utf8'));
 const READER = (() => { const g = {}; new Function('self', 'window', 'globalThis', fs.readFileSync(path.join(__dirname, '../coming-soon/assets/import/inspyx_import.js'), 'utf8'))(g, g, g); return g.inspyxImport; })();
 const J = (t) => (typeof t === 'string' ? JSON.parse(t) : t);
@@ -48,7 +52,8 @@ function syncServer(rows0) {
   };
   const all = () => [...held.values()].map((h) => h.row);
   const alive = (r) => r.deleted_at == null && r.data.deletedAt == null;
-  return { answer, pushes, people: () => all().filter((r) => r.kind === 'inspector_contacts'), past: () => all().filter((r) => r.kind === 'past_inspections' && alive(r)), alive };
+  return { answer, pushes, people: () => all().filter((r) => r.kind === 'inspector_contacts'), past: () => all().filter((r) => r.kind === 'past_inspections' && alive(r)),
+    prices: () => all().filter((r) => r.kind === 'price_services' && alive(r)), alive };
 }
 /* The stand-in spectora-import: one page of each list, from the fixture. */
 function spxServer(over) {
@@ -56,7 +61,7 @@ function spxServer(over) {
   return { calls, next: (body) => {
     calls.push(body);
     if (over) { const a = over(body); if (a) return a; }
-    const list = body.what === 'clients' ? FIXTURE.clients : body.what === 'agents' ? FIXTURE.agents : body.what === 'inspections' ? FIXTURE.records : [];
+    const list = body.what === 'clients' ? FIXTURE.clients : body.what === 'agents' ? FIXTURE.agents : body.what === 'inspections' ? FIXTURE.records : body.what === 'services' ? SERVICES : [];
     return { status: 200, body: Object.assign({ records: list, has_next: false, cut: false }, body.what === 'inspections' ? { before: '2026-11-27T00:00:00Z' } : {}) };
   } };
 }
@@ -101,11 +106,13 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
       const { page } = o;
       ok(label + ': the title and purpose are the app’s, with the how-to in three steps', (await page.locator('h1').textContent()) === 'Bring your business to Inspyx' &&
         (await page.locator('.br-lede').textContent()).indexOf('Paste the key from Spectora or ISN.') === 0 && (await page.locator('.br-how-step').count()) === 3);
+      if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'br-start-' + label + '.png') });
       await page.locator('.br-where summary').click();
+      ok(label + ': “Where do I find my key?” opens on Spectora (most switchers come from Spectora)', await page.locator('ol[data-tab-pane="spectora"]').isVisible() &&
+        await page.locator('ol[data-tab-pane="isn"]').isHidden() && (await page.locator('[data-tab="spectora"]').getAttribute('aria-selected')) === 'true');
       await page.locator('[data-tab="isn"]').click();
       ok(label + ': “Where do I find my key?” shows Spectora’s steps, and ISN’s on its tab', await page.locator('[data-tab-pane="isn"]').first().isVisible() &&
         (await page.locator('ol[data-tab-pane="isn"] li').first().textContent()) === 'In ISN, open Settings, then My Access Keys, and make a key.');
-      if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'br-start-' + label + '.png'), fullPage: true });
       await paste(page, 'abc');
       ok(label + ': a paste that isn’t a key: the app’s words, and Check waits', (await page.locator('[data-sees]').textContent()) === words.unclear && await page.locator('[data-check]').isDisabled());
       await paste(page, 'AKIAEXAMPLEKEY1234 s3cretSECRETs3cretSECRET');
@@ -120,26 +127,37 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
       await page.locator('[data-check]').click();
       await until(async () => await page.locator('[data-preview]').isVisible());
       ok(label + ': it reads clients, agents and past inspections from Spectora, with the key in the body only',
-        JSON.stringify(spx.calls.map((c) => c.what)) === '["clients","agents","inspections"]' && spx.calls.every((c) => c.key === KEY));
+        JSON.stringify(spx.calls.map((c) => c.what)) === '["clients","agents","inspections","services"]' && spx.calls.every((c) => c.key === KEY));
       ok(label + ': the box is emptied once read (the key is forgotten)', (await page.locator('[data-key]').inputValue()) === '');
-      ok(label + ': ONE preview: found in Spectora, people and past inspections counted, prices said to come later',
+      ok(label + ': ONE preview: found in Spectora, people, past inspections and prices counted',
         (await page.locator('[data-found]').textContent()) === 'Found in your Spectora account' && /\d+ clients? · \d+ agents?/.test(await page.locator('[data-count-people]').textContent()) &&
-        /\d+ inspections?/.test(await page.locator('[data-count-past]').textContent()) && (await page.locator('[data-card="prices"] .br-count').textContent()) === 'This page can’t keep these yet.');
+        /\d+ inspections?/.test(await page.locator('[data-count-past]').textContent()) && (await page.locator('[data-count-prices]').textContent()) === '2 services');
       ok(label + ': “Nothing is saved until you tap Bring in.”, and NOTHING was kept yet', (await page.locator('.br-nothing').textContent()) === 'Nothing is saved until you tap Bring in.' && sync.pushes.length === 0);
       const n = +(await page.locator('[data-go]').getAttribute('data-n'));
       ok(label + ': the button says how many: “Bring in N”', (await page.locator('[data-go]').textContent()) === 'Bring in ' + n && n > 0, String(n));
-      if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'br-preview-' + label + '.png'), fullPage: true });
+      if (w === WIDE) {
+        await page.locator('[data-found]').scrollIntoViewIfNeeded();
+        const nav = await page.evaluate(() => { const r = document.querySelector('nav.dash').getBoundingClientRect(); return { top: r.top, h: r.height, win: window.innerHeight, y: window.scrollY }; });
+        ok(label + ': scrolled down, the sidebar stays pinned at the top and runs the full height', nav.y > 0 && nav.top === 0 && Math.abs(nav.h - nav.win) <= 1, JSON.stringify(nav));
+      }
+      ok(label + ': past inspections’ days in the dashboard’s own style (“Nov 3, 2026”)', (await page.locator('[data-list-past] li').allTextContents()).some((t) => /^[A-Z][a-z]{2} \d{1,2}, 20\d\d · /.test(t)) &&
+        !(await page.locator('[data-list-past] li').allTextContents()).some((t) => /^20\d\d-\d\d-\d\d/.test(t)));
+      ok(label + ': services and prices: counted and listed with their price, as the app keeps them', /^\d+ services?$/.test(await page.locator('[data-count-prices]').textContent()) &&
+        (await page.locator('[data-list-prices] li').allTextContents()).every((t) => / · \$\d/.test(t)), await page.locator('[data-count-prices]').textContent());
+      if (SHOTS) { await page.evaluate(() => document.querySelector('[data-preview]').scrollIntoView({ block: 'start', behavior: 'instant' })); await page.waitForTimeout(500); await page.screenshot({ path: path.join(SHOTS, 'br-preview-' + label + '.png') }); }
       await page.locator('[data-go]').click();
       await until(async () => await page.locator('[data-done]').isVisible(), 10000);
       const after = names(sync.people());
       ok(label + ': brought in: nobody twice in People (clients, agents and the people the inspections name, planned as one)', after.length === new Set(after).size, JSON.stringify(after));
-      const pastN = sync.past().length, peopleKept = sync.people().length - seed().length;
-      ok(label + ': what was kept is what the button said', pastN + peopleKept + (/* Ana's fill */ 0) >= n - 1 && pastN > 0, JSON.stringify({ n, pastN, peopleKept }));
+      const pastN = sync.past().length, peopleKept = sync.people().length - seed().length, prices = sync.prices().map((r) => [r.data.name, r.data.feeCents, r.data.minutes, r.data.parentId]);
+      ok(label + ': what was kept is what the button said (people, Ana filled, past inspections, prices)', pastN + peopleKept + 1 + prices.length === n && pastN > 0, JSON.stringify({ n, pastN, peopleKept, prices: prices.length }));
+      ok(label + ': prices kept as the app keeps them: the hidden one and the one with no price left off; services of their own', JSON.stringify(prices) === JSON.stringify([['Home Inspection', 35000, 150, null], ['Radon', 15000, 0, null]]), JSON.stringify(prices));
+      ok(label + ': the done lines: people, past inspections, services in the price list', (await page.locator('[data-done-list] li').allTextContents()).some((t) => t === '2 services in your price list'));
       ok(label + ': “Your business is in Inspyx”, with Undo', (await page.locator('[data-done] h2').textContent()) === 'Your business is in Inspyx' && await page.locator('[data-undo]').isVisible());
       if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'br-done-' + label + '.png'), fullPage: true });
       await page.locator('[data-undo]').click();
       await until(async () => (await said(page)) === 'Taken out again. Nothing from it is left.', 10000);
-      ok(label + ': Undo: People and the past inspections are as they were', JSON.stringify(names(sync.people())) === JSON.stringify(names(seed())) && sync.past().length === 0,
+      ok(label + ': Undo: People, the past inspections and the price list are as they were', JSON.stringify(names(sync.people())) === JSON.stringify(names(seed())) && sync.past().length === 0 && sync.prices().length === 0,
         JSON.stringify([names(sync.people()), sync.past().length]));
       ok(label + ': the key went nowhere but spectora-import', o.bodies.filter((b) => b.indexOf(KEY) >= 0).every((b) => b.indexOf('/functions/v1/spectora-import') >= 0));
       ok(label + ': no errors, nothing else leaves the site' + (w === PHONE ? ', nothing off the side' : ''), o.errs.length === 0 && o.away.length === 0 &&
