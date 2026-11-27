@@ -27,6 +27,10 @@
       var at = step === 'done' ? 3 : order.indexOf(step);
       li.classList.toggle('is-done', order.indexOf(s) < at);
       li.classList.toggle('is-now', order.indexOf(s) === at);
+      if (order.indexOf(s) === at) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+      // The steps are where things stand, never buttons (Moises, 2026-11-26: he tapped one): the step it is at
+      // says which button below moves it on.
+      all('[data-next]', li).forEach(function (n) { n.hidden = !(order.indexOf(s) === at && n.getAttribute('data-next') === button); });
     });
   }
 

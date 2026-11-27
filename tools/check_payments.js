@@ -22,24 +22,44 @@ async function open(browser, status, connect) {
   await page.route(/stripe\.com|evil\.example/, (r) => { went.push(r.request().url()); r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stand-in</title>' }); });
   await page.goto(base + '/payments');
   await page.waitForTimeout(700);
-  const seen = () => page.evaluate(() => ({ words: [...document.querySelectorAll('[data-stands]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), buttons: [...document.querySelectorAll('[data-do]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), now: [...document.querySelectorAll('.pay-step.is-now')].map((e) => e.dataset.step) }));
+  const seen = () => page.evaluate(() => ({ words: [...document.querySelectorAll('[data-stands]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), buttons: [...document.querySelectorAll('[data-do]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), now: [...document.querySelectorAll('.pay-step.is-now')].map((e) => e.dataset.step), next: [...document.querySelectorAll('[data-next]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), current: [...document.querySelectorAll('.pay-step[aria-current="step"]')].map((e) => e.dataset.step) }));
   return { ctx, page, errs, went, asks, seen };
 }
 (async () => {
   const browser = await playwright.chromium.launch();
   try {
     const cases = [
-      ['no plan yet', { status: 409, json: { error: 'no_account' } }, 'Start your plan first, from your account: card payments use the same Stripe account.', ['Your account'], ['plan']],
-      ['not set up', { status: 200, json: { state: 'none', payouts: false } }, 'Not set up. Clients can pay you by card once Stripe has your business details and bank account.', ['Set up'], ['stripe']],
-      ['Stripe needs more', { status: 200, json: { state: 'needs_info', payouts: false } }, 'Stripe needs a few more details before clients can pay you by card.', ['Finish setup'], ['stripe']],
-      ['Stripe checking', { status: 200, json: { state: 'pending', payouts: false } }, 'Stripe is checking your details. This usually takes a few minutes.', ['Check again'], ['stripe']],
-      ['ready', { status: 200, json: { state: 'ready', payouts: true } }, 'Ready: clients can pay you by card.', [], []],
-      ['no answer', 'down', 'Couldn’t check. Try again.', ['Check again'], ['stripe']],
+      ['no plan yet', { status: 409, json: { error: 'no_account' } }, 'Start your plan first, from your account: card payments use the same Stripe account.', ['Your account'], ['plan'], ['Next: start your plan from Your account, below.']],
+      ['not set up', { status: 200, json: { state: 'none', payouts: false } }, 'Not set up. Clients can pay you by card once Stripe has your business details and bank account.', ['Set up'], ['stripe'], ['Next: tap Set up below.']],
+      ['Stripe needs more', { status: 200, json: { state: 'needs_info', payouts: false } }, 'Stripe needs a few more details before clients can pay you by card.', ['Finish setup'], ['stripe'], ['Next: tap Finish setup below.']],
+      ['Stripe checking', { status: 200, json: { state: 'pending', payouts: false } }, 'Stripe is checking your details. This usually takes a few minutes.', ['Check again'], ['stripe'], ['Next: tap Check again below.']],
+      ['ready', { status: 200, json: { state: 'ready', payouts: true } }, 'Ready: clients can pay you by card.', [], [], []],
+      ['no answer', 'down', 'Couldn’t check. Try again.', ['Check again'], ['stripe'], ['Next: tap Check again below.']],
     ];
-    for (const [what, status, words, buttons, now] of cases) {
+    for (const [what, status, words, buttons, now, next] of cases) {
       const o = await open(browser, status, null);
       const v = await o.seen();
       ok(what + ': says so, with the one button that moves it on', JSON.stringify(v.words) === JSON.stringify([words]) && JSON.stringify(v.buttons) === JSON.stringify(buttons) && JSON.stringify(v.now) === JSON.stringify(now) && o.errs.length === 0, JSON.stringify(v));
+      // The step it is at names that button (Moises, 2026-11-26: the steps read as buttons).
+      ok(what + ': the step it is at says which button below moves it on', JSON.stringify(v.next) === JSON.stringify(next) && JSON.stringify(v.current) === JSON.stringify(now), JSON.stringify([v.next, v.current]));
+      await o.ctx.close();
+    }
+    // Steps, never choices: nothing in them can be pressed, and nothing looks as if it could.
+    {
+      const o = await open(browser, { status: 200, json: { state: 'none', payouts: false } }, null);
+      const look = () => o.page.evaluate(() => [...document.querySelectorAll('.pay-step')].map((li) => {
+        const c = getComputedStyle(li), d = getComputedStyle(li.querySelector('.pay-dot'));
+        return [c.cursor, c.backgroundColor, c.boxShadow, d.boxShadow, li.querySelectorAll('button, a, input, [role], [tabindex]').length, d.animationName].join('|');
+      }));
+      const before = await look();
+      await o.page.hover('.pay-step[data-step="ready"]');
+      await o.page.waitForTimeout(250);
+      const after = await look();
+      const steps = before.map((x) => x.split('|'));
+      ok('the steps are steps, not choices: no button, link or role in them, a plain cursor, no box, outline, ring or pulse, and no change under the pointer',
+        before.join() === after.join() && steps.every(([cursor, bg, shadow, dotShadow, pressables, anim]) =>
+          cursor === 'default' && (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') && shadow === 'none' && dotShadow === 'none' && pressables === '0' && anim === 'none'),
+        JSON.stringify([before, after]));
       await o.ctx.close();
     }
     // Back to the tab while the first check is still out: the newer answer stands (a slow older one never wins).
