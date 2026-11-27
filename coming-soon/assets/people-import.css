@@ -108,6 +108,9 @@
 .pi-spx-k input:focus{outline:2px solid #1D62D8; outline-offset:1px}
 .pi-spx-in{position:relative; display:block}
 .pi-spx-in input{padding-right:48px}
+/* The key is hidden as typed by a mask, never as a password box: a password manager fills password boxes (it once put
+   his saved password here: the rehearsal, round 2). */
+.pi-spx-in input[data-masked]{-webkit-text-security:disc; text-security:disc}
 .pi-spx-eye{position:absolute; top:50%; right:4px; transform:translateY(-50%); display:grid; place-items:center; width:40px; height:40px; border:0; border-radius:10px; background:transparent; color:#4A5362; cursor:pointer}
 .pi-spx-eye:hover{background:#F1F3F6} .pi-spx-eye:focus-visible{outline:2px solid #1D62D8; outline-offset:1px}
 .pi-spx-eye svg{width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
