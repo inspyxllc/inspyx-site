@@ -96,7 +96,7 @@ async function open(browser, o) {
 
 const until = async (fn, ms) => { const end = Date.now() + (ms || TIMEOUT / 2); for (;;) { if (await fn()) return true; if (Date.now() > end) return false; await new Promise((r) => setTimeout(r, 50)); } };
 // What a person sees: innerText leaves out hidden parts (the C9 line's other variant, the debit line).
-const shown = async (page, sel) => (await page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.closest('[hidden]') && e.getClientRects().length > 0).map((e) => e.innerText.replace(/\s+/g, ' ').trim()), sel)).join(' | ');
+const shown = async (page, sel) => (await page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => e.getClientRects().length > 0).map((e) => e.innerText.replace(/\s+/g, ' ').trim()), sel)).join(' | ');
 const fake = (page) => page.evaluate(() => window.__stripe || null);
 const csp = (page) => page.evaluate(() => window.__csp);
 
