@@ -854,7 +854,8 @@
   }
   function handPayments(id) {
     return Object.keys(biz).filter(function (k) { return k.indexOf('inspection_payments/') === 0; }).map(function (k) { return biz[k]; })
-      .filter(function (r) { var d = r.data; return d && d.inspectionId === id && d.voidedAt == null && d.method !== 'pay_link' && typeof d.amountCents === 'number'; })
+      // A deleted row is never counted (as bizData leaves it out of the Paid line: Codex on #131).
+      .filter(function (r) { var d = r.data; return r.deleted_at == null && d && d.deletedAt == null && d.inspectionId === id && d.voidedAt == null && d.method !== 'pay_link' && typeof d.amountCents === 'number'; })
       .sort(function (a, b) { return a.data.recordedAt - b.data.recordedAt; });
   }
   /* The client's pay link, brought up to what the inspection says now (the phone's refreshPayLink, create false). */

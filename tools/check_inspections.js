@@ -561,6 +561,21 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
+  await group('fee and payments: a deleted payment row never counts toward what was paid by hand (Codex on #131)', async () => {
+    const s = server(); seed(s);
+    const gone = { kind: 'inspection_payments', id: 'pgone', updated_at: 9, deleted_at: 9, data: { id: 'pgone', ownerAccountId: ME, inspectionId: INSP, amountCents: 30000, method: 'cash', note: null,
+      recordedAt: 8, recordedByAccountId: ME, voidedAt: null, updatedAt: 9, deletedAt: 9, cardLive: null } };
+    const t = actServer([gone]);
+    const { page, ctx, payCalls } = await open(browser, { server: s, hash: '#' + INSP, bizServer: t.answer });
+    await until(async () => (await vis(page, '[data-fee-edit]')).length === 1);
+    ok('not listed', (await vis(page, '[data-pays] li')).length === 0);
+    await page.click('[data-fee-edit]');
+    await page.fill('[data-fee-amount]', '400');
+    await page.click('[data-fee-form] button[type="submit"]');
+    ok('and the pay link is told nothing was paid by hand', await until(async () => payCalls.length >= 1) && payCalls[payCalls.length - 1].offline_paid_cents === 0, JSON.stringify(payCalls));
+    await ctx.close();
+  });
+
   await group('fee and payments: a priced fee changed, refused, failed, the pay link unreachable', async () => {
     const s = server(); seed(s);
     const quoted = { kind: 'inspection_fees', id: 'fee1', updated_at: 5, deleted_at: null, data: { id: 'fee1', ownerAccountId: ME, inspectionId: INSP, selectionJson: '{"services":["svc"]}',
