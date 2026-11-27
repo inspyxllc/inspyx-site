@@ -1187,7 +1187,7 @@
         if (!x || typeof x.inspection_id !== 'string') return;
         published[x.inspection_id] = true;
         var at = typeof x.published_at === 'string' ? Date.parse(x.published_at) : NaN;
-        if (isFinite(at)) reports[x.inspection_id] = { at: at };
+        if (isFinite(at)) reports[x.inspection_id] = { at: at, locked: x.locked === true };
       });
       renderOne();
     }, function () { /* unknown: the line stays out */ });
@@ -1207,11 +1207,21 @@
     return at;
   }
   var SEND_EMAIL = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(\.[A-Za-z0-9-]{1,63})+$/;
+  // The report function's own rules (report/core.ts): a name of at most 100 characters with no control character, a
+  // link's label at most 120, at most 10 people a send; a send names an address once.
+  var SEND_MAX = 10, NAME_MAX = 100;
+  var CONTROL = new RegExp('[\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]', 'g');
+  function fitName(n) { return Array.from(String(n || '').replace(CONTROL, ' ').replace(/\s+/g, ' ').trim()).slice(0, NAME_MAX).join('').trim(); }
   function sendPeople(id) {
+    var seen = {};
     return parts('person', function (p) { return owner['person/' + p] === id && Object.prototype.hasOwnProperty.call(ROLES, val('person', p, 'role')); })
       .sort(byPosition('person')).map(function (p) {
-        return { id: p, role: val('person', p, 'role'), name: text(val('person', p, 'name')).trim(), email: text(val('person', p, 'email')).trim() };
-      }).filter(function (x) { return SEND_EMAIL.test(x.email); });
+        return { id: p, role: val('person', p, 'role'), name: fitName(val('person', p, 'name')), email: text(val('person', p, 'email')).trim() };
+      }).filter(function (x) {
+        if (!SEND_EMAIL.test(x.email) || seen[x.email.toLowerCase()]) return false;
+        seen[x.email.toLowerCase()] = true;
+        return true;
+      });
   }
   var sendFor = null, sendOff = {}, sendSeen = {}, sendBusy = false, sendSaid = null;
   function sendSay(which, vals) {
@@ -1235,6 +1245,7 @@
     sendPeople(id).forEach(function (x) { if (!sendSeen[x.id]) { sendSeen[x.id] = true; if (x.role !== 'client') sendOff[x.id] = true; } });
     var outdated = lastChange(id) > rep.at;
     show('data-send-state', outdated ? 'outdated' : 'ready');
+    $('[data-send-locked]').hidden = !rep.locked;
     var t = $('[data-send-made]') || $('[data-v="made"]');
     t.textContent = DAY.format(new Date(rep.at)) + ', ' + CLOCK.format(new Date(rep.at));
     var people = sendPeople(id), list = $('[data-send-who]'), shape = JSON.stringify(people);
@@ -1268,7 +1279,10 @@
     if (lastChange(id) > reports[id].at) { sendSay('outdated'); renderOne(); return; }
     var picked = sendPeople(id).filter(function (x) { return !sendOff[x.id]; });
     if (!picked.length) { sendSay('pick'); return; }
+    if (picked.length > SEND_MAX) { sendSay('too-many'); return; }
     var subject = $('[data-send-subject]').value.trim(), message = $('[data-send-message]').value;
+    // The function refuses a send with no subject: said here, never "didn't go through".
+    if (!subject) { sendSay('no-subject'); return; }
     sendBusy = true; renderSend(id); sendSay(null);
     // Its answer belongs to this inspection: shown only while it is still the one open (Codex on #130).
     var here = function () { return chosen() === id; };

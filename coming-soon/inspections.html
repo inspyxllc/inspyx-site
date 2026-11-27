@@ -99,6 +99,7 @@
 <p class="insp-send-out" data-send-state="outdated" hidden>The inspection changed after the report was made. Make the report again on your phone, then send.</p>
 <div data-send-state="ready" hidden>
 <p class="insp-send-made">Report made <span data-v="made"></span>. Each person gets their own link, so you see who opened it.</p>
+<p class="insp-send-made" data-send-locked hidden>This report is locked: your client sees only its cover until the agreement is signed and paid.</p>
 <fieldset class="insp-send-who"><legend>Send it to</legend><ul data-send-who></ul></fieldset>
 <p class="insp-send-none" data-send-none hidden>No one on this inspection has an email yet. Add one on your phone.</p>
 <label class="insp-send-l">Subject <input type="text" data-send-subject maxlength="200" autocomplete="off"></label>
@@ -107,6 +108,8 @@
 <div role="status">
 <p class="insp-send-said ok" data-send-said="sent" hidden>Sent to <b data-v="sent-to"></b>. You get a copy too.</p>
 <p class="insp-send-said" data-send-said="pick" hidden>Tick who gets it first.</p>
+<p class="insp-send-said" data-send-said="too-many" hidden>At most 10 people at once. Untick some, then send.</p>
+<p class="insp-send-said" data-send-said="no-subject" hidden>Write a subject first.</p>
 <p class="insp-send-said" data-send-said="outdated" hidden>The inspection just changed after the report was made. Make the report again on your phone, then send.</p>
 <p class="insp-send-said" data-send-said="daily" hidden>That’s the most report emails for one day. Try again tomorrow.</p>
 <p class="insp-send-said" data-send-said="failed" hidden>That didn’t go through. Try again.</p>

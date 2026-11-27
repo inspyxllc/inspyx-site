@@ -107,7 +107,7 @@ async function open(browser, o) {
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
         body: JSON.stringify({ reports: (o.published || []).map((x) => typeof x === 'string'
           ? { inspection_id: x, published_at: 1, locked: false, links: [], emails: [] }
-          : { inspection_id: x.id, published_at: new Date(x.at).toISOString(), locked: false, links: [], emails: [] }), as_of: new Date().toISOString() }) });
+          : { inspection_id: x.id, published_at: new Date(x.at).toISOString(), locked: x.locked === true, links: [], emails: [] }), as_of: new Date().toISOString() }) });
     }
     // The report function (Send the report): o.report(body) answers { status, json }; every call kept in reportCalls.
     if (u.startsWith(SERVER + '/functions/v1/report')) {
@@ -555,6 +555,40 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     r.ping();
     ok('remade: Send is back without a reload', await until(async () => (await vis(r.page, '[data-send-state="ready"]')).length === 1, 5000));
     await r.ctx.close();
+  });
+
+  await group('send the report: the report function\'s own rules kept here (my pass before r6)', async () => {
+    const s = server(); seed(s);
+    const id = (n) => '6f1c2a3b-0000-4000-8000-0000000000' + String(n).padStart(2, '0');
+    const longName = 'Ana \u0007' + 'x'.repeat(150);
+    s.phone('person', id(1), 'role', 'client'); s.phone('person', id(1), 'name', longName); s.phone('person', id(1), 'email', 'ana@example.com'); s.phone('person', id(1), 'position', 0);
+    // The same address as the client's: one person.
+    s.phone('person', id(2), 'role', 'buyer_agent'); s.phone('person', id(2), 'name', 'Same Mail'); s.phone('person', id(2), 'email', 'ANA@example.com'); s.phone('person', id(2), 'position', 1);
+    const r = await open(browser, { server: s, hash: '#' + INSP, published: [{ id: INSP, at: Date.now() + 60000, locked: true }] });
+    await until(async () => (await vis(r.page, '[data-send-go]')).length === 1);
+    ok('a locked report says the client sees its cover until signed and paid', same(await vis(r.page, '[data-send-locked]'), ['This report is locked: your client sees only its cover until the agreement is signed and paid.']));
+    ok('two people with one address: one in the list', (await r.page.$$('[data-send-who] input')).length === 1);
+    await r.page.fill('[data-send-subject]', '   ');
+    await r.page.click('[data-send-go]');
+    ok('no subject: said, nothing asked', same(await vis(r.page, '[data-send-said]'), ['Write a subject first.']) && r.reportCalls.length === 0);
+    await r.page.fill('[data-send-subject]', 'Your report');
+    await r.page.click('[data-send-go]');
+    await until(async () => r.reportCalls.some((c) => c.action === 'send'));
+    const link = r.reportCalls.find((c) => c.action === 'link'), send = r.reportCalls.find((c) => c.action === 'send');
+    const name = send.recipients[0].name;
+    ok('a long name with a control character: fit for the function (no control character, at most 100), in the link and the send',
+      [...name].length === 100 && !/[\x00-\x1f]/.test(name) && name.startsWith('Ana x') && link.label === name && send.recipients.length === 1, JSON.stringify([name.length, link.label === name]));
+    await r.ctx.close();
+    // Eleven people ticked: at most ten a send.
+    const s2 = server(); seed(s2);
+    for (let n = 1; n <= 11; n++) {
+      s2.phone('person', id(n), 'role', 'client'); s2.phone('person', id(n), 'name', 'Person ' + n); s2.phone('person', id(n), 'email', 'p' + n + '@example.com'); s2.phone('person', id(n), 'position', n);
+    }
+    const r2 = await open(browser, { server: s2, hash: '#' + INSP, published: [{ id: INSP, at: Date.now() + 60000 }] });
+    await until(async () => (await r2.page.$$('[data-send-who] input')).length === 11);
+    await r2.page.click('[data-send-go]');
+    ok('eleven ticked: says at most ten, nothing asked', same(await vis(r2.page, '[data-send-said]'), ['At most 10 people at once. Untick some, then send.']) && r2.reportCalls.length === 0);
+    await r2.ctx.close();
   });
 
   await group('send the report: an agent added while it is open comes unticked (Codex on #130)', async () => {
