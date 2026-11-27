@@ -18,7 +18,9 @@
     ['clientFirstName', "Client's first name", false], ['clientPhone', "Client's phone", false],
     ['clientEmail', "Client's email", false], ['street', 'Street', false], ['city', 'City', false],
     ['state', 'State', false], ['zip', 'ZIP code', false], ['companyPhone', 'Company phone', false],
-    ['year', 'This year', false]
+    ['year', 'This year', false],
+    // A reinspection agreement's own (agreement_blanks.dart's reinspection blanks): read in square brackets.
+    ['originalInspectionDate', 'Original inspection date', true], ['itemsToRecheck', 'Items to recheck', true]
   ];
   var EMPTY_BLANK_LINE = '__________';
 
@@ -99,6 +101,9 @@
       case 'company': return dartTrim(f.company);
       case 'licenseNumber': return dartTrim(f.licenseNumber);
       case 'companyPhone': return dartTrim(f.companyPhone);
+      case 'originalInspectionDate': return f.originalInspectionDate ? longDate(f.originalInspectionDate) : '';
+      case 'itemsToRecheck': return (f.itemsToRecheck || []).filter(function (i) { return dartTrim(i) !== ''; })
+        .map(function (i) { return '- ' + dartTrim(i); }).join('\n');
       default: return '';
     }
   }

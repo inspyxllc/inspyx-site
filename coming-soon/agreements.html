@@ -71,12 +71,21 @@
 <ol class="agr-list" data-list></ol>
 </section>
 
+<section class="agr-group" data-group="reinspections" hidden>
+<div class="agr-head"><h2>Reinspection agreements</h2><button class="btn small" type="button" data-add="reinspection">Add a reinspection agreement</button></div>
+<div class="agr-empty" data-empty-re hidden>
+<p>A reinspection's client signs a short agreement of its own. Start from Inspyx's draft reinspection agreement and have your attorney review it, or write your own.</p>
+<button class="btn" type="button" data-starter-open-re>Start from the draft reinspection agreement</button>
+</div>
+<ol class="agr-list" data-list-re></ol>
+</section>
+
 </main>
 <noscript><p class="help">This page needs JavaScript turned on in this browser.</p></noscript>
 
 <dialog class="agr-dialog" data-dialog aria-labelledby="agr-title">
 <form method="dialog" data-form novalidate>
-<h2 id="agr-title"><span data-title="new">New agreement</span><span data-title="edit" hidden>Agreement</span></h2>
+<h2 id="agr-title"><span data-title="new">New agreement</span><span data-title="edit" hidden>Agreement</span><span data-title="new-re" hidden>New reinspection agreement</span><span data-title="edit-re" hidden>Reinspection agreement</span></h2>
 <label>Name <input type="text" name="name" autocomplete="off"></label>
 <button class="btn small quiet agr-starter" type="button" data-starter hidden>Start from the draft starter agreement</button>
 <div class="agr-tabs" role="tablist">
@@ -99,6 +108,8 @@
 <button type="button" data-blank="[Today's date]">Today's date</button>
 <button type="button" data-blank="[Buyer's agent]">Buyer's agent</button>
 <button type="button" data-blank="[Listing agent]">Listing agent</button>
+<button type="button" data-blank="[Original inspection date]" data-re-only data-name="originalInspectionDate" hidden>Original inspection date</button>
+<button type="button" data-blank="[Items to recheck]" data-re-only data-name="itemsToRecheck" hidden>Items to recheck</button>
 </div>
 <p class="agr-help">Clients read and sign this exact text. Editing it later doesn't change an agreement already signed.</p>
 </div>
@@ -148,6 +159,38 @@ This agreement is between [Your company] (the Inspector), represented by [Your n
 Signed by the Client on [Today's date].</span></div>
 </template>
 
+<!-- The reinspection agreement (Moises 2026-11-27: "Yes, approve" to the seven terms; "A, reuse sections" for term
+     6: the starter's own "If something seems missed" and "The whole agreement", word for word, named as this
+     agreement names its parties). tools/check_agreements.js holds these words. -->
+<template data-t="starter-re">
+<div><span data-s="name">Reinspection agreement</span><span data-s="words">Reinspection agreement
+
+This agreement is between [Your company] ("we", "us") and [Client name] ("you") for a reinspection at [Property address] on [Inspection date].
+
+1. What a reinspection is. We return to look again at the items below, which were reported in our inspection of [Original inspection date]. A reinspection is not a new home inspection. We look only at the listed items, as they can be seen and reached on the day.
+
+2. Items to look at. We look at these items:
+
+[Items to recheck]
+
+We report on each one: whether it looks repaired, looks not repaired, or could not be checked, and why. An item added later is looked at only if we both agree to it before the visit.
+
+3. What we don't do. We don't take things apart, test hidden parts, or judge how well a repair was done beyond what can be seen. We can't confirm that work was done by a licensed contractor or with permits. Ask the seller for receipts, permits and warranties.
+
+4. The report is a snapshot. It says what we saw on the day of the reinspection. It is not a warranty or a guarantee that the item won't fail later.
+
+5. Fee. The reinspection fee is [Fee], due before we send the report.
+
+6. If something seems missed, and the whole agreement. You agree to tell us in writing and to let us look again before any repair is made, except in an emergency. This is the whole agreement between you and us. If a part of it can't be enforced, the rest still applies.
+
+7. Who may rely on it. The report is for you. Others, such as your agent or lender, may read it, but we owe them nothing under it.
+
+By signing, you confirm you have read this agreement and agree to it.
+
+[Client name] · signed [Today's date]
+[Your name], [Your company], license [License number]</span></div>
+</template>
+
 <template data-t="words">
 <span data-w="sample-client">Jordan Smith</span>
 <span data-w="sample-address">12 Palm Way, Tampa, FL 33609</span>
@@ -161,6 +204,9 @@ Signed by the Client on [Today's date].</span></div>
 <span data-w="sample-zip">33609</span>
 <span data-w="sample-services">Home inspection</span>
 <span data-w="sample-fee-lines">Home inspection: $425.00</span>
+<span data-w="sample-original-date">Monday, November 23, 2026</span>
+<span data-w="sample-items">- Water heater
+- Roof covering</span>
 <span data-w="missing-company-phone">your company's phone</span>
 <span data-w="sample-buyer-agent">Alicia Gomez</span>
 <span data-w="sample-buyer-agent-phone">(813) 555-0177</span>

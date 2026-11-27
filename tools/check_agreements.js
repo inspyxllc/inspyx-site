@@ -29,7 +29,8 @@ function legalProblem(r) {
   const d = r.data;
   if (r.kind === 'legal_default') return d.id === 'signs' && d.deletedAt == null && (d.agreementId === null || /^[A-Za-z0-9_.:-]{1,64}$/.test(d.agreementId)) ? null : 'default';
   if (d.deletedAt != null) return null;
-  if (d.kind !== 'agreement') return 'kind';
+  // legal_rules.ts's DOCUMENT_KINDS (with inspyx-mobile #842): an inspection's agreement, and a reinspection's.
+  if (d.kind !== 'agreement' && d.kind !== 'reinspection') return 'kind';
   if (typeof d.title !== 'string' || !trimmed(d.title) || Array.from(d.title).length > 120) return 'title';
   if (typeof d.body !== 'string' || !trimmed(d.body) || new TextEncoder().encode(d.body).length > 100000) return 'body';
   return null;
@@ -141,6 +142,40 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
   await group('nothing yet', async () => {
     const { page, ctx } = await open(browser, { server: server() });
     ok('with no agreements, it says what to do, and offers the starter and to add one', (await vis(page, '[data-empty] p')).join() === 'No agreements yet. Start from Inspyx’s draft starter agreement and have your attorney review it, or write your own.' && (await vis(page, '[data-starter-open]')).join() === 'Start from the draft starter agreement' && (await vis(page, '[data-add="agreement"]')).join() === 'Add an agreement');
+    await ctx.close();
+  });
+
+  // The reinspection agreement's starter: Moises's words (2026-11-27, the seven terms; term 6 his "A, reuse
+  // sections": the starter's own "If something seems missed" and "The whole agreement"). Word for word.
+  const REINSPECTION_STARTER = "Reinspection agreement\n\nThis agreement is between [Your company] (\"we\", \"us\") and [Client name] (\"you\") for a reinspection at [Property address] on [Inspection date].\n\n1. What a reinspection is. We return to look again at the items below, which were reported in our inspection of [Original inspection date]. A reinspection is not a new home inspection. We look only at the listed items, as they can be seen and reached on the day.\n\n2. Items to look at. We look at these items:\n\n[Items to recheck]\n\nWe report on each one: whether it looks repaired, looks not repaired, or could not be checked, and why. An item added later is looked at only if we both agree to it before the visit.\n\n3. What we don't do. We don't take things apart, test hidden parts, or judge how well a repair was done beyond what can be seen. We can't confirm that work was done by a licensed contractor or with permits. Ask the seller for receipts, permits and warranties.\n\n4. The report is a snapshot. It says what we saw on the day of the reinspection. It is not a warranty or a guarantee that the item won't fail later.\n\n5. Fee. The reinspection fee is [Fee], due before we send the report.\n\n6. If something seems missed, and the whole agreement. You agree to tell us in writing and to let us look again before any repair is made, except in an emergency. This is the whole agreement between you and us. If a part of it can't be enforced, the rest still applies.\n\n7. Who may rely on it. The report is for you. Others, such as your agent or lender, may read it, but we owe them nothing under it.\n\nBy signing, you confirm you have read this agreement and agree to it.\n\n[Client name] · signed [Today's date]\n[Your name], [Your company], license [License number]";
+  await group('a reinspection agreement', async () => {
+    const s = server();
+    const { page, ctx, calls } = await open(browser, { server: s });
+    ok('its own place: what it is, the draft to start from, and its own Add', (await vis(page, '[data-group="reinspections"] h2')).join() === 'Reinspection agreements' &&
+      (await vis(page, '[data-starter-open-re]')).join() === 'Start from the draft reinspection agreement' && (await vis(page, '[data-add="reinspection"]')).join() === 'Add a reinspection agreement');
+    await page.click('[data-starter-open-re]');
+    const typed = await page.inputValue(F + ' textarea[name="words"]');
+    ok('the starter is Moises\'s words, word for word', typed === REINSPECTION_STARTER, typed.slice(0, 80));
+    ok('and no placeholder is left in it', !/placeholder|\bTBD\b|TODO|XXX|term 6:/i.test(typed));
+    const paper = () => page.evaluate(() => document.querySelector('[data-paper]').innerText);
+    ok('the preview fills its own blanks: the original inspection\'s date and the items, one per line',
+      await until(async () => { const t = await paper(); return t.includes('Monday, November 23, 2026') && /- Water heater\s*\n\s*- Roof covering/.test(t); }),
+      (await paper()).slice(0, 160));
+    ok('named and titled as a reinspection agreement', (await page.inputValue(F + ' input[name="name"]')) === 'Reinspection agreement' && (await vis(page, F + ' h2')).join() === 'New reinspection agreement');
+    await page.click(F + ' [data-tab="write"]');
+    ok('its own blanks are offered too: the original inspection\'s date and the items to recheck',
+      (await vis(page, F + ' [data-blank]')).slice(-2).join('|') === 'Original inspection date|Items to recheck');
+    await page.click(F + ' button[type="submit"]');
+    await until(async () => (await vis(page, '[data-say]')).join() === 'Saved.');
+    const sent = pushed(calls);
+    const doc = sent.find((r) => r.kind === 'legal_documents');
+    ok('saved as a reinspection agreement, and never the one clients sign for an inspection',
+      !!doc && doc.data.kind === 'reinspection' && doc.data.body === REINSPECTION_STARTER && !sent.some((r) => r.kind === 'legal_default'));
+    ok('listed under Reinspection agreements; the inspection agreements still have none',
+      (await vis(page, '[data-list-re] [data-v="name"]')).join() === 'Reinspection agreement' && (await vis(page, '[data-list] [data-v="name"]')).length === 0);
+    await page.click('[data-list-re] [data-edit]');
+    ok('opened again, it is a reinspection agreement, with no choosing for clients to sign',
+      (await vis(page, F + ' h2')).join() === 'Reinspection agreement' && !(await page.locator(F + ' [data-only="choose"]').isVisible()) && !(await page.locator(F + ' [data-only="signs"]').isVisible()));
     await ctx.close();
   });
 

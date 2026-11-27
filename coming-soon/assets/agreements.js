@@ -94,22 +94,34 @@
   var characters = function (s) { return Array.from(s).length; };
   var bytes = function (s) { return new TextEncoder().encode(s).length; };
 
-  var standing = function () {
+  /* The live documents of one kind: 'agreement' (an inspection's) or 'reinspection' (a reinspection's own). */
+  var standing = function (kind) {
+    kind = kind || 'agreement';
     return Object.keys(rows).map(function (k) { return rows[k]; }).filter(function (r) {
-      return r.kind === 'legal_documents' && r.deleted_at === null && r.data.deletedAt == null && r.data.kind === 'agreement';
+      return r.kind === 'legal_documents' && r.deleted_at === null && r.data.deletedAt == null && r.data.kind === kind;
     }).map(function (r) { return r.data; });
   };
   var signsRow = function () { var r = rows['legal_default/' + SIGNS]; return r ? r.data : null; };
 
   /* The phone's order (legal_library.dart's _agreementsNow): by name, then when made; the one chosen first. */
   function agreements() {
-    var list = standing().sort(function (a, b) {
-      var x = a.title.toLowerCase(), y = b.title.toLowerCase();
-      return x < y ? -1 : x > y ? 1 : (a.createdAt - b.createdAt);
-    });
+    var list = byName(standing('agreement'));
     var chosen = signsRow(), at = chosen ? list.findIndex(function (d) { return d.id === chosen.agreementId; }) : -1;
     if (at > 0) list.unshift(list.splice(at, 1)[0]);
     return list;
+  }
+  /* A reinspection's (legal_library.dart's _documentsNow): by name, the one used last first; never a default. */
+  function reinspections() {
+    var list = byName(standing('reinspection')), last = -1;
+    list.forEach(function (d, i) { if (typeof d.lastUsedAt === 'number' && (last < 0 || d.lastUsedAt > list[last].lastUsedAt)) last = i; });
+    if (last > 0) list.unshift(list.splice(last, 1)[0]);
+    return list;
+  }
+  function byName(docs) {
+    return docs.sort(function (a, b) {
+      var x = a.title.toLowerCase(), y = b.title.toLowerCase();
+      return x < y ? -1 : x > y ? 1 : (a.createdAt - b.createdAt);
+    });
   }
 
   /* A new change time: now, or just past the row's last one. */
@@ -131,7 +143,7 @@
     showOne(main, 'data-live', failing ? 'offline' : loaded ? 'live' : 'connecting');
     if (!loaded) { showOne(main, 'data-state', failing ? 'failed' : 'loading'); return; }
     showOne(main, 'data-state', '');
-    $('[data-group]', main).hidden = false;
+    all('[data-group]', main).forEach(function (g) { g.hidden = false; });
     var list = $('[data-list]', main), docs = agreements();
     $('[data-empty]', main).hidden = docs.length > 0;
     list.textContent = '';
@@ -140,8 +152,19 @@
       card.setAttribute('data-id', d.id);
       $('[data-v="name"]', card).textContent = d.title;
       $('[data-v="line"]', card).textContent = [i === 0 ? words('signs') : null, words('edited') + ' ' + DATE.format(new Date(d.updatedAt))].filter(Boolean).join(' · ');
-      $('[data-edit]', card).addEventListener('click', function () { open(d, i === 0); });
+      $('[data-edit]', card).addEventListener('click', function () { open(d, i === 0, 'agreement'); });
       list.appendChild(card);
+    });
+    var reList = $('[data-list-re]', main), re = reinspections();
+    $('[data-empty-re]', main).hidden = re.length > 0;
+    reList.textContent = '';
+    re.forEach(function (d) {
+      var card = tpl('agreement');
+      card.setAttribute('data-id', d.id);
+      $('[data-v="name"]', card).textContent = d.title;
+      $('[data-v="line"]', card).textContent = words('edited') + ' ' + DATE.format(new Date(d.updatedAt));
+      $('[data-edit]', card).addEventListener('click', function () { open(d, false, 'reinspection'); });
+      reList.appendChild(card);
     });
   }
 
@@ -149,6 +172,7 @@
 
   var dialog = $('[data-dialog]'), form = $('[data-form]');
   var editing = null;   // the agreement being changed, or null for a new one
+  var kind = 'agreement';   // the kind the dialog is for: 'agreement' or 'reinspection'
   // A new agreement's id and times, given when the dialog opens and kept for every Save in it: a Save that failed
   // may still have landed, and a retry must change that same row, never make a second.
   var draft = null;
@@ -159,17 +183,21 @@
     showOne(b, 'data-arm', armed ? '1' : '0');
   }
 
-  function open(d, signs) {
+  function open(d, signs, k) {
     editing = d;
+    kind = k === 'reinspection' ? 'reinspection' : 'agreement';
+    var re = kind === 'reinspection';
     draft = d ? null : { id: newId(), createdAt: null, updatedAt: 0 };
-    showOne(form, 'data-title', d ? 'edit' : 'new');
+    showOne(form, 'data-title', (d ? 'edit' : 'new') + (re ? '-re' : ''));
+    all('[data-re-only]', form).forEach(function (b) { b.hidden = !re; });
     form.elements.name.value = d ? d.title : '';
     form.elements.words.value = d ? d.body : '';
     form.elements.signs.checked = false;
     tab('write');
-    $('[data-starter]', form).hidden = !!d || !starter;
-    $('[data-only="choose"]', form).hidden = !d || signs;
-    $('[data-only="signs"]', form).hidden = !d || !signs;
+    $('[data-starter]', form).hidden = !!d || !starterOf(kind);
+    // Only an inspection agreement is ever the one clients sign.
+    $('[data-only="choose"]', form).hidden = !d || signs || re;
+    $('[data-only="signs"]', form).hidden = !d || !signs || re;
     $('[data-delete]', form).hidden = !d;
     armDelete(false);
     showOne(form, 'data-problem', '');
@@ -205,7 +233,7 @@
     var data = {
       id: was ? was.id : draft.id,
       ownerAccountId: me,
-      kind: 'agreement',
+      kind: kind,
       title: f.title,
       body: f.body,
       createdAt: was ? was.createdAt : draft.createdAt,
@@ -214,7 +242,8 @@
     };
     var push = [wire('legal_documents', data)];
     // The first agreement becomes the one clients sign (the phone's add); one ticked here becomes it too.
-    if ((!was && standing().length === 0) || (was && form.elements.signs.checked)) push.push(signsWire(data.id));
+    // Never a reinspection agreement: a reinspection's has no default, and an inspection never signs one.
+    if (kind === 'agreement' && ((!was && standing('agreement').length === 0) || (was && form.elements.signs.checked))) push.push(signsWire(data.id));
     finish(push, 'saved');
   });
 
@@ -243,27 +272,36 @@
   }
 
   all('[data-close]').forEach(function (b) { b.addEventListener('click', function () { dialog.close(); }); });
-  all('[data-add="agreement"]').forEach(function (b) { b.addEventListener('click', function () { open(null, false); }); });
+  all('[data-add="agreement"]').forEach(function (b) { b.addEventListener('click', function () { open(null, false, 'agreement'); }); });
+  all('[data-add="reinspection"]').forEach(function (b) { b.addEventListener('click', function () { open(null, false, 'reinspection'); }); });
 
   // ---- the starter, the blanks and the preview (job 7, W14) --------------------------------------------------------
 
   // The starter is offered only while the page holds it (it waits on Moises's word: tools/starter_agreement_draft.html).
   var starterTpl = document.querySelector('template[data-t="starter"]');
   var starter = starterTpl ? starterTpl.content : null;
+  var starterReTpl = document.querySelector('template[data-t="starter-re"]');
+  var starterRe = starterReTpl ? starterReTpl.content : null;
+  /* The starter for the kind the dialog is for. */
+  function starterOf(k) { return k === 'reinspection' ? starterRe : starter; }
   all('[data-starter-open]').forEach(function (b) { b.hidden = !starter; });
+  all('[data-starter-open-re]').forEach(function (b) { b.hidden = !starterRe; });
   all('[data-only-starter]').forEach(function (p) { p.hidden = !starter; });
   all('[data-no-starter]').forEach(function (p) { p.hidden = !!starter; });
   // The starter's name and words in the dialog: only for a new one, and never over words he has typed.
   function useStarter() {
     var w = form.elements.words;
     if (dartTrim(w.value) !== '' && !window.confirm(words('replace'))) return;
-    if (dartTrim(form.elements.name.value) === '') form.elements.name.value = $('[data-s="name"]', starter).textContent;
-    w.value = $('[data-s="words"]', starter).textContent;
+    var from = starterOf(kind);
+    if (!from) return;
+    if (dartTrim(form.elements.name.value) === '') form.elements.name.value = $('[data-s="name"]', from).textContent;
+    w.value = $('[data-s="words"]', from).textContent;
     showUnknown();
     tab('preview');
   }
   $('[data-starter]', form).addEventListener('click', useStarter);
-  all('[data-starter-open]').forEach(function (b) { b.addEventListener('click', function () { open(null, false); useStarter(); }); });
+  all('[data-starter-open]').forEach(function (b) { b.addEventListener('click', function () { open(null, false, 'agreement'); useStarter(); }); });
+  all('[data-starter-open-re]').forEach(function (b) { b.addEventListener('click', function () { open(null, false, 'reinspection'); useStarter(); }); });
 
   // A blank goes where he is typing, as one piece.
   all('[data-blank]', form).forEach(function (b) {
@@ -360,6 +398,8 @@
   var NAMED = { 'Client name': 'clientName', 'Property address': 'propertyAddress', 'Inspection date': 'inspectionDate', Fee: 'fee',
     'Your name': 'inspectorName', 'Your company': 'company', 'License number': 'licenseNumber', "Today's date": 'today',
     "Buyer's agent": 'buyerAgent', 'Listing agent': 'listingAgent' };
+  // A reinspection agreement's own blanks, by the page's buttons (each names its blank): the page holds the words.
+  all('[data-re-only][data-name]').forEach(function (b) { NAMED[b.textContent.trim()] = b.getAttribute('data-name'); });
   // A spot the client initials, as the signing page counts one (sign/core.ts SPOT).
   var SPOT = /\[[ \t\u00a0]*initials[ \t\u00a0]*\]/gi;
   // Every blank in [para] as the app reads it: {start, end, blank (its name, or null when Inspyx can't fill it), raw}.
@@ -399,6 +439,8 @@
       case 'fee': return sample('sample-fee');
       case 'services': return sample('sample-services');
       case 'feeLines': return sample('sample-fee-lines');
+      case 'originalInspectionDate': return sample('sample-original-date');
+      case 'itemsToRecheck': return sample('sample-items');
       case 'inspectorName': return mine(d.inspectorName, 'missing-name');
       case 'company': return mine(d.companyName, 'missing-company');
       case 'licenseNumber': return mine(d.licenseNumber, 'missing-license');
