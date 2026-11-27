@@ -44,6 +44,9 @@
   // Every field the server holds for this inspector: "entity/id.field" -> { inspection, entity, id, field, value, at, device }
   var fields = Object.create(null);
   var point = null, offset = 0, pulling = null, again = false;
+  // The first pull brings every field the inspector has (rehearsal 3, findings 28–29: 51,542 of them, 53 pages, ~23 s):
+  // until it ends the page shows "Loading", never a part of the list or "Live" (the list showed one of 27).
+  var loaded = false;
   var outbox = [];          // this page's edits not yet answered: { inspection, entity, id, field, value, at }
   var dirty = Object.create(null);   // keys being typed in right now
   var timers = Object.create(null);
@@ -81,12 +84,13 @@
     if (pulling) { again = true; return pulling; }
     var loop = function () { return exchange().then(function (more) { return more ? loop() : null; }); };
     pulling = loop().then(function () {
+      loaded = true;
       show('data-save', outbox.length ? 'saving' : (anyEdits ? 'saved' : ''));
       showLive(listening ? 'live' : 'connecting');
       render();
     }, function () {
       showLive('offline');
-      if (point === null) show('data-list', 'failed');
+      if (!loaded) show('data-list', 'failed');
       if (outbox.length) show('data-save', 'failed');
       setTimeout(sync, 5000);
     }).then(function () {
@@ -159,6 +163,12 @@
 
   function renderList() {
     var list = $('[data-list="items"]');
+    if (!loaded) {
+      show('data-list', 'loading');
+      $('[data-findbox]').hidden = true;
+      list.hidden = true;
+      return;
+    }
     var ids = parts('inspection').filter(function (id) { return typeof val('inspection', id, 'title') === 'string' && !archived(id); });
     ids.sort(function (a, b) { var da = dayOf(a), db = dayOf(b); return (db ? db.at : 0) - (da ? da.at : 0) || (a < b ? -1 : 1); });
     var q = $('[data-find]').value.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -191,6 +201,8 @@
   function renderOne() {
     var id = chosen();
     var detail = $('[data-detail]'), pick = $('[data-pick]');
+    // Never half an inspection: one opened by its address waits for the first pull with the list.
+    if (!loaded) { detail.hidden = true; pick.hidden = true; shape = null; return; }
     if (!id || deleted('inspection', id) || val('inspection', id, 'title') === undefined) {
       detail.hidden = true; pick.hidden = false; shape = null; return;
     }
@@ -1630,7 +1642,7 @@
   main.hidden = false;
   auth.listen(function (ping) {
     if (ping && ping.signedOut) { window.location.replace('/signin'); return; }
-    if (ping && ping.joined) { listening = true; showLive('live'); }
+    if (ping && ping.joined) { listening = true; if (loaded) showLive('live'); }
     else { pullBusiness(); pullPublished(); }
     sync();
   });

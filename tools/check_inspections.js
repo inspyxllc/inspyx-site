@@ -151,10 +151,13 @@ async function open(browser, o) {
     calls.push({ headers: req.headers(), body });
     if (o.down) return route.abort('failed');
     const results = (body.push || []).map((w, i) => ({ i, outcome: s.push(body.device, w) }));
-    const rows = [...s.held.values()].filter((h) => h.seq > (body.after || 0)).sort((a, b) => a.seq - b.seq).slice(0, body.limit || 500);
+    // o.page: the server's own cap on a page (a pull in several pages); o.pageDelay: each page's wait.
+    const cap = Math.min(body.limit || 500, o.page || Infinity);
+    const rows = [...s.held.values()].filter((h) => h.seq > (body.after || 0)).sort((a, b) => a.seq - b.seq).slice(0, cap);
+    if (o.pageDelay) await new Promise((r) => setTimeout(r, o.pageDelay));
     return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({
       results, skipped: [], fields: rows.map((h) => ({ inspection: h.inspection, entity: h.entity, id: h.id, field: h.field, value: h.value, at: h.at, device: h.device, seq: h.seq })),
-      next: rows.length ? rows[rows.length - 1].seq : body.after, more: rows.length >= (body.limit || 500), now: Date.now() }) });
+      next: rows.length ? rows[rows.length - 1].seq : body.after, more: rows.length >= cap, now: Date.now() }) });
   });
   const res = await page.goto(url + 'inspections' + (o.hash || ''), { waitUntil: 'load' });
   await page.waitForTimeout(500);
@@ -175,6 +178,21 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     const s = server(); seed(s);
     const { page, ctx, calls } = await open(browser, { server: s, store: null });
     ok('signed out: the page sends the visitor to sign in, and asks nothing of the server', await until(async () => new URL(page.url()).pathname === '/signin') && calls.length === 0, page.url());
+    await ctx.close();
+  });
+
+  await group('a first pull in many pages: "Loading" until it ends, never part of the list or "Live" (rehearsal 3, findings 28-29)', async () => {
+    const s = server(); seed(s);
+    const { page, ctx, errs, calls } = await open(browser, { server: s, page: 3, pageDelay: 300, hash: '#' + INSP });
+    // open() waits half a second: a page or two has come, not all.
+    const pages = calls.length;
+    ok('mid-pull: still pulling (several pages)', pages >= 1 && pages < Math.ceil(s.held.size / 3), pages + ' of ' + Math.ceil(s.held.size / 3));
+    ok('mid-pull: "Loading your inspections…", no inspection listed, no Find box', same(await vis(page, '[data-list]:not([data-list="items"])'), ['Loading your inspections…']) &&
+      (await vis(page, '[data-list="items"] li')).length === 0 && (await vis(page, '[data-findbox]')).length === 0);
+    ok('mid-pull: not "Live" yet, and no half-drawn inspection', !(await vis(page, '[data-live]')).join().startsWith('Live') && (await vis(page, '[data-detail]')).length === 0);
+    ok('then: both inspections, the one asked for open, and "Live"', await until(async () => (await vis(page, '[data-list="items"] li')).length === 2 &&
+      await boxValue(page, 'inspection', INSP, 'title') === '12 Oak St' && (await vis(page, '[data-live]')).join().startsWith('Live'), 15000));
+    ok('every page asked once, each from where the last ended', calls.every((c, i) => i === 0 ? c.body.after === null : typeof c.body.after === 'number') && errs.length === 0, errs.join(' | '));
     await ctx.close();
   });
 
