@@ -3,7 +3,8 @@
    ISN's access key, secret key and page address in any order), read by the app's own rules (inspyxImport.pastedKey);
    or a file. Then ONE preview of everything found, and nothing is kept before Bring in.
    - Spectora is read through the spectora-import function (the key in the request's body only; forgotten after);
-     ISN waits for isn-import: until it is live the page says to use the app.
+     ISN is read through isn-import (the server asks ISN for each list and passes it on), mapped by the app's own reader
+     (inspyxImport.isn, #811).
    - What is found is planned by the phone's own planners (inspyxImport.spectora / contacts / inspections), the people
      first and the past inspections against People as it would be after them, so nobody is planned twice.
    - Never from a People it couldn't read whole: People and the kept past inspections are read again, and everything
@@ -24,7 +25,7 @@
   }
   var MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
   var MAX = 10 * 1024 * 1024, BATCH = 200, SHOWN = 8, LIMIT = 100, ASK_DEADLINE = 60000;
-  var ISN_WEB = false;   // isn-import live: then ISN keys are read here too
+  var ISN_WEB = true;    // isn-import is live (#804, 2026-11-27): ISN keys are read here too, through it
   var STAND_IN = '00000000-0000-0000-0000-000000000000';
   var $ = function (sel) { return main.querySelector(sel); };
   var words = (function () {
@@ -109,6 +110,7 @@
       if (source.file && source.kind === 'past') return null;
       var r = source.file
         ? parse(imp.contacts(source.file.name, source.file.bytes, { kind: source.kind, existing: existingOf(rows) }))
+        : source.isn ? parse(imp.isn('people', source.isn, { existing: existingOf(rows) }))
         : parse(imp.spectora('people', { clients: source.clients, agents: source.agents, clients_cut: source.cuts.clients, agents_cut: source.cuts.agents }, { existing: existingOf(rows) }));
       return r;
     };
@@ -124,6 +126,7 @@
     if (source.file ? source.kind === 'past' : true) {
       var r2 = source.file
         ? parse(imp.inspections(source.file.name, source.file.bytes, { existing: existingOf(rows), existing_past: past }))
+        : source.isn ? parse(imp.isn('inspections', source.isn, { existing: existingOf(rows), existing_past: past }))
         : parse(imp.spectora('inspections', { records: source.records, cut: source.cuts.records }, { existing: existingOf(rows), existing_past: past }));
       if (r2.status !== 'ok') { if (!r1) return { refused: r2.message }; }
       else {
@@ -230,7 +233,7 @@
     if (!k) { line.textContent = ''; check.disabled = true; return; }
     line.setAttribute('data-kind', k.kind);
     if (k.kind === 'spectora') { line.textContent = words('sees-spectora'); pasted = k; }
-    else if (k.kind === 'isn') { line.textContent = words('sees-isn', { company: k.company_key }) + (ISN_WEB ? '' : ' ' + words('isn-later')); pasted = ISN_WEB ? k : null; }
+    else if (k.kind === 'isn') { line.textContent = words('sees-isn', { company: k.company_key }); pasted = ISN_WEB ? k : null; }
     else line.textContent = k.message;
     check.disabled = !pasted || busy;
   }
@@ -287,6 +290,50 @@
     };
     return page(1, 0);
   }
+  /* ---- read ISN: through isn-import, each list once, as the app reads it (the keys checked with "me" first) ---- */
+  var ISN_SAYS = { bad_keys: 'isn-bad_keys', no_privilege: 'isn-no_privilege', bad_address: 'isn-bad_address', busy: 'isn-busy',
+    unreadable: 'isn-unreadable', no_signal: 'isn-no_signal', unknown_host: 'isn-unknown', hour_full: 'isn-hour_full' };
+  var isnSays = function (a) { return words(ISN_SAYS[a && a.refused] || 'isn-unreadable'); };
+  function askIsn(keys, what, mine) {
+    // Every request as the account the page opened for (Codex on #133): a sign-in switched in another tab ends the read.
+    if (mine !== picked || !sameAccount()) return Promise.resolve({ over: true });
+    var body = { access_key: keys.access_key, secret_key: keys.secret_key, host: keys.host, company_key: keys.company_key, what: what };
+    // Past inspections only: the orders before now, as the app asks.
+    if (what === 'orders') body.before = new Date().toISOString();
+    return auth.ask('isn-import', body, ASK_DEADLINE).then(function (r) {
+      if (r === null) { window.location.replace('/signin'); return { over: true }; }
+      if (r.status === 429) return { refused: 'hour_full' };
+      if (r.status === 503) return { refused: 'busy' };
+      return r.json && typeof r.json === 'object' ? r.json : { refused: 'unreadable' };
+    }, function () { return { refused: 'no_signal' }; }).then(function (a) { return mine !== picked ? { over: true } : a; });
+  }
+  function readIsn(keys, got, mine) {
+    var k = keys;
+    // Unlabelled keys may be the other way round: tried swapped once, on bad_keys from "me" only (as the app does).
+    var check = function (swapped) {
+      return askIsn(k, 'me', mine).then(function (a) {
+        if (a.over) return a;
+        if (a.me) return null;
+        if (a.refused === 'bad_keys' && !keys.labelled && !swapped) {
+          k = { access_key: keys.secret_key, secret_key: keys.access_key, host: keys.host, company_key: keys.company_key };
+          return check(true);
+        }
+        return { message: isnSays(a) };
+      });
+    };
+    var lists = ['clients', 'agents', 'agencies', 'users', 'orders'];
+    var next = function (i) {
+      if (i >= lists.length) return Promise.resolve(null);
+      say(lists[i] === 'orders' ? 'reading-past' : 'reading-people');
+      return askIsn(k, lists[i], mine).then(function (a) {
+        if (a.over) return a;
+        if (Array.isArray(a.records)) { got.isn[lists[i]] = a.records; return next(i + 1); }
+        return { message: isnSays(a) };
+      });
+    };
+    return check(false).then(function (end) { return end || next(0); });
+  }
+
   var reading = false;   // Spectora is being read with the key now
   function lockKey(on) { reading = on; keyBox.disabled = on; $('[data-check]').disabled = on || !pasted; $('[data-stop]').hidden = !on; }
   $('[data-stop]').addEventListener('click', function () { picked++; lockKey(false); keyClear(); say('stopped'); });
@@ -294,6 +341,7 @@
     e.preventDefault();
     if (busy || !pasted || !sameAccount()) return;
     if (keyAutofilled()) { keyClear(); say('autofilled'); keyBox.focus(); return; }
+    if (pasted.kind === 'isn') { readIsnKeys(pasted); return; }
     var key = pasted.key;
     done = null; $('[data-done]').hidden = true; $('[data-preview]').hidden = true; source = null;
     var mine = ++picked;
@@ -314,6 +362,23 @@
       return preview().then(function () { if (end && end.message) say(null, null, end.message); });
     });
   });
+
+  /* ISN's keys, read: nothing kept of them once read (the box emptied), then the ONE preview. */
+  function readIsnKeys(k) {
+    var keys = { access_key: k.access_key, secret_key: k.secret_key, host: k.host, company_key: k.company_key, labelled: k.labelled === true };
+    done = null; $('[data-done]').hidden = true; $('[data-preview]').hidden = true; source = null;
+    var mine = ++picked;
+    var got = { platform: 'ISN', isn: { clients: [], agents: [], agencies: [], users: [], orders: [] } };
+    say('checking'); lockKey(true);
+    readIsn(keys, got, mine).catch(function () { return { message: words('failed') }; }).then(function (end) {
+      keys = null;
+      if (mine !== picked || (end && end.over)) return;
+      keyClear(); lockKey(false);
+      if (end && end.message) { say(null, null, end.message); return; }
+      source = got;
+      return preview();
+    });
+  }
 
   /* ---- a file: what it holds is his to say (clients, agents or past inspections), then it is read ---- */
   var pendingFile = null;

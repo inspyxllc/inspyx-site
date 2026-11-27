@@ -70,6 +70,29 @@ function spxServer(over) {
   } };
 }
 
+/* The stand-in isn-import (the ISN fixture of the app's bring_business_test): the keys' own user, then each list. It
+   takes the pair only one way round (access key first) unless told otherwise; [refuse] answers "me" with a refusal. */
+function isnServer(o) {
+  o = o || {};
+  const calls = [];
+  const lists = {
+    clients: [{ id: 'c-1', first: 'Casey', last: 'Client', email: 'casey@example.com' }],
+    agents: [{ id: 'a-1', first: 'Avery', last: 'Agent', agency: 'ag-1' }],
+    agencies: [{ id: 'ag-1', name: 'Sunshine Realty' }],
+    users: [{ id: 'u-1', displayname: 'Jordan Inspector' }],
+    orders: [{ id: 'o-1', datetime: '2026-10-02 09:00:00', address1: '12 Palm Way', client: 'c-1', buyersagent: 'a-1', inspector1: 'u-1' }],
+  };
+  return { calls, next: (body) => {
+    calls.push(body);
+    if (body.what === 'me') {
+      if (o.refuse) return { status: 200, body: { refused: o.refuse } };
+      const right = o.swapped ? body.access_key === 's3cretSECRETs3cretSECRET' : body.access_key === 'AKIAEXAMPLEKEY1234';
+      return { status: 200, body: right ? { me: { id: 'u-1' } } : { refused: 'bad_keys' } };
+    }
+    return { status: 200, body: { records: lists[body.what] || [] } };
+  } };
+}
+
 async function open(browser, o) {
   const ctx = await browser.newContext({ viewport: { width: o.w || WIDE, height: 900 }, locale: 'en-US' });
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, kept());
@@ -86,6 +109,10 @@ async function open(browser, o) {
       const a = o.sync.answer(b);
       if (pushing && o.sync.loseNext) { o.sync.loseNext = false; return route.fulfill({ status: 503, contentType: 'application/json', headers: cors, body: '{}' }); }
       return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(a) });
+    }
+    if (u.startsWith(SERVER + '/functions/v1/isn-import') && o.isn) {
+      const a = o.isn.next(JSON.parse(req.postData() || '{}'));
+      return route.fulfill({ status: a.status, contentType: 'application/json', headers: cors, body: JSON.stringify(a.body) });
     }
     if (u.startsWith(SERVER + '/functions/v1/spectora-import')) {
       if (o.spx.delay) await new Promise((r) => setTimeout(r, o.spx.delay));
@@ -129,8 +156,8 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
       await paste(page, 'AKIAEXAMPLEKEY1234 s3cretSECRETs3cretSECRET');
       ok(label + ': ISN keys without the address: what is missing, in the app’s words', (await page.locator('[data-sees]').textContent()) === words.needsAddress);
       await paste(page, ISN);
-      ok(label + ': ISN keys and address: seen, and the page says to use the app for now (nothing is read here yet)',
-        (await page.locator('[data-sees]').textContent()) === 'ISN keys for acme ISN: use the Inspyx app for now. Reading ISN here comes soon.' && await page.locator('[data-check]').isDisabled());
+      ok(label + ': ISN keys and address: seen, and Check and read (ISN is read here since 2026-11-27)',
+        (await page.locator('[data-sees]').textContent()) === 'ISN keys for acme' && await page.locator('[data-check]').isEnabled());
       await paste(page, 'Bearer ' + KEY);
       ok(label + ': a Spectora key: “A Spectora key”, and Check and read', (await page.locator('[data-sees]').textContent()) === 'A Spectora key' && await page.locator('[data-check]').isEnabled() &&
         (await page.locator('[data-check]').textContent()) === 'Check and read');
@@ -292,6 +319,54 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     await o.page.waitForTimeout(3000);
     ok('and the read Spectora answers late never lands: the preview is the file\'s', (await o.page.locator('[data-found]').textContent()) === 'Found in clients.csv' &&
       (await o.page.locator('[data-count-people]').textContent()) === '1 client · 0 agents', await o.page.locator('[data-count-people]').textContent());
+    await o.ctx.close();
+  });
+
+  await group('ISN: the keys checked, swapped once when unlabelled, every list read through isn-import, one preview', async () => {
+    let sync = syncServer(seed()), spx = spxServer(), isn = isnServer();
+    let o = await open(browser, { sync, spx, isn });
+    // Unlabelled, the secret first (read in the order pasted): ISN refuses the pair, so it is tried the other way
+    // round, once.
+    await paste(o.page, 'https://inspectionsupport.com/acme/access-keys\ns3cretSECRETs3cretSECRET\nAKIAEXAMPLEKEY1234');
+    await o.page.locator('[data-check]').click();
+    await until(async () => await o.page.locator('[data-preview]').isVisible(), 10000);
+    const whats = isn.calls.map((c) => c.what);
+    ok('ISN: "me", then once more swapped, then clients, agents, agencies, users and the orders before now',
+      JSON.stringify(whats) === JSON.stringify(['me', 'me', 'clients', 'agents', 'agencies', 'users', 'orders']) &&
+      isn.calls.every((c) => c.host === 'inspectionsupport.com' && c.company_key === 'acme') &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(isn.calls[6].before || '') && isn.calls.slice(0, 6).every((c) => c.before === undefined), JSON.stringify(whats));
+    ok('ISN: the one preview, by the app\'s reader: its client and agent, its past inspection',
+      (await o.page.locator('[data-found]').textContent()) === 'Found in your ISN account' &&
+      (await o.page.locator('[data-count-people]').textContent()) === '1 client · 1 agent' && (await o.page.locator('[data-count-past]').textContent()).startsWith('1 '),
+      [await o.page.locator('[data-found]').textContent(), await o.page.locator('[data-count-people]').textContent(), await o.page.locator('[data-count-past]').textContent()].join(' | '));
+    ok('ISN: the keys went nowhere but isn-import, and the box is emptied', o.bodies.filter((b) => b.indexOf('AKIAEXAMPLEKEY1234') >= 0).every((b) => b.indexOf('/functions/v1/isn-import') >= 0) &&
+      (await o.page.locator('[data-key]').inputValue()) === '' && sync.pushes.length === 0);
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 10000);
+    ok('ISN: brought in: Casey and Avery in People, the past inspection kept', names(sync.people()).includes('casey client') && names(sync.people()).includes('avery agent') && sync.past().length === 1,
+      JSON.stringify([names(sync.people()), sync.past().length]));
+    ok('ISN: no errors', o.errs.length === 0 && o.away.length === 0, o.errs.concat(o.away).join(' | '));
+    await o.ctx.close();
+
+    // A refusal: the app's words; nothing more is asked, nothing kept, the box emptied.
+    sync = syncServer(seed()); spx = spxServer(); isn = isnServer({ refuse: 'no_privilege' });
+    o = await open(browser, { sync, spx, isn });
+    await paste(o.page, ISN);
+    await o.page.locator('[data-check]').click();
+    await until(async () => (await said(o.page)).indexOf('owner or manager') >= 0, 10000);
+    ok('ISN refused: the app\'s words; only "me" was asked; nothing kept',
+      (await said(o.page)) === "These keys work, but ISN doesn't let their user read this. Make the keys on an owner or manager account." &&
+      JSON.stringify(isn.calls.map((c) => c.what)) === '["me"]' && await o.page.locator('[data-preview]').isHidden() && sync.pushes.length === 0 &&
+      (await o.page.locator('[data-key]').inputValue()) === '', await said(o.page));
+    await o.ctx.close();
+
+    // Labelled keys are never swapped: bad_keys is said at once.
+    sync = syncServer(seed()); spx = spxServer(); isn = isnServer({ swapped: true });
+    o = await open(browser, { sync, spx, isn });
+    await paste(o.page, 'https://inspectionsupport.com/acme/access-keys\naccess key: AKIAEXAMPLEKEY1234\nsecret key: s3cretSECRETs3cretSECRET');
+    await o.page.locator('[data-check]').click();
+    await until(async () => (await said(o.page)).indexOf("didn't accept") >= 0, 10000);
+    ok('ISN, labelled keys: never swapped; the app\'s words for keys ISN refuses', JSON.stringify(isn.calls.map((c) => c.what)) === '["me"]', JSON.stringify(isn.calls.map((c) => c.what)));
     await o.ctx.close();
   });
 
