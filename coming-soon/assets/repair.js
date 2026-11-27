@@ -91,13 +91,24 @@
     return c >= 0 && c <= MAX_CENTS ? c : null;
   }
 
+  /* Every request of this page. One deadline covers the whole answer, its headers AND its body: one that stalls
+     partway is ended with the rest and fails, as no connection does. It settles itself, so a body read that ignores
+     the abort can't hold it. */
+  var DEADLINE = 20000;
   function ask(body) {
-    return fetch(API, {
-      method: 'POST', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ key: state.key }, body))
-    }).then(function (res) {
-      return res.json().catch(function () { return {}; }).then(function (j) { return { status: res.status, json: j || {} }; });
+    var stop = typeof AbortController === 'function' ? new AbortController() : null;
+    return new Promise(function (resolve, reject) {
+      var done = false, timer = null;
+      var end = function (r) { if (done) return; done = true; if (timer) clearTimeout(timer); if (r) resolve(r); else reject(new Error('no answer')); };
+      timer = setTimeout(function () { if (stop) stop.abort(); end(null); }, DEADLINE);
+      fetch(API, {
+        method: 'POST', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ key: state.key }, body)), signal: stop ? stop.signal : undefined
+      }).then(function (res) {
+        res.json().then(function (j) { end({ status: res.status, json: j || {} }); },
+          function () { end({ status: res.status, json: {} }); });
+      }, function () { end(null); });
     });
   }
 

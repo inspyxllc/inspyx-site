@@ -52,6 +52,21 @@ async function open(browser, o) {
     const a = o.answer ? o.answer(body, calls.length) : (body.link_id ? { status: 200, json: PLAIN } : { status: 200, json: LIST });
     return route.fulfill({ status: a.status, contentType: 'application/json', headers: cors, body: JSON.stringify(a.json) });
   });
+  // A body that stalls: the first answer gets its headers, then a body that never ends.
+  if (o.stallFirst) {
+    await page.addInitScript(() => {
+      const real = window.fetch;
+      let stalled = false;
+      window.fetch = function (input, init) {
+        if (!stalled && init && init.method === 'POST') {
+          stalled = true;
+          const body = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode('{"state":')); } });
+          return Promise.resolve(new Response(body, { status: 200, headers: { 'content-type': 'application/json' } }));
+        }
+        return real.apply(this, arguments);
+      };
+    });
+  }
   const res = await page.goto(url + (o.path === undefined ? 'a#' + PAGE_KEY : o.path), { waitUntil: 'load' });
   await page.waitForTimeout(400);
   return { ctx, page, errs, away, calls, asked, res };
@@ -94,6 +109,13 @@ const items = (page) => page.evaluate(() => {
       await ctx.close();
     });
   }
+
+  await group('an answer that stalls mid-body', async () => {
+    const { page, ctx } = await open(browser, { stallFirst: true });
+    ok('is given up at its deadline: the page says it couldn\'t open, never waits for good',
+      await until(async () => (await shown(page, '[data-state="failed"]')) !== '', 30000), await shown(page, '[data-state]'));
+    await ctx.close();
+  });
 
   await group('a report, opened from the list', async () => {
     const { page, ctx, errs, away, calls, asked } = await open(browser, {});

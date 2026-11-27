@@ -53,22 +53,25 @@
     return new Intl.DateTimeFormat('en-US', o).format(d);
   }
 
+  /* Every request of this page. One deadline covers the whole answer, its headers AND its body: one that stalls
+     partway is ended with the rest, and counts as no answer. It settles itself, so a body read that ignores the
+     abort can't hold it. */
   function ask(body) {
     var stop = typeof AbortController === 'function' ? new AbortController() : null;
-    var timer = stop ? setTimeout(function () { stop.abort(); }, DEADLINE) : null;
-    return fetch(API, {
-      method: 'POST', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify(body), signal: stop ? stop.signal : undefined,
-    }).then(function (res) {
-      if (timer) clearTimeout(timer);
-      if (res.status === 404) return { state: 'gone' };
-      if (res.status === 429) return { state: 'slow' };
-      if (!res.ok) return { state: 'failed' };
-      return res.json().catch(function () { return { state: 'failed' }; });
-    }, function () {
-      if (timer) clearTimeout(timer);
-      return { state: 'failed' };
+    return new Promise(function (resolve) {
+      var done = false, timer = null;
+      var finish = function (a) { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(a); };
+      timer = setTimeout(function () { if (stop) stop.abort(); finish({ state: 'failed' }); }, DEADLINE);
+      fetch(API, {
+        method: 'POST', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(body), signal: stop ? stop.signal : undefined,
+      }).then(function (res) {
+        if (res.status === 404) return finish({ state: 'gone' });
+        if (res.status === 429) return finish({ state: 'slow' });
+        if (!res.ok) return finish({ state: 'failed' });
+        return res.json().then(finish, function () { finish({ state: 'failed' }); });
+      }, function () { finish({ state: 'failed' }); });
     });
   }
 

@@ -80,6 +80,33 @@ const numberOf = (id) => allFindings().find((f) => f.id === id).number;
 (async () => {
   const browser = await engine.launch();
 
+  // ---- an answer that stalls mid-body: its headers come, its body never ends. It is given up at its deadline and
+  // the page says it couldn't open, with Try again, never waiting for good. On the sample only.
+  if (!PROD) {
+    const stalled = await open(browser, {
+      init: () => {
+        const real = window.fetch;
+        let stalled = false;
+        window.fetch = function (input, init) {
+          const u = typeof input === 'string' ? input : input.url;
+          if (!stalled && /report\.json/.test(u)) {
+            stalled = true;
+            const body = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode('{"state":')); } });
+            return Promise.resolve(new Response(body, { status: 200, headers: { 'content-type': 'application/json' } }));
+          }
+          return real.apply(this, arguments);
+        };
+      },
+    });
+    let failedShown = false;
+    for (let i = 0; i < 300 && !failedShown; i++) {
+      failedShown = await stalled.page.evaluate(() => document.querySelector('[data-state="failed"]') !== null);
+      if (!failedShown) await new Promise((r) => setTimeout(r, 100));
+    }
+    ok('an answer that stalls mid-body is given up at its deadline: the report says it couldn\'t open', failedShown);
+    await stalled.ctx.close();
+  }
+
   // ---- a reinspection (content /15, 2026-11-26): its cover, the recheck's tiles in the PDF's colours, the summary
   // for the agent (as text), and each rechecked finding's result first on its card; an ordinary report shows none.
   // On the sample only: the live site has no sample to open (Codex on #118).
