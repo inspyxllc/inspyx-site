@@ -220,11 +220,12 @@
   $('[data-sign]').addEventListener('click', sign);
 
   /* What is still owed, from the view (the lead, 2026-11-27: his Pay-to-unlock flow): only a sum above zero and a link to
-     this site's own pay page. */
+     this site's own pay link: inspyx.com/pay/<token> (rehearsal 3, finding 13: on to Stripe from there), or the
+     inspyx.com/pay#<token> the server gave before. */
   function owed() {
     var p = view && view.pay;
     if (!p || typeof p.dueCents !== 'number' || !(p.dueCents > 0) || p.dueCents % 1 !== 0) return null;
-    if (typeof p.link !== 'string' || !/^https:\/\/inspyx\.com\/pay#[A-Za-z0-9_-]{22}$/.test(p.link)) return null;
+    if (typeof p.link !== 'string' || !/^https:\/\/inspyx\.com\/pay[/#][A-Za-z0-9_-]{22}$/.test(p.link)) return null;
     return p;
   }
   function usd(cents) {
