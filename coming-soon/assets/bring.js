@@ -92,7 +92,7 @@
   function planAll(newId, importId) {
     var me = (auth.who() || {}).id || STAND_IN, now = Date.now(), imp = window.inspyxImport;
     var rows = book.rows(), past = PS.keptForReader(pastBook.rows(), me);
-    var people = { push: [], changes: [], plan: [] }, left = [], history = null;
+    var people = { push: [], changes: [], plan: [] }, left = [], history = null, cuts = [];
     var runPeople = function () {
       if (source.file && source.kind === 'past') return null;
       var r = source.file
@@ -106,6 +106,7 @@
       var a = CI.applyPlan(rows, r1.plan || [], me, now, newId);
       people = { push: a.push, changes: a.changes, plan: r1.plan || [] };
       left = left.concat(r1.skipped || []);
+      if (r1.cut && r1.cut_message) cuts.push(r1.cut_message);
       rows = merged(rows, a.push);
     }
     if (source.file ? source.kind === 'past' : true) {
@@ -118,6 +119,8 @@
         people.push = people.push.concat(b.push); people.changes = people.changes.concat(b.changes);
         people.plan = people.plan.concat((r2.people && r2.people.plan) || []);
         left = left.concat(r2.skipped || []).concat((r2.people && r2.people.skipped) || []);
+        // A file past the reader's limit is read to there, and says so (Codex on #133): never cut quietly.
+        if (r2.cut && r2.cut_message) cuts.push(r2.cut_message);
         history = PS.newRows(r2.inspections || [], me, now, newId, importId);
         history.read = r2.inspections || [];
       }
@@ -130,7 +133,7 @@
         left = left.concat(r3.skipped || []);
       }
     }
-    return { people: people, history: history, prices: prices, left: left };
+    return { people: people, history: history, prices: prices, left: left, cuts: cuts };
   }
 
   /* ---- the preview ---- */
@@ -158,6 +161,7 @@
     var lpr = $('[data-list-prices]'); lpr.textContent = '';
     p.prices.lines.slice(0, SHOWN).forEach(function (x) { lpr.appendChild(el('li', null, x.name + ' · ' + MONEY.format(x.fee_cents / 100))); });
     var left = p.left.concat(p.history ? p.history.problems.map(function (x) { return { line: x.line, reason: x.problem }; }) : []);
+    var cutNote = $('[data-cut]'); cutNote.hidden = !p.cuts.length; cutNote.textContent = p.cuts.join(' ');
     var det = $('[data-left]'); det.hidden = !left.length;
     if (left.length) {
       $('[data-left-n]').textContent = plural('left', left.length);
@@ -380,13 +384,15 @@
     [].slice.call(main.querySelectorAll('button, textarea, input')).forEach(function (b) { b.disabled = on; });
     if (!on) { seen(); keyBox.disabled = false; }
   }
-  function finished(people, past, nothing, prices) {
+  function finished(people, past, nothing, prices, refused) {
     $('[data-preview]').hidden = true; say(null);
     var ul = $('[data-done-list]'); ul.textContent = '';
     if (nothing) ul.appendChild(el('li', null, words('done-nothing')));
     if (people) ul.appendChild(el('li', null, plural('done-people', people)));
     if (past) ul.appendChild(el('li', null, plural('done-past', past)));
     if (prices) ul.appendChild(el('li', null, plural('done-prices', prices)));
+    // What the server kept out (a change from the phone was newer: Codex on #133): said, never passed off as done.
+    if (refused) ul.appendChild(el('li', 'br-refused', plural('refused', refused)));
     $('[data-done]').hidden = false;
     $('[data-undo]').hidden = !(done && ((done.people && done.people.length) || done.past || (done.prices && done.prices.length)));
   }
@@ -414,9 +420,11 @@
           done.people = p.people.changes.filter(function (c) { return keptSet[c.id]; });
           if (res.broke) { finished(done.people.length, done.past ? done.past.n : 0, false, 0); say('failed'); return; }
           var keptSoFar = pr.kept.length + res.kept.length;
+          var refused = (past.length - pr.kept.length) + (p.people.push.length - res.kept.length);
           return sendSure(p.prices.push, priceBook, function (k) { say('bringing', { done: keptSoFar + k, n: all }); }).then(function (rp) {
             done.prices = rp.kept;
-            finished(done.people.length, done.past ? done.past.n : 0, false, done.prices.length);
+            if (!rp.broke) refused += p.prices.push.length - rp.kept.length;
+            finished(done.people.length, done.past ? done.past.n : 0, false, done.prices.length, refused);
             if (rp.broke) say('failed');
           });
         });

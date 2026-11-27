@@ -107,3 +107,5 @@
   .br-how-done { left: 14px; font-size: 13px; }
   .br-how-step { font-size: 12px; padding: 8px; }
 }
+.br-cut { color: #b45309; margin: 10px 0 0; }
+.br-refused { color: #b45309; }

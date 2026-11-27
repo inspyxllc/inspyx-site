@@ -46,7 +46,7 @@ function syncServer(rows0) {
   const answer = (b) => {
     const applied = [];
     if ((b.push || []).length) pushes.push(b.push.length);
-    for (const r of b.push || []) { const k = r.kind + '/' + r.id, h = held.get(k); if (h && h.row.updated_at >= r.updated_at) { applied.push({ kind: r.kind, id: r.id, applied: false }); continue; } held.set(k, { row: r, seq: ++seq }); applied.push({ kind: r.kind, id: r.id, applied: true }); }
+    for (const r of b.push || []) { const k = r.kind + '/' + r.id, h = held.get(k); if ((h && h.row.updated_at >= r.updated_at) || (srv.refuse && srv.refuse(r))) { applied.push({ kind: r.kind, id: r.id, applied: false }); continue; } held.set(k, { row: r, seq: ++seq }); applied.push({ kind: r.kind, id: r.id, applied: true }); }
     const after = typeof b.after === 'number' ? b.after : 0;
     return { rows: [...held.values()].filter((h) => h.seq > after).sort((x, y) => x.seq - y.seq).map((h) => h.row), next: seq, more: false, skipped: [], applied };
   };
@@ -55,8 +55,9 @@ function syncServer(rows0) {
   // put: another device's change, newer than anything held. loseNext: the next push is kept but its answer is lost.
   // delay: each push answered that much later.
   const put = (r) => held.set(r.kind + '/' + r.id, { row: r, seq: ++seq });
-  return { answer, pushes, put, loseNext: false, delay: 0, people: () => all().filter((r) => r.kind === 'inspector_contacts'), past: () => all().filter((r) => r.kind === 'past_inspections' && alive(r)),
-    prices: () => all().filter((r) => r.kind === 'price_services' && alive(r)), alive };
+  const srv = { answer, pushes, put, loseNext: false, delay: 0, people: () => all().filter((r) => r.kind === 'inspector_contacts'), past: () => all().filter((r) => r.kind === 'past_inspections' && alive(r)),
+    prices: () => all().filter((r) => r.kind === 'price_services' && alive(r)), alive, refuse: null };
+  return srv;
 }
 /* The stand-in spectora-import: one page of each list, from the fixture. */
 function spxServer(over) {
@@ -248,6 +249,32 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
       JSON.stringify([keptPast, await o.page.locator('[data-done-list] li').allTextContents()]));
     await o.page.locator('[data-undo]').click();
     ok('and Undo takes them back', await until(async () => sync.past().length === 0, 10000));
+    await o.ctx.close();
+  });
+
+  await group('Codex r2 on #133: a file past the reader\'s limit; rows the server turns down', async () => {
+    // A past-inspections file of 20,002 lines: the reader reads 20,000 and says so; the page shows its words.
+    const big = 'Date,Address,Client\n' + Array.from({ length: 20002 }, (_, i) => '2026-01-' + String(1 + (i % 28)).padStart(2, '0') + ',' + i + ' Oak St,Client ' + i).join('\n') + '\n';
+    const want = J(READER.inspections('history.csv', new TextEncoder().encode(big), { existing: [], existing_past: [] }));
+    let sync = syncServer(seed()), spx = spxServer(), o = await open(browser, { sync, spx });
+    await o.page.setInputFiles('[data-pick]', { name: 'history.csv', mimeType: 'text/csv', buffer: Buffer.from(big, 'utf8') });
+    await until(async () => await o.page.locator('[data-file-kind]').isVisible());
+    await o.page.locator('[data-fk="past"]').click();
+    await until(async () => await o.page.locator('[data-preview]').isVisible(), 30000);
+    ok('a file past the reader\'s limit: its own words say it was cut, in plain view', want.cut === true && !!want.cut_message &&
+      await o.page.locator('[data-cut]').isVisible() && (await o.page.locator('[data-cut]').textContent()) === want.cut_message, want.cut_message);
+    await o.ctx.close();
+
+    // A person the server turns down while the import is saved (the phone's change was newer): said on the done screen.
+    sync = syncServer(seed()); spx = spxServer(); o = await open(browser, { sync, spx });
+    sync.refuse = (r) => r.kind === 'inspector_contacts' && r.data && r.data.name === 'Bob Diaz';
+    await paste(o.page, KEY); await o.page.locator('[data-check]').click();
+    await until(async () => await o.page.locator('[data-preview]').isVisible());
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 10000);
+    const lines = await o.page.locator('[data-done-list] li').allTextContents();
+    ok('a row the server turned down: "1 more didn\'t go through", never passed off as all done', lines.some((t) => t.indexOf('1 more didn’t go through') === 0) &&
+      !names(sync.people()).includes('bob diaz'), JSON.stringify(lines));
     await o.ctx.close();
   });
 
