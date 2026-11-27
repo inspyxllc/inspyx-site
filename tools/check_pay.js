@@ -16,6 +16,8 @@ const FN = 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/pay/';
 const STRIPE_JS = 'https://js.stripe.com/v3/';
 // Made up, built at run time so no literal here looks like a secret.
 const LINK = 'P'.repeat(11) + 'q'.repeat(11);
+// Another inspection's link, opened in the same tab.
+const LINK2 = 'R'.repeat(11) + 's'.repeat(11);
 const PK = 'pk_' + 'test_' + 'x'.repeat(24);
 const ACCT = 'acct_' + '1Ab2Cd3Ef4';
 const PI = 'pi_' + '3Qx' + 'y'.repeat(20);
@@ -75,16 +77,17 @@ async function open(browser, o) {
     const req = route.request(), u = req.url();
     const cors = { 'access-control-allow-origin': '*' };
     if (u === STRIPE_JS && !o.noStripe) return route.fulfill({ status: 200, contentType: 'text/javascript', body: FAKE_STRIPE });
-    if (!u.startsWith(FN + LINK)) { away.push(u); return route.abort(); }
+    if (!u.startsWith(FN + LINK) && !u.startsWith(FN + LINK2)) { away.push(u); return route.abort(); }
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { ...cors, 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'GET, POST' } });
     const q = new URL(u).search;
     // The function's own Checkout address, opened when the fee no longer applies.
     if (req.method() === 'GET' && q === '') { calls.push({ method: 'GET', q, nav: true }); return route.fulfill({ status: 200, contentType: 'text/plain', body: 'checkout' }); }
     const body = req.method() === 'POST' ? JSON.parse(req.postData() || '{}') : null;
-    calls.push({ method: req.method(), q, body, headers: req.headers() });
+    calls.push({ method: req.method(), q, body, headers: req.headers(), link: u.startsWith(FN + LINK2) ? 2 : 1 });
     const a = o.answer ? o.answer(req.method(), q, body, calls.length) : null;
     const def = req.method() === 'POST' ? { status: 200, json: quoteFor(body.payment_method) }
       : /pi=/.test(q) ? { status: 200, json: { state: 'paid', receipt_url: RECEIPT } }
+      : u.startsWith(FN + LINK2) ? { status: 200, json: { ...DUE, title: 'Reinspection' } }
       : { status: 200, json: DUE };
     const r = a || def;
     return route.fulfill({ status: r.status, contentType: 'application/json', headers: cors, body: JSON.stringify(r.json) });
@@ -234,6 +237,52 @@ async function quoteWith(page, cardText) {
     await ctx.close();
   });
 
+  // Once Stripe took the payment, the page follows THAT payment until its result is read: an answer that doesn't come
+  // (a timeout, a 5xx) never strands it, and nothing ever offers to pay again.
+  await group('paid, but the first read of the result fails', async () => {
+    let piAsks = 0;
+    const { page, ctx, calls } = await open(browser, { answer: (m, q) => {
+      if (!/pi=/.test(q)) return null;
+      piAsks++;
+      return piAsks === 1 ? { status: 503, json: {} } : piAsks === 2 ? { status: 200, json: { state: 'confirming' } } : null;
+    } });
+    await quoteWith(page, 'credit');
+    await until(async () => (await shown(page, '[data-quote]')) !== '');
+    await page.click('[data-paynow]');
+    ok('it keeps asking about that payment, then shows the thanks and the receipt', await until(async () => (await shown(page, '[data-states] [data-state]')) === 'Paid. Thank you!', 15000) &&
+      (await page.getAttribute('[data-receipt]', 'href')) === RECEIPT && piAsks >= 3, 'asked ' + piAsks);
+    ok('and never offers to pay again: no Try again, no amount due, no second payment', (await shown(page, '[data-again]')) === '' && (await shown(page, '[data-due]')) === '' &&
+      calls.filter((c) => c.method === 'POST').length === 1 && (await fake(page)).calls.filter((c) => c.startsWith('confirm:')).length === 1);
+    await ctx.close();
+  });
+  await group('paid, and the tab is reloaded before the result is read', async () => {
+    const { page, ctx, calls } = await open(browser, { answer: (m, q) => (/pi=/.test(q) ? { status: 200, json: { state: 'confirming' } } : null) });
+    await quoteWith(page, 'credit');
+    await until(async () => (await shown(page, '[data-quote]')) !== '');
+    await page.click('[data-paynow]');
+    await until(async () => calls.some((c) => /pi=/.test(c.q)));
+    const before = calls.length;
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForTimeout(600);
+    const after = calls.slice(before);
+    ok('the reloaded page follows the same payment, never asks what is due, and shows no way to pay', after.length > 0 && after.every((c) => c.q === '?view=json&pi=' + PI) &&
+      (await shown(page, '[data-due]')) === '' && (await shown(page, '[data-states] [data-state]')) === 'Your payment is going through. Stripe’s receipt shows here once it’s confirmed.',
+      JSON.stringify(after.map((c) => c.q)));
+    await ctx.close();
+  });
+  await group('another pay link opened in the same tab', async () => {
+    const { page, ctx, calls } = await open(browser, {});
+    await until(async () => (await shown(page, '[data-what]')) !== '');
+    // The page starts again on it: wait for that load before reading anything (the reload may come before the
+    // call that moves the address returns).
+    const reloaded = page.waitForEvent('load');
+    await page.evaluate((l) => { location.hash = l; }, LINK2).catch(() => {});
+    await reloaded;
+    await page.waitForTimeout(400);
+    ok('the page starts again on the new link: its inspection, and the address put away again', await until(async () => (await shown(page, '[data-what]')).startsWith('Reinspection')) &&
+      calls.some((c) => c.link === 2) && new URL(page.url()).hash === '', await shown(page, '[data-what]'));
+    await ctx.close();
+  });
   await group('Stripe\'s form can\'t load', async () => {
     const { page, ctx } = await open(browser, { noStripe: true });
     ok('without Stripe.js it says it couldn\'t open, and shows no card box', (await shown(page, '[data-states] [data-state]')) === 'The payment couldn’t be opened. Check your connection and try again.' && (await shown(page, '[data-due]')) === '');

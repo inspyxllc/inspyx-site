@@ -16,6 +16,7 @@
   var FN = 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/pay/';
   var LINK = /^[A-Za-z0-9_-]{22}$/;
   var KEPT = 'inspyx.pay.link';
+  var PAID = 'inspyx.pay.paying';   // {link, pi}: a payment Stripe took whose result isn't read yet
   var DEADLINE = 20000;   // an ask that takes longer counts as no answer
   var PK = /^pk_(test|live)_[A-Za-z0-9]{10,240}$/;
   var ACCT = /^acct_[A-Za-z0-9]{6,64}$/;
@@ -42,6 +43,13 @@
   }
 
   var stripe = null, card = null, secret = null, busy = false, rate = 0;
+
+  /* A payment Stripe took, for this link: followed until its result is read, across a reload of the tab. */
+  function paying() {
+    try { var k = JSON.parse(sessionStorage.getItem(PAID) || 'null'); if (k && k.link === link && PI.test(k.pi || '')) return k.pi; } catch (e) { /* storage off */ }
+    return null;
+  }
+  function keepPaying(pi) { try { if (pi) sessionStorage.setItem(PAID, JSON.stringify({ link: link, pi: pi })); else sessionStorage.removeItem(PAID); } catch (e) { /* storage off */ } }
 
   function state(name) {
     all('[data-states] [data-state]').forEach(function (p) { p.hidden = p.getAttribute('data-state') !== name; });
@@ -94,14 +102,13 @@
     a.hidden = !ok;
   }
 
-  function settled(a, tries) {
+  function settled(a) {
     due.hidden = true;
-    if (a.state === 'paid') { state('paid'); receipt(a.receipt_url); return true; }
-    if (a.state === 'nothing_due') { state(a.paid_in_full === true ? 'paidfull' : 'nothing'); return true; }
+    if (a.state === 'paid') { keepPaying(null); state('paid'); receipt(a.receipt_url); return true; }
+    if (a.state === 'nothing_due') { keepPaying(null); state(a.paid_in_full === true ? 'paidfull' : 'nothing'); return true; }
     if (a.state === 'confirming') {
       state('confirming');
-      // Stripe confirms within moments: look again a few times, then leave the words to say it is on its way.
-      if (tries > 0 && settled.pi) setTimeout(function () { ask('GET', '?view=json&pi=' + settled.pi).then(function (b) { if (!settled(b, tries - 1)) look(); }); }, 2000);
+      if (settled.pi) follow(settled.pi);
       return true;
     }
     if (a.state === 'checkout') { toCheckout(a.url); return true; }
@@ -109,11 +116,37 @@
     return false;
   }
 
+  /* Once Stripe took a payment, the page asks about THAT payment until its result is read: soon at first, then
+     less often, and at once when the tab comes back or the connection does. Never the plain "what is due" view,
+     which, asked before the function records the payment, would offer to take it a second time. */
+  var followTimer = null, followTries = 0;
+  function follow(pi) {
+    settled.pi = pi;
+    keepPaying(pi);
+    state('confirming');
+    due.hidden = true;
+    if (followTimer) return;
+    var wait = followTries < 5 ? 2000 : Math.min(30000, 2000 * Math.pow(2, followTries - 4));
+    followTimer = setTimeout(followNow, followTries === 0 ? 0 : wait);
+  }
+  function followNow() {
+    if (followTimer) { clearTimeout(followTimer); followTimer = null; }
+    var pi = settled.pi;
+    if (!pi) return;
+    followTries++;
+    ask('GET', '?view=json&pi=' + pi).then(function (a) {
+      if (a.state === 'paid' || a.state === 'nothing_due' || a.state === 'gone' || a.state === 'checkout') return settled(a);
+      follow(pi);   // confirming, no answer, or not recorded yet: still on its way
+    });
+  }
+  window.addEventListener('online', function () { if (followTimer) followNow(); });
+  doc.addEventListener('visibilitychange', function () { if (doc.visibilityState === 'visible' && followTimer) followNow(); });
+
   function look() {
     state('loading');
     due.hidden = true;
     ask('GET', '?view=json').then(function (a) {
-      if (settled(a, 0)) return;
+      if (settled(a)) return;
       if (a.state === 'due') return showDue(a);
       state('failed');
     });
@@ -190,7 +223,7 @@
       return ask('POST', '', { action: 'quote', payment_method: r.paymentMethod.id }).then(function (a) {
         busy = false; go.disabled = false;
         if (a.state === 'quote') return showQuote(a);
-        if (a.state === 'checkout' || a.state === 'nothing_due' || a.state === 'gone') return settled(a, 0);
+        if (a.state === 'checkout' || a.state === 'nothing_due' || a.state === 'gone') return settled(a);
         error('failed');
       });
     }, function () { busy = false; go.disabled = false; error('failed'); });
@@ -212,10 +245,7 @@
       }
       // Paid: what the function recorded from Stripe's own answer, with Stripe's receipt.
       secret = null;
-      settled.pi = pi.id;
-      state('confirming');
-      due.hidden = true;
-      ask('GET', '?view=json&pi=' + pi.id).then(function (a) { if (!settled(a, 5)) state('confirming'); });
+      follow(pi.id);
     }, function () { busy = false; other.disabled = false; payNow.disabled = false; error('failed'); });
   });
 
@@ -230,6 +260,21 @@
   });
 
   again.addEventListener('click', function () { look(); });
+
+  /* Another pay link opened in this tab: the browser only moves to it within the page, so the page starts again on
+     it, once nothing is on its way to Stripe. A payment of the last link still being read is read by that link. */
+  window.addEventListener('hashchange', function () {
+    var next = (location.hash || '').replace(/^#/, '');
+    if (!LINK.test(next) || next === link) return;
+    (function when() {
+      if (busy) return setTimeout(when, 300);
+      try { sessionStorage.setItem(KEPT, next); } catch (e) { /* storage off: the address carries it */ }
+      location.reload();
+    })();
+  });
+
   if (!link) return state('gone');
+  var pending = paying();
+  if (pending) return follow(pending);
   look();
 })();
