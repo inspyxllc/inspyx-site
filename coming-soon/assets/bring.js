@@ -47,6 +47,15 @@
   var plan = null;       // the last plan shown (counts), for Bring in to compare
   var done = null;       // { people: changes[], past: { importId, n } | null } for Undo
   var busy = false, picked = 0;
+  /* The account the page opened for: its books hold that account's rows. If another tab signs in as someone else,
+     nothing is planned or kept from these rows as the new account: the page starts again (its own adversarial pass). */
+  var opened = null;
+  function sameAccount() {
+    var w = auth.who();
+    if (w && opened && w.id === opened) return true;
+    window.location.reload();
+    return false;
+  }
 
   /* ---- People, as the planners take it ---- */
   function existingOf(rows) {
@@ -90,7 +99,7 @@
   /* The whole plan, from what was found and People and the kept past inspections now: the people first, then the past
      inspections planned against People as it would be after them. [newId] makes the ids (stand-ins for the preview). */
   function planAll(newId, importId) {
-    var me = (auth.who() || {}).id || STAND_IN, now = Date.now(), imp = window.inspyxImport;
+    var me = opened || STAND_IN, now = Date.now(), imp = window.inspyxImport;
     var rows = book.rows(), past = PS.keptForReader(pastBook.rows(), me);
     var people = { push: [], changes: [], plan: [] }, left = [], history = null, cuts = [];
     var runPeople = function () {
@@ -187,6 +196,7 @@
   }
   function preview() {
     var mine = picked;
+    if (!sameAccount()) return Promise.resolve();
     say(null);
     return fresh().then(function (ok) {
       if (mine !== picked) return;
@@ -276,7 +286,7 @@
   $('[data-stop]').addEventListener('click', function () { picked++; lockKey(false); keyClear(); say('stopped'); });
   $('[data-key-form]').addEventListener('submit', function (e) {
     e.preventDefault();
-    if (busy || !pasted) return;
+    if (busy || !pasted || !sameAccount()) return;
     if (keyAutofilled()) { keyClear(); say('autofilled'); keyBox.focus(); return; }
     var key = pasted.key;
     done = null; $('[data-done]').hidden = true; $('[data-preview]').hidden = true; source = null;
@@ -401,8 +411,8 @@
     $('[data-undo]').hidden = !(done && ((done.people && done.people.length) || done.past || (done.prices && done.prices.length)));
   }
   $('[data-go]').addEventListener('click', function () {
-    if (busy || !source || !plan) return;
-    var me = auth.who().id, mine = picked;
+    if (busy || !source || !plan || !sameAccount()) return;
+    var me = opened, mine = picked;
     lock(true);
     fresh().then(function (ok) {
       if (!ok) { say('no-people'); return; }
@@ -438,8 +448,8 @@
 
   /* ---- Undo: the past inspections of this import deleted, the people put back as they were ---- */
   $('[data-undo]').addEventListener('click', function () {
-    if (busy || !done) return;
-    var me = auth.who().id;
+    if (busy || !done || !sameAccount()) return;
+    var me = opened;
     lock(true); say('undoing');
     fresh().then(function (ok) {
       if (!ok) { say('undo-failed'); return; }
@@ -470,6 +480,7 @@
 
   auth.current().then(function (s) {
     if (!s) return;
+    opened = (auth.who() || {}).id || null;
     main.hidden = false;
     book.start(function () {});
     pastBook.start(function () {});

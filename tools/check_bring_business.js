@@ -295,6 +295,19 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     await o.ctx.close();
   });
 
+  await group('own pass: another account signed in from another tab', async () => {
+    const sync = syncServer(seed()), spx = spxServer();
+    const o = await open(browser, { sync, spx });
+    await paste(o.page, KEY); await o.page.locator('[data-check]').click();
+    await until(async () => await o.page.locator('[data-preview]').isVisible());
+    // Another tab signs in as someone else: this page's books still hold the first account's rows.
+    const reloaded = o.page.waitForEvent('framenavigated', { timeout: 5000 }).then(() => true, () => false);
+    await o.page.evaluate(() => { const real = window.InspyxAuth.who; window.InspyxAuth.who = function () { const w = real(); return w ? Object.assign({}, w, { id: '22222222-2222-4222-8222-222222222222' }) : w; }; });
+    await o.page.locator('[data-go]').click();
+    ok('Bring in under another account: nothing is kept, and the page starts again', await reloaded && sync.pushes.length === 0, JSON.stringify(sync.pushes));
+    await o.ctx.close();
+  });
+
   await browser.close();
   console.log(failed ? '\n' + failed + ' check(s) failed' : '\nall checks passed');
   process.exit(failed ? 1 : 0);
