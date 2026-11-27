@@ -92,6 +92,23 @@ async function open(browser, o) {
     const r = a || def;
     return route.fulfill({ status: r.status, contentType: 'application/json', headers: cors, body: JSON.stringify(r.json) });
   });
+  // A body that stalls: the first read of a payment's result gets its headers, then a body that never ends.
+  if (o.stallPiOnce) {
+    await page.addInitScript(() => {
+      const real = window.fetch;
+      let stalled = false;
+      window.fetch = function (input, init) {
+        const u = typeof input === 'string' ? input : input.url;
+        if (!stalled && /pi=/.test(u)) {
+          stalled = true;
+          window.__stalled = true;
+          const body = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode('{"state":')); } });
+          return Promise.resolve(new Response(body, { status: 200, headers: { 'content-type': 'application/json' } }));
+        }
+        return real.apply(this, arguments);
+      };
+    });
+  }
   const res = await page.goto(url + (o.path === undefined ? 'pay#' + LINK : o.path), { waitUntil: 'load' });
   await page.waitForTimeout(400);
   return { ctx, page, errs, away, calls, asked, res };
@@ -268,6 +285,17 @@ async function quoteWith(page, cardText) {
     ok('the reloaded page follows the same payment, never asks what is due, and shows no way to pay', after.length > 0 && after.every((c) => c.q === '?view=json&pi=' + PI) &&
       (await shown(page, '[data-due]')) === '' && (await shown(page, '[data-states] [data-state]')) === 'Your payment is going through. Stripe’s receipt shows here once it’s confirmed.',
       JSON.stringify(after.map((c) => c.q)));
+    await ctx.close();
+  });
+  await group('paid, and the first read of the result stalls mid-body', async () => {
+    const { page, ctx, calls } = await open(browser, { stallPiOnce: true });
+    await quoteWith(page, 'credit');
+    await until(async () => (await shown(page, '[data-quote]')) !== '');
+    await page.click('[data-paynow]');
+    ok('the stalled answer is given up at its deadline and asked again: thanks and receipt, no second payment',
+      await until(async () => (await shown(page, '[data-states] [data-state]')) === 'Paid. Thank you!', 40000) &&
+      (await page.evaluate(() => window.__stalled === true)) && calls.filter((c) => /pi=/.test(c.q)).length >= 1 &&
+      calls.filter((c) => c.method === 'POST').length === 1 && (await fake(page)).calls.filter((c) => c.startsWith('confirm:')).length === 1);
     await ctx.close();
   });
   await group('the page opens on a payment already on its way (none of this tab\'s own)', async () => {

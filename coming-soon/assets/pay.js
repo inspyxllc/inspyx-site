@@ -69,20 +69,23 @@
   var money = function (cents) { return usd.format(cents / 100); };
   var percent = function (bp) { return (bp % 100 === 0 ? String(bp / 100) : (bp / 100).toFixed(1)) + '%'; };
 
+  /* Every request of this page. One deadline covers the whole answer, its headers AND its body: one that stalls
+     partway (the headers come, the body never ends) is ended with the rest, and counts as no answer, which the
+     caller asks again. It settles itself, so a body read that ignores the abort can't hold it. */
   function ask(method, query, body) {
     var stop = typeof AbortController === 'function' ? new AbortController() : null;
-    var timer = stop ? setTimeout(function () { stop.abort(); }, DEADLINE) : null;
     var init = { method: method, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer', signal: stop ? stop.signal : undefined };
     // A GET carries no header of its own; a POST says only that its body is JSON (the function allows no other).
     if (body) { init.headers = { 'Content-Type': 'application/json' }; init.body = JSON.stringify(body); }
-    return fetch(FN + link + (query || ''), init).then(function (res) {
-      if (timer) clearTimeout(timer);
-      if (res.status === 404) return { state: 'gone' };
-      if (!res.ok) return { state: 'failed' };
-      return res.json().catch(function () { return { state: 'failed' }; });
-    }, function () {
-      if (timer) clearTimeout(timer);
-      return { state: 'failed' };
+    return new Promise(function (resolve) {
+      var done = false, timer = null;
+      var finish = function (a) { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(a); };
+      timer = setTimeout(function () { if (stop) stop.abort(); finish({ state: 'failed' }); }, DEADLINE);
+      fetch(FN + link + (query || ''), init).then(function (res) {
+        if (res.status === 404) return finish({ state: 'gone' });
+        if (!res.ok) return finish({ state: 'failed' });
+        return res.json().then(finish, function () { finish({ state: 'failed' }); });
+      }, function () { finish({ state: 'failed' }); });
     });
   }
 
