@@ -37,6 +37,7 @@
 .bk-say{margin:14px 0 0; font-size:15px; color:#9A3412}
 /* The discount code (the rehearsal, round 2): the inspector's codes (Prices), checked by the server's price. */
 .bk-code{margin-top:14px; display:grid; gap:6px}
+.bk-code + .bk-quote{margin-top:12px}
 .bk-code label{font-size:14px; color:var(--ink-soft)}
 .bk-code-row{display:flex; gap:8px}
 .bk-code-row input{flex:1 1 auto; min-width:0; text-transform:uppercase}
