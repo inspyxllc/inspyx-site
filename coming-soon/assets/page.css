@@ -169,3 +169,10 @@ footer nav a{padding:0 8px}
   .hero::before, .hero::after, .floor, .glow, .float, .sweep{animation:none}
   .card3d, .spot, .bar nav a{transition:none}
 }
+
+/* About: the founder's photo and name beside his story. */
+.doc article .founder{display:flex; align-items:center; gap:18px; margin-top:16px; padding:14px; border-radius:22px; background:var(--ground)}
+.founder img{width:112px; height:112px; flex:none; border-radius:50%; object-fit:cover}
+.founder figcaption{display:flex; flex-direction:column; gap:2px; font-size:15px; line-height:1.4; color:var(--ink-soft)}
+.founder figcaption strong{font-size:19px; letter-spacing:-.01em}
+@media (max-width:520px){ .founder img{width:84px; height:84px} }
