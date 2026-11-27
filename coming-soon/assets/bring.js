@@ -109,14 +109,16 @@
     var runPeople = function () {
       if (source.file && source.kind === 'past') return null;
       var r = source.file
-        ? parse(imp.contacts(source.file.name, source.file.bytes, { kind: source.kind, existing: existingOf(rows) }))
+        ? parse(imp.contacts(source.file.name, source.file.bytes, { kind: source.kind, existing: existingOf(rows), keep_unread: true }))
         : source.isn ? parse(imp.isn('people', source.isn, { existing: existingOf(rows) }))
         : parse(imp.spectora('people', { clients: source.clients, agents: source.agents, clients_cut: source.cuts.clients, agents_cut: source.cuts.agents }, { existing: existingOf(rows) }));
       return r;
     };
     var r1 = runPeople();
     if (r1 && r1.status !== 'ok') return { refused: r1.message };
+    var unread = [];
     if (r1) {
+      unread = r1.unread || [];
       var a = CI.applyPlan(rows, r1.plan || [], me, now, newId);
       people = { push: a.push, changes: a.changes, plan: r1.plan || [] };
       left = left.concat(r1.skipped || []);
@@ -125,7 +127,7 @@
     }
     if (source.file ? source.kind === 'past' : true) {
       var r2 = source.file
-        ? parse(imp.inspections(source.file.name, source.file.bytes, { existing: existingOf(rows), existing_past: past }))
+        ? parse(imp.inspections(source.file.name, source.file.bytes, { existing: existingOf(rows), existing_past: past, keep_unread: true }))
         : source.isn ? parse(imp.isn('inspections', source.isn, { existing: existingOf(rows), existing_past: past }))
         : parse(imp.spectora('inspections', { records: source.records, cut: source.cuts.records }, { existing: existingOf(rows), existing_past: past }));
       if (r2.status !== 'ok') { if (!r1) return { refused: r2.message }; }
@@ -136,6 +138,7 @@
         left = left.concat(r2.skipped || []).concat((r2.people && r2.people.skipped) || []);
         // A file past the reader's limit is read to there, and says so (Codex on #133): never cut quietly.
         if (r2.cut && r2.cut_message) cuts.push(r2.cut_message);
+        if (source.file) unread = r2.unread || [];
         history = PS.newRows(r2.inspections || [], me, now, newId, importId);
         history.read = r2.inspections || [];
       }
@@ -148,13 +151,18 @@
         left = left.concat(r3.skipped || []);
       }
     }
-    return { people: people, history: history, prices: prices, left: left, cuts: cuts };
+    return { people: people, history: history, prices: prices, left: left, cuts: cuts, unread: unread };
   }
 
   /* ---- the preview ---- */
   function shown(p) {
     $('[data-preview]').hidden = false;
     $('[data-found]').textContent = source.file ? words('found-file', { file: source.file.name }) : words('found', { platform: source.platform });
+    // The columns nothing reads (switch PR 8): named here, and where they go: each one's notes, unless that person
+    // already has notes (People never writes over a note: Codex on #136).
+    var un = $('[data-unread]'), cols = (source.file && p.unread) || [];
+    un.textContent = cols.length === 0 ? '' : cols.length === 1 ? words('unread-1', { columns: cols[0] }) : words('unread-n', { n: cols.length, columns: cols.join(', ') });
+    un.hidden = cols.length === 0;
     var roles = { clients: 0, agents: 0 };
     p.people.changes.forEach(function (c) {
       var row = p.people.push.filter(function (r) { return r.id === c.id; })[0], role = row && row.data && row.data.role;
@@ -394,14 +402,54 @@
     var reader = new FileReader();
     reader.onload = function () {
       if (mine !== picked) return;
-      pendingFile = { name: f.name, bytes: new Uint8Array(reader.result) };
-      say(null);
+      var bytes = new Uint8Array(reader.result), imp = window.inspyxImport, guess = null;
+      // The app's own guess (switch PR 8): what the file is by its name when Inspyx knows it (Horizon's exports,
+      // HomeGauge's, ISN's), else by its columns. The chips still let him change it.
+      try { guess = imp && typeof imp.bringKind === 'function' ? parse(imp.bringKind(f.name, bytes)) : null; } catch (e) { guess = null; }
       $('[data-file-name]').textContent = f.name;
+      $('[data-file-what]').textContent = guess && guess.what ? guess.what : '';
+      $('[data-file-what]').hidden = !(guess && guess.what);
       [].slice.call(main.querySelectorAll('[data-fk]')).forEach(function (b) { b.classList.remove('is-on'); b.setAttribute('aria-checked', 'false'); });
+      // A known file that holds no people or inspections (Horizon's templates, its dashboard), or one the app's reader
+      // refuses: said, never read.
+      $('[data-to-converter]').hidden = true; toConvert = null;
+      // A file the converter reads: Horizon's Company Templates, or a template spreadsheet (the app's drop installs
+      // those; here the converter on Templates reads them). "Convert it now" takes this very file there.
+      var sheet = guess && guess.status === 'ok' && guess.kind === 'template';
+      if (sheet || (guess && guess.status === 'elsewhere' && guess.holds === 'templates')) {
+        pendingFile = null; $('[data-file-kind]').hidden = true;
+        toConvert = { name: f.name, bytes: bytes };
+        say(null, null, sheet ? words('template-sheet') : words('to-converter', { what: guess.what }));
+        $('[data-to-converter]').hidden = false;
+        return;
+      }
+      if (guess && guess.status !== 'ok' && guess.message) {
+        pendingFile = null; $('[data-file-kind]').hidden = true;
+        say(null, null, guess.message);
+        return;
+      }
+      pendingFile = { name: f.name, bytes: bytes };
+      say(null);
       $('[data-file-kind]').hidden = false;
+      if (guess && guess.kind) chooseKind(main.querySelector('[data-fk="' + guess.kind + '"]'));
     };
     reader.onerror = function () { if (mine === picked) say('failed'); };
     reader.readAsArrayBuffer(f);
+  }
+  // "Convert it now": the file goes to Templates through this browser's own storage, and Templates converts it at once.
+  var toConvert = null;
+  $('[data-convert-now]').addEventListener('click', function () {
+    var file = toConvert, go = function () { window.location.assign('/templates?file=drop'); };
+    if (!file || !window.inspyxHandoff) { window.location.assign('/templates'); return; }
+    window.inspyxHandoff.put(file).then(go, function () { window.location.assign('/templates'); });
+  });
+  // What the file holds, chosen (by him, or by the app's guess): its chip on, and the preview read.
+  function chooseKind(fk) {
+    if (!fk || !pendingFile || busy) return;
+    [].slice.call(main.querySelectorAll('[data-fk]')).forEach(function (b) { var on = b === fk; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
+    ++picked; done = null; $('[data-done]').hidden = true;
+    source = { file: pendingFile, kind: fk.getAttribute('data-fk') };
+    preview();
   }
   $('[data-pick]').addEventListener('change', function (e) { take(e.target.files && e.target.files[0]); e.target.value = ''; });
   var drop = $('[data-drop]');
@@ -410,13 +458,7 @@
   drop.addEventListener('drop', function (e) { e.preventDefault(); drop.classList.remove('is-over'); take(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]); });
   main.addEventListener('click', function (e) {
     var fk = e.target.closest('[data-fk]');
-    if (fk && pendingFile && !busy) {
-      [].slice.call(main.querySelectorAll('[data-fk]')).forEach(function (b) { var on = b === fk; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
-      ++picked; done = null; $('[data-done]').hidden = true;
-      source = { file: pendingFile, kind: fk.getAttribute('data-fk') };
-      preview();
-      return;
-    }
+    if (fk && pendingFile && !busy) { chooseKind(fk); return; }
     var tab = e.target.closest('[data-tab]');
     if (tab) {
       var which = tab.getAttribute('data-tab');

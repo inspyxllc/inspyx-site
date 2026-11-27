@@ -79,6 +79,8 @@
 .br-or::before, .br-or::after { content: ""; flex: 1; height: 1px; background: var(--line, #e2e8f0); }
 .br-file-kind { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
 .br-file-kind [data-file-name] { font-weight: 600; margin-right: 4px; overflow-wrap: anywhere; }
+.br-file-what { color: var(--ink-soft, #5b6472); font-size: 13px; margin-right: 6px; }
+.br-unread { margin: 4px 0 10px; font-size: 13px; color: var(--ink-soft, #5b6472); overflow-wrap: anywhere; }
 
 /* ---- the preview ---- */
 .br-preview { margin-top: 22px; }

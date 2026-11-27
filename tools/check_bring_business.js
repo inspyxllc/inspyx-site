@@ -223,7 +223,11 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     const CSV = 'Full Name,Mobile,E-mail\nDaniel Ortiz,305-555-0142,\nAna Reyes,,ana@x.com\nZoe Park,786,zoe@x.com\n';
     await o.page.setInputFiles('[data-pick]', { name: 'clients.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV, 'utf8') });
     await until(async () => await o.page.locator('[data-file-kind]').isVisible());
-    ok('a file: it asks what the file holds, and reads nothing before', sync.pushes.length === 0 && await o.page.locator('[data-preview]').isHidden());
+    // Switch PR 8: the app's guess is chosen at once (here clients, by its columns), as on the phone; the chips can change
+    // it, and nothing is kept before Bring in.
+    await until(async () => await o.page.locator('[data-preview]').isVisible());
+    ok('a file: the app\'s guess is chosen and previewed; the chips can change it; nothing is kept yet',
+      sync.pushes.length === 0 && (await o.page.locator('[data-fk="clients"]').getAttribute('aria-checked')) === 'true');
     await o.page.locator('[data-fk="clients"]').click();
     await until(async () => await o.page.locator('[data-preview]').isVisible());
     ok('a clients file: found in the file, counted, nothing kept yet', (await o.page.locator('[data-found]').textContent()) === 'Found in clients.csv' &&
@@ -367,6 +371,57 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     await o.page.locator('[data-check]').click();
     await until(async () => (await said(o.page)).indexOf("didn't accept") >= 0, 10000);
     ok('ISN, labelled keys: never swapped; the app\'s words for keys ISN refuses', JSON.stringify(isn.calls.map((c) => c.what)) === '["me"]', JSON.stringify(isn.calls.map((c) => c.what)));
+    await o.ctx.close();
+  });
+
+  // Switch PR 8 (2026-11-27). Horizon publishes none of its export layouts: the Horizon files below are GUESSES at
+  // plausible headers (several, in the app's tests), never its real layout. Spectora's agents export is DOCUMENTED.
+  await group('switch PR 8: another app\'s exports, known by name or by their columns; unread columns kept', async () => {
+    let sync = syncServer(seed()), spx = spxServer(), o = await open(browser, { sync, spx });
+    const pick = (name, text, type) => o.page.setInputFiles('[data-pick]', { name, mimeType: type || 'text/csv', buffer: Buffer.from(text, 'utf8') });
+    const chosen = async () => o.page.locator('[data-fk][aria-checked="true"]').getAttribute('data-fk');
+    // GUESS: Horizon's CRM Clients, with a column nothing reads.
+    await pick('CRM Clients.csv', 'Client Name,Email,Property Address,Date Added\nDana Reyes,dana@example.com,12 Palm Way,2025-03-14\n');
+    await until(async () => await o.page.locator('[data-preview]').isVisible());
+    ok('Horizon\'s CRM Clients: said for what it is, read as clients, its unread column named',
+      (await o.page.locator('[data-file-what]').textContent()) === "Horizon's CRM Clients" && await chosen() === 'clients' &&
+      await o.page.locator('[data-unread]').isVisible() &&
+      (await o.page.locator('[data-unread]').textContent()) === "A column Inspyx doesn't read: Date Added. It goes in each one's notes, unless they already have notes.",
+      await o.page.locator('[data-unread]').textContent());
+    if (SHOTS) { await o.page.setViewportSize({ width: 1280, height: 1100 }); await o.page.locator('[data-file-kind]').scrollIntoViewIfNeeded(); await o.page.screenshot({ path: SHOTS + '/58-bring-horizon-clients.png' }); }
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 10000);
+    const dana = sync.people().find((r) => r.data.name === 'Dana Reyes');
+    ok('brought in with the unread column in her note', !!dana && /Date Added: 2025-03-14/.test(dana.data.note || ''), dana && dana.data.note);
+    await o.ctx.close();
+
+    sync = syncServer(seed()); spx = spxServer(); o = await open(browser, { sync, spx });
+    // DOCUMENTED: Spectora's agents export, with no "agent" in the file's name.
+    await pick('export (1).csv', 'Name,Email Address,Phone Number,Number of Inspections,Agent Team\nSam Ortiz,sam@example.com,305-555-0177,14,Ortiz Team\n');
+    await until(async () => await chosen() === 'agents');
+    ok('Spectora\'s agents export: agents by its columns', await chosen() === 'agents' && (await o.page.locator('[data-file-what]').isHidden()));
+    // GUESS: Horizon's Inspection Bookings.
+    await pick('Inspection Bookings Data.csv', 'Inspection Date,Address,Client,Status\n2025-04-02,12 Palm Way,Dana Reyes,Completed\n');
+    await until(async () => await chosen() === 'past');
+    ok('Horizon\'s Inspection Bookings: past inspections', await chosen() === 'past');
+    // Horizon's Company Templates: the converter's, said, never read, never an error.
+    await pick('Company Templates.json', '{"sections":[]}', 'application/json');
+    await until(async () => (await o.page.locator('[data-say]').textContent()).includes('Inspyx can turn it into your template'));
+    if (SHOTS) { await o.page.locator('[data-say]').scrollIntoViewIfNeeded(); await o.page.screenshot({ path: SHOTS + '/59-bring-horizon-templates.png' }); }
+    ok('Horizon\'s Company Templates: "Convert it now" offered; no kind to pick, no preview, nothing kept',
+      (await o.page.locator('[data-say]').textContent()) === "This is Horizon's Company Templates: Inspyx can turn it into your template." &&
+      await o.page.locator('[data-convert-now]').isVisible() &&
+      await o.page.locator('[data-file-kind]').isHidden() && await o.page.locator('[data-preview]').isHidden() && sync.pushes.length === 0 && o.errs.length === 0,
+      JSON.stringify(o.errs));
+    // "Convert it now": THIS file goes to Templates through this browser's own storage. Templates is stood in for by a
+    // bare page with the handoff alone, to read back what arrived (check_templates.js checks Templates taking it).
+    await o.page.route((u) => new URL(u).pathname === '/templates', (r) => r.fulfill({ status: 200, contentType: 'text/html',
+      body: '<!doctype html><meta charset="utf-8"><script src="/assets/handoff.js"></script>' }));
+    await Promise.all([o.page.waitForURL((u) => new URL(u).pathname === '/templates', { timeout: 10000 }), o.page.locator('[data-convert-now]').click()]);
+    const arrived = await o.page.evaluate(() => window.inspyxHandoff.take().then((h) => h && { name: h.name, text: new TextDecoder().decode(h.bytes) }));
+    ok('Convert it now opens Templates with THIS file waiting for it', new URL(o.page.url()).search === '?file=drop' &&
+      !!arrived && arrived.name === 'Company Templates.json' && arrived.text === '{"sections":[]}', JSON.stringify(arrived));
+
     await o.ctx.close();
   });
 
