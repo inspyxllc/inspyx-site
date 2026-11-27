@@ -279,6 +279,87 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
+  // The job card (the rehearsal, round 2, A05): the fee, what's paid, the agreement and the house's facts, read from the
+  // business sync and the inspection; plus how to reach each person.
+  const JOB = (page, k) => page.evaluate((q) => { const e = document.querySelector('[data-job] [data-v="' + q + '"]'); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; }, k);
+  const NOON = (d) => Date.UTC(2026, 10, d, 17, 0, 0);
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('the job card, ' + label, async () => {
+      const s = server(); seed(s);
+      const P = '6f1c2a3b-0000-4000-8000-0000000000d1', S1 = '5e000000-0000-4000-8000-000000000001', S2 = '5e000000-0000-4000-8000-000000000002';
+      s.phone('person', P, 'role', 'client'); s.phone('person', P, 'name', 'Ana Diaz'); s.phone('person', P, 'position', 0);
+      s.phone('person', P, 'phone', '(305) 555-0100'); s.phone('person', P, 'email', 'ana@example.com');
+      s.phone('fact', 'fact-year', 'label', 'Year built'); s.phone('fact', 'fact-year', 'value_text', '1987'); s.phone('fact', 'fact-year', 'position', 0);
+      s.phone('fact', 'fact-sqft', 'label', 'Square feet'); s.phone('fact', 'fact-sqft', 'value_text', '  '); s.phone('fact', 'fact-sqft', 'position', 1);
+      s.phone('fact', 'fact-roof', 'label', 'Roof'); s.phone('fact', 'fact-roof', 'value_text', 'Tile'); s.phone('fact', 'fact-roof', 'position', 2);
+      const row = (kind, data, at) => ({ kind, id: data.id, updated_at: at, deleted_at: null, data });
+      const pay = (id, cents, method, at, extra) => row('inspection_payments', Object.assign({ id, ownerAccountId: 'a', inspectionId: INSP, amountCents: cents, method, note: null,
+        recordedAt: at, recordedByAccountId: 'a', voidedAt: null, updatedAt: at, deletedAt: null, cardLive: null }, extra || {}), at);
+      let state = 'part';
+      const biz = () => {
+        const fee = row('inspection_fees', { id: 'fee1', inspectionId: INSP, selectionJson: '{"services":["svc","radon"]}', totalCents: 47500, updatedAt: 5, deletedAt: null,
+          linesJson: JSON.stringify([{ kind: 'service', id: 'svc', name: 'Home inspection', cents: 40000, minutes: 180 }, { kind: 'service', id: 'radon', name: 'Radon', cents: 7500, minutes: 0 }, { kind: 'tax', id: 't', name: 'Sales tax', cents: 0, minutes: 0 }]) }, 5);
+        const rows = [fee,
+          pay('pay-cash', 20000, 'cash', 10),
+          pay('pay-test', 5000, 'pay_link', 11),
+          pay('pay-void', 9900, 'zelle', 12, { voidedAt: 13 }),
+          pay('pay-other', 1000, 'cash', 14, { inspectionId: OTHER }),
+          row('signings', { id: S1, inspectionId: INSP, bookingId: 'b', status: 'signed', sentAt: 1, signedAt: NOON(20), signerName: 'Ana Diaz', deletedAt: null }, 3),
+          // An update sent after it: the job stays signed (the box above says the update waits).
+          row('signings', { id: S2, inspectionId: INSP, bookingId: 'b', status: 'sent', sentAt: 8, deletedAt: null }, 9)];
+        if (state === 'paid') rows.push(pay('pay-card', 27500, 'pay_link', 20, { cardLive: true }));
+        if (state === 'paid') rows.push(row('inspection_agreements', { id: 'agr-1', ownerAccountId: 'a', inspectionId: INSP, agreementText: null, agreementSha256: 'b'.repeat(64), signerName: 'Bo Lee',
+          signaturePng: null, signatureSha256: 'c'.repeat(64), signedAt: NOON(22), recordedByAccountId: 'a', bodyElsewhere: true, updatedAt: NOON(22), deletedAt: null }, 21));
+        return rows;
+      };
+      const { page, ctx, errs, away, ping } = await open(browser, { server: s, w, zone: 'America/New_York', hash: '#' + INSP, biz });
+      ok(label + ': the fee and what it is for (no tax line)', await until(async () => await JOB(page, 'fee') === '$475.00') && await JOB(page, 'fee-what') === 'Home inspection + Radon', JSON.stringify([await JOB(page, 'fee'), await JOB(page, 'fee-what')]));
+      ok(label + ': part paid: real money only (a voided payment, another job\'s and a test card don\'t count)',
+        await JOB(page, 'paid-pill') === 'Part paid' && await JOB(page, 'paid') === '$200.00 of $475.00, $275.00 left' &&
+        await JOB(page, 'paid-how') === '$200.00 cash' && same(await vis(page, '[data-job] [data-v="paid-test"]'), ['A test card payment of $50.00 isn’t counted.']) &&
+        await page.getAttribute('[data-job] [data-v="paid-pill"]', 'data-kind') === 'part', JSON.stringify([await JOB(page, 'paid-pill'), await JOB(page, 'paid'), await JOB(page, 'paid-how')]));
+      ok(label + ': signed online, by whom and when; an update sent since doesn\'t unsign it',
+        await JOB(page, 'agr-pill') === 'Signed' && await JOB(page, 'agr') === 'Online by Ana Diaz, Nov 20, 2026', JSON.stringify([await JOB(page, 'agr-pill'), await JOB(page, 'agr')]));
+      ok(label + ': the house\'s facts with a value, in order', same(await vis(page, '[data-facts] li'), ['Year built 1987', 'Roof Tile']), JSON.stringify(await vis(page, '[data-facts] li')));
+      ok(label + ': how to reach the client', same(await vis(page, '[data-people] [data-v="reach"]'), ['(305) 555-0100 · ana@example.com']), JSON.stringify(await vis(page, '[data-v="reach"]')));
+      if (process.env.SHOTS) { await page.waitForTimeout(400); await page.locator('[data-job]').screenshot({ path: require('path').join(process.env.SHOTS, 'job-' + label + '-part.png') }); }
+      state = 'paid'; ping();
+      ok(label + ': paid in full by a live card: heard without a reload',
+        await until(async () => await JOB(page, 'paid-pill') === 'Paid') && await JOB(page, 'paid') === '$475.00' &&
+        await JOB(page, 'paid-how') === '$200.00 cash + $275.00 card' && (await vis(page, '[data-job] [data-v="paid-test"]')).length === 1, JSON.stringify([await JOB(page, 'paid'), await JOB(page, 'paid-how')]));
+      ok(label + ': a newer signature on the phone speaks (its body stayed on the phone: still signed)', await JOB(page, 'agr') === 'On the phone by Bo Lee, Nov 22, 2026', await JOB(page, 'agr'));
+      if (process.env.SHOTS) { await page.waitForTimeout(400); await page.locator('[data-job]').screenshot({ path: require('path').join(process.env.SHOTS, 'job-' + label + '-paid.png') }); }
+      ok(label + ': nothing runs off the side of the screen', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      ok(label + ': no errors', errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
+      await ctx.close();
+    });
+  }
+
+  await group('the job card: no fee, nothing paid, sent but not signed, no facts', async () => {
+    const s = server(); seed(s);
+    const S1 = '5e000000-0000-4000-8000-000000000001';
+    const rows = [{ kind: 'signings', id: S1, updated_at: 3, deleted_at: null, data: { id: S1, inspectionId: INSP, bookingId: 'b', status: 'sent', sentAt: 1, deletedAt: null } }];
+    const { page, ctx, errs } = await open(browser, { server: s, hash: '#' + INSP, biz: () => rows });
+    ok('empty job: no fee yet, not paid, sent to sign', await until(async () => await JOB(page, 'agr') === 'Sent to sign, not signed yet') &&
+      await JOB(page, 'fee') === 'No fee set yet' && await JOB(page, 'fee-what') === '' && await JOB(page, 'paid-pill') === 'Not paid' && await JOB(page, 'paid') === 'Nothing paid yet' &&
+      await JOB(page, 'paid-how') === '' && (await vis(page, '[data-job] [data-v="paid-test"]')).length === 0 && await JOB(page, 'agr-pill') === 'Not signed', JSON.stringify([await JOB(page, 'fee'), await JOB(page, 'paid'), await JOB(page, 'agr')]));
+    ok('empty job: no facts row, no reach line for a person without one', (await vis(page, '[data-facts-row]')).length === 0 && errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
+  await group('the job card: a signed signing with no time or name, a payment with no fee', async () => {
+    const s = server(); seed(s);
+    const S1 = '5e000000-0000-4000-8000-000000000001';
+    const rows = [{ kind: 'signings', id: S1, updated_at: 3, deleted_at: null, data: { id: S1, inspectionId: INSP, bookingId: 'b', status: 'signed', sentAt: 1, signerName: null, deletedAt: null } },
+      { kind: 'inspection_payments', id: 'p1', updated_at: 4, deleted_at: null, data: { id: 'p1', ownerAccountId: 'a', inspectionId: INSP, amountCents: 15000, method: 'check', note: null,
+        recordedAt: 4, recordedByAccountId: 'a', voidedAt: null, updatedAt: 4, deletedAt: null, cardLive: null } }];
+    const { page, ctx } = await open(browser, { server: s, hash: '#' + INSP, biz: () => rows });
+    ok('no time, no name: still Signed, by your client', await until(async () => await JOB(page, 'agr') === 'Online by your client') && await JOB(page, 'agr-pill') === 'Signed', await JOB(page, 'agr'));
+    ok('no fee set, a check came in: Paid, the amount, never "part paid"', await JOB(page, 'paid-pill') === 'Paid' && await JOB(page, 'paid') === '$150.00' && await JOB(page, 'paid-how') === '$150.00 check',
+      JSON.stringify([await JOB(page, 'paid-pill'), await JOB(page, 'paid'), await JOB(page, 'paid-how')]));
+    await ctx.close();
+  });
+
   await group('agreement out of date: nothing to say when it holds, or with no snapshot', async () => {
     const s = server(); seed(s);
     const S1 = '5e000000-0000-4000-8000-000000000001';
