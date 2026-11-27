@@ -258,6 +258,7 @@
     });
     renderPeople(id);
     renderJob(id);
+    renderPays(id);
     renderFlags(id);
     renderTemplateButtons(id);
     refreshAI();   // a field changed on the phone changes what it offers
@@ -809,6 +810,148 @@
       if (r.json.more) pullBusiness();
       return kept ? 'saved' : 'refused';
     }, function () { return 'failed'; });
+  }
+  /* ---- Set the fee and record a payment on the web (the lead, 2026-11-27: his rule, the web does what the app does).
+     The same rows the phone writes (InspectionFeeStore.setFee with InspectionFeeEntry.byHand; recordPayment and its
+     undo, voidedAt), through the business sync; then the client's pay link is brought up to date with the request
+     the phone sends (refreshPayLink: payments, action link, never made here). ---- */
+  var FEE_MAX = 100000000, STATES = {"AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "DC": "District of Columbia", "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland", "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "PR": "Puerto Rico", "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming"};
+  function centsOf(textIn) {
+    var t = String(textIn || '').replace(/[$,\s]/g, '');
+    if (!/^\d{1,9}(\.\d{1,2})?$/.test(t)) return null;
+    var parts = t.split('.');
+    return parseInt(parts[0], 10) * 100 + (parts[1] ? parseInt((parts[1] + '0').slice(0, 2), 10) : 0);
+  }
+  function feeRows(id) {
+    return Object.keys(biz).filter(function (k) { return k.indexOf('inspection_fees/') === 0; }).map(function (k) { return biz[k]; })
+      .filter(function (r) { return r.data && r.data.inspectionId === id; });
+  }
+  function feeRow(id, cents) {
+    var rows = feeRows(id), now = Date.now() + offset, me = auth.who().id;
+    rows.sort(function (a, b) { return (b.data.updatedAt || 0) - (a.data.updatedAt || 0) || (a.id < b.id ? 1 : -1); });
+    var standing = rows[0] && rows[0].deleted_at == null && rows[0].data.deletedAt == null ? rows[0] : null;
+    // Above every fee of the inspection (the store's _onTop): the newest is the fee.
+    var at = now;
+    rows.forEach(function (r) { at = Math.max(at, (r.data.updatedAt || 0) + 1, (r.updated_at || 0) + 1); });
+    var data = {
+      id: standing ? standing.id : window.crypto.randomUUID(), ownerAccountId: standing ? standing.data.ownerAccountId : me, inspectionId: id,
+      selectionJson: '{}', linesJson: JSON.stringify([{ kind: 'service', id: '', name: 'Inspection fee', cents: cents, minutes: 0 }]),
+      totalCents: cents, minutes: 0, factsJson: '{}', createdAt: standing ? standing.data.createdAt : at, updatedAt: at, deletedAt: null
+    };
+    return { kind: 'inspection_fees', id: data.id, updated_at: at, deleted_at: null, data: data };
+  }
+  function paymentRow(id, cents, method, note) {
+    var at = Date.now() + offset, me = auth.who().id, pid = window.crypto.randomUUID();
+    return { kind: 'inspection_payments', id: pid, updated_at: at, deleted_at: null, data: {
+      id: pid, ownerAccountId: me, inspectionId: id, amountCents: cents, method: method, note: note || null,
+      recordedAt: at, recordedByAccountId: me, voidedAt: null, updatedAt: at, deletedAt: null, cardLive: null } };
+  }
+  function voidRow(held) {
+    var at = Math.max(Date.now() + offset, held.updated_at + 1), data = {};
+    Object.keys(held.data).forEach(function (k) { data[k] = held.data[k]; });
+    data.voidedAt = at; data.updatedAt = at;
+    return { kind: 'inspection_payments', id: held.id, updated_at: at, deleted_at: null, data: data };
+  }
+  function handPayments(id) {
+    return Object.keys(biz).filter(function (k) { return k.indexOf('inspection_payments/') === 0; }).map(function (k) { return biz[k]; })
+      // A deleted row is never counted (as bizData leaves it out of the Paid line: Codex on #131).
+      .filter(function (r) { var d = r.data; return r.deleted_at == null && d && d.deletedAt == null && d.inspectionId === id && d.voidedAt == null && d.method !== 'pay_link' && typeof d.amountCents === 'number'; })
+      .sort(function (a, b) { return a.data.recordedAt - b.data.recordedAt; });
+  }
+  /* The client's pay link, brought up to what the inspection says now (the phone's refreshPayLink, create false). */
+  function refreshPayLink(id) {
+    var fee = feeOf(id), byHand = handPayments(id).reduce(function (n, r) { return n + r.data.amountCents; }, 0);
+    var named = fee && !fee.byHand ? fee.lines.filter(function (l) { return l.kind !== 'discount' && l.kind !== 'tax'; }).map(function (l) { return l.name; }) : [];
+    var address = [text(val('inspection', id, 'address')).trim(), text(val('inspection', id, 'city')).trim()].filter(Boolean).join(', ');
+    var client = parts('person', function (p) { return owner['person/' + p] === id && val('person', p, 'role') === 'client'; }).sort(byPosition('person'))
+      .map(function (p) { return text(val('person', p, 'email')).trim(); }).filter(Boolean)[0];
+    var st = text(val('inspection', id, 'state')).trim(), code = null;
+    if (STATES[st.toUpperCase()]) code = st.toUpperCase();
+    else Object.keys(STATES).forEach(function (k) { if (STATES[k].toLowerCase() === st.toLowerCase()) code = k; });
+    var body = { action: 'link', inspection_id: id, fee_cents: fee ? fee.totalCents : 0, offline_paid_cents: byHand,
+      title: named.length ? named.join(' + ') : 'Home inspection', create: false, as_of: Date.now() + offset };
+    if (address) body.detail = address;
+    if (client) body.client_email = client;
+    if (code) body.property_state = code;
+    return auth.ask('payments', body, DEADLINE).then(function (r) { return !!r && r.status === 200; }, function () { return false; });
+  }
+  var jobBusy = false;
+  function jobSay(which) {
+    var p = $('[data-job-said]');
+    p.hidden = !which; if (!which) return;
+    p.textContent = word(which);
+    p.classList.toggle('bad', which === 'job-failed' || which === 'job-refused');
+  }
+  function jobSave(rows, done) {
+    var id = chosen();
+    if (!id || jobBusy || !bizLoaded) return;
+    jobBusy = true; jobSay(null);
+    sendBiz(rows).then(function (o) {
+      if (o !== 'saved') { jobBusy = false; jobSay(o === 'refused' ? 'job-refused' : 'job-failed'); renderOne(); return; }
+      if (done) done();
+      renderOne();
+      // Every page of the feed in before the pay link's totals are worked out (Codex on #131): a fee or a payment on a
+      // later page is never left out of them.
+      return pullBusiness().then(function (whole) {
+        if (!whole) { jobBusy = false; jobSay('job-saved-later'); return; }
+        return refreshPayLink(id).then(function (ok) { jobBusy = false; jobSay(ok ? 'job-saved' : 'job-saved-later'); });
+      });
+    });
+  }
+  function amountProblem(cents, payment) {
+    if (cents === null) return 'amount-bad';
+    if (payment && cents <= 0) return 'amount-zero';
+    if (cents > FEE_MAX) return 'amount-big';
+    return null;
+  }
+  // A form is its inspection's: opened for it, closed when another is opened, never submitted for another (Codex on #131).
+  function formFor(f) { return f.getAttribute('data-for'); }
+  $('[data-fee-edit]').addEventListener('click', function () {
+    var id = chosen(), fee = id && feeOf(id), f = $('[data-fee-form]');
+    f.setAttribute('data-for', id || ''); f.hidden = false; $('[data-fee-problem]').hidden = true;
+    $('[data-fee-amount]').value = fee ? (fee.totalCents / 100).toFixed(2) : '';
+    $('[data-fee-quoted]').hidden = !(fee && !fee.byHand);
+    $('[data-fee-amount]').focus();
+  });
+  $('[data-fee-cancel]').addEventListener('click', function () { $('[data-fee-form]').hidden = true; });
+  $('[data-fee-form]').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var id = chosen(), cents = centsOf($('[data-fee-amount]').value), bad = amountProblem(cents, false), pb = $('[data-fee-problem]');
+    if (formFor($('[data-fee-form]')) !== id) { $('[data-fee-form]').hidden = true; return; }
+    pb.hidden = !bad; if (bad) { pb.textContent = word(bad); return; }
+    jobSave([feeRow(id, cents)], function () { $('[data-fee-form]').hidden = true; });
+  });
+  $('[data-pay-add]').addEventListener('click', function () {
+    var f = $('[data-pay-form]');
+    f.setAttribute('data-for', chosen() || ''); f.hidden = false; $('[data-pay-problem]').hidden = true;
+    $('[data-pay-amount]').value = ''; $('[data-pay-note]').value = ''; $('[data-pay-method]').value = 'cash';
+    $('[data-pay-amount]').focus();
+  });
+  $('[data-pay-cancel]').addEventListener('click', function () { $('[data-pay-form]').hidden = true; });
+  $('[data-pay-form]').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var id = chosen(), cents = centsOf($('[data-pay-amount]').value), bad = amountProblem(cents, true), pb = $('[data-pay-problem]');
+    if (formFor($('[data-pay-form]')) !== id) { $('[data-pay-form]').hidden = true; return; }
+    pb.hidden = !bad; if (bad) { pb.textContent = word(bad); return; }
+    jobSave([paymentRow(id, cents, $('[data-pay-method]').value, $('[data-pay-note]').value.trim())], function () { $('[data-pay-form]').hidden = true; });
+  });
+  function renderPays(id) {
+    var list = $('[data-pays]'), rows = handPayments(id), usd = Fill ? Fill.agreementUsd : function (c) { return '$' + (c / 100).toFixed(2); };
+    var shape = JSON.stringify(rows.map(function (r) { return [r.id, r.data.amountCents, r.data.method, r.data.recordedAt]; }));
+    $('[data-fee-edit]').textContent = word(feeOf(id) ? 'fee-change' : 'fee-set');
+    // Nothing set until the whole business feed is in (a fee or payment not yet read would be left out: Codex on #131).
+    $('[data-fee-edit]').hidden = !bizLoaded; $('[data-pay-add]').hidden = !bizLoaded;
+    ['[data-fee-form]', '[data-pay-form]'].forEach(function (q) { var f = $(q); if (!f.hidden && (formFor(f) !== id || !bizLoaded)) f.hidden = true; });
+    if (list.getAttribute('data-shape') === shape) return;
+    list.setAttribute('data-shape', shape); list.textContent = '';
+    rows.forEach(function (r) {
+      var li = document.createElement('li'), sp = document.createElement('span'), b = document.createElement('button');
+      var amount = usd(r.data.amountCents), how = word('pay-' + r.data.method);
+      sp.textContent = amount + ' ' + how + ' · ' + DAY.format(new Date(r.data.recordedAt)) + (r.data.note ? ' · ' + r.data.note : '');
+      b.type = 'button'; b.textContent = word('pay-undo'); b.setAttribute('aria-label', word('pay-undo-label').replace('{amount}', amount).replace('{how}', how));
+      b.addEventListener('click', function () { var held = biz['inspection_payments/' + r.id]; if (held) jobSave([voidRow(held)]); });
+      li.appendChild(sp); li.appendChild(b); list.appendChild(li);
+    });
   }
   function archiveRow(id) {
     var now = Date.now() + offset, held = biz['archived_inspections/' + id];
