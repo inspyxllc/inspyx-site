@@ -34,6 +34,21 @@
     });
   }
 
+  /* Back from Stripe (Moises's setup, 2026-11-27). ?stripe=done: for a few minutes after, Stripe is still checking what he
+     gave and can say "needs details" with nothing missing; this page says Stripe is checking and checks again by itself,
+     never sends him back into Stripe for it. ?stripe=again (the link ran out): a fresh one is opened, once. The address
+     is cleaned either way. */
+  var BACK_KEY = 'inspyx.stripe.back', AGAIN_KEY = 'inspyx.stripe.again', SETTLE = 5 * 60000, EVERY = 10000;
+  var store = function (k, v) { try { if (v === undefined) return window.sessionStorage.getItem(k); if (v === null) window.sessionStorage.removeItem(k); else window.sessionStorage.setItem(k, v); } catch (e) { return null; } return null; };
+  var back = (/[?&]stripe=(done|again)(?:&|$)/.exec(window.location.search) || [])[1] || null;
+  if (back) {
+    try { window.history.replaceState(null, '', window.location.pathname + window.location.hash); } catch (e) { /* the address stays */ }
+    if (back === 'done') store(BACK_KEY, String(Date.now()));
+  }
+  function settling() { var at = Number(store(BACK_KEY)); return at > 0 && Date.now() - at < SETTLE; }
+  var again = null;
+  function checkSoon() { clearTimeout(again); again = setTimeout(function () { if (!busy) check(); }, EVERY); }
+
   var asked = 0;   // each check is numbered: only the newest one's answer shows (a slow older one never overwrites it)
   function check() {
     var mine = ++asked;
@@ -44,8 +59,9 @@
       if (r.status === 409 && r.json && r.json.error === 'no_account') { show('no-plan', 'plan', false); return; }
       if (r.status === 404 || r.status === 501) { show('not-set-up', '', false); return; }
       var s = r.status === 200 && r.json ? r.json.state : null;
-      if (s === 'ready') show('ready', '', r.json.payouts !== true);
+      if (s === 'ready') { store(BACK_KEY, null); show('ready', '', r.json.payouts !== true); }
       else if (s === 'none') show('none', 'setup', false);
+      else if ((s === 'needs_info' || s === 'pending') && settling()) { show('stripe-checking', '', false); checkSoon(); }
       else if (s === 'needs_info') show('needs_info', 'finish', false);
       else if (s === 'pending') show('pending', 'again', false);
       else show('failed', 'again', false);
@@ -55,13 +71,20 @@
   function openStripe(button) {
     busy = true; button.disabled = true;
     main.querySelector('[data-page-failed]').hidden = true;
-    auth.ask('payments', { action: 'connect' }, DEADLINE).then(function (r) {
+    // "back": "web": Stripe brings him back here, to /payments, not the home page (the server's fixed addresses).
+    auth.ask('payments', { action: 'connect', back: 'web' }, DEADLINE).then(function (r) {
       var to = null;
       try { to = r && r.status === 200 && r.json && typeof r.json.url === 'string' ? new URL(r.json.url) : null; } catch (e) { to = null; }
       if (to && to.protocol === 'https:' && STRIPE.indexOf(to.host) >= 0 && !to.username && !to.password) { window.location.assign(to.href); return; }
       if (r && r.status === 409) { show('no-plan', 'plan', false); return; }
       main.querySelector('[data-page-failed]').hidden = false;
-    }, function () { main.querySelector('[data-page-failed]').hidden = false; }).then(function () { busy = false; button.disabled = false; });
+      fellBack();
+    }, function () { main.querySelector('[data-page-failed]').hidden = false; fellBack(); }).then(function () { busy = false; button.disabled = false; });
+  }
+  // A fresh link that couldn't be opened leaves "Opening a fresh one" for where things stand, with its button.
+  function fellBack() {
+    var waiting = main.querySelector('[data-stands="link-expired"]');
+    if (waiting && !waiting.hidden) setTimeout(check, 0);
   }
 
   buttons.forEach(function (b) {
@@ -72,6 +95,18 @@
 
   if (!auth.who()) { window.location.replace('/signin'); return; }
   main.hidden = false;
-  check();
+  // Asked again whenever the page comes back into view, or back from the browser's back-forward cache: registered
+  // before a fresh link opens, so Back from Stripe never leaves "Opening a fresh one" standing (Codex on #132).
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && !busy) check(); });
+  window.addEventListener('pageshow', function (e) { if (e.persisted && !busy) check(); });
+  // The link ran out: a fresh one, once in a while (never a loop if Stripe keeps sending him back).
+  var lastAgain = Number(store(AGAIN_KEY));
+  if (back === 'again' && !(lastAgain > 0 && Date.now() - lastAgain < 2 * 60000)) {
+    store(AGAIN_KEY, String(Date.now()));
+    show('link-expired', '', false);
+    var go = main.querySelector('[data-do="finish"]');
+    openStripe(go);
+    return;
+  }
+  check();
 })();
