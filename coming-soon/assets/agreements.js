@@ -174,6 +174,8 @@
     armDelete(false);
     showOne(form, 'data-problem', '');
     say('');
+    brought = { filled: 0, signatures: 0, unknown: [] };
+    showBrought();
     dialog.showModal();
     form.elements.name.focus();
   }
@@ -257,6 +259,7 @@
     if (dartTrim(w.value) !== '' && !window.confirm(words('replace'))) return;
     if (dartTrim(form.elements.name.value) === '') form.elements.name.value = $('[data-s="name"]', starter).textContent;
     w.value = $('[data-s="words"]', starter).textContent;
+    showUnknown();
     tab('preview');
   }
   $('[data-starter]', form).addEventListener('click', useStarter);
@@ -268,7 +271,70 @@
       var w = form.elements.words, at = w.selectionStart == null ? w.value.length : w.selectionStart;
       w.setRangeText(b.getAttribute('data-blank'), at, w.selectionEnd == null ? at : w.selectionEnd, 'end');
       w.focus();
+      showUnknown();
     });
+  });
+
+  // ---- another app's blanks (switch, 2026-11-27) -----------------------------------------------------------------
+  // Words pasted in from Spectora, ISN, Horizon or Palmtech have their blanks written Inspyx's way by the phone's own
+  // code (inspyx_import.js: placeholder_translate.dart), and the dialog says what was done. A client's initial spot
+  // becomes an [Initials] box; a signature spot is taken out (the client signs once, at the end, as always). The blanks
+  // Inspyx can't fill are named under the words, as the phone's editor names them, and marked in the preview.
+  var brought = { filled: 0, signatures: 0, unknown: [] };
+  var reader = function () {
+    var r = window.inspyxImport;
+    return r && typeof r.placeholders === 'function' && typeof r.unknownBlanks === 'function' ? r : null;
+  };
+  var put = function (key, n, list) { return words(key).replace('{n}', String(n)).replace('{list}', list || ''); };
+  // The one line about blanks once something came from another app: what was filled, and the ones Inspyx can't fill
+  // that the words hold now (brought in or typed since), so they go from it as he replaces them.
+  var broughtAny = function () { return brought.filled > 0 || brought.signatures > 0 || brought.unknown.length > 0; };
+  function broughtLine(still) {
+    var b = brought, parts = [];
+    if (!broughtAny()) return '';
+    if (b.filled > 0) parts.push(b.filled === 1 ? words('filled-1') : put('filled-n', b.filled));
+    if (still.length > 0) parts.push(put('not-known', still.length, still.join(', ')));
+    var head = parts.join(' · ');
+    if (b.signatures === 0) return head;
+    var sign = b.signatures === 1 ? words('sign-1') : put('sign-n', b.signatures);
+    return head ? head + '. ' + sign : sign;
+  }
+  function showBrought() { showUnknown(); }
+  // The blanks in the words that Inspyx can't fill, each once; none while the phone's reader hasn't loaded.
+  function unknownNow() {
+    var r = reader();
+    if (!r) return [];
+    try { var u = JSON.parse(r.unknownBlanks(form.elements.words.value)); return Array.isArray(u) ? u : []; } catch (e) { return []; }
+  }
+  function showUnknown() {
+    var u = unknownNow(), top = $('[data-brought]', form), el = $('[data-unknown]', form), line = broughtLine(u);
+    top.textContent = line;
+    top.hidden = !line;
+    top.classList.toggle('agr-look', u.length > 0);
+    // One line about them: the one above, once something came from another app.
+    var own = broughtAny() ? '' : u.length === 0 ? '' : u.length === 1 ? put('cant-fill-1', 1, u[0]) : put('cant-fill-n', u.length, u.join(', '));
+    el.textContent = own;
+    el.hidden = !own;
+  }
+  form.elements.words.addEventListener('input', showUnknown);
+  form.elements.words.addEventListener('paste', function (e) {
+    var r = reader(), cd = e.clipboardData;
+    if (!r || !cd) return;
+    var text = cd.getData('text/plain');
+    if (!text) return;
+    var t;
+    try { t = JSON.parse(r.placeholders(text, 'agreement')); } catch (err) { return; }
+    if (!t || t.status !== 'ok' || !t.changes.length) return;
+    // Words already written Inspyx's way paste as they are: nothing came from another app ({{ name }} tidied is his own).
+    var came = function (c) { return t.unknown.indexOf(c.to) < 0 || c.from.slice(0, 2) !== '{{'; };
+    if (!t.changes.some(came)) return;
+    e.preventDefault();
+    var w = form.elements.words, from = w.selectionStart == null ? w.value.length : w.selectionStart;
+    w.setRangeText(t.text, from, w.selectionEnd == null ? from : w.selectionEnd, 'end');
+    t.changes.forEach(function (c) { if (c.to !== '' && t.unknown.indexOf(c.to) < 0) brought.filled++; });
+    brought.signatures += t.signatures_moved;
+    t.unknown.forEach(function (u) { if (brought.unknown.indexOf(u) < 0) brought.unknown.push(u); });
+    showBrought();
   });
 
   function tab(which) {
@@ -289,40 +355,98 @@
     });
   });
 
-  var BLANK = /\[(Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today's date)\]/g;
+  // Without the phone's reader (it didn't load): the offered blanks as the editor writes them, by their names.
+  var BLANK = /\[(Client name|Property address|Inspection date|Fee|Your name|Your company|License number|Today's date|Buyer's agent|Listing agent)\]/g;
+  var NAMED = { 'Client name': 'clientName', 'Property address': 'propertyAddress', 'Inspection date': 'inspectionDate', Fee: 'fee',
+    'Your name': 'inspectorName', 'Your company': 'company', 'License number': 'licenseNumber', "Today's date": 'today',
+    "Buyer's agent": 'buyerAgent', 'Listing agent': 'listingAgent' };
+  // A spot the client initials, as the signing page counts one (sign/core.ts SPOT).
+  var SPOT = /\[[ \t\u00a0]*initials[ \t\u00a0]*\]/gi;
+  // Every blank in [para] as the app reads it: {start, end, blank (its name, or null when Inspyx can't fill it), raw}.
+  function blanksIn(para) {
+    var r = reader(), out = [], m;
+    if (r && typeof r.agreementBlanks === 'function') {
+      try { out = JSON.parse(r.agreementBlanks(para)); } catch (e) { out = []; }
+    } else {
+      BLANK.lastIndex = 0;
+      while ((m = BLANK.exec(para))) out.push({ start: m.index, end: BLANK.lastIndex, blank: NAMED[m[1]] });
+    }
+    SPOT.lastIndex = 0;
+    while ((m = SPOT.exec(para))) out.push({ start: m.index, end: SPOT.lastIndex, spot: true });
+    return out.sort(function (a, b) { return a.start - b.start; });
+  }
   var DAY = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   // What each blank reads as in the preview, and whose it is: his own from his profile, a sample client's, or missing.
+  // What each blank reads as in the preview, and whose it is: his own from his profile, a sample client's (and sample
+  // agents'), or missing. By the blank's name in the app (agreement_blanks.dart's AgreementBlank).
   function fill(blank) {
     var p = rows['inspector_profile/profile'], d = p && p.deleted_at === null ? p.data : {};
     var mine = function (v, missing) { var t = typeof v === 'string' ? dartTrim(v) : ''; return t ? [t, 'yours'] : [words(missing), 'missing']; };
+    var sample = function (key) { return [words(key), 'sample']; };
+    var first = function (key) { return [words(key).split(' ')[0], 'sample']; };
+    var rest = function (key) { return [words(key).split(' ').slice(1).join(' '), 'sample']; };
     switch (blank) {
-      case 'Client name': return [words('sample-client'), 'sample'];
-      case 'Property address': return [words('sample-address'), 'sample'];
-      case 'Inspection date': return [words('sample-date'), 'sample'];
-      case 'Fee': return [words('sample-fee'), 'sample'];
-      case 'Your name': return mine(d.inspectorName, 'missing-name');
-      case 'Your company': return mine(d.companyName, 'missing-company');
-      case 'License number': return mine(d.licenseNumber, 'missing-license');
+      case 'clientName': return sample('sample-client');
+      case 'clientFirstName': return first('sample-client');
+      case 'clientPhone': return sample('sample-phone');
+      case 'clientEmail': return sample('sample-email');
+      case 'propertyAddress': return sample('sample-address');
+      case 'street': return sample('sample-street');
+      case 'city': return sample('sample-city');
+      case 'state': return sample('sample-state');
+      case 'zip': return sample('sample-zip');
+      case 'inspectionDate': return sample('sample-date');
+      case 'fee': return sample('sample-fee');
+      case 'services': return sample('sample-services');
+      case 'feeLines': return sample('sample-fee-lines');
+      case 'inspectorName': return mine(d.inspectorName, 'missing-name');
+      case 'company': return mine(d.companyName, 'missing-company');
+      case 'licenseNumber': return mine(d.licenseNumber, 'missing-license');
+      case 'companyPhone': return mine(d.companyPhone, 'missing-company-phone');
+      case 'year': return [String(new Date().getFullYear()), 'yours'];
+      case 'buyerAgent': return sample('sample-buyer-agent');
+      case 'buyerAgentFirstName': return first('sample-buyer-agent');
+      case 'buyerAgentLastName': return rest('sample-buyer-agent');
+      case 'buyerAgentPhone': return sample('sample-buyer-agent-phone');
+      case 'buyerAgentEmail': return sample('sample-buyer-agent-email');
+      case 'listingAgent': return sample('sample-listing-agent');
+      case 'listingAgentFirstName': return first('sample-listing-agent');
+      case 'listingAgentLastName': return rest('sample-listing-agent');
+      case 'listingAgentPhone': return sample('sample-listing-agent-phone');
+      case 'listingAgentEmail': return sample('sample-listing-agent-email');
       default: return [DAY.format(new Date()), 'yours'];
     }
   }
+
   // The words as the client reads them: paragraphs, each blank filled and marked.
   function paint() {
     var paper = $('[data-paper]', form);
     paper.textContent = '';
     form.elements.words.value.split(/\n{2,}/).forEach(function (para) {
       if (dartTrim(para) === '') return;
-      var el = document.createElement('p'), last = 0, m;
-      BLANK.lastIndex = 0;
-      while ((m = BLANK.exec(para))) {
-        el.appendChild(document.createTextNode(para.slice(last, m.index)));
-        var f = fill(m[1]), mark = document.createElement('mark');
-        mark.className = 'agr-fill';
-        mark.setAttribute('data-fill', f[1]);
-        mark.textContent = f[0];
+      var el = document.createElement('p'), last = 0;
+      blanksIn(para).forEach(function (b) {
+        if (b.start < last) return;
+        el.appendChild(document.createTextNode(para.slice(last, b.start)));
+        var mark = document.createElement('mark');
+        if (b.spot) {
+          // A spot the client initials: a box, as on the signing page.
+          mark.className = 'agr-initials';
+          mark.textContent = words('initials');
+        } else if (b.blank === null) {
+          // One Inspyx can't fill: marked, as the inspector wrote it.
+          mark.className = 'agr-fill';
+          mark.setAttribute('data-fill', 'unknown');
+          mark.textContent = para.slice(b.start, b.end);
+        } else {
+          var f = fill(b.blank);
+          mark.className = 'agr-fill';
+          mark.setAttribute('data-fill', f[1]);
+          mark.textContent = f[0];
+        }
         el.appendChild(mark);
-        last = BLANK.lastIndex;
-      }
+        last = b.end;
+      });
       el.appendChild(document.createTextNode(para.slice(last)));
       paper.appendChild(el);
     });
