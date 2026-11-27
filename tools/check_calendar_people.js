@@ -299,6 +299,23 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     await ctx.close();
   });
 
+  await group('the calendar: an archived inspection and its booking leave it (the rehearsal, round 2)', async () => {
+    const s = server(); seed(s);
+    const shelf = (idv, at) => ({ kind: 'archived_inspections', id: idv, updated_at: 3, deleted_at: null, data: { id: idv, ownerAccountId: ME, archivedAt: at, updatedAt: 3, deletedAt: null } });
+    const bookings = [shelf(A, 3), shelf(G, null),   // G was archived and brought back: it stays
+      { kind: 'bookings', id: 'bk-a', updated_at: 1, deleted_at: null, data: { id: 'bk-a', status: 'confirmed', inspectionId: A,
+        startsAt: ny('2026-11-18T09:00:00'), endsAt: ny('2026-11-18T11:00:00'), property: { street: '12 Oak St', city: 'Miami', state: 'FL' } } },
+      // A booking whose inspection never reached the web, archived on the phone: off too.
+      shelf('6f1c2a3b-0000-4000-8000-0000000000ff', 4),
+      { kind: 'bookings', id: 'bk-z', updated_at: 1, deleted_at: null, data: { id: 'bk-z', status: 'booked', inspectionId: '6f1c2a3b-0000-4000-8000-0000000000ff',
+        startsAt: ny('2026-11-18T16:00:00'), endsAt: ny('2026-11-18T17:00:00'), property: { street: '8 Shelf St', city: 'Miami', state: 'FL' } } }];
+    const { page, ctx } = await open(browser, { server: s, path: 'calendar', hash: '#2026-11', bookings });
+    await page.waitForTimeout(500);
+    const d18 = (await day(page, '2026-11-18')).join(' | ');
+    ok('archived: off the month, its booking too; one brought back stays', !d18.includes('12 Oak St') && !d18.includes('8 Shelf St') && d18.includes('2 Palm Dr'), d18);
+    await ctx.close();
+  });
+
   await group('the calendar: other states', async () => {
     const empty = server();
     let r = await open(browser, { server: empty, path: 'calendar' });

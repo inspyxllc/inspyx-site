@@ -159,7 +159,7 @@
 
   function renderList() {
     var list = $('[data-list="items"]');
-    var ids = parts('inspection').filter(function (id) { return typeof val('inspection', id, 'title') === 'string'; });
+    var ids = parts('inspection').filter(function (id) { return typeof val('inspection', id, 'title') === 'string' && !archived(id); });
     ids.sort(function (a, b) { var da = dayOf(a), db = dayOf(b); return (db ? db.at : 0) - (da ? da.at : 0) || (a < b ? -1 : 1); });
     var q = $('[data-find]').value.toLowerCase().replace(/\s+/g, ' ').trim();
     var them = !q ? ids : ids.filter(function (id) {
@@ -262,6 +262,7 @@
     renderTemplateButtons(id);
     refreshAI();   // a field changed on the phone changes what it offers
     renderAgreement(id);
+    renderActs(id);
     chapterChoices(id);
     renderSearch(id);
     var started = val('inspection', id, 'inspection_at'), line = $('[data-started]');
@@ -346,6 +347,7 @@
   var BIZ = { signings: true, signing_details: true, inspection_fees: true, bookings: true, item_flags: true,
     inspection_templates: true, template_default: true, inspection_payments: true, inspection_agreements: true };
   var biz = Object.create(null), bizPoint = null, bizPulling = null;
+  var bizLoaded = false;   // the whole business feed came in once: until then, no booking is known to be absent
   function pullBusiness() {
     if (bizPulling) return bizPulling;
     var loop = function () {
@@ -358,10 +360,13 @@
     };
     // Answers whether the whole feed came in: a save to a template must not take a library it couldn't read for an
     // empty one (Codex on inspyx-site #98).
-    bizPulling = loop().then(function (ok) { bizPulling = null; renderOne(); return ok === true; },
+    bizPulling = loop().then(function (ok) { bizPulling = null; if (ok === true) bizLoaded = true; renderList(); renderOne(); return ok === true; },
       function () { bizPulling = null; return false; });
     return bizPulling;
   }
+  // The archive (2026-11-25, archive_rules.ts) and the bookings' write-back: read and written here too (the
+  // rehearsal, round 2: the web couldn't cancel or put away a job).
+  BIZ.archived_inspections = true;
   function takeBiz(row) {
     if (!row || !BIZ[row.kind] || typeof row.id !== 'string') return;
     var k = row.kind + '/' + row.id, held = biz[k], wire = flagWire[k];
@@ -771,6 +776,121 @@
   }
 
   /* The inspection's signings: by the id the server copied onto them, or through its booking. */
+  /* ---- Cancel this booking and Archive (the rehearsal, round 2: a booked job couldn't be cancelled or put away on
+     the web). The phone has no deleting a whole inspection: it archives, and the archive can bring it back. Cancel is
+     the phone's cancelBookingOf: the booking goes back as cancelled (the server emails the client and frees the time),
+     then the inspection goes to the archive. ---- */
+  function archived(id) {
+    var r = biz['archived_inspections/' + id];
+    return !!(r && r.deleted_at == null && r.data && r.data.archivedAt != null);
+  }
+  /* The booking that holds this inspection's time (booked or confirmed), as its row; null when none does. */
+  function standingBooking(id) {
+    var best = null;
+    Object.keys(biz).forEach(function (k) {
+      if (k.indexOf('bookings/') !== 0) return;
+      var r = biz[k], d = r.data;
+      if (!d || r.deleted_at != null || d.inspectionId !== id || (d.status !== 'booked' && d.status !== 'confirmed')) return;
+      if (!best || r.updated_at > best.updated_at) best = r;
+    });
+    return best;
+  }
+  /* Sends [rows] in one exchange: 'saved' when every one was kept, 'refused' when one wasn't, 'failed' when it didn't
+     go through. */
+  function sendBiz(rows) {
+    return auth.ask('sync', { push: rows, after: bizPoint, limit: 500 }, DEADLINE).then(function (r) {
+      if (r === null) { window.location.replace('/signin'); return 'failed'; }
+      if (r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) return 'failed';
+      var mine = function (x) { return rows.some(function (w) { return w.kind === x.kind && w.id === x.id; }); };
+      var kept = !(r.json.skipped || []).some(mine) && !(r.json.applied || []).some(function (a) { return a.applied === false && mine(a); });
+      if (kept) rows.forEach(takeBiz);
+      r.json.rows.forEach(takeBiz);
+      if (r.json.next) bizPoint = r.json.next;
+      if (r.json.more) pullBusiness();
+      return kept ? 'saved' : 'refused';
+    }, function () { return 'failed'; });
+  }
+  function archiveRow(id) {
+    var now = Date.now() + offset, held = biz['archived_inspections/' + id];
+    var at = Math.max(now, held ? held.updated_at + 1 : 0);
+    return { kind: 'archived_inspections', id: id, updated_at: at, deleted_at: null,
+      data: { id: id, ownerAccountId: auth.who().id, archivedAt: at, updatedAt: at, deletedAt: null } };
+  }
+  function cancelRow(held) {
+    var at = Math.max(Date.now() + offset, held.updated_at + 1), data = {};
+    Object.keys(held.data).forEach(function (k) { data[k] = held.data[k]; });
+    data.status = 'cancelled'; data.updatedAt = at;
+    return { kind: 'bookings', id: held.id, updated_at: at, deleted_at: null, data: data };
+  }
+  var actAsk = null, actBusy = false, actSaid = null;   // actSaid: { id, which, name }
+  function clientOf(id) {
+    var b = standingBooking(id), d = b && b.data, c = d && d.client;
+    var name = c && typeof c.name === 'string' ? c.name.trim() : '';
+    if (!name) {
+      var p = parts('person', function (x) { return owner['person/' + x] === id && val('person', x, 'role') === 'client'; }).sort(byPosition('person'))[0];
+      name = p ? text(val('person', p, 'name')).trim() : '';
+    }
+    return name;
+  }
+  function renderActs(id) {
+    var box = $('[data-acts]'), gone = archived(id), booking = gone ? null : standingBooking(id), client = clientOf(id);
+    // Until the bookings are in, a booked job can't be told from one with none (Codex on #125): nothing is offered.
+    box.hidden = !bizLoaded;
+    if (!bizLoaded) return;
+    $('[data-acts-archived]').hidden = !gone;
+    $('[data-act="cancel"]').hidden = gone || !booking;
+    $('[data-act="archive"]').hidden = gone || !!booking;
+    var line = $('[data-acts-booked]');
+    line.hidden = gone || !booking;
+    if (booking) line.textContent = client ? word('act-booked-by').replace('{name}', client) : word('act-booked');
+    all('[data-act-said]').forEach(function (p) { p.hidden = !(actSaid && actSaid.id === id && p.getAttribute('data-act-said') === actSaid.which); });
+    all('[data-act-said] [data-v="client"]').forEach(function (b) { b.textContent = actSaid && actSaid.name ? actSaid.name : word('act-your-client'); });
+  }
+  var actDialog = document.querySelector('[data-act-dialog]');
+  function askAct(which) {
+    var id = chosen();
+    if (!id || actBusy) return;
+    var client = clientOf(id);
+    actAsk = { id: id, which: which, client: client };
+    all('[data-act-q]', actDialog).forEach(function (el) { el.hidden = el.getAttribute('data-act-q') !== which; });
+    all('[data-v="client"]', actDialog).forEach(function (b) { b.textContent = client || word('act-your-client'); });
+    actDialog.querySelector('[data-act-work]').hidden = which !== 'cancel' || !hasWork(id);
+    all('[data-act-problem]', actDialog).forEach(function (p) { p.hidden = true; });
+    actDialog.showModal();
+    actDialog.querySelector('[data-act-keep]').focus();
+  }
+  /* Started, or any photo: then the words say what's done is kept in the archive (the phone's inspectionHasWork). */
+  function hasWork(id) {
+    if (typeof val('inspection', id, 'inspection_at') === 'number') return true;
+    return parts('photo', function (ph) { return owner['photo/' + ph] === id; }).length > 0;
+  }
+  function doAct() {
+    var a = actAsk;
+    if (!a || actBusy) return;
+    var problem = function (w) { all('[data-act-problem]', actDialog).forEach(function (p) { p.hidden = p.getAttribute('data-act-problem') !== w; }); };
+    var busy = function (on) { actBusy = on; all('button', actDialog).forEach(function (b) { b.disabled = on; }); };
+    busy(true); problem('');
+    var done = function (which) { busy(false); actDialog.close(); actSaid = { id: a.id, which: which, name: a.client }; renderList(); renderOne(); };
+    if (a.which === 'archive') {
+      // A booking that came in since the dialog opened: archiving alone would leave the client booked (Codex on #125).
+      if (standingBooking(a.id)) { busy(false); problem('archive-booked'); renderOne(); return; }
+      sendBiz([archiveRow(a.id)]).then(function (o) { if (o === 'saved') done('archived'); else { busy(false); problem('archive-' + o); } });
+      return;
+    }
+    var held = standingBooking(a.id);
+    if (!held) { busy(false); problem('cancel-refused'); return; }
+    // The booking first: the inspection goes to the archive only once its booking is cancelled, so "the booking
+    // stands" is always true when said (cancelBookingOf: both or neither).
+    sendBiz([cancelRow(held)]).then(function (o) {
+      if (o !== 'saved') { busy(false); problem('cancel-' + o); return; }
+      return sendBiz([archiveRow(a.id)]).then(function (o2) { done(o2 === 'saved' ? 'cancelled' : 'cancelled-kept'); });
+    });
+  }
+  all('[data-act]').forEach(function (b) { b.addEventListener('click', function () { askAct(b.getAttribute('data-act')); }); });
+  actDialog.querySelector('[data-act-keep]').addEventListener('click', function () { if (!actBusy) actDialog.close(); });
+  actDialog.addEventListener('cancel', function (e) { if (actBusy) e.preventDefault(); });
+  actDialog.querySelector('form').addEventListener('submit', function (e) { e.preventDefault(); doAct(); });
+
   function signingsOf(id) {
     var booked = bizData('bookings').filter(function (b) { return b.inspectionId === id; }).map(function (b) { return b.id; });
     return bizData('signings').filter(function (s) { return s.inspectionId === id || booked.indexOf(s.bookingId) >= 0; });
