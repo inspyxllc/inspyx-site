@@ -95,6 +95,10 @@
 
   if (!auth.who()) { window.location.replace('/signin'); return; }
   main.hidden = false;
+  // Asked again whenever the page comes back into view, or back from the browser's back-forward cache: registered
+  // before a fresh link opens, so Back from Stripe never leaves "Opening a fresh one" standing (Codex on #132).
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && !busy) check(); });
+  window.addEventListener('pageshow', function (e) { if (e.persisted && !busy) check(); });
   // The link ran out: a fresh one, once in a while (never a loop if Stripe keeps sending him back).
   var lastAgain = Number(store(AGAIN_KEY));
   if (back === 'again' && !(lastAgain > 0 && Date.now() - lastAgain < 2 * 60000)) {
@@ -105,5 +109,4 @@
     return;
   }
   check();
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && !busy) check(); });
 })();

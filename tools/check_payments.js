@@ -22,7 +22,7 @@ async function open(browser, status, connect, opt = {}) {
     if (a === 'down') return r.abort('failed');
     r.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a.json) });
   });
-  await page.route(/stripe\.com|evil\.example/, (r) => { went.push(r.request().url()); r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stand-in</title>' }); });
+  await page.route(/stripe\.com|evil\.example/, (r) => { went.push(r.request().url()); if (opt.stripeAbort) return r.fulfill({ status: 204 }); r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stand-in</title>' }); });
   await page.goto(base + '/payments' + (opt.query || ''));
   await page.waitForTimeout(700);
   const seen = () => page.evaluate(() => ({ words: [...document.querySelectorAll('[data-stands]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), buttons: [...document.querySelectorAll('[data-do]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), now: [...document.querySelectorAll('.pay-step.is-now')].map((e) => e.dataset.step), next: [...document.querySelectorAll('[data-next]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), current: [...document.querySelectorAll('.pay-step[aria-current="step"]')].map((e) => e.dataset.step) }));
@@ -119,6 +119,17 @@ async function open(browser, status, connect, opt = {}) {
     o = await open(browser, NEEDS, STRIPE_URL, { query: '?stripe=again' });
     await o.page.waitForTimeout(400);
     ok('the link ran out: a fresh one opens by itself, back to /payments', o.went.some((u) => u.startsWith('https://connect.stripe.com/setup/')) && o.bodies.some((b) => b.action === 'connect' && b.back === 'web'), JSON.stringify([o.went, o.bodies]));
+    await o.ctx.close();
+    // Back from Stripe to the page it left (the back-forward cache): it shows where things stand (Codex on #132). Stripe's
+    // page is refused here, so the page stays as it was left: "Opening a fresh one", as a restore brings it back.
+    o = await open(browser, NEEDS, STRIPE_URL, { query: '?stripe=again', stripeAbort: true });
+    await o.page.waitForTimeout(400);
+    const before132 = o.asks.filter((a) => a === 'status').length;
+    await o.page.evaluate(() => { const e = new PageTransitionEvent('pageshow', { persisted: true }); window.dispatchEvent(e); });
+    await o.page.waitForTimeout(400);
+    v = await o.seen();
+    ok('Back from Stripe to the page it opened from: checked again, with its button, never left "Opening a fresh one"',
+      o.asks.filter((a) => a === 'status').length > before132 && JSON.stringify(v.buttons) === JSON.stringify(['Finish setup']), JSON.stringify(v));
     await o.ctx.close();
     o = await open(browser, NEEDS, STRIPE_URL, { query: '?stripe=again', session: [['inspyx.stripe.again', String(Date.now() - 30000)]] });
     v = await o.seen();
