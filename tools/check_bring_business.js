@@ -52,7 +52,10 @@ function syncServer(rows0) {
   };
   const all = () => [...held.values()].map((h) => h.row);
   const alive = (r) => r.deleted_at == null && r.data.deletedAt == null;
-  return { answer, pushes, people: () => all().filter((r) => r.kind === 'inspector_contacts'), past: () => all().filter((r) => r.kind === 'past_inspections' && alive(r)),
+  // put: another device's change, newer than anything held. loseNext: the next push is kept but its answer is lost.
+  // delay: each push answered that much later.
+  const put = (r) => held.set(r.kind + '/' + r.id, { row: r, seq: ++seq });
+  return { answer, pushes, put, loseNext: false, delay: 0, people: () => all().filter((r) => r.kind === 'inspector_contacts'), past: () => all().filter((r) => r.kind === 'past_inspections' && alive(r)),
     prices: () => all().filter((r) => r.kind === 'price_services' && alive(r)), alive };
 }
 /* The stand-in spectora-import: one page of each list, from the fixture. */
@@ -76,7 +79,13 @@ async function open(browser, o) {
   page.on('request', (r) => bodies.push(r.url() + ' ' + (r.postData() || '')));
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
     const req = route.request(), u = req.url(), cors = { 'access-control-allow-origin': '*' };
-    if (u.startsWith(SERVER + '/functions/v1/sync')) return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(o.sync.answer(JSON.parse(req.postData() || '{}'))) });
+    if (u.startsWith(SERVER + '/functions/v1/sync')) {
+      const b = JSON.parse(req.postData() || '{}'), pushing = (b.push || []).length > 0;
+      if (pushing && o.sync.delay) await new Promise((r) => setTimeout(r, o.sync.delay));
+      const a = o.sync.answer(b);
+      if (pushing && o.sync.loseNext) { o.sync.loseNext = false; return route.fulfill({ status: 503, contentType: 'application/json', headers: cors, body: '{}' }); }
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(a) });
+    }
     if (u.startsWith(SERVER + '/functions/v1/spectora-import')) {
       const a = o.spx.next(JSON.parse(req.postData() || '{}'));
       return route.fulfill({ status: a.status, contentType: 'application/json', headers: cors, body: JSON.stringify(a.body) });
@@ -193,6 +202,52 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     await o.page.locator('[data-go]').click();
     await until(async () => await o.page.locator('[data-done]').isVisible(), 10000);
     ok('brought in: Daniel and Zoe new, Ana filled (once)', JSON.stringify(names(sync.people())) === JSON.stringify(['ana reyes', 'daniel ortiz', 'zoe park']), JSON.stringify(names(sync.people())));
+    await o.ctx.close();
+  });
+
+  await group('Codex on #133: the same total but other changes; a file dropped while it saves; a lost answer', async () => {
+    // (1) Ana without an email, Bob with one: the file fills Ana. Then, before Bring in, another device fills Ana's email
+    // and clears Bob's: still one change, but Bob's. Nothing he didn't see is kept: the new plan is shown.
+    let sync = syncServer([person('seed-0', 'Ana Reyes', 'client'), person('seed-1', 'Bob Lane', 'client', { email: 'bob@x.com' })]), spx = spxServer();
+    let o = await open(browser, { sync, spx });
+    await o.page.setInputFiles('[data-pick]', { name: 'clients.csv', mimeType: 'text/csv', buffer: Buffer.from('Name,Email\nAna Reyes,ana@x.com\nBob Lane,bob@x.com\n', 'utf8') });
+    await until(async () => await o.page.locator('[data-file-kind]').isVisible());
+    await o.page.locator('[data-fk="clients"]').click();
+    await until(async () => await o.page.locator('[data-preview]').isVisible());
+    const firstList = await o.page.locator('[data-list-people] li').allTextContents();
+    const later = Date.now() + 600000;
+    sync.put(Object.assign(person('seed-0', 'Ana Reyes', 'client', { email: 'ana@x.com', updatedAt: later }), { updated_at: later }));
+    sync.put(Object.assign(person('seed-1', 'Bob Lane', 'client', { email: null, updatedAt: later }), { updated_at: later }));
+    await o.page.locator('[data-go]').click();
+    ok('the same total, other changes: nothing kept, and the new plan is shown (Bob now, not Ana)', await until(async () => JSON.stringify(await o.page.locator('[data-list-people] li').allTextContents()) === '["Bob Lane"]') &&
+      JSON.stringify(firstList) === '["Ana Reyes"]' && sync.pushes.length === 0 && await o.page.locator('[data-done]').isHidden(), JSON.stringify([firstList, sync.pushes]));
+    await o.ctx.close();
+
+    // (2) A file dropped while Bring in runs is not taken: the save finishes, with its Undo, and the page is usable.
+    sync = syncServer(seed()); spx = spxServer(); o = await open(browser, { sync, spx });
+    await paste(o.page, KEY); await o.page.locator('[data-check]').click();
+    await until(async () => await o.page.locator('[data-preview]').isVisible());
+    sync.delay = 700;
+    await o.page.locator('[data-go]').click();
+    await o.page.waitForTimeout(200);
+    await o.page.dispatchEvent('[data-drop]', 'drop', { dataTransfer: await o.page.evaluateHandle(() => { const d = new DataTransfer(); d.items.add(new File(['Name\nZed'], 'other.csv', { type: 'text/csv' })); return d; }) });
+    ok('a file dropped during Bring in: ignored; the save finishes with Undo and the page unlocks', await until(async () => await o.page.locator('[data-done]').isVisible(), 15000) &&
+      await o.page.locator('[data-undo]').isVisible() && await o.page.locator('[data-file-kind]').isHidden() && await o.page.locator('[data-undo]').isEnabled() && o.errs.length === 0, JSON.stringify(o.errs));
+    await o.ctx.close();
+
+    // (3) The past inspections are kept but their answer is lost: what landed is counted as kept, with its Undo.
+    sync = syncServer(seed()); spx = spxServer(); o = await open(browser, { sync, spx });
+    await paste(o.page, KEY); await o.page.locator('[data-check]').click();
+    await until(async () => await o.page.locator('[data-preview]').isVisible());
+    sync.loseNext = true;
+    await o.page.locator('[data-go]').click();
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 10000);
+    const keptPast = sync.past().length;
+    ok('a lost answer: the past inspections that landed are said, with Undo (never "nothing changed")', keptPast > 0 &&
+      (await o.page.locator('[data-done-list] li').allTextContents()).some((t) => t === keptPast + ' past inspections') && await o.page.locator('[data-undo]').isVisible(),
+      JSON.stringify([keptPast, await o.page.locator('[data-done-list] li').allTextContents()]));
+    await o.page.locator('[data-undo]').click();
+    ok('and Undo takes them back', await until(async () => sync.past().length === 0, 10000));
     await o.ctx.close();
   });
 

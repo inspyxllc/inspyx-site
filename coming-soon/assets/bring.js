@@ -167,7 +167,19 @@
     var n = p.people.push.length + pastN + priceN;
     var go = $('[data-go]'); go.textContent = n ? words('bring-n', { n: n }) : words('bring-0'); go.disabled = busy;
     go.setAttribute('data-n', String(n));
-    plan = { n: n };
+    plan = { n: n, sig: signature(p) };
+  }
+  /* What a plan would change, without its new ids and times: who gets added, filled (with what) or brought back, which
+     past inspections, which services at what price. Bring in keeps only a plan that says exactly what was shown (Codex
+     on #133: the same total can be other changes). */
+  function signature(p) {
+    var person = function (e) { return [e.action, e.action === 'new' ? null : e.id, e.row ? [e.row.role, e.row.name, e.row.phone, e.row.email, e.row.company, e.row.note] : null, e.fills || null]; };
+    var day = function (r) { var d = r.data || {}; return [d.date, d.dateInFile, d.address, d.client, d.reference, d.feeCents]; };
+    return JSON.stringify({
+      people: p.people.plan.filter(function (e) { return e.action !== 'unchanged'; }).map(person),
+      past: (p.history ? p.history.push : []).map(day),
+      prices: p.prices.lines.map(function (x) { return [x.name, x.fee_cents, x.minutes, x.description]; }),
+    });
   }
   function preview() {
     var mine = picked;
@@ -285,7 +297,7 @@
   /* ---- a file: what it holds is his to say (clients, agents or past inspections), then it is read ---- */
   var pendingFile = null;
   function take(f) {
-    if (!f) return;
+    if (!f || busy) return;
     var mine = ++picked;
     done = null; $('[data-done]').hidden = true; $('[data-preview]').hidden = true; source = null;
     if (f.size > MAX) { say('too-big'); return; }
@@ -344,6 +356,25 @@
     };
     return next();
   }
+  /* After a batch whose answer was lost (it may have been kept): the rows of [push] the server now holds as sent, read
+     again from it (Codex on #133). Their Undo is kept, and nothing kept is said to be unchanged. */
+  function landed(push, bk) {
+    if (!push.length) return Promise.resolve([]);
+    return Promise.resolve(bk.pull()).then(function () {
+      var held = {}; bk.rows().forEach(function (r) { held[r.id] = r; });
+      return push.filter(function (r) { var h = held[r.id]; return h && h.updated_at === r.updated_at; }).map(function (r) { return r.id; });
+    }, function () { return []; });
+  }
+  /* sendAll, then, if a batch's answer was lost, what landed anyway counted as kept. */
+  function sendSure(push, bk, progress) {
+    return sendAll(push, bk, progress).then(function (r) {
+      if (!r.broke) return r;
+      return landed(push, bk).then(function (ids) {
+        var all = {}; r.kept.concat(ids).forEach(function (id) { all[id] = true; });
+        return { kept: Object.keys(all), broke: true };
+      });
+    });
+  }
   function lock(on) {
     busy = on;
     [].slice.call(main.querySelectorAll('button, textarea, input')).forEach(function (b) { b.disabled = on; });
@@ -369,21 +400,21 @@
       if (p.refused) { say(null, null, p.refused); return; }
       var n = p.people.push.length + (p.history ? p.history.push.length : 0) + p.prices.push.length;
       // What he saw is not what would be kept now (People changed meanwhile): shown again, nothing kept.
-      if (n !== plan.n) { shown(p); return; }
+      if (n !== plan.n || signature(p) !== plan.sig) { shown(p); return; }
       if (!n) { done = null; finished(0, 0, true); return; }
       done = { people: [], past: null, prices: [] };
       var past = p.history && p.history.push.length ? p.history.push : [];
       var all = n;
       say('bringing', { done: 0, n: all });
-      return sendAll(past, pastBook, function (k) { say('bringing', { done: k, n: all }); }).then(function (pr) {
+      return sendSure(past, pastBook, function (k) { say('bringing', { done: k, n: all }); }).then(function (pr) {
         if (past.length && pr.kept.length) done.past = { importId: past[0].data.importId, n: pr.kept.length };
-        if (pr.broke) { finished(0, pr.kept.length, false, 0); if (!pr.kept.length) say('failed'); return; }
-        return sendAll(p.people.push, book, function (k) { say('bringing', { done: pr.kept.length + k, n: all }); }).then(function (res) {
+        if (pr.broke) { if (pr.kept.length) finished(0, pr.kept.length, false, 0); say('failed'); return; }
+        return sendSure(p.people.push, book, function (k) { say('bringing', { done: pr.kept.length + k, n: all }); }).then(function (res) {
           var keptSet = {}; res.kept.forEach(function (id) { keptSet[id] = true; });
           done.people = p.people.changes.filter(function (c) { return keptSet[c.id]; });
-          if (res.broke) { finished(done.people.length, done.past ? done.past.n : 0, false, 0); if (!done.people.length && !done.past) say('failed'); else say('failed'); return; }
+          if (res.broke) { finished(done.people.length, done.past ? done.past.n : 0, false, 0); say('failed'); return; }
           var keptSoFar = pr.kept.length + res.kept.length;
-          return sendAll(p.prices.push, priceBook, function (k) { say('bringing', { done: keptSoFar + k, n: all }); }).then(function (rp) {
+          return sendSure(p.prices.push, priceBook, function (k) { say('bringing', { done: keptSoFar + k, n: all }); }).then(function (rp) {
             done.prices = rp.kept;
             finished(done.people.length, done.past ? done.past.n : 0, false, done.prices.length);
             if (rp.broke) say('failed');
