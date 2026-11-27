@@ -303,12 +303,25 @@
   /* Only a key he typed or pasted is ever sent (the rehearsal, round 2: Chrome autofilled his saved password into this
      box). keyHis is the box's value as his own typing, pasting, dropping or undoing last left it; a value put there any
      other way (a browser's autofill or suggestion) is refused, the box emptied, and nothing sent. */
-  var keyHis = '';
+  var keyHis = '', keyTainted = false;
   var HIS = /^(insertText|insertFromPaste|insertFromDrop|insertFromYank|insertCompositionText|insertLineBreak|delete|historyUndo|historyRedo)/;
   var keyBox = $('[data-spx-key]');
-  function keyClear() { if (keyBox) keyBox.value = ''; keyHis = ''; }
+  function keyClear() { if (keyBox) keyBox.value = ''; keyHis = ''; keyTainted = false; }
   if (keyBox) {
-    keyBox.addEventListener('input', function (e) { if (e.isTrusted && typeof e.inputType === 'string' && HIS.test(e.inputType)) keyHis = keyBox.value; });
+    // Before each edit of his: a box that no longer holds what his own edits left was changed by something else (a
+    // script, an extension, a late autofill). His next keystroke must not bless that value (Codex on #128): the box
+    // stays refused until he empties it or replaces all of it.
+    keyBox.addEventListener('beforeinput', function (e) {
+      if (!e.isTrusted) return;
+      var all = keyBox.selectionStart === 0 && keyBox.selectionEnd === keyBox.value.length;
+      if (keyBox.value !== keyHis && !all) keyTainted = true;
+      else if (all) keyTainted = false;
+    });
+    keyBox.addEventListener('input', function (e) {
+      if (!(e.isTrusted && typeof e.inputType === 'string' && HIS.test(e.inputType))) return;
+      keyHis = keyBox.value;
+      if (keyBox.value === '') keyTainted = false;
+    });
     // Empty as the page opens, and again a moment later and on coming back to it (a browser can fill a box late).
     keyClear();
     setTimeout(function () { if (keyBox.value !== keyHis) keyClear(); }, 400);
@@ -318,7 +331,7 @@
     if (!keyBox) return false;
     var auto = false;
     try { auto = keyBox.matches(':autofill'); } catch (e) { try { auto = keyBox.matches(':-webkit-autofill'); } catch (e2) { auto = false; } }
-    return auto || keyBox.value !== keyHis;
+    return auto || keyTainted || keyBox.value !== keyHis;
   }
   var spxStop = $('[data-spx-stop]');
   if (spxStop) spxStop.addEventListener('click', function () { picked++; spxLock(false); spxSay('spx-stopped'); keyClear(); spxHide(true); });

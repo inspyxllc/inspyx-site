@@ -344,7 +344,25 @@ const sigOf = (rows) => JSON.stringify(rows.filter((r) => r.deleted_at == null &
       await page.keyboard.insertText(KEY);
       await page.locator('[data-spx-go]').click();
       ok((history ? 'history' : 'people') + ': pasted: it goes', await until(async () => spx.calls.length >= 1, 4000));
+      await until(async () => await page.locator('[data-read]').isVisible() || await page.locator('[data-spx-key]').isEnabled(), 6000);
+      // Set by a script after the page settled, then one keystroke of his (Codex on #128): still refused.
+      spx.calls.length = 0;
+      await page.locator('[data-spx-key]').evaluate((e) => { e.value = 'MySavedPassword!1'; });
+      await page.locator('[data-spx-key]').focus();
+      await page.keyboard.press('End');
+      await page.keyboard.type(' ');
+      await page.locator('[data-spx-go]').click();
+      await page.waitForTimeout(300);
+      ok((history ? 'history' : 'people') + ': set by a script, then a keystroke of his: still never sent', spx.calls.length === 0 && await page.locator('[data-spx-key]').inputValue() === '');
+      // All of it replaced by his paste: his.
+      await page.locator('[data-spx-key]').evaluate((e) => { e.value = 'MySavedPassword!1'; });
+      await page.locator('[data-spx-key]').focus();
+      await page.keyboard.press('ControlOrMeta+A');
+      await page.keyboard.insertText(KEY);
+      await page.locator('[data-spx-go]').click();
+      ok((history ? 'history' : 'people') + ': all of it replaced by his paste: it goes', await until(async () => spx.calls.length >= 1, 4000));
       await o.ctx.close();
+      // (next)
       // Filled before he ever touched it (as the page opens): emptied a moment later, before anything can be sent.
       const o2 = await open(browser, { sync: syncServer(seed()), spx: spxServer([page200([])]), history });
       await o2.page.locator('[data-spx-key]').evaluate((e) => { e.value = 'MySavedPassword!1'; });
