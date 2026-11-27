@@ -505,7 +505,12 @@
     if (!fk || !pendingFile || busy) return;
     [].slice.call(main.querySelectorAll('[data-fk]')).forEach(function (b) { var on = b === fk; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
     ++picked; done = null; $('[data-done]').hidden = true;
-    source = { file: pendingFile, kind: fk.getAttribute('data-fk') };
+    var kind = fk.getAttribute('data-fk'), was = source && source.file === pendingFile ? source : null;
+    // His column choices stay for the same file while it holds people (clients and agents read the same columns; Codex
+    // on #138, as the old importer did); past inspections have columns of their own, so a switch to or from them starts
+    // from the reader's match.
+    var keep = was && was.match && (was.kind === 'past') === (kind === 'past') ? was.match : null;
+    source = { file: pendingFile, kind: kind, match: keep };
     preview();
   }
   $('[data-pick]').addEventListener('change', function (e) { take(e.target.files && e.target.files[0]); e.target.value = ''; });

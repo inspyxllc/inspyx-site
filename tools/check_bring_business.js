@@ -462,6 +462,15 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     ok('his choice re-reads the file: two clients, the bad line gone, his choices kept', (await o.page.locator('[data-count-people]').textContent()).startsWith('2 clients') &&
       (await o.page.locator('[data-col="0"]').inputValue()) === 'fullName' && (await o.page.locator('[data-col="1"]').inputValue()) === 'phone');
     if (SHOTS) { await o.page.locator('[data-cols-box]').scrollIntoViewIfNeeded(); await o.page.screenshot({ path: SHOTS + '/61-bring-columns-fixed.png' }); }
+    // Clients to Agents and back (and the chip already chosen): his column choices stay (Codex on #138).
+    await o.page.locator('[data-fk="agents"]').click();
+    await until(async () => ((await o.page.locator('[data-count-people]').textContent()) || '') === '2 agents');
+    await o.page.locator('[data-fk="agents"]').click();
+    await o.page.waitForTimeout(300);
+    await o.page.locator('[data-fk="clients"]').click();
+    await until(async () => ((await o.page.locator('[data-count-people]').textContent()) || '') === '2 clients');
+    ok('switching Clients and Agents keeps his column choices', (await o.page.locator('[data-col="0"]').inputValue()) === 'fullName' &&
+      (await o.page.locator('[data-col="1"]').inputValue()) === 'phone');
     // A column he sets to "Not used" stays so when he changes another (the reader would guess it again; Codex on #106).
     await o.page.locator('[data-col="2"]').selectOption('');
     await until(async () => (await o.page.locator('[data-col="2"]').inputValue()) === '');
