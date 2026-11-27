@@ -124,6 +124,49 @@ const pngInfo = (b64) => {
     }
   });
 
+  await group('the ask to draw initials goes once they are placed, whatever the order (rehearsal 3, finding 26)', async () => {
+    const ONE = 'AGREEMENT\nI agree. [Initials]';
+    const orders = {
+      'Sign first, then draw, then the spot': async (page) => { await page.click('[data-sign]'); await draw(page, 'initials'); await page.locator('.sg-spot').first().click(); },
+      'the spot first, then draw, then the spot': async (page) => { await page.locator('.sg-spot').first().click(); await draw(page, 'initials'); await page.locator('.sg-spot').first().click(); },
+      'draw, then the spot': async (page) => { await draw(page, 'initials'); await page.locator('.sg-spot').first().click(); },
+    };
+    // The spot first, or Sign first, then draw: the ask to draw goes as the initials are drawn; the spot stays the
+    // client's to tap (a second tap on an initialed spot takes it back).
+    for (const first of ['.sg-spot', '[data-sign]']) {
+      const t = await open(browser, { view: VIEW(ONE) });
+      await t.page.locator('[data-state="open"]').waitFor({ state: 'visible' });
+      await t.page.locator(first).first().click();
+      ok(first + ' first: asked to draw', await shown(t.page, '[data-say="draw-initials"]'));
+      await draw(t.page, 'initials');
+      const placed = (await t.page.locator('[data-v="placed"]').first().textContent()).replace(/\s+/g, ' ').trim();
+      ok(first + ' first, then draw: the ask goes as they are drawn; no spot initialed by itself', !(await shown(t.page, '[data-say="draw-initials"]')) && /^0 .* 1$/.test(placed), placed);
+      await t.ctx.close();
+    }
+    // Another ask on screen is left as it is: drawing the initials answers only the ask to draw them.
+    {
+      const t = await open(browser, { view: VIEW(ONE) });
+      await t.page.locator('[data-state="open"]').waitFor({ state: 'visible' });
+      await draw(t.page, 'initials');
+      await t.page.click('[data-sign]');
+      ok('asked to initial the spot', await shown(t.page, '[data-say="initials"]'));
+      await draw(t.page, 'initials');
+      ok('drawing more leaves that ask', await shown(t.page, '[data-say="initials"]'));
+      await t.ctx.close();
+    }
+    for (const touch of [false, true]) {
+      for (const [label, steps] of Object.entries(orders)) {
+        const t = await open(browser, { view: VIEW(ONE), touch });
+        await t.page.locator('[data-state="open"]').waitFor({ state: 'visible' });
+        await steps(t.page);
+        const placed = (await t.page.locator('[data-v="placed"]').first().textContent()).replace(/\s+/g, ' ').trim();
+        const asks = await t.page.locator('[data-say]:visible').allTextContents();
+        ok((touch ? 'touch: ' : 'mouse: ') + label + ': 1 of 1, and no ask left', /^1 .* 1$/.test(placed) && asks.length === 0, JSON.stringify({ placed, asks }));
+        await t.ctx.close();
+      }
+    }
+  });
+
   await group('what stops a signing, in order', async () => {
     const t = await open(browser);
     await t.page.locator('[data-state="open"]').waitFor({ state: 'visible' });

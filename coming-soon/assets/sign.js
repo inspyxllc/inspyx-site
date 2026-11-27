@@ -28,7 +28,8 @@
   })();
   var setAll = function (name, text) { all('[data-v="' + name + '"]').forEach(function (el) { el.textContent = text; }); };
   var state = function (which) { all('[data-state]', main).forEach(function (el) { el.hidden = el.getAttribute('data-state') !== which; }); };
-  var say = function (which) { all('[data-say]', main).forEach(function (el) { el.hidden = el.getAttribute('data-say') !== which; }); };
+  var saying = null;
+  var say = function (which) { saying = which; all('[data-say]', main).forEach(function (el) { el.hidden = el.getAttribute('data-say') !== which; }); };
 
   // As written: a key needs no decoding (hex, dashes, a dot, base64url), so anything that would is not one
   // (Codex on site PR 65: decoding "#%" threw and left the page loading).
@@ -77,6 +78,9 @@
     spots.push(b);
     return b;
   }
+  // The ask to draw the initials goes as soon as they are drawn (rehearsal 3, finding 26: it stayed on screen after);
+  // the spots are still the client's to tap.
+  function initialsDrawn() { if (saying === 'draw-initials') say(null); }
   function mark(b, on) {
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
     b.textContent = words(on ? 'initialed' : 'initial-here');
@@ -142,7 +146,11 @@
       p.points++;
       if (p.points >= 3) p.drawn = true;
     });
-    var up = function () { p.down = false; p.last = null; };
+    var up = function () {
+      p.down = false;
+      p.last = null;
+      if (name === 'initials' && p.drawn) initialsDrawn();
+    };
     c.addEventListener('pointerup', up);
     c.addEventListener('pointercancel', up);
     c.addEventListener('pointerleave', up);
