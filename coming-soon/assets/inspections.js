@@ -66,7 +66,7 @@
   /* One exchange with the function: sends what waits, brings what changed. */
   function exchange() {
     var push = outbox.slice(0, 500);
-    return auth.ask('inspection-sync', { device: me, push: push, after: point, limit: 1000 }, DEADLINE).then(function (r) {
+    return auth.ask('inspection-sync', { device: me, push: push, after: point, limit: 5000 }, DEADLINE).then(function (r) {
       if (r === null) { window.location.replace('/signin'); return false; }
       if (r.status !== 200 || !r.json || !Array.isArray(r.json.fields)) throw new Error('sync');
       if (typeof r.json.now === 'number') offset = r.json.now - Date.now();
