@@ -37,6 +37,7 @@
   var draftKey = null;
   var saving = false, savedOnce = false;
   var fitting = null;    // the days for the picked services, or null for the page's own
+  var code = null;       // the discount code applied (Apply), sent with every price, the draft and the booking
 
   function call(body) {
     if (preview) return Promise.resolve({ status: 0, body: {} });
@@ -202,7 +203,9 @@
   // total at once, and Book waits until a price for the current choices has come back.
   // pending: the price being asked for pendingKey's choices; it settles true when that price came back.
   var asked = 0, quotedFor = null, pending = null, pendingKey = null;
-  function choicesKey() { return JSON.stringify([pickedIds(), facts()]); }
+  function choicesKey() { return JSON.stringify([pickedIds(), facts(), code]); }
+  // The code's line under the price: on (it took money off), off (it took nothing off these choices), or none.
+  var codeSay = function (which) { all('[data-code-say]', main).forEach(function (el) { el.hidden = el.getAttribute('data-code-say') !== which; }); };
   function changed() {
     say(null);
     quotedFor = null;
@@ -220,9 +223,16 @@
     pendingKey = key;
     // Waited for only while it's on its way: once it settles it's forgotten, so a failed price is asked for again
     // on the next try (Codex on site PR 64).
-    var thisOne = call({ action: 'quote', slug: slug, serviceIds: ids, facts: f }).then(function (r) {
+    var q = { action: 'quote', slug: slug, serviceIds: ids, facts: f };
+    if (code) q.discountCode = code;
+    codeSay(null);
+    var thisOne = call(q).then(function (r) {
       var priced = mine === asked && r.status === 200 && !!r.body.quote;
-      if (priced) { drawQuote(r.body.quote); quotedFor = key; }
+      if (priced) {
+        drawQuote(r.body.quote); quotedFor = key;
+        setAll('code', code || '');
+        codeSay(!code ? null : r.body.quote.discount === true ? 'on' : 'off');
+      }
       if (pending === thisOne) { pending = null; pendingKey = null; }
       return priced;
     });
@@ -275,6 +285,7 @@
     if (pickedTime === null && !(d.client.email && /@/.test(d.client.email))) return;
     saving = true;
     var body = { action: 'save', slug: slug, serviceIds: pickedIds(), facts: facts(), details: d };
+    if (code) body.discountCode = code;
     if (draftKey) body.draftKey = draftKey;
     call(body).then(function (r) {
       saving = false;
@@ -295,6 +306,8 @@
     if (preview) return;
     var first = problem(details());
     if (first) { say(first); return; }
+    // A code typed but not applied goes with the booking too: applied now, so its price is the one waited for.
+    if (typedCode() !== code) { code = typedCode(); if (!code) codeSay(null); changed(); }
     // Never book against a price for other choices (or none). A price already on its way for these choices (the last
     // field's change, as Book is pressed) is waited for; otherwise it's asked for. If it can't be had, say so.
     var key = choicesKey();
@@ -312,6 +325,7 @@
   }
   function send(d, btn) {
     var body = { action: 'book', slug: slug, serviceIds: pickedIds(), facts: facts(), details: d, startsAt: pickedTime };
+    if (code) body.discountCode = code;
     if (draftKey) body.draftKey = draftKey;
     if (d.client.smsOk) body.smsConsentVersion = SMS_CONSENT_VERSION;
     call(body).then(function (r) {
@@ -349,6 +363,7 @@
     setAll('zone', zoneName());
     document.title = $('h1', main.querySelector('[data-state="open"]')).textContent;
     drawDays(); drawServices();
+    $('[data-code]', main).hidden = !(p.services && p.services.length);
     state('open');
   }
   function sample() {
@@ -376,6 +391,17 @@
   });
   ['bk-sqft', 'bk-year', 'bk-found', 'bk-zip'].forEach(function (id) { $('#' + id).addEventListener('change', changed); });
   $('[data-book]', main).addEventListener('click', book);
+  // Apply (or Enter in the box): the code as typed, the server's spaces rule aside; an empty box takes it off.
+  function typedCode() { var typed = $('#bk-code').value.trim().slice(0, 60); return typed === '' ? null : typed.toUpperCase(); }
+  function applyCode() {
+    var next = typedCode();
+    if (next === code && quotedFor === choicesKey()) return;
+    code = next;
+    if (!code) codeSay(null);
+    changed();
+  }
+  $('[data-apply]', main).addEventListener('click', applyCode);
+  $('#bk-code').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); applyCode(); } });
 
   if (preview) {
     $('[data-preview]', main).hidden = false;

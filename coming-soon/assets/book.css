@@ -35,6 +35,15 @@
 .bk-quote.bk-pending{opacity:.4}
 .bk-total{display:flex; justify-content:space-between; font-size:17px; margin:8px 0 0}
 .bk-say{margin:14px 0 0; font-size:15px; color:#9A3412}
+/* The discount code (the rehearsal, round 2): the inspector's codes (Prices), checked by the server's price. */
+.bk-code{margin-top:14px; display:grid; gap:6px}
+.bk-code label{font-size:14px; color:var(--ink-soft)}
+.bk-code-row{display:flex; gap:8px}
+.bk-code-row input{flex:1 1 auto; min-width:0; text-transform:uppercase}
+.bk-apply{flex:none; min-height:44px; padding:0 18px; border:0; border-radius:10px; background:#fff; color:var(--navy); font:600 15px var(--font); cursor:pointer; box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.bk-apply:disabled{opacity:.55; cursor:default}
+.bk-code-say{margin:0; font-size:14.5px; color:#9A3412}
+.bk-code-say.bk-code-on{color:#166534}
 .bk-none{font-size:15px; color:var(--ink-soft)}
 .bk-book{display:block; width:100%; min-height:56px; margin-top:24px; border:0; border-radius:14px; background:var(--navy); color:#fff; font:700 18px var(--font); cursor:pointer}
 .bk-book:disabled{opacity:.55; cursor:default}
