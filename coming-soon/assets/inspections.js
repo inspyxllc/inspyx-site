@@ -257,6 +257,7 @@
       if (el.value !== want) el.value = want;
     });
     renderPeople(id);
+    renderJob(id);
     renderFlags(id);
     renderTemplateButtons(id);
     refreshAI();   // a field changed on the phone changes what it offers
@@ -315,7 +316,7 @@
   function renderPeople(id) {
     var box = $('[data-people]'), list = $('[data-people-list]');
     var people = parts('person', function (p) { return owner['person/' + p] === id && Object.prototype.hasOwnProperty.call(ROLES, val('person', p, 'role')); }).sort(byPosition('person'));
-    var next = JSON.stringify(people.map(function (p) { return [p, val('person', p, 'role'), text(val('person', p, 'name'))]; }));
+    var next = JSON.stringify(people.map(function (p) { return [p, val('person', p, 'role'), text(val('person', p, 'name')), text(val('person', p, 'phone')), text(val('person', p, 'email'))]; }));
     box.hidden = people.length === 0;
     if (list.getAttribute('data-shape') === id + next) return;
     list.setAttribute('data-shape', id + next);
@@ -325,6 +326,9 @@
       var row = tpl('person');
       row.querySelector('[data-v="name"]').textContent = text(val('person', p, 'name')).trim() || word('noname');
       row.querySelector('[data-v="role"]').textContent = word(role);
+      // How to reach them, as the phone keeps it (the rehearsal, A05: names only).
+      row.querySelector('[data-v="reach"]').textContent = [text(val('person', p, 'phone')).trim(), text(val('person', p, 'email')).trim()]
+        .filter(Boolean).join(' · ');
       row.querySelector('[data-v="look"]').textContent = word('look-' + as);
       var a = row.querySelector('[data-look]');
       a.setAttribute('href', '/look#i=' + encodeURIComponent(id) + '&as=' + as);
@@ -340,7 +344,7 @@
      agreement_outdated.dart in JS. ---- */
   var Fill = window.InspyxFill;
   var BIZ = { signings: true, signing_details: true, inspection_fees: true, bookings: true, item_flags: true,
-    inspection_templates: true, template_default: true };
+    inspection_templates: true, template_default: true, inspection_payments: true, inspection_agreements: true };
   var biz = Object.create(null), bizPoint = null, bizPulling = null;
   function pullBusiness() {
     if (bizPulling) return bizPulling;
@@ -690,6 +694,62 @@
     if (!Array.isArray(lines)) return null;
     return { lines: lines.filter(function (l) { return l && typeof l.name === 'string' && typeof l.cents === 'number'; }),
       totalCents: f.totalCents, byHand: Object.keys(json(f.selectionJson, {})).length === 0 };
+  }
+
+  /* ---- The job (the rehearsal, round 2, A05, 2026-11-26: the job page showed the people's names and nothing of the
+     fee, the payments, the agreement or the house). Read only: the fee and the payments are set on the phone and
+     travel through the business sync (PR 3, Moises's "Yes, store them"); the facts are the inspection's own. ---- */
+  var say = function (w, vals) { return word(w).replace(/\{(\w+)\}/g, function (m, k) { return vals && k in vals ? vals[k] : m; }); };
+  function renderJob(id) {
+    if (!Fill) return;
+    var usd = Fill.agreementUsd, fee = feeOf(id);
+    var set = function (k, t) { $('[data-job] [data-v="' + k + '"]').textContent = t; };
+    set('fee', fee ? usd(fee.totalCents) : say('job-no-fee'));
+    set('fee-what', fee && !fee.byHand ? fee.lines.filter(function (l) { return l.kind !== 'discount' && l.kind !== 'tax'; })
+      .map(function (l) { return l.name; }).join(' + ') : '');
+    // Real money only, as Your numbers on the phone: a card payment counts when Stripe took it live (cardLive).
+    var paid = 0, test = 0, how = [];
+    bizData('inspection_payments').filter(function (p) { return p.inspectionId === id && p.voidedAt == null && typeof p.amountCents === 'number'; })
+      .sort(function (a, b) { return a.recordedAt - b.recordedAt; }).forEach(function (p) {
+        if (p.method === 'pay_link' && p.cardLive !== true) { test += p.amountCents; return; }
+        paid += p.amountCents; how.push(usd(p.amountCents) + ' ' + say('pay-' + p.method));
+      });
+    var total = fee ? fee.totalCents : 0, left = Math.max(0, total - paid);
+    var pill = fee ? (paid >= total ? 'paid' : paid > 0 ? 'part' : 'unpaid') : paid > 0 ? 'paid' : 'unpaid';
+    var pillEl = $('[data-job] [data-v="paid-pill"]');
+    pillEl.textContent = say('job-pill-' + pill); pillEl.setAttribute('data-kind', pill);
+    set('paid', paid === 0 ? say('job-paid-none') : fee && left > 0 ? say('job-paid-of', { paid: usd(paid), fee: usd(total) }) + say('job-left', { left: usd(left) }) : usd(paid));
+    set('paid-how', how.join(' + '));
+    var testEl = $('[data-job] [data-v="paid-test"]');
+    testEl.hidden = test === 0; testEl.textContent = test > 0 ? say('job-test-card', { cents: usd(test) }) : '';
+    // Signed online (its newest signed signing: an update sent after it doesn't unsign it, the box above says it
+    // waits), or on the phone (its agreement, carried since PR 3 part 3). The newer of the two speaks.
+    var day = function (ms) { return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
+    var when = function (r) { return typeof r.signedAt === 'number' ? r.signedAt : 0; };
+    var mine = signingsOf(id).filter(function (g) { return g.status !== 'void' && g.deletedAt == null; });
+    var online = mine.filter(function (g) { return g.status === 'signed'; })
+      .sort(function (a, b) { return when(b) - when(a) || (b.sentAt || 0) - (a.sentAt || 0); })[0];
+    var onPhone = bizData('inspection_agreements').filter(function (a) { return a.inspectionId === id && typeof a.signedAt === 'number'; })
+      .sort(function (a, b) { return b.signedAt - a.signedAt || (a.id < b.id ? 1 : -1); })[0];
+    var agrEl = $('[data-job] [data-v="agr-pill"]'), signed = !!(online || onPhone);
+    agrEl.textContent = say(signed ? 'job-pill-signed' : 'job-pill-unsigned'); agrEl.setAttribute('data-kind', signed ? 'paid' : 'unpaid');
+    var by = function (w, r) { return say(w + (when(r) ? '' : '-nodate'), { name: text(r.signerName).trim() || say('job-someone'), day: when(r) ? day(r.signedAt) : '' }); };
+    set('agr', online && (!onPhone || when(online) >= onPhone.signedAt) ? by('job-signed-online', online)
+      : onPhone ? by('job-signed-phone', onPhone)
+      : mine.some(function (g) { return g.status === 'sent' || g.status === 'opened'; }) ? say('job-sent-not-signed') : say('job-not-signed'));
+    // The house's facts, as the inspection holds them: the ones with a value.
+    var facts = parts('fact', function (f) { return owner['fact/' + f] === id && text(val('fact', f, 'value_text')).trim() !== ''; }).sort(byPosition('fact'));
+    var list = $('[data-facts]'), shape = JSON.stringify(facts.map(function (f) { return [f, val('fact', f, 'label'), val('fact', f, 'value_text')]; }));
+    $('[data-facts-row]').hidden = facts.length === 0;
+    if (list.getAttribute('data-shape') !== shape) {
+      list.setAttribute('data-shape', shape); list.textContent = '';
+      facts.forEach(function (f) {
+        var li = document.createElement('li');
+        var b = document.createElement('b'); b.textContent = text(val('fact', f, 'label')); li.appendChild(b);
+        li.appendChild(document.createTextNode(' ' + text(val('fact', f, 'value_text'))));
+        list.appendChild(li);
+      });
+    }
   }
 
   /* What the inspection puts into the blanks today, as the phone's _agreementFacts. */
