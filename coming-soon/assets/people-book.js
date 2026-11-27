@@ -162,4 +162,6 @@
   }
   window.InspyxPeopleBook = makeBook('inspector_contacts');
   window.InspyxPastBook = makeBook('past_inspections');
+  // The price list's services, for bringing prices in (bring.js, 2026-11-27): the rows Prices writes.
+  window.InspyxPriceBook = makeBook('price_services');
 })();
