@@ -24,3 +24,6 @@
 .sg-sign:disabled{opacity:.55; cursor:default}
 .sg-fine{font-size:13px; color:var(--ink-faint); margin:8px 0 0}
 @media (max-width:520px){ .sg h1{font-size:25px} .sg-step{padding:14px} }
+/* What happens next, once signed (the rehearsal, 2026-11-26: the signed page had no next step). */
+.sg-done h2{font-size:17px; margin:28px 0 10px}
+.sg-next{margin:0; padding-left:20px; display:grid; gap:8px; font-size:15.5px; line-height:1.45; color:var(--ink-soft)}
