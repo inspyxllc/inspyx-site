@@ -411,13 +411,20 @@
       [].slice.call(main.querySelectorAll('[data-fk]')).forEach(function (b) { b.classList.remove('is-on'); b.setAttribute('aria-checked', 'false'); });
       // A known file that holds no people or inspections (Horizon's templates, its dashboard), or one the app's reader
       // refuses: said, never read.
-      $('[data-to-converter]').hidden = true;
+      $('[data-to-converter]').hidden = true; toConvert = null;
+      // A file the converter reads: Horizon's Company Templates, or a template spreadsheet (the app's drop installs
+      // those; here the converter on Templates reads them). "Convert it now" takes this very file there.
+      var sheet = guess && guess.status === 'ok' && guess.kind === 'template';
+      if (sheet || (guess && guess.status === 'elsewhere' && guess.holds === 'templates')) {
+        pendingFile = null; $('[data-file-kind]').hidden = true;
+        toConvert = { name: f.name, bytes: bytes };
+        say(null, null, sheet ? words('template-sheet') : words('to-converter', { what: guess.what }));
+        $('[data-to-converter]').hidden = false;
+        return;
+      }
       if (guess && guess.status !== 'ok' && guess.message) {
         pendingFile = null; $('[data-file-kind]').hidden = true;
-        // Horizon's Company Templates: this website's own converter takes it (Templates).
-        var toConverter = guess.status === 'elsewhere' && guess.holds === 'templates';
-        say(null, null, toConverter ? words('to-converter', { what: guess.what }) : guess.message);
-        $('[data-to-converter]').hidden = !toConverter;
+        say(null, null, guess.message);
         return;
       }
       pendingFile = { name: f.name, bytes: bytes };
@@ -428,6 +435,13 @@
     reader.onerror = function () { if (mine === picked) say('failed'); };
     reader.readAsArrayBuffer(f);
   }
+  // "Convert it now": the file goes to Templates through this browser's own storage, and Templates converts it at once.
+  var toConvert = null;
+  $('[data-convert-now]').addEventListener('click', function () {
+    var file = toConvert, go = function () { window.location.assign('/templates?file=drop'); };
+    if (!file || !window.inspyxHandoff) { window.location.assign('/templates'); return; }
+    window.inspyxHandoff.put(file).then(go, function () { window.location.assign('/templates'); });
+  });
   // What the file holds, chosen (by him, or by the app's guess): its chip on, and the preview read.
   function chooseKind(fk) {
     if (!fk || !pendingFile || busy) return;

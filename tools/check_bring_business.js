@@ -406,12 +406,22 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     ok('Horizon\'s Inspection Bookings: past inspections', await chosen() === 'past');
     // Horizon's Company Templates: the converter's, said, never read, never an error.
     await pick('Company Templates.json', '{"sections":[]}', 'application/json');
-    await until(async () => (await o.page.locator('[data-say]').textContent()).includes('Open Templates'));
+    await until(async () => (await o.page.locator('[data-say]').textContent()).includes('Inspyx can turn it into your template'));
     if (SHOTS) { await o.page.locator('[data-say]').scrollIntoViewIfNeeded(); await o.page.screenshot({ path: SHOTS + '/59-bring-horizon-templates.png' }); }
-    ok('Horizon\'s Company Templates: pointed to this website\'s converter (Templates); no kind to pick, no preview, nothing kept',
-      (await o.page.locator('[data-to-converter] a').getAttribute('href')) === '/templates' && await o.page.locator('[data-to-converter]').isVisible() &&
+    ok('Horizon\'s Company Templates: "Convert it now" offered; no kind to pick, no preview, nothing kept',
+      (await o.page.locator('[data-say]').textContent()) === "This is Horizon's Company Templates: Inspyx can turn it into your template." &&
+      await o.page.locator('[data-convert-now]').isVisible() &&
       await o.page.locator('[data-file-kind]').isHidden() && await o.page.locator('[data-preview]').isHidden() && sync.pushes.length === 0 && o.errs.length === 0,
       JSON.stringify(o.errs));
+    // "Convert it now": THIS file goes to Templates through this browser's own storage. Templates is stood in for by a
+    // bare page with the handoff alone, to read back what arrived (check_templates.js checks Templates taking it).
+    await o.page.route((u) => new URL(u).pathname === '/templates', (r) => r.fulfill({ status: 200, contentType: 'text/html',
+      body: '<!doctype html><meta charset="utf-8"><script src="/assets/handoff.js"></script>' }));
+    await Promise.all([o.page.waitForURL((u) => new URL(u).pathname === '/templates', { timeout: 10000 }), o.page.locator('[data-convert-now]').click()]);
+    const arrived = await o.page.evaluate(() => window.inspyxHandoff.take().then((h) => h && { name: h.name, text: new TextDecoder().decode(h.bytes) }));
+    ok('Convert it now opens Templates with THIS file waiting for it', new URL(o.page.url()).search === '?file=drop' &&
+      !!arrived && arrived.name === 'Company Templates.json' && arrived.text === '{"sections":[]}', JSON.stringify(arrived));
+
     await o.ctx.close();
   });
 

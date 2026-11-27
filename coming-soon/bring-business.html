@@ -20,6 +20,7 @@
 <script src="/assets/import/inspyx_import.js" defer></script>
 <script src="/assets/contacts-import.js" defer></script>
 <script src="/assets/past-store.js" defer></script>
+<script src="/assets/handoff.js" defer></script>
 <script src="/assets/bring.js" defer></script>
 </head>
 <body class="has-dash">
@@ -94,7 +95,7 @@
 </div>
 
 <p class="pi-say" data-say role="status" hidden></p>
-<p class="br-to-converter" data-to-converter hidden><a class="btn small" href="/templates">Open Templates</a></p>
+<p class="br-to-converter" data-to-converter hidden><button type="button" class="btn small" data-convert-now>Convert it now</button></p>
 
 <section class="br-preview" data-preview hidden>
 <h2 data-found></h2>
@@ -138,7 +139,8 @@
 <span data-w="stopped">Stopped: nothing is brought in, and your key is forgotten.</span>
 <span data-w="found">Found in your {platform} account</span>
 <span data-w="found-file">Found in {file}</span>
-<span data-w="to-converter">This is {what}: the converter turns it into an Inspyx template. Open Templates and convert this file there.</span>
+<span data-w="to-converter">This is {what}: Inspyx can turn it into your template.</span>
+<span data-w="template-sheet">This is a template spreadsheet: Inspyx can turn it into your template.</span>
 <span data-w="unread-1">A column Inspyx doesn't read, kept in each one's notes: {columns}</span>
 <span data-w="unread-n">{n} columns Inspyx doesn't read, kept in each one's notes: {columns}</span>
 <span data-w="people-count">{clients} {clientsWord} · {agents} {agentsWord}</span>

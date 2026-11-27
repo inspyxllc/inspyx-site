@@ -179,6 +179,14 @@
   }
 
   pick.addEventListener('change', function () { var f = pick.files && pick.files[0]; pick.value = ''; take(f); });
+  // A file brought here by Bring your business's "Convert it now" (switch PR 8): taken once from this browser's own
+  // storage, and converted as if he had picked it. The address is put back, so a reload asks nothing again.
+  if (/[?&]file=drop(&|$)/.test(window.location.search) && window.inspyxHandoff) {
+    window.history.replaceState(null, '', window.location.pathname);
+    window.inspyxHandoff.take().then(function (h) {
+      if (h) take({ name: h.name, arrayBuffer: function () { return Promise.resolve(h.bytes.slice().buffer); } });
+    }, function () { /* nothing kept: he picks the file as usual */ });
+  }
   ['dragenter', 'dragover'].forEach(function (type) {
     drop.addEventListener(type, function (e) { e.preventDefault(); drop.classList.add('is-over'); });
   });

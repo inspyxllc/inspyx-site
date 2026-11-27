@@ -25,7 +25,7 @@ let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
 const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
 
-const PATH_WORDS = 'open Inspyx, tap the menu (\u2630) \u2192 Import \u2192 Convert my template.';
+const PATH_WORDS = 'open Inspyx, tap More \u2192 Import \u2192 Convert my template.'; // the app's menu is "More" since #135
 const SCAN = 'This PDF is a scan (pictures of pages). Convert it on your phone, where Inspyx reads scans: ' + PATH_WORDS;
 
 function role(line) {
@@ -149,6 +149,33 @@ const settled = (page) => page.waitForFunction(() => {
     await page.waitForSelector('[data-drop]');
     const st = await page.evaluate(() => ({ a: getComputedStyle(document.querySelector('.tpl-finger')).animationName, r: getComputedStyle(document.querySelector('.tpl-ready')).opacity }));
     ok('with less motion asked, the stage rests on its last frame: the template ready', st.a === 'none' && st.r === '1', JSON.stringify(st));
+    await ctx.close();
+  });
+
+  await group('a file brought by Bring your business\'s "Convert it now" converts at once, once (switch PR 8)', async () => {
+    const w = world(); const { ctx, page } = await open(browser, w);
+    await page.waitForSelector('[data-drop]');
+    const text = fs.readFileSync(path.join(FILES, 'roof.txt'));
+    // What Bring your business leaves in this browser's own storage, then the page it opens.
+    await page.evaluate((b) => window.inspyxHandoff.put({ name: 'roof.txt', bytes: new Uint8Array(b) }), [...text]);
+    await page.goto(url + 'templates?file=drop');
+    await page.waitForSelector('.tpl-card', { timeout: 30000 });
+    ok('the file converts with no pick, named for the file', (await page.locator('.tpl-card').first().locator('[data-name]').innerText()) === 'Roof' && w.hellos.length > 0);
+    ok('the address is put back to /templates', new URL(page.url()).pathname === '/templates' && new URL(page.url()).search === '');
+    ok('the file is taken out as it is read', (await page.evaluate(() => window.inspyxHandoff.take())) === null);
+    const asked = w.asked.length;
+    await page.goto(url + 'templates?file=drop');
+    await page.waitForSelector('[data-drop]');
+    await page.waitForTimeout(800);
+    ok('opened again, nothing is converted again', w.asked.length === asked && (await page.locator('.tpl-card').count()) === 0);
+    // One left behind and no longer fresh is dropped.
+    await page.evaluate((b) => window.inspyxHandoff.put({ name: 'roof.txt', bytes: new Uint8Array(b) }), [...text]);
+    await page.evaluate(() => new Promise((ok) => { const r = indexedDB.open('inspyx-handoff', 1); r.onsuccess = () => { const t = r.result.transaction('files', 'readwrite'), s = t.objectStore('files'), g = s.get('convert'); g.onsuccess = () => { const v = g.result; v.at -= 11 * 60 * 1000; s.put(v, 'convert'); }; t.oncomplete = () => { r.result.close(); ok(); }; }; }));
+    await page.goto(url + 'templates?file=drop');
+    await page.waitForSelector('[data-drop]');
+    await page.waitForTimeout(800);
+    ok('a file left longer than 10 minutes is not converted', w.asked.length === asked && (await page.locator('.tpl-card').count()) === 0);
+    ok('no errors', page.errors.length === 0, page.errors.join(' | '));
     await ctx.close();
   });
 
