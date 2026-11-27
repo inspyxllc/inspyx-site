@@ -58,7 +58,7 @@
       return r.deleted_at === null && r.data.deletedAt == null && ROLES.indexOf(r.data.role) >= 0 && typeof r.data.name === 'string';
     }).map(function (r) {
       var d = r.data, s = function (v) { return typeof v === 'string' ? v : ''; };
-      return { role: d.role, name: d.name, email: s(d.email), phone: s(d.phone), company: s(d.company), note: s(d.note), at: d.lastUsedAt || 0 };
+      return { id: r.id, role: d.role, name: d.name, email: s(d.email), phone: s(d.phone), company: s(d.company), note: s(d.note), at: d.lastUsedAt || 0 };
     });
   }
 
@@ -103,6 +103,40 @@
     }, function () { return 'failed'; });
   }
 
+  /* A batch sent as one exchange: which rows were kept ('kept' ids), or null when it didn't go through. */
+  function send(push) {
+    return exchange(push).then(function (answer) {
+      if (!answer) return null;
+      var refused = {};
+      (answer.skipped || []).forEach(function (x) { if (x.kind === KIND) refused[x.id] = true; });
+      (answer.applied || []).forEach(function (a) { if (a.kind === KIND && a.applied === false) refused[a.id] = true; });
+      var kept = push.filter(function (r) { return !refused[r.id]; });
+      kept.forEach(take);
+      return (answer.more ? pull() : Promise.resolve()).then(function () { tell(); return { kept: kept.map(function (r) { return r.id; }) }; });
+    }, function () { return null; });
+  }
+
+  /* Deletes the rows [ids] ([deleted] true), or brings them back (false), as the phone's deleteContact and
+     restoreContact do: the same row, marked or unmarked, newer than the copy held. Answers { outcome, kept }: outcome
+     'saved' (every one kept), 'refused' (one the server holds newer: the phone changed it) or 'failed'; kept, the
+     ids the server did keep (some, when refused: Codex on #123). */
+  function mark(ids, deleted) {
+    var now = Date.now(), push = [];
+    ids.forEach(function (id) {
+      var held = rows[id];
+      if (!held) return;
+      var at = Math.max(now, held.updated_at + 1), data = {};
+      Object.keys(held.data).forEach(function (k) { data[k] = held.data[k]; });
+      data.updatedAt = at; data.deletedAt = deleted ? at : null;
+      push.push({ kind: KIND, id: id, updated_at: at, deleted_at: deleted ? at : null, data: data });
+    });
+    if (push.length === 0) return Promise.resolve({ outcome: 'refused', kept: [] });
+    return send(push).then(function (r) {
+      if (r === null) return { outcome: 'failed', kept: [] };
+      return { outcome: r.kept.length === push.length ? 'saved' : 'refused', kept: r.kept };
+    });
+  }
+
   return {
     start: function (onChange) {
       var who = auth.who();
@@ -120,17 +154,8 @@
     // For bringing people in (people-import.js): every row held, deleted ones too; and a batch sent as one exchange,
     // answering which rows were kept ('kept' ids), or null when it didn't go through.
     rows: function () { return Object.keys(rows).map(function (k) { return rows[k]; }); },
-    send: function (push) {
-      return exchange(push).then(function (answer) {
-        if (!answer) return null;
-        var refused = {};
-        (answer.skipped || []).forEach(function (x) { if (x.kind === KIND) refused[x.id] = true; });
-        (answer.applied || []).forEach(function (a) { if (a.kind === KIND && a.applied === false) refused[a.id] = true; });
-        var kept = push.filter(function (r) { return !refused[r.id]; });
-        kept.forEach(take);
-        return (answer.more ? pull() : Promise.resolve()).then(function () { tell(); return { kept: kept.map(function (r) { return r.id; }) }; });
-      }, function () { return null; });
-    },
+    send: send,
+    mark: mark,
     pull: pull,
     newDraft: function () { return { id: window.crypto.randomUUID(), at: 0, last: 0 }; },
   };
