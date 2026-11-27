@@ -2,9 +2,7 @@
 // signed-in addresses and nothing else? And (2026-11-17) do the public pages get their own rule, and every address
 // the two headers every page sends? A rule Vercel refuses fails the whole build, so run this before any
 // publish that changes vercel.json.
-// It needs Vercel's reader, which this repo does not carry:
-//   mkdir /tmp/vercelcheck && cd /tmp/vercelcheck && npm init -y && npm i @vercel/routing-utils
-//   NODE_PATH=/tmp/vercelcheck/node_modules node tools/check_rules.js
+// It needs Vercel's reader, which this repo does not carry: bash tools/check_rules.sh installs it once and runs this.
 const fs = require('fs');
 const path = require('path');
 const { getTransformedRoutes } = require('@vercel/routing-utils');
@@ -27,8 +25,9 @@ ok('the rule catches no other address', !no.some(applies), no.filter(applies).jo
 const wss = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co;/.test(r.headers['Content-Security-Policy']));
 // The calendar and people pages (2026-11-16) read the same live inspections, so they share that rule.
 const live = ['/inspections', '/calendar', '/people'];
-// /inspections also opens Spex's relay socket (Edit with AI, 2026-11-24): its own rule, the live one plus that socket.
-const wssAI = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/chat---spex-relay-yu5bdad2fa-uc\.a\.run\.app;/.test(r.headers['Content-Security-Policy']));
+// /inspections also opens Spex's relay socket (Edit with AI) and reads this site's own files (a template saved from a
+// finding is read back): its own rule, the live one plus those two, word for word.
+const wssAI = (p) => ruled.some((r) => new RegExp(r.src).test(p) && /connect-src 'self' https:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/btxlrfvqifnrnxffohsz\.supabase\.co wss:\/\/chat---spex-relay-yu5bdad2fa-uc\.a\.run\.app;/.test(r.headers['Content-Security-Policy']));
 ok('the inspections, calendar and people pages have the rule, with the live socket', live.every((p) => applies(p) && (wss(p) || (p === '/inspections' && wssAI(p)))), live.filter((p) => !applies(p) || !(wss(p) || (p === '/inspections' && wssAI(p)))).join(' '));
 ok('Spex\'s relay socket: /inspections only, of the live pages, under one rule', wssAI('/inspections') && !wssAI('/calendar') && !wssAI('/people') && ruled.filter((r) => new RegExp(r.src).test('/inspections')).length === 1);
 ok('no other page may open the live socket', !['/signin', '/account', '/plan', '/reset', '/signup', '/today', '/numbers', '/reports', '/prices', '/agreements', '/profile', '/', '/inspections/x', '/inspection', '/calendar/x', '/people/x', '/calendars', '/peoples'].some(wss));
@@ -100,10 +99,16 @@ ok('the public rules reach no file and no other address (/assets/home.js, /prici
 const EVERY = ['/', '/pricing', '/signin', '/r', '/r/' + key, '/a', '/no-such-page', '/assets/home.js', '/assets/page.css', '/.well-known/apple-app-site-association'];
 ok('every address, files and a wrong address too: nosniff and never in a frame', EVERY.every((p) => got(p)['X-Content-Type-Options'] === 'nosniff' && got(p)['X-Frame-Options'] === 'DENY'), EVERY.filter((p) => got(p)['X-Content-Type-Options'] !== 'nosniff' || got(p)['X-Frame-Options'] !== 'DENY').join(' '));
 // The rule for every address sends only those two, with the same values every other rule sends: so it doesn't
-// matter which of two rules Vercel lets win for the same header.
+// matter which of two rules Vercel lets win for the same header. One address alone may be framed: /email-frame, the
+// designed email /emails shows inside itself, by this site only (SAMEORIGIN, and its own frame-ancestors 'self',
+// which browsers follow first).
 const all = cfg.headers.filter((r) => r.source === '/(.*)');
-const same = cfg.headers.every((r) => r.headers.every((x) => !['X-Content-Type-Options', 'X-Frame-Options'].includes(x.key) || x.value === (x.key === 'X-Frame-Options' ? 'DENY' : 'nosniff')));
+const FRAMED = '/email-frame';
+const same = cfg.headers.every((r) => r.headers.every((x) => !['X-Content-Type-Options', 'X-Frame-Options'].includes(x.key) || x.value === (x.key === 'X-Frame-Options' ? (r.source === FRAMED ? 'SAMEORIGIN' : 'DENY') : 'nosniff')));
 ok('the rule for every address sends nosniff and DENY alone, and no rule sends them otherwise', all.length === 1 && all[0].headers.map((x) => x.key).join(',') === 'X-Content-Type-Options,X-Frame-Options' && same);
+const framed = cfg.headers.filter((r) => r.headers.some((x) => x.key === 'X-Frame-Options' && x.value !== 'DENY'));
+const framedCsp = (framed[0] || { headers: [] }).headers.find((x) => x.key === 'Content-Security-Policy');
+ok('only ' + FRAMED + ' may be framed, by this site alone', framed.length === 1 && framed[0].source === FRAMED && !!framedCsp && /frame-ancestors 'self'(;|$)/.test(framedCsp.value) && got(FRAMED)['X-Frame-Options'] === 'SAMEORIGIN', framed.map((r) => r.source).join(' '));
 // What the rules allow is what the pages hold: no script written into a page (the home page's runs from
 // /assets/home-early.js), no style written into a policy page, no on...= handler anywhere.
 {
