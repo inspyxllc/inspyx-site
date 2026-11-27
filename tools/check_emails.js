@@ -130,6 +130,19 @@ async function open(browser, o) {
     ok('the frame page\'s own rule', fr.headers.get('content-security-policy') === "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src https://btxlrfvqifnrnxffohsz.supabase.co data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'" &&
       fr.headers.get('x-frame-options') === 'SAMEORIGIN', fr.headers.get('content-security-policy'));
     ok('/emails may frame only its own pages, and is framed by none', / frame-src 'self';/.test(em.headers.get('content-security-policy')) && /frame-ancestors 'none'/.test(em.headers.get('content-security-policy')) && em.headers.get('x-frame-options') === 'DENY', em.headers.get('content-security-policy'));
+    // Booking confirmed with no agreement to sign: the preview asks for the email the sender makes then (toSign false);
+    // with a live agreement, as before. Other messages never say.
+    const legal = (idv, kind, deletedAt) => ({ kind: 'legal_documents', id: idv, updated_at: 2, deleted_at: deletedAt, data: { id: idv, ownerAccountId: ME, kind, title: 'T', body: 'B', createdAt: 1, updatedAt: 2, deletedAt } });
+    for (const [label, rows, want] of [['no agreement', [], false], ['only a deleted agreement and a privacy notice', [legal('a1', 'agreement', 3), legal('p1', 'privacy', null)], false],
+      ['a live agreement', [legal('a2', 'agreement', null)], undefined], ['someone else\'s agreement only', [Object.assign(legal('a3', 'agreement', null), { data: Object.assign(legal('a3', 'agreement', null).data, { ownerAccountId: 'other' }) })], false]]) {
+      o = await open(browser, { rows });
+      await o.page.click('[data-msg="booking_confirmed"] summary');
+      await o.page.click('[data-msg="day_before"] summary');
+      await o.page.waitForTimeout(400);
+      const bc = o.previews.filter((p) => p.messageId === 'booking_confirmed').pop(), db = o.previews.filter((p) => p.messageId === 'day_before').pop();
+      ok('the Booking confirmed preview, ' + label + ': ' + (want === false ? 'with nothing to sign' : 'as before'), !!bc && bc.toSign === want && !!db && !('toSign' in db), JSON.stringify([bc, db]));
+      await o.ctx.close();
+    }
     // No designed email (the function made none): the plain words, as before.
     o = await open(browser, { html: '' });
     await o.page.click('[data-msg="booking_confirmed"] summary');
