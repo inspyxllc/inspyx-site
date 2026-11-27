@@ -258,6 +258,7 @@
     });
     renderPeople(id);
     renderJob(id);
+    renderSend(id);
     renderPays(id);
     renderFlags(id);
     renderTemplateButtons(id);
@@ -1320,13 +1321,147 @@
      question says the client's copy stays as it is until the next publish. Unknown (not asked yet, or it failed): the
      line is left out, never guessed. */
   var published = null;
+  var reports = null;   // inspection id -> { at: when its report was published (ms) }: null until known
   function pullPublished() {
     return auth.ask('reports-sent', { action: 'list' }, DEADLINE).then(function (r) {
       if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.reports)) return;
-      published = {};
-      r.json.reports.forEach(function (x) { if (x && typeof x.inspection_id === 'string') published[x.inspection_id] = true; });
+      published = {}; reports = {};
+      r.json.reports.forEach(function (x) {
+        if (!x || typeof x.inspection_id !== 'string') return;
+        published[x.inspection_id] = true;
+        var at = typeof x.published_at === 'string' ? Date.parse(x.published_at) : NaN;
+        if (isFinite(at)) reports[x.inspection_id] = { at: at, locked: x.locked === true };
+      });
+      renderOne();
     }, function () { /* unknown: the line stays out */ });
   }
+  /* ---- Send the report (the rehearsal, round 2; the lead, 2026-11-27). The web can't make a report, so it sends the
+     one published only while it is current: no change to the inspection after it was published (the phone's #783 remakes
+     an outdated one first; the web can't read its revision, so it compares the inspection's newest change with the
+     publish time). Bookkeeping a phone writes when it applies sync isn't a change. Each person gets their own link, as
+     the app sends (web_report.dart: link, then send). ---- */
+  var BOOKKEEPING = { updated_at: true, updated_by_account_id: true };
+  function lastChange(id) {
+    var at = 0;
+    Object.keys(fields).forEach(function (k) {
+      var f = fields[k];
+      if (f.inspection === id && !BOOKKEEPING[f.field] && typeof f.at === 'number' && f.at > at) at = f.at;
+    });
+    return at;
+  }
+  var SEND_EMAIL = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(\.[A-Za-z0-9-]{1,63})+$/;
+  // The report function's own rules (report/core.ts): a name of at most 100 characters with no control character, a
+  // link's label at most 120, at most 10 people a send; a send names an address once.
+  var SEND_MAX = 10, NAME_MAX = 100;
+  var CONTROL = new RegExp('[\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]', 'g');
+  function fitName(n) { return Array.from(String(n || '').replace(CONTROL, ' ').replace(/\s+/g, ' ').trim()).slice(0, NAME_MAX).join('').trim(); }
+  function sendPeople(id) {
+    var seen = {};
+    return parts('person', function (p) { return owner['person/' + p] === id && Object.prototype.hasOwnProperty.call(ROLES, val('person', p, 'role')); })
+      .sort(byPosition('person')).map(function (p) {
+        return { id: p, role: val('person', p, 'role'), name: fitName(val('person', p, 'name')), email: text(val('person', p, 'email')).trim() };
+      }).filter(function (x) {
+        if (!SEND_EMAIL.test(x.email) || seen[x.email.toLowerCase()]) return false;
+        seen[x.email.toLowerCase()] = true;
+        return true;
+      });
+  }
+  var sendFor = null, sendOff = {}, sendSeen = {}, sendBusy = false, sendSaid = null;
+  function sendSay(which, vals) {
+    sendSaid = which;
+    all('[data-send-said]').forEach(function (p) { p.hidden = p.getAttribute('data-send-said') !== which; });
+    if (vals && vals.to) $('[data-v="sent-to"]').textContent = vals.to;
+  }
+  function renderSend(id) {
+    var box = $('[data-send]'), rep = reports && reports[id];
+    box.hidden = !rep;
+    if (!rep) return;
+    if (sendFor !== id) {
+      // Another inspection: its own words, every person ticked but the agents (the client is who a report goes to).
+      sendFor = id; sendOff = {}; sendSeen = {}; sendSay(null);
+      var place = text(val('inspection', id, 'address')).trim() || text(val('inspection', id, 'title')).trim();
+      $('[data-send-subject]').value = place ? word('send-subject').replace('{place}', place) : word('send-subject-none');
+      $('[data-send-message]').value = word('send-message').replace('{place}', place || word('send-the-property'));
+    }
+    // Each person as they first appear, by their role: the client ticked, an agent not, whether there from the start or
+    // added on the phone while this is open (Codex on #130); his own ticks are kept.
+    sendPeople(id).forEach(function (x) { if (!sendSeen[x.id]) { sendSeen[x.id] = true; if (x.role !== 'client') sendOff[x.id] = true; } });
+    var outdated = lastChange(id) > rep.at;
+    show('data-send-state', outdated ? 'outdated' : 'ready');
+    $('[data-send-locked]').hidden = !rep.locked;
+    var t = $('[data-send-made]') || $('[data-v="made"]');
+    t.textContent = DAY.format(new Date(rep.at)) + ', ' + CLOCK.format(new Date(rep.at));
+    var people = sendPeople(id), list = $('[data-send-who]'), shape = JSON.stringify(people);
+    $('[data-send-none]').hidden = people.length > 0;
+    if (list.getAttribute('data-shape') !== shape) {
+      list.setAttribute('data-shape', shape); list.textContent = '';
+      people.forEach(function (x) {
+        var li = document.createElement('li'), l = document.createElement('label'), c = document.createElement('input'), sp = document.createElement('span'), sm = document.createElement('small');
+        c.type = 'checkbox'; c.setAttribute('data-send-person', x.id); c.checked = !sendOff[x.id];
+        c.addEventListener('change', function () { if (c.checked) delete sendOff[x.id]; else sendOff[x.id] = true; });
+        sp.textContent = (x.name || x.email) + ' · ' + word(x.role);
+        sm.textContent = x.email;
+        sp.appendChild(sm); l.appendChild(c); l.appendChild(sp); li.appendChild(l); list.appendChild(li);
+      });
+    }
+    $('[data-send-go]').disabled = sendBusy || people.length === 0;
+  }
+  function newKey() {
+    var b = new Uint8Array(16); window.crypto.getRandomValues(b);
+    return btoa(String.fromCharCode.apply(null, b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function sha256Hex(textIn) {
+    return window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(textIn)).then(function (d) {
+      return Array.prototype.map.call(new Uint8Array(d), function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+    });
+  }
+  function sendReport() {
+    var id = chosen();
+    if (!id || sendBusy || !reports || !reports[id]) return;
+    // Checked again as it goes: a change that came in since the box was drawn.
+    if (lastChange(id) > reports[id].at) { sendSay('outdated'); renderOne(); return; }
+    var picked = sendPeople(id).filter(function (x) { return !sendOff[x.id]; });
+    if (!picked.length) { sendSay('pick'); return; }
+    if (picked.length > SEND_MAX) { sendSay('too-many'); return; }
+    var subject = $('[data-send-subject]').value.trim(), message = $('[data-send-message]').value;
+    // The function refuses a send with no subject: said here, never "didn't go through".
+    if (!subject) { sendSay('no-subject'); return; }
+    sendBusy = true; renderSend(id); sendSay(null);
+    // Its answer belongs to this inspection: shown only while it is still the one open (Codex on #130).
+    var here = function () { return chosen() === id; };
+    var stop = function (which, vals) { sendBusy = false; if (here()) sendSay(which, vals); renderOne(); };
+    var keys = [];
+    // One link a person (the app's order: each link made, then the one send that emails them all).
+    var chain = Promise.resolve(true);
+    picked.forEach(function (x) {
+      chain = chain.then(function (ok) {
+        if (!ok) return false;
+        var key = newKey();
+        return sha256Hex(key).then(function (sha) {
+          return auth.ask('report', { action: 'link', inspection_id: id, key_sha256: sha, audience: ROLES[x.role], label: x.name || null }, DEADLINE);
+        }).then(function (r) {
+          if (r === null) { window.location.replace('/signin'); return false; }
+          if (r.status !== 200) return false;
+          keys.push({ address: x.email, name: x.name, key: key });
+          return true;
+        });
+      });
+    });
+    chain.then(function (ok) {
+      if (!ok) { stop('failed'); return; }
+      // Checked again just before it goes: a change that came in while the links were being made (Codex on #130).
+      if (lastChange(id) > reports[id].at) { stop('outdated'); return; }
+      return auth.ask('report', { action: 'send', inspection_id: id, recipients: keys, subject: subject, message: message }, DEADLINE).then(function (r) {
+        if (r === null) { window.location.replace('/signin'); return; }
+        if (r.status === 429) { stop('daily'); return; }
+        if (r.status !== 200 || !r.json || !Array.isArray(r.json.emails)) { stop('failed'); return; }
+        var names = picked.map(function (x) { return x.name || x.email; });
+        stop('sent', { to: names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + word('send-and') + names[names.length - 1] });
+      });
+    }).catch(function () { stop('failed'); });
+  }
+  $('[data-send-go]').addEventListener('click', sendReport);
+
   function publishedLine(inspection) { $('[data-confirm-published]').hidden = !(published && published[inspection]); }
   function askDelete(inspection, entity, id) {
     var d = $('[data-confirm]');
@@ -1486,17 +1621,17 @@
   $('[data-flagfilter]').addEventListener('click', function () { flagOnly = !flagOnly; renderOne(); });
   var finding = null;
   $('[data-find]').addEventListener('input', function () { clearTimeout(finding); finding = setTimeout(renderList, 120); });
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); pullPublished(); } });
   // The business pull rides the same clock (Codex on inspyx-site #89): a fee changed on the phone or an updated
   // agreement signed reaches an open tab within a minute, never only on a tab switch. It asks from where it left off.
-  setInterval(function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); } }, FALLBACK);
+  setInterval(function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); pullPublished(); } }, FALLBACK);
 
   if (!auth.who()) { window.location.replace('/signin'); return; }
   main.hidden = false;
   auth.listen(function (ping) {
     if (ping && ping.signedOut) { window.location.replace('/signin'); return; }
     if (ping && ping.joined) { listening = true; showLive('live'); }
-    else pullBusiness();
+    else { pullBusiness(); pullPublished(); }
     sync();
   });
   sync();

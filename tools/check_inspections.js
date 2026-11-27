@@ -62,7 +62,7 @@ async function open(browser, o) {
   await ctx.addInitScript((v) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); if (v === null) localStorage.removeItem('inspyx.signin'); else localStorage.setItem('inspyx.signin', v); } } catch (e) { /* none */ } }, store);
   const page = await ctx.newPage();
   page.setDefaultTimeout(8000);
-  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [], relay = [], fileCalls = [], payCalls = [];
+  const s = o.server, errs = [], away = [], calls = [], sockets = [], bizCalls = [], bookCalls = [], relay = [], fileCalls = [], payCalls = [], reportCalls = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
   await page.routeWebSocket(/realtime\/v1\/websocket/, (ws) => {
@@ -111,7 +111,15 @@ async function open(browser, o) {
     }
     if (u.startsWith(SERVER + '/functions/v1/reports-sent')) {
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
-        body: JSON.stringify({ reports: (o.published || []).map((id) => ({ inspection_id: id, published_at: 1, locked: false, links: [], emails: [] })), as_of: new Date().toISOString() }) });
+        body: JSON.stringify({ reports: (o.published || []).map((x) => typeof x === 'string'
+          ? { inspection_id: x, published_at: 1, locked: false, links: [], emails: [] }
+          : { inspection_id: x.id, published_at: new Date(x.at).toISOString(), locked: x.locked === true, links: [], emails: [] }), as_of: new Date().toISOString() }) });
+    }
+    // The report function (Send the report): o.report(body) answers { status, json }; every call kept in reportCalls.
+    if (u.startsWith(SERVER + '/functions/v1/report')) {
+      const b = JSON.parse(req.postData() || '{}'); reportCalls.push(b);
+      const a = o.report ? await o.report(b) : { status: 200, json: b.action === 'send' ? { emails: b.recipients.map((x) => ({ address: x.address, status: 'queued' })) } : { link: { id: 'l1' } } };
+      return route.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a.json) });
     }
     if (u.startsWith(SERVER + '/functions/v1/booking') && o.booking) {
       const b = JSON.parse(req.postData() || '{}'); bookCalls.push({ headers: req.headers(), body: b });
@@ -151,7 +159,7 @@ async function open(browser, o) {
   const res = await page.goto(url + 'inspections' + (o.hash || ''), { waitUntil: 'load' });
   await page.waitForTimeout(500);
   const ping = () => sockets[sockets.length - 1].ws.send(JSON.stringify({ topic: 'realtime:insp:' + ME, event: 'broadcast', ref: null, payload: { type: 'broadcast', event: 'changed', payload: { seq: s.seq } } }));
-  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls, relay, fileCalls, payCalls };
+  return { ctx, page, errs, away, calls, sockets, res, ping, bizCalls, bookCalls, relay, fileCalls, payCalls, reportCalls };
 }
 
 const vis = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((e) => !e.hidden && e.getClientRects().length > 0).map((e) => e.textContent.replace(/\s+/g, ' ').trim()), sel);
@@ -531,9 +539,12 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       ok(label + ': and the pay link knows what was paid by hand', payCalls[payCalls.length - 1].offline_paid_cents === 20000);
       if (process.env.SHOTS) await page.locator('[data-job]').screenshot({ path: process.env.SHOTS + '/fee-pay-' + label + '.png' });
       await page.click('[data-pays] li button');
+      // Read once the Undo has gone and the pay link was told (read at once, it raced the push: flaky 2 in 3).
+      const undone = await until(async () => (await vis(page, '[data-pays] li')).length === 0 && t.pushed.filter((r) => r.kind === 'inspection_payments').length >= 2 &&
+        payCalls.length > 0 && payCalls[payCalls.length - 1].offline_paid_cents === 0);
       const voided = t.pushed.filter((r) => r.kind === 'inspection_payments').pop();
-      ok(label + ': Undo: the same row, voided, newer; gone from the list; the pay link told', await until(async () => (await vis(page, '[data-pays] li')).length === 0) &&
-        voided.id === pay.id && voided.data.voidedAt === voided.updated_at && voided.updated_at > pay.updated_at && voided.data.amountCents === 20000 && payCalls[payCalls.length - 1].offline_paid_cents === 0);
+      ok(label + ': Undo: the same row, voided, newer; gone from the list; the pay link told', undone &&
+        voided.id === pay.id && voided.data.voidedAt === voided.updated_at && voided.updated_at > pay.updated_at && voided.data.amountCents === 20000);
       // Change a fee the phone priced from the price list: said; the same row, newer than every fee there.
       ok(label + ': no errors, nothing off the side', errs.length === 0 && away.length === 0 && await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), errs.concat(away).join(' | '));
       await ctx.close();
@@ -603,6 +614,179 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     ok('the standing fee changed in place, by hand now, above every fee there (a removed one too)', f.data.totalCents === 50000 && f.data.selectionJson === '{}' && f.updated_at > AHEAD && f.data.createdAt === 3 &&
       (await vis(page, '[data-job] [data-v="fee"]')).join() === '$500.00', JSON.stringify(f));
     await ctx.close();
+  });
+
+  // Send the report (the rehearsal, round 2; the lead, 2026-11-27): one link a person, only while the report is current.
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('send the report, ' + label, async () => {
+      const s = server(); seed(s);
+      const C = '6f1c2a3b-0000-4000-8000-0000000000d1', A = '6f1c2a3b-0000-4000-8000-0000000000d2', N = '6f1c2a3b-0000-4000-8000-0000000000d3';
+      s.phone('person', C, 'role', 'client'); s.phone('person', C, 'name', 'Ana Diaz'); s.phone('person', C, 'email', 'ana@example.com'); s.phone('person', C, 'position', 0);
+      s.phone('person', A, 'role', 'buyer_agent'); s.phone('person', A, 'name', 'Avery Agent'); s.phone('person', A, 'email', 'avery@realty.example'); s.phone('person', A, 'position', 1);
+      s.phone('person', N, 'role', 'listing_agent'); s.phone('person', N, 'name', 'No Mail'); s.phone('person', N, 'position', 2);
+      // Published after every change so far (the seed's fields are written at Date.now()).
+      const publishedAt = Date.now() + 60000;
+      const { page, ctx, errs, away, reportCalls } = await open(browser, { server: s, w, hash: '#' + INSP, published: [{ id: INSP, at: publishedAt }] });
+      ok(label + ': a current report: who gets it (people with an email; the client ticked, agents not), the app\'s subject and note',
+        await until(async () => (await vis(page, '[data-send-state="ready"]')).length === 1) &&
+        same(await page.$$eval('[data-send-who] label', (ls) => ls.map((l) => [l.querySelector('input').checked, l.textContent.replace(/\s+/g, ' ').trim()])),
+          [[true, 'Ana Diaz · Clientana@example.com'], [false, 'Avery Agent · Buyer’s agentavery@realty.example']]) &&
+        await page.inputValue('[data-send-subject]') === 'Inspection report: 12 Oak St, Miami' &&
+        (await page.inputValue('[data-send-message]')).startsWith('Hello,\n\nYour inspection report for 12 Oak St, Miami is ready.'),
+        JSON.stringify([await page.$$eval('[data-send-who] label', (ls) => ls.map((l) => l.textContent)), await page.inputValue('[data-send-subject]')]));
+      if (process.env.SHOTS) await page.locator('[data-send]').screenshot({ path: process.env.SHOTS + '/send-ready-' + label + '.png' });
+      await page.check('[data-send-who] input >> nth=1');
+      await page.click('[data-send-go]');
+      ok(label + ': sent: one link a person (its key\'s SHA-256, their audience and name), then one send with each raw key; it says to whom',
+        await until(async () => same(await vis(page, '[data-send-said]'), ['Sent to Ana Diaz and Avery Agent. You get a copy too.'])), JSON.stringify(await vis(page, '[data-send-said]')));
+      const links = reportCalls.filter((c) => c.action === 'link'), send = reportCalls.filter((c) => c.action === 'send')[0];
+      const crypto = require('crypto');
+      ok(label + ': the calls, as the app makes them', links.length === 2 && links.every((l) => l.inspection_id === INSP && /^[0-9a-f]{64}$/.test(l.key_sha256)) &&
+        same(links.map((l) => [l.audience, l.label]), [['client', 'Ana Diaz'], ['agent', 'Avery Agent']]) && !!send && send.inspection_id === INSP &&
+        same(send.recipients.map((r) => [r.address, r.name]), [['ana@example.com', 'Ana Diaz'], ['avery@realty.example', 'Avery Agent']]) &&
+        send.recipients.every((r, i) => /^[A-Za-z0-9_-]{22}$/.test(r.key) && crypto.createHash('sha256').update(r.key).digest('hex') === links[i].key_sha256) &&
+        new Set(send.recipients.map((r) => r.key)).size === send.recipients.length &&
+        send.subject === 'Inspection report: 12 Oak St, Miami', JSON.stringify([links, send]));
+      ok(label + ': nothing runs off the side, no errors', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth) && errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
+      await ctx.close();
+    });
+  }
+
+  await group('send the report: a change while the links are made stops it; a remade report is heard without a reload (Codex on #130)', async () => {
+    const s = server(); seed(s);
+    const C = '6f1c2a3b-0000-4000-8000-0000000000d1';
+    s.phone('person', C, 'role', 'client'); s.phone('person', C, 'name', 'Ana Diaz'); s.phone('person', C, 'email', 'ana@example.com'); s.phone('person', C, 'position', 0);
+    const pub = [{ id: INSP, at: Date.now() + 60000 }];
+    let changed = false;
+    const r = await open(browser, { server: s, hash: '#' + INSP, published: pub,
+      report: async (b) => {
+        if (b.action === 'link' && !changed) {
+          changed = true;
+          s.push('phone-bbbbbbbbbbbbbbbbbb', { inspection: INSP, entity: 'item', id: ITEM, field: 'note', value: 'Changed during', at: pub[0].at + 1000 });
+          await new Promise((d) => setTimeout(d, 1500));   // the page hears the change before this answer
+        }
+        return { status: 200, json: {} };
+      } });
+    await until(async () => (await vis(r.page, '[data-send-go]')).length === 1);
+    await r.page.click('[data-send-go]');
+    await r.page.waitForTimeout(100);
+    r.ping();
+    const sawOutdated = await until(async () => (await vis(r.page, '[data-send-state="outdated"]')).length === 1);
+    await r.page.waitForTimeout(2200);   // past the held link answer: whatever would go has gone
+    ok('a change while the links were made: never sent', sawOutdated && !r.reportCalls.some((c) => c.action === 'send'),
+      JSON.stringify(r.reportCalls.map((c) => c.action)));
+    // Remade on the phone: published again, later; heard on the next ping, no reload.
+    pub[0].at = pub[0].at + 120000;
+    r.ping();
+    ok('remade: Send is back without a reload', await until(async () => (await vis(r.page, '[data-send-state="ready"]')).length === 1, 5000));
+    await r.ctx.close();
+  });
+
+  await group('send the report: the report function\'s own rules kept here (my pass before r6)', async () => {
+    const s = server(); seed(s);
+    const id = (n) => '6f1c2a3b-0000-4000-8000-0000000000' + String(n).padStart(2, '0');
+    const longName = 'Ana \u0007' + 'x'.repeat(150);
+    s.phone('person', id(1), 'role', 'client'); s.phone('person', id(1), 'name', longName); s.phone('person', id(1), 'email', 'ana@example.com'); s.phone('person', id(1), 'position', 0);
+    // The same address as the client's: one person.
+    s.phone('person', id(2), 'role', 'buyer_agent'); s.phone('person', id(2), 'name', 'Same Mail'); s.phone('person', id(2), 'email', 'ANA@example.com'); s.phone('person', id(2), 'position', 1);
+    const r = await open(browser, { server: s, hash: '#' + INSP, published: [{ id: INSP, at: Date.now() + 60000, locked: true }] });
+    await until(async () => (await vis(r.page, '[data-send-go]')).length === 1);
+    ok('a locked report says the client sees its cover until signed and paid', same(await vis(r.page, '[data-send-locked]'), ['This report is locked: your client sees only its cover until the agreement is signed and paid.']));
+    ok('two people with one address: one in the list', (await r.page.$$('[data-send-who] input')).length === 1);
+    await r.page.fill('[data-send-subject]', '   ');
+    await r.page.click('[data-send-go]');
+    ok('no subject: said, nothing asked', same(await vis(r.page, '[data-send-said]'), ['Write a subject first.']) && r.reportCalls.length === 0);
+    await r.page.fill('[data-send-subject]', 'Your report');
+    await r.page.click('[data-send-go]');
+    await until(async () => r.reportCalls.some((c) => c.action === 'send'));
+    const link = r.reportCalls.find((c) => c.action === 'link'), send = r.reportCalls.find((c) => c.action === 'send');
+    const name = send.recipients[0].name;
+    ok('a long name with a control character: fit for the function (no control character, at most 100), in the link and the send',
+      [...name].length === 100 && !/[\x00-\x1f]/.test(name) && name.startsWith('Ana x') && link.label === name && send.recipients.length === 1, JSON.stringify([name.length, link.label === name]));
+    await r.ctx.close();
+    // Eleven people ticked: at most ten a send.
+    const s2 = server(); seed(s2);
+    for (let n = 1; n <= 11; n++) {
+      s2.phone('person', id(n), 'role', 'client'); s2.phone('person', id(n), 'name', 'Person ' + n); s2.phone('person', id(n), 'email', 'p' + n + '@example.com'); s2.phone('person', id(n), 'position', n);
+    }
+    const r2 = await open(browser, { server: s2, hash: '#' + INSP, published: [{ id: INSP, at: Date.now() + 60000 }] });
+    await until(async () => (await r2.page.$$('[data-send-who] input')).length === 11);
+    await r2.page.click('[data-send-go]');
+    ok('eleven ticked: says at most ten, nothing asked', same(await vis(r2.page, '[data-send-said]'), ['At most 10 people at once. Untick some, then send.']) && r2.reportCalls.length === 0);
+    await r2.ctx.close();
+  });
+
+  await group('send the report: an agent added while it is open comes unticked (Codex on #130)', async () => {
+    const s = server(); seed(s);
+    const C = '6f1c2a3b-0000-4000-8000-0000000000d1', A = '6f1c2a3b-0000-4000-8000-0000000000d2';
+    s.phone('person', C, 'role', 'client'); s.phone('person', C, 'name', 'Ana Diaz'); s.phone('person', C, 'email', 'ana@example.com'); s.phone('person', C, 'position', 0);
+    const r = await open(browser, { server: s, hash: '#' + INSP, published: [{ id: INSP, at: Date.now() + 60000 }] });
+    await until(async () => (await r.page.$$('[data-send-who] input')).length === 1);
+    s.phone('person', A, 'role', 'buyer_agent'); s.phone('person', A, 'name', 'Avery Agent'); s.phone('person', A, 'email', 'avery@realty.example'); s.phone('person', A, 'position', 1);
+    r.ping();
+    ok('the agent appears unticked; the client stays ticked', await until(async () => same(await r.page.$$eval('[data-send-who] input', (xs) => xs.map((x) => x.checked)), [true, false])),
+      JSON.stringify(await r.page.$$eval('[data-send-who] input', (xs) => xs.map((x) => x.checked))));
+    await r.ctx.close();
+  });
+
+  await group('send the report: an answer that comes after switching inspections stays with its own (Codex on #130)', async () => {
+    const s = server(); seed(s);
+    const C = '6f1c2a3b-0000-4000-8000-0000000000d1';
+    s.phone('person', C, 'role', 'client'); s.phone('person', C, 'name', 'Ana Diaz'); s.phone('person', C, 'email', 'ana@example.com'); s.phone('person', C, 'position', 0);
+    const r = await open(browser, { server: s, hash: '#' + INSP, published: [{ id: INSP, at: Date.now() + 60000 }, { id: OTHER, at: Date.now() + 60000 }],
+      report: async (b) => { if (b.action === 'send') await new Promise((d) => setTimeout(d, 1200)); return { status: 200, json: b.action === 'send' ? { emails: [] } : {} }; } });
+    await until(async () => (await vis(r.page, '[data-send-go]')).length === 1);
+    await r.page.click('[data-send-go]');
+    await r.page.waitForTimeout(200);
+    await r.page.evaluate((o) => { location.hash = '#' + o; }, OTHER);
+    await r.page.waitForTimeout(1600);
+    ok('A\'s "sent" never shows on B; B\'s own subject', (await vis(r.page, '[data-send-said]')).length === 0 && await r.page.inputValue('[data-send-subject]') === 'Inspection report: 9 Elm Ave',
+      JSON.stringify([await vis(r.page, '[data-send-said]'), await r.page.inputValue('[data-send-subject]')]));
+    await r.ctx.close();
+  });
+
+  await group('send the report: outdated, nobody ticked, the daily cap, a failure', async () => {
+    const s = server(); seed(s);
+    const C = '6f1c2a3b-0000-4000-8000-0000000000d1';
+    s.phone('person', C, 'role', 'client'); s.phone('person', C, 'name', 'Ana Diaz'); s.phone('person', C, 'email', 'ana@example.com'); s.phone('person', C, 'position', 0);
+    // Published before the last change: outdated, nothing sent.
+    let r = await open(browser, { server: s, hash: '#' + INSP, published: [{ id: INSP, at: Date.now() - 3600000 }] });
+    ok('changed after it was made: the lead\'s sentence, no Send', await until(async () => same(await vis(r.page, '[data-send-state]'), ['The inspection changed after the report was made. Make the report again on your phone, then send.'])) &&
+      (await vis(r.page, '[data-send-go]')).length === 0);
+    if (process.env.SHOTS) await r.page.locator('[data-send]').screenshot({ path: process.env.SHOTS + '/send-outdated.png' });
+    await r.ctx.close();
+    // A change written after the box was drawn: Send checks again, says so, sends nothing.
+    const at = Date.now() + 60000;
+    let answer = { status: 200, json: { link: {} } };
+    r = await open(browser, { server: s, hash: '#' + INSP, published: [{ id: INSP, at }], report: (b) => b.action === 'send' ? answer : { status: 200, json: {} } });
+    await until(async () => (await vis(r.page, '[data-send-go]')).length === 1);
+    s.push('phone-bbbbbbbbbbbbbbbbbb', { inspection: INSP, entity: 'item', id: ITEM, field: 'note', value: 'Changed later', at: at + 1000 });
+    r.ping();
+    await r.page.waitForTimeout(400);
+    await r.page.click('[data-send-go]').catch(() => null);
+    ok('a change since: never sent; the box says to make it again', await until(async () => (await vis(r.page, '[data-send-state="outdated"]')).length === 1) && r.reportCalls.length === 0);
+    await r.ctx.close();
+    // Nobody ticked; the daily cap; a failure.
+    const s2 = server(); seed(s2);
+    s2.phone('person', C, 'role', 'client'); s2.phone('person', C, 'name', 'Ana Diaz'); s2.phone('person', C, 'email', 'ana@example.com'); s2.phone('person', C, 'position', 0);
+    r = await open(browser, { server: s2, hash: '#' + INSP, published: [{ id: INSP, at: Date.now() + 60000 }], report: (b) => b.action === 'send' ? answer : { status: 200, json: {} } });
+    await until(async () => (await vis(r.page, '[data-send-go]')).length === 1);
+    await r.page.uncheck('[data-send-who] input');
+    await r.page.click('[data-send-go]');
+    ok('nobody ticked: says so, nothing asked', same(await vis(r.page, '[data-send-said]'), ['Tick who gets it first.']) && r.reportCalls.length === 0);
+    await r.page.check('[data-send-who] input');
+    answer = { status: 429, json: { error: 'daily' } };
+    await r.page.click('[data-send-go]');
+    ok('the daily cap: said', await until(async () => same(await vis(r.page, '[data-send-said]'), ['That’s the most report emails for one day. Try again tomorrow.'])));
+    answer = { status: 503, json: { error: 'database' } };
+    await r.page.click('[data-send-go]');
+    ok('a failure: said, never "sent"', await until(async () => same(await vis(r.page, '[data-send-said]'), ['That didn’t go through. Try again.'])));
+    await r.ctx.close();
+    // No report published: no box.
+    r = await open(browser, { server: s2, hash: '#' + INSP, published: [] });
+    await r.page.waitForTimeout(600);
+    ok('no published report: no Send box', (await vis(r.page, '[data-send]')).length === 0);
+    await r.ctx.close();
   });
 
   await group('agreement out of date: nothing to say when it holds, or with no snapshot', async () => {
