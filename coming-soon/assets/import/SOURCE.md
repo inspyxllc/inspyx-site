@@ -4,5 +4,5 @@ The phone's own people reader and import planner (inspyx-mobile `tool/web_import
 web. Do not edit: build it again from inspyx-mobile main with `tool/web_import/build.sh`, then copy
 `build/web_import/inspyx_import.js` here and update the lines below.
 
-- Built from inspyx-mobile branch `claude/columns-from-values` commit `d57961bd` (columns told by their values, `by_values`), 2026-11-27. FOR REVIEW ONLY: rebuilt from main once it merges.
-- sha256 `b631f04ea0b2188a0c9fb142f1371c0c5de63a6557be5a76af42f9143d771d46`, 314,307 bytes.
+- Built from inspyx-mobile main commit `a11945c0` (with #815: columns told by their values, `by_values`; #813 `bringKind`, `keep_unread`; #811 `isn`), 2026-11-27.
+- sha256 `032dfa73fd1d1a789bbf8ce8210e5dc3b51370ddbf2df90b859acbf66a4855da`, 316,573 bytes.
