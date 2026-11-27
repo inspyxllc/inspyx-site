@@ -368,6 +368,129 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
+  // Cancel this booking and Archive (the rehearsal, round 2): the phone's cancelBookingOf and archive, on the web.
+  function actServer(rows) {
+    const held = new Map(rows.map((r) => [r.kind + '/' + r.id, r]));
+    const t = { held, pushed: [], down: false, refuse: [] };
+    t.answer = (b) => {
+      const push = b.push || [];
+      push.forEach((r) => t.pushed.push(JSON.parse(JSON.stringify(r))));
+      if (push.length && t.down) return {};
+      if (!push.length && t.pullDown) return {};
+      const applied = push.map((r) => {
+        const k = r.kind + '/' + r.id, h = held.get(k), ok = !t.refuse.includes(r.kind) && (!h || r.updated_at > h.updated_at);
+        if (ok) held.set(k, r);
+        return { kind: r.kind, id: r.id, applied: ok };
+      });
+      return { applied, skipped: [], rows: [...held.values()], next: 'n', more: false };
+    };
+    return t;
+  }
+  const listed = (page) => page.evaluate(() => [...document.querySelectorAll('[data-list="items"] a')].map((a) => a.getAttribute('href')));
+  for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
+    await group('cancel this booking, ' + label, async () => {
+      const s = server(); seed(s);
+      const P = '6f1c2a3b-0000-4000-8000-0000000000d1';
+      s.phone('person', P, 'role', 'client'); s.phone('person', P, 'name', 'Ana Diaz'); s.phone('person', P, 'position', 0);
+      const BK = { kind: 'bookings', id: 'bk1', updated_at: 5, deleted_at: null, data: { id: 'bk1', ownerAccountId: ME, status: 'booked', inspectionId: INSP,
+        startsAt: 1795000000000, endsAt: 1795010800000, client: { name: 'Ana Diaz', email: 'ana@example.com' }, property: { street: '12 Oak St' }, updatedAt: 5, deletedAt: null } };
+      const t = actServer([BK]);
+      const { page, ctx, errs, away } = await open(browser, { server: s, w, hash: '#' + INSP, bizServer: t.answer });
+      ok(label + ': a booked job: who booked it, and Cancel this booking (no Archive: the client would stay booked)',
+        await until(async () => same(await vis(page, '[data-acts-booked]'), ['Booked online by Ana Diaz.'])) && same(await vis(page, '[data-act]'), ['Cancel this booking']));
+      await page.click('[data-act="cancel"]');
+      ok(label + ': it asks first, in the phone\'s words, and says the work is kept',
+        same(await vis(page, '[data-act-dialog] h2 [data-act-q]'), ['Cancel Ana Diaz’s booking?']) &&
+        (await vis(page, '[data-act-dialog] p[data-act-q="cancel"]')).join() === 'Ana Diaz gets an email that it’s cancelled, and the time opens on your page again. The inspection goes to the archive. What you’ve done on it is kept there, and you can bring it back.',
+        JSON.stringify(await vis(page, '[data-act-dialog] p')));
+      ok(label + ': the work line shows: the job has a photo', (await vis(page, '[data-act-work]')).length === 1);
+      if (process.env.SHOTS) await page.screenshot({ path: process.env.SHOTS + '/act-cancel-ask-' + label + '.png' });
+      await page.click('[data-act-keep]');
+      ok(label + ': Keep it: closed, nothing sent', !(await page.isVisible('[data-act-dialog]')) && t.pushed.length === 0);
+      t.down = true;
+      await page.click('[data-act="cancel"]'); await page.click('[data-act-dialog] button[type="submit"]');
+      ok(label + ': no connection: the booking stands, it says so, nothing archived', await until(async () => same(await vis(page, '[data-act-problem]'), ['That didn’t go through. The booking stands. Try again.'])) &&
+        t.held.get('bookings/bk1').data.status === 'booked' && !t.pushed.some((r) => r.kind === 'archived_inspections'));
+      t.down = false; t.refuse = ['bookings'];
+      await page.click('[data-act-dialog] button[type="submit"]');
+      ok(label + ': a booking changed elsewhere (the client cancelled): never "cancelled", nothing archived', await until(async () => same(await vis(page, '[data-act-problem]'), ['This booking changed just now (your client may have cancelled it). Close this and look again.'])) &&
+        !t.pushed.some((r) => r.kind === 'archived_inspections'));
+      t.refuse = [];
+      const before = t.pushed.length;
+      await page.click('[data-act-dialog] button[type="submit"]');
+      ok(label + ': cancelled: it says so, and the job leaves the list', await until(async () => same(await vis(page, '[data-act-said]'), ['Booking cancelled. Ana Diaz gets an email, and the inspection is in your archive.'])) &&
+        !(await listed(page)).includes('#' + INSP) && (await listed(page)).includes('#' + OTHER), JSON.stringify(await vis(page, '[data-act-said]')));
+      const sent = t.pushed.slice(before), bk = sent[0], ar = sent[1];
+      ok(label + ': first the booking, as held but cancelled and newer (only status and updatedAt change)', sent.length === 2 && bk.kind === 'bookings' && bk.data.status === 'cancelled' &&
+        bk.updated_at > 5 && bk.data.updatedAt === bk.updated_at && bk.deleted_at === null &&
+        JSON.stringify(Object.assign({}, bk.data, { status: 'booked', updatedAt: 5 })) === JSON.stringify(BK.data), JSON.stringify(bk));
+      ok(label + ': then the archive row, as the phone makes it', !!ar && ar.kind === 'archived_inspections' && ar.id === INSP && ar.deleted_at === null &&
+        same(Object.keys(ar.data).sort(), ['archivedAt', 'deletedAt', 'id', 'ownerAccountId', 'updatedAt']) && ar.data.id === INSP && ar.data.ownerAccountId === ME &&
+        ar.data.archivedAt === ar.updated_at && ar.data.updatedAt === ar.updated_at && ar.data.deletedAt === null, JSON.stringify(ar));
+      ok(label + ': opened by its link: it says it\'s in the archive, and offers nothing', same(await vis(page, '[data-acts-archived]'), ['This inspection is in your archive. You can bring it back on your phone.']) && (await vis(page, '[data-act]')).length === 0);
+      if (process.env.SHOTS) await page.locator('[data-acts]').screenshot({ path: process.env.SHOTS + '/act-cancelled-' + label + '.png' });
+      ok(label + ': nothing runs off the side, no errors', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth) && errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
+      await ctx.close();
+    });
+  }
+
+  await group('no action before the bookings are in; a booking that arrives while Archive is asked stops it (Codex on #125)', async () => {
+    const s = server(); seed(s);
+    const t = actServer([]);
+    t.pullDown = true;
+    const { page, ctx, ping } = await open(browser, { server: s, hash: '#' + OTHER, bizServer: t.answer });
+    await until(async () => (await vis(page, '[data-detail]')).length > 0);
+    await page.waitForTimeout(500);
+    ok('the bookings can\'t be read: nothing offered (a booked job would look unbooked)', (await vis(page, '[data-acts]')).length === 0 && (await vis(page, '[data-act]')).length === 0);
+    t.pullDown = false; ping();
+    ok('read: Archive offered (no booking)', await until(async () => same(await vis(page, '[data-act]'), ['Archive'])));
+    await page.click('[data-act="archive"]');
+    t.held.set('bookings/bk9', { kind: 'bookings', id: 'bk9', updated_at: 7, deleted_at: null, data: { id: 'bk9', status: 'booked', inspectionId: OTHER, startsAt: 1, endsAt: 2, client: { name: 'Bo Lee' }, updatedAt: 7, deletedAt: null } });
+    ping();
+    await page.waitForTimeout(500);
+    await page.click('[data-act-dialog] button[type="submit"]');
+    ok('a booking came in meanwhile: not archived, it says to cancel the booking instead', await until(async () => same(await vis(page, '[data-act-problem]'), ['This job has a booking now. Close this and use Cancel this booking.'])) &&
+      !t.pushed.some((r) => r.kind === 'archived_inspections'));
+    await ctx.close();
+  });
+
+  await group('archive a job, and a cancel whose archive didn\'t go', async () => {
+    const s = server(); seed(s);
+    const t = actServer([]);
+    const { page, ctx, errs } = await open(browser, { server: s, hash: '#' + OTHER, bizServer: t.answer });
+    ok('no booking: Archive only, no booked line', await until(async () => same(await vis(page, '[data-act]'), ['Archive'])) && (await vis(page, '[data-acts-booked]')).length === 0);
+    await page.click('[data-act="archive"]');
+    ok('it asks first', same(await vis(page, '[data-act-dialog] h2 [data-act-q]'), ['Archive this inspection?']) && same(await vis(page, '[data-act-dialog] p'), ['It leaves your list, here and on your phone. Nothing in it is lost: you can bring it back on your phone.']));
+    t.refuse = ['archived_inspections'];
+    await page.click('[data-act-dialog] button[type="submit"]');
+    ok('a newer copy elsewhere: never "archived"', await until(async () => same(await vis(page, '[data-act-problem]'), ['Your phone changed this just now. Close this and try again.'])) && (await listed(page)).includes('#' + OTHER));
+    t.refuse = [];
+    await page.click('[data-act-dialog] button[type="submit"]');
+    ok('archived: it says so, it leaves the list', await until(async () => same(await vis(page, '[data-act-said]'), ['Archived. It’s off your list here and on your phone. You can bring it back on your phone.'])) && !(await listed(page)).includes('#' + OTHER));
+    ok('the row: this inspection, archived now', t.held.get('archived_inspections/' + OTHER).data.archivedAt > 0 && errs.length === 0, errs.join(' | '));
+    await ctx.close();
+    // The booking cancelled, its archive refused: says the cancel happened and offers Archive.
+    const s2 = server(); seed(s2);
+    const t2 = actServer([{ kind: 'bookings', id: 'bk2', updated_at: 5, deleted_at: null, data: { id: 'bk2', status: 'confirmed', inspectionId: INSP, startsAt: 1, endsAt: 2, client: { name: '' }, updatedAt: 5, deletedAt: null } }]);
+    t2.refuse = ['archived_inspections'];
+    const r = await open(browser, { server: s2, hash: '#' + INSP, bizServer: t2.answer });
+    await until(async () => (await vis(r.page, '[data-act="cancel"]')).length === 1);
+    ok('no client name: "Booked online.", and the dialog says "Your client"', same(await vis(r.page, '[data-acts-booked]'), ['Booked online.']));
+    await r.page.click('[data-act="cancel"]');
+    await r.page.click('[data-act-dialog] button[type="submit"]');
+    ok('cancelled but not archived: it says both, and Archive is offered', await until(async () => same(await vis(r.page, '[data-act-said]'), ['Booking cancelled. Your client gets an email. It couldn’t go to your archive: Archive it below.'])) &&
+      same(await vis(r.page, '[data-act]'), ['Archive']) && t2.held.get('bookings/bk2').data.status === 'cancelled', JSON.stringify(await vis(r.page, '[data-act-said]')));
+    await r.ctx.close();
+    // Archived on the phone while its booking still stands: nothing offered here (bring it back on the phone first).
+    const s3 = server(); seed(s3);
+    const t3 = actServer([{ kind: 'bookings', id: 'bk3', updated_at: 5, deleted_at: null, data: { id: 'bk3', status: 'booked', inspectionId: OTHER, startsAt: 1, endsAt: 2, client: { name: 'Bo Lee' }, updatedAt: 5, deletedAt: null } },
+      { kind: 'archived_inspections', id: OTHER, updated_at: 6, deleted_at: null, data: { id: OTHER, ownerAccountId: ME, archivedAt: 6, updatedAt: 6, deletedAt: null } }]);
+    const r3 = await open(browser, { server: s3, hash: '#' + OTHER, bizServer: t3.answer });
+    ok('archived with its booking standing: says it\'s archived, offers nothing', await until(async () => (await vis(r3.page, '[data-acts-archived]')).length === 1) &&
+      (await vis(r3.page, '[data-act]')).length === 0 && (await vis(r3.page, '[data-acts-booked]')).length === 0);
+    await r3.ctx.close();
+  });
+
   // Send the report (the rehearsal, round 2; the lead, 2026-11-27): one link a person, only while the report is current.
   for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
     await group('send the report, ' + label, async () => {

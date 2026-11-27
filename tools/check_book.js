@@ -54,7 +54,10 @@ async function open(browser, path, o = {}) {
       if (o.slowQuotesFrom && o.quotes >= o.slowQuotesFrom) await new Promise((r) => setTimeout(r, 1500));
       const lines = [{ kind: 'service', id: 'home', name: 'Full home inspection', cents: 45000 }];
       if (body.serviceIds.includes('radon')) lines.push({ kind: 'add_on', id: 'radon', name: 'Radon test', cents: 15000 });
-      return reply(200, { state: 'open', quote: { lines, totalCents: lines.reduce((s, l) => s + l.cents, 0), minutes: 210 } });
+      // The inspector's one code (as quote.ts: the case and outer spaces aside): $25 off.
+      const taken = typeof body.discountCode === 'string' && body.discountCode.trim().toUpperCase() === 'SPRING25';
+      if (taken) lines.push({ kind: 'discount', id: 'd1', name: 'SPRING25', cents: -2500 });
+      return reply(200, { state: 'open', quote: { lines, totalCents: lines.reduce((s, l) => s + l.cents, 0), minutes: 210, discount: taken } });
     }
     if (body.action === 'save') return reply(200, { state: 'saved', draftKey: 'a'.repeat(32) });
     if (body.action === 'book') {
@@ -207,6 +210,79 @@ const lastBook = (calls) => calls.filter((c) => c.action === 'book').pop();
     await page.waitForSelector('[data-state="booked"]:not([hidden])');
     const b = lastBook(calls);
     ok('the unticked box is what goes: no yes to texts, no consent version', b && b.details.client.smsOk === false && b.smsConsentVersion === undefined);
+    await ctx.close();
+  });
+
+  // The discount code (the rehearsal, round 2): the inspector's codes, checked by the server's price; sent with the
+  // price, the draft and the booking; Book never goes against a price asked for without it.
+  for (const [label, w] of [['wide', 1280], ['phone', 390]]) await group('a discount code, ' + label, async () => {
+    const o = { w };
+    const { ctx, page, errs, away, calls } = await open(browser, '/book/rivera', o);
+    await page.waitForSelector('[data-state="open"]:not([hidden])');
+    ok(label + ': the box is there, empty, with Apply', await page.isVisible('#bk-code') && await page.isVisible('[data-apply]') && (await page.inputValue('#bk-code')) === '');
+    await fill(page);
+    await page.waitForFunction(() => document.querySelector('[data-v="total"]').textContent === '$600');
+    const quotes = () => calls.filter((c) => c.action === 'quote');
+    ok(label + ': no code: no code asked about, nothing said', quotes().every((c) => c.discountCode === undefined) && !(await page.isVisible('[data-code-say="on"]')) && !(await page.isVisible('[data-code-say="off"]')));
+    await page.fill('#bk-code', '  spring25 ');
+    await page.click('[data-apply]');
+    const said = (k) => page.waitForSelector('[data-code-say="' + k + '"]:not([hidden])', { timeout: 4000 }).then(() => true, () => false);
+    ok(label + ': Apply: the price asked for with the code, its line and the new total, and it says so',
+      await said('on') && quotes().pop().discountCode === 'SPRING25' && (await page.textContent('[data-v="total"]')) === '$575' &&
+      (await page.locator('[data-lines] li', { hasText: 'SPRING25' }).textContent()).replace(/\s+/g, ' ') === 'SPRING25−$25' &&
+      (await page.textContent('[data-code-say="on"]')).replace(/\s+/g, ' ').trim() === 'Code SPRING25 applied.');
+    if (process.env.SHOTS) await page.locator('[aria-labelledby="bk-what"]').screenshot({ path: process.env.SHOTS + '/book-code-on-' + label + '.png' });
+    await page.fill('#bk-code', 'nope');
+    await page.press('#bk-code', 'Enter');
+    ok(label + ': a code that takes nothing off: Enter applies it too, the price without it, and it says so plainly',
+      await said('off') && quotes().pop().discountCode === 'NOPE' && (await page.textContent('[data-v="total"]')) === '$600' && !(await page.isVisible('[data-code-say="on"]')) &&
+      (await page.textContent('[data-code-say="off"]')).replace(/\s+/g, ' ').trim() === 'Code NOPE doesn’t take anything off what you picked. Check it, or ask your inspector.');
+    if (process.env.SHOTS) await page.locator('[aria-labelledby="bk-what"]').screenshot({ path: process.env.SHOTS + '/book-code-off-' + label + '.png' });
+    await page.fill('#bk-code', '');
+    await page.click('[data-apply]');
+    ok(label + ': an empty box takes it off: no code asked about, nothing said',
+      await page.waitForFunction(() => document.querySelector('[data-v="total"]').textContent === '$600' && !document.querySelector('[data-quote]').hasAttribute('aria-busy')).then(() => true, () => false) &&
+      quotes().pop().discountCode === undefined && !(await page.isVisible('[data-code-say="off"]')));
+    // Book pressed while the price with the code is on its way: it waits for that price, and books with the code.
+    o.slowQuotesFrom = o.quotes + 1;
+    await page.fill('#bk-code', 'Spring25');
+    await page.click('[data-apply]');
+    await page.click('[data-book]');
+    await page.waitForSelector('[data-state="booked"]:not([hidden])');
+    const b = lastBook(calls);
+    ok(label + ': Book during the code\'s price: waits for it, and books with the code', !!b && b.discountCode === 'SPRING25' && calls.indexOf(b) > calls.indexOf(quotes().pop()));
+    ok(label + ': the draft carries the code too', calls.some((c) => c.action === 'save' && c.discountCode === 'SPRING25'), JSON.stringify(calls.filter((c) => c.action === 'save').map((c) => c.discountCode || null)));
+    ok(label + ': nothing runs off the side, no errors', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth) && errs.length === 0 && away.length === 0, errs.concat(away).join(' | '));
+    await ctx.close();
+  });
+
+  await group('a discount code typed but never applied, then Book', async () => {
+    const o = {};
+    const { ctx, page, calls, errs } = await open(browser, '/book/rivera', o);
+    await page.waitForSelector('[data-state="open"]:not([hidden])');
+    await fill(page);
+    await page.waitForFunction(() => document.querySelector('[data-v="total"]').textContent === '$600');
+    await page.fill('#bk-code', 'spring25');
+    await page.click('[data-book]');
+    await page.waitForSelector('[data-state="booked"]:not([hidden])');
+    const b = lastBook(calls), q = calls.filter((c) => c.action === 'quote').pop();
+    ok('Book applies it, waits for its price, and books with it', !!b && b.discountCode === 'SPRING25' && q.discountCode === 'SPRING25' && calls.indexOf(q) < calls.indexOf(b) && errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
+  await group('while a booking waits on its price, the code can\'t change under it (Codex on #124)', async () => {
+    const o = {};
+    const { ctx, page, calls } = await open(browser, '/book/rivera', o);
+    await page.waitForSelector('[data-state="open"]:not([hidden])');
+    await fill(page);
+    await page.waitForFunction(() => document.querySelector('[data-v="total"]').textContent === '$600');
+    o.slowQuotesFrom = o.quotes + 1;
+    await page.fill('#bk-code', 'spring25');
+    await page.click('[data-book]');
+    await page.waitForTimeout(200);
+    ok('Book waiting: the code box and Apply are locked', await page.isDisabled('#bk-code') && await page.isDisabled('[data-apply]'));
+    await page.waitForSelector('[data-state="booked"]:not([hidden])');
+    ok('and it books with the code it waited for', lastBook(calls).discountCode === 'SPRING25');
     await ctx.close();
   });
 

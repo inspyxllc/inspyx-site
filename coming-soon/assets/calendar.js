@@ -75,12 +75,20 @@
 
   // ---- bookings (read only): a booked inspection's length, and bookings not yet on the phone ----------------
   var rows = Object.create(null), point = null, pulling = null;
+  // The archive (archived_inspections), from the same feed: an archived inspection frees its time and leaves the
+  // calendar, as on the phone (the rehearsal, round 2).
+  var shelf = Object.create(null);
   function pullBookings() {
     if (pulling) return pulling;
     var loop = function () {
       return auth.ask('sync', { push: [], after: point, limit: 500 }, 20000).then(function (r) {
         if (!r || r.status !== 200 || !r.json || !Array.isArray(r.json.rows)) return null;
         r.json.rows.forEach(function (row) {
+          if (row && row.kind === 'archived_inspections' && typeof row.id === 'string') {
+            var was = shelf[row.id];
+            if (!was || row.updated_at >= was.updated_at) shelf[row.id] = row;
+            return;
+          }
           if (!row || row.kind !== 'bookings' || typeof row.id !== 'string') return;
           var held = rows[row.id];
           if (!held || row.updated_at >= held.updated_at) rows[row.id] = row;
@@ -93,6 +101,7 @@
     return pulling;
   }
   var num = function (v) { return typeof v === 'number' && isFinite(v) ? v : null; };
+  function archived(id) { var r = shelf[id]; return !!(r && r.deleted_at == null && r.data && r.data.archivedAt != null); }
   function bookings() {
     return Object.keys(rows).map(function (k) { return rows[k]; }).filter(function (r) {
       return r.deleted_at == null && r.data && (r.data.status === 'booked' || r.data.status === 'confirmed') &&
@@ -112,6 +121,7 @@
     data.parts('inspection').forEach(function (id) {
       if (!ID.test(id)) return;
       here[id] = true;
+      if (archived(id)) return;
       var w = data.when(id);
       if (w && w.at >= from && w.at < to) out.push({ id: id, at: w.at, timed: w.timed, len: w.timed ? bookedLength(id) : null });
     });
@@ -120,6 +130,7 @@
       // Its inspection was made and then deleted on the phone: gone, never "on your phone at its next sync" (follow-up
       // 3, Codex on #86).
       if (typeof b.inspectionId === 'string' && data.val('inspection', b.inspectionId, '_del') === true) return;
+      if (typeof b.inspectionId === 'string' && archived(b.inspectionId)) return;
       if (b.startsAt < from || b.startsAt >= to) return;
       var p = b.property && typeof b.property === 'object' ? b.property : {};
       var street = [text(p.street).trim(), text(p.unit).trim()].filter(Boolean).join(', ');
@@ -131,7 +142,7 @@
   /* Whether there is anything to show at all: an inspection, or a booking the phone hasn't made one of yet (a first
      booking made on /new shows at once, before the phone syncs: Codex on #86). */
   function anything() {
-    return data.parts('inspection').some(function (id) { return ID.test(id); }) || bookings().length > 0;
+    return data.parts('inspection').some(function (id) { return ID.test(id) && !archived(id); }) || bookings().length > 0;
   }
   function jobLink(j) {
     var job = tpl(j.booking ? 'booked' : 'job'), a = job.querySelector('a'), time = job.querySelector('[data-v="time"]');

@@ -219,8 +219,25 @@
   }
   $('[data-sign]').addEventListener('click', sign);
 
+  /* What is still owed, from the view (the lead, 2026-11-27: his Pay-to-unlock flow): only a sum above zero and a link to
+     this site's own pay page. */
+  function owed() {
+    var p = view && view.pay;
+    if (!p || typeof p.dueCents !== 'number' || !(p.dueCents > 0) || p.dueCents % 1 !== 0) return null;
+    if (typeof p.link !== 'string' || !/^https:\/\/inspyx\.com\/pay#[A-Za-z0-9_-]{22}$/.test(p.link)) return null;
+    return p;
+  }
+  function usd(cents) {
+    var whole = Math.floor(cents / 100), part = cents % 100;
+    return '$' + whole.toLocaleString('en-US') + (part ? '.' + String(part).padStart(2, '0') : '');
+  }
   function done(name, at) {
     setAll('signedline', words('signed-by') + ' ' + name + (at ? ' ' + words('on') + ' ' + when(at) : ''));
+    // Step 2: Pay when a fee is owed; "nothing more to do" only when nothing is.
+    var pay = owed();
+    $('[data-next="pay"]').hidden = !pay;
+    $('[data-next="none"]').hidden = !!pay;
+    if (pay) { setAll('due', usd(pay.dueCents)); $('[data-pay-link]').href = pay.link; }
     state('signed');
     window.scrollTo(0, 0);
   }
