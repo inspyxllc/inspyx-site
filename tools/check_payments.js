@@ -6,24 +6,27 @@ const playwright = require('playwright');
 const base = (process.env.URL || 'http://localhost:4173/').replace(/\/+$/, '');
 let failed = 0;
 const ok = (name, pass, detail) => { if (!pass) failed++; console.log((pass ? 'PASS  ' : 'FAIL  ') + name + (pass || detail === undefined ? '' : '  [' + detail + ']')); };
-async function open(browser, status, connect) {
+async function open(browser, status, connect, opt = {}) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await ctx.addInitScript(() => localStorage.setItem('inspyx.signin', JSON.stringify({ access: 'a', renew: 'r', ends: Date.now() + 3600e3, id: '11111111-1111-4111-8111-111111111111', email: 'dave@example.com' })));
   const page = await ctx.newPage();
-  const errs = [], went = [], asks = [];
+  const errs = [], went = [], asks = [], bodies = [];
+  if (opt.clock) await page.clock.install();
+  if (opt.session) await ctx.addInitScript((kv) => { for (const [k, v] of kv) sessionStorage.setItem(k, v); }, opt.session);
   page.on('pageerror', (e) => errs.push(e.message));
   await page.route('**/functions/v1/payments', async (r) => {
-    const b = JSON.parse(r.request().postData() || '{}'); asks.push(b.action);
+    const b = JSON.parse(r.request().postData() || '{}'); asks.push(b.action); bodies.push(b);
+    if (typeof status === 'function' && b.action === 'status') { const a2 = status(); return r.fulfill({ status: a2.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a2.json) }); }
     let a = b.action === 'connect' ? connect : status;
     if (Array.isArray(a)) { const [delay, answer] = a[Math.min(asks.filter((x) => x === 'status').length - 1, a.length - 1)]; await new Promise((d) => setTimeout(d, delay)); a = answer; }
     if (a === 'down') return r.abort('failed');
     r.fulfill({ status: a.status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(a.json) });
   });
   await page.route(/stripe\.com|evil\.example/, (r) => { went.push(r.request().url()); r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stand-in</title>' }); });
-  await page.goto(base + '/payments');
+  await page.goto(base + '/payments' + (opt.query || ''));
   await page.waitForTimeout(700);
   const seen = () => page.evaluate(() => ({ words: [...document.querySelectorAll('[data-stands]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), buttons: [...document.querySelectorAll('[data-do]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), now: [...document.querySelectorAll('.pay-step.is-now')].map((e) => e.dataset.step), next: [...document.querySelectorAll('[data-next]')].filter((e) => !e.hidden).map((e) => e.textContent.trim()), current: [...document.querySelectorAll('.pay-step[aria-current="step"]')].map((e) => e.dataset.step) }));
-  return { ctx, page, errs, went, asks, seen };
+  return { ctx, page, errs, went, asks, bodies, seen };
 }
 (async () => {
   const browser = await playwright.chromium.launch();
@@ -82,6 +85,49 @@ async function open(browser, status, connect) {
     o = await open(browser, { status: 200, json: { state: 'ready', payouts: false } }, null);
     ok('ready, payouts still being checked: said under it', await o.page.isVisible('[data-payouts]'));
     ok('the plan page stays unlinked: /payments points to the account page', await o.page.evaluate(() => ![...document.querySelectorAll('a')].some((a) => a.getAttribute('href') === '/plan')));
+    await o.ctx.close();
+    // Back from Stripe (Moises's live setup, 2026-11-27).
+    const NEEDS = { status: 200, json: { state: 'needs_info', payouts: false } }, READY = { status: 200, json: { state: 'ready', payouts: true } };
+    const STRIPE_URL = { status: 200, json: { url: 'https://connect.stripe.com/setup/e/acct_1/abc' } };
+    o = await open(browser, { status: 200, json: { state: 'none', payouts: false } }, STRIPE_URL);
+    await o.page.click('[data-do="setup"]');
+    await o.page.waitForTimeout(500);
+    ok('Set up asks to come back to /payments ("back": "web")', o.bodies.some((b) => b.action === 'connect' && b.back === 'web'), JSON.stringify(o.bodies));
+    await o.ctx.close();
+    let answer = NEEDS;
+    o = await open(browser, () => answer, STRIPE_URL, { query: '?stripe=done', clock: true });
+    let v = await o.seen();
+    ok('back from Stripe, Stripe still checking ("needs details" with nothing missing): says Stripe is checking, no Finish setup, the address cleaned',
+      JSON.stringify(v.words) === JSON.stringify(['Stripe is checking your details. This usually takes a minute or two; this page checks again by itself.']) && v.buttons.length === 0 &&
+      await o.page.evaluate(() => location.search) === '', JSON.stringify(v));
+    const before = o.asks.filter((a) => a === 'status').length;
+    await o.page.clock.runFor(10500);
+    await o.page.waitForTimeout(200);
+    ok('it checks again by itself', o.asks.filter((a) => a === 'status').length > before);
+    answer = READY;
+    await o.page.clock.runFor(10500);
+    await o.page.waitForTimeout(200);
+    v = await o.seen();
+    ok('and shows ready once Stripe is done, never sending him back into Stripe', JSON.stringify(v.words) === JSON.stringify(['Ready: clients can pay you by card.']) && !o.asks.includes('connect'), JSON.stringify(v));
+    await o.ctx.close();
+    // Still "needs details" after the few minutes: then it is real, and Finish setup is offered.
+    o = await open(browser, NEEDS, STRIPE_URL, { session: [['inspyx.stripe.back', String(Date.now() - 6 * 60000)]] });
+    v = await o.seen();
+    ok('long after coming back, still needing details: Finish setup, as before', JSON.stringify(v.buttons) === JSON.stringify(['Finish setup']), JSON.stringify(v));
+    await o.ctx.close();
+    // The link ran out: a fresh one opens by itself, once; not again within two minutes.
+    o = await open(browser, NEEDS, STRIPE_URL, { query: '?stripe=again' });
+    await o.page.waitForTimeout(400);
+    ok('the link ran out: a fresh one opens by itself, back to /payments', o.went.some((u) => u.startsWith('https://connect.stripe.com/setup/')) && o.bodies.some((b) => b.action === 'connect' && b.back === 'web'), JSON.stringify([o.went, o.bodies]));
+    await o.ctx.close();
+    o = await open(browser, NEEDS, STRIPE_URL, { query: '?stripe=again', session: [['inspyx.stripe.again', String(Date.now() - 30000)]] });
+    v = await o.seen();
+    ok('ran out again within two minutes: no loop; where things stand, with its button', o.went.length === 0 && JSON.stringify(v.buttons) === JSON.stringify(['Finish setup']), JSON.stringify([o.went, v]));
+    await o.ctx.close();
+    o = await open(browser, NEEDS, 'down', { query: '?stripe=again' });
+    await o.page.waitForTimeout(400);
+    v = await o.seen();
+    ok('a fresh link that can\'t be had: says so, and where things stand with its button', await o.page.isVisible('[data-page-failed]') && JSON.stringify(v.buttons) === JSON.stringify(['Finish setup']), JSON.stringify(v));
     await o.ctx.close();
   } finally { await browser.close(); }
   console.log(failed === 0 ? 'all checks passed' : failed + ' CHECK(S) FAILED');
