@@ -271,7 +271,8 @@
     };
     return page(1, 0);
   }
-  function lockKey(on) { keyBox.disabled = on; $('[data-check]').disabled = on || !pasted; $('[data-stop]').hidden = !on; }
+  var reading = false;   // Spectora is being read with the key now
+  function lockKey(on) { reading = on; keyBox.disabled = on; $('[data-check]').disabled = on || !pasted; $('[data-stop]').hidden = !on; }
   $('[data-stop]').addEventListener('click', function () { picked++; lockKey(false); keyClear(); say('stopped'); });
   $('[data-key-form]').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -303,6 +304,9 @@
   function take(f) {
     if (!f || busy) return;
     var mine = ++picked;
+    // A file instead of the key being read (Codex on #133): that read is over (picked moved on, so its answer never
+    // lands), and the key goes with it: emptied, and the box his again.
+    if (reading) { lockKey(false); keyClear(); }
     done = null; $('[data-done]').hidden = true; $('[data-preview]').hidden = true; source = null;
     if (f.size > MAX) { say('too-big'); return; }
     say('reading-file');

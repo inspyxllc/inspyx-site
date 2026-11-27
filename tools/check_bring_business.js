@@ -88,6 +88,7 @@ async function open(browser, o) {
       return route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(a) });
     }
     if (u.startsWith(SERVER + '/functions/v1/spectora-import')) {
+      if (o.spx.delay) await new Promise((r) => setTimeout(r, o.spx.delay));
       const a = o.spx.next(JSON.parse(req.postData() || '{}'));
       return route.fulfill({ status: a.status, contentType: 'application/json', headers: cors, body: JSON.stringify(a.body) });
     }
@@ -275,6 +276,22 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     const lines = await o.page.locator('[data-done-list] li').allTextContents();
     ok('a row the server turned down: "1 more didn\'t go through", never passed off as all done', lines.some((t) => t.indexOf('1 more didn’t go through') === 0) &&
       !names(sync.people()).includes('bob diaz'), JSON.stringify(lines));
+    await o.ctx.close();
+  });
+
+  await group('Codex r3 on #133: a file chosen while Spectora is being read', async () => {
+    const sync = syncServer(seed()), spx = spxServer(); spx.delay = 900;
+    const o = await open(browser, { sync, spx });
+    await paste(o.page, KEY); await o.page.locator('[data-check]').click();
+    await until(async () => await o.page.locator('[data-key]').isDisabled());
+    await o.page.setInputFiles('[data-pick]', { name: 'clients.csv', mimeType: 'text/csv', buffer: Buffer.from('Full Name,Mobile,E-mail\nZoe Park,786,zoe@x.com\n', 'utf8') });
+    ok('a file while Spectora is read: the key is emptied, the box is his again, Stop is gone', await until(async () => (await o.page.locator('[data-key]').inputValue()) === '' &&
+      await o.page.locator('[data-key]').isEnabled() && await o.page.locator('[data-stop]').isHidden()));
+    await o.page.locator('[data-fk="clients"]').click();
+    await until(async () => await o.page.locator('[data-preview]').isVisible());
+    await o.page.waitForTimeout(3000);
+    ok('and the read Spectora answers late never lands: the preview is the file\'s', (await o.page.locator('[data-found]').textContent()) === 'Found in clients.csv' &&
+      (await o.page.locator('[data-count-people]').textContent()) === '1 client · 0 agents', await o.page.locator('[data-count-people]').textContent());
     await o.ctx.close();
   });
 
