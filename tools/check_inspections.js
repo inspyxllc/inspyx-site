@@ -527,6 +527,22 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     });
   }
 
+  await group('send the report: an answer that comes after switching inspections stays with its own (Codex on #130)', async () => {
+    const s = server(); seed(s);
+    const C = '6f1c2a3b-0000-4000-8000-0000000000d1';
+    s.phone('person', C, 'role', 'client'); s.phone('person', C, 'name', 'Ana Diaz'); s.phone('person', C, 'email', 'ana@example.com'); s.phone('person', C, 'position', 0);
+    const r = await open(browser, { server: s, hash: '#' + INSP, published: [{ id: INSP, at: Date.now() + 60000 }, { id: OTHER, at: Date.now() + 60000 }],
+      report: async (b) => { if (b.action === 'send') await new Promise((d) => setTimeout(d, 1200)); return { status: 200, json: b.action === 'send' ? { emails: [] } : {} }; } });
+    await until(async () => (await vis(r.page, '[data-send-go]')).length === 1);
+    await r.page.click('[data-send-go]');
+    await r.page.waitForTimeout(200);
+    await r.page.evaluate((o) => { location.hash = '#' + o; }, OTHER);
+    await r.page.waitForTimeout(1600);
+    ok('A\'s "sent" never shows on B; B\'s own subject', (await vis(r.page, '[data-send-said]')).length === 0 && await r.page.inputValue('[data-send-subject]') === 'Inspection report: 9 Elm Ave',
+      JSON.stringify([await vis(r.page, '[data-send-said]'), await r.page.inputValue('[data-send-subject]')]));
+    await r.ctx.close();
+  });
+
   await group('send the report: outdated, nobody ticked, the daily cap, a failure', async () => {
     const s = server(); seed(s);
     const C = '6f1c2a3b-0000-4000-8000-0000000000d1';

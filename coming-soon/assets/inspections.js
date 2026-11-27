@@ -1268,7 +1268,9 @@
     if (!picked.length) { sendSay('pick'); return; }
     var subject = $('[data-send-subject]').value.trim(), message = $('[data-send-message]').value;
     sendBusy = true; renderSend(id); sendSay(null);
-    var stop = function (which) { sendBusy = false; sendSay(which); renderSend(id); };
+    // Its answer belongs to this inspection: shown only while it is still the one open (Codex on #130).
+    var here = function () { return chosen() === id; };
+    var stop = function (which, vals) { sendBusy = false; if (here()) sendSay(which, vals); renderOne(); };
     var keys = [];
     // One link a person (the app's order: each link made, then the one send that emails them all).
     var chain = Promise.resolve(true);
@@ -1293,8 +1295,7 @@
         if (r.status === 429) { stop('daily'); return; }
         if (r.status !== 200 || !r.json || !Array.isArray(r.json.emails)) { stop('failed'); return; }
         var names = picked.map(function (x) { return x.name || x.email; });
-        stop('sent');
-        sendSay('sent', { to: names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + word('send-and') + names[names.length - 1] });
+        stop('sent', { to: names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + word('send-and') + names[names.length - 1] });
       });
     }).catch(function () { stop('failed'); });
   }
