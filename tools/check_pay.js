@@ -270,6 +270,17 @@ async function quoteWith(page, cardText) {
       JSON.stringify(after.map((c) => c.q)));
     await ctx.close();
   });
+  await group('the page opens on a payment already on its way (none of this tab\'s own)', async () => {
+    let plain = 0;
+    const { page, ctx } = await open(browser, { answer: (m, q) => {
+      if (m !== 'GET' || /pi=/.test(q)) return null;
+      plain++;
+      return plain <= 2 ? { status: 200, json: { state: 'confirming' } } : { status: 200, json: { state: 'paid', receipt_url: RECEIPT } };
+    } });
+    ok('it keeps asking, then shows the thanks and the receipt, never a way to pay', await until(async () => (await shown(page, '[data-states] [data-state]')) === 'Paid. Thank you!', 15000) &&
+      (await page.getAttribute('[data-receipt]', 'href')) === RECEIPT && (await shown(page, '[data-due]')) === '' && plain >= 3, 'asked ' + plain);
+    await ctx.close();
+  });
   await group('another pay link opened in the same tab', async () => {
     const { page, ctx, calls } = await open(browser, {});
     await until(async () => (await shown(page, '[data-what]')) !== '');

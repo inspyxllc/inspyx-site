@@ -108,7 +108,7 @@
     if (a.state === 'nothing_due') { keepPaying(null); state(a.paid_in_full === true ? 'paidfull' : 'nothing'); return true; }
     if (a.state === 'confirming') {
       state('confirming');
-      if (settled.pi) follow(settled.pi);
+      follow(settled.pi || null);
       return true;
     }
     if (a.state === 'checkout') { toCheckout(a.url); return true; }
@@ -116,13 +116,12 @@
     return false;
   }
 
-  /* Once Stripe took a payment, the page asks about THAT payment until its result is read: soon at first, then
-     less often, and at once when the tab comes back or the connection does. Never the plain "what is due" view,
-     which, asked before the function records the payment, would offer to take it a second time. */
+  /* A payment on its way is followed until its result is read: soon at first, then less often, and at once when
+     the tab comes back or the connection does. One this tab took is asked about by its own id, never through the
+     plain "what is due" view, which, asked before the function records it, would offer to take it a second time. */
   var followTimer = null, followTries = 0;
   function follow(pi) {
-    settled.pi = pi;
-    keepPaying(pi);
+    if (pi) { settled.pi = pi; keepPaying(pi); }
     state('confirming');
     due.hidden = true;
     if (followTimer) return;
@@ -131,11 +130,13 @@
   }
   function followNow() {
     if (followTimer) { clearTimeout(followTimer); followTimer = null; }
-    var pi = settled.pi;
-    if (!pi) return;
+    var pi = settled.pi || null;
     followTries++;
-    ask('GET', '?view=json&pi=' + pi).then(function (a) {
+    // With no payment of this tab's own to name (the page opened on a payment already on its way), the plain
+    // view is asked: the server answers what is due, and "due" then is its own word that nothing is pending.
+    ask('GET', '?view=json' + (pi ? '&pi=' + pi : '')).then(function (a) {
       if (a.state === 'paid' || a.state === 'nothing_due' || a.state === 'gone' || a.state === 'checkout') return settled(a);
+      if (!pi && a.state === 'due') return showDue(a);
       follow(pi);   // confirming, no answer, or not recorded yet: still on its way
     });
   }
