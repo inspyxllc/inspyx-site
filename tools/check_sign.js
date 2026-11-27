@@ -4,6 +4,8 @@
 // The browser runs in New York time.
 // usage: node tools/serve.js &   then   node tools/check_sign.js
 const playwright = require('playwright');
+const fs = require('fs');
+const path = require('path');
 const engine = process.env.BROWSER === 'webkit' ? playwright.webkit : playwright.chromium;
 
 const url = process.env.URL || 'http://localhost:4173/';
@@ -255,8 +257,17 @@ const pngInfo = (b64) => {
       a.href === 'https://inspyx.com/pay#Tok_ddddddddddddddddd1' && !a.next.join().includes('nothing more'), JSON.stringify(a));
     if (process.env.SHOTS) await t.page.locator('[data-state="signed"]').screenshot({ path: process.env.SHOTS + '/sign-pay-owed.png' });
     await t.ctx.close();
+    // The server's link now (rehearsal 3, finding 13): inspyx.com/pay/<token>, which goes on to Stripe.
+    t = await open(browser, { view: VIEW(TEXT, Object.assign({}, signed, { pay: { dueCents: 27550, link: 'https://inspyx.com/pay/Tok_ddddddddddddddddd1' } })) });
+    await t.page.locator('[data-state="signed"]').waitFor({ state: 'visible' });
+    a = await step(t.page);
+    ok('owed, with an inspyx.com/pay/<token> link: Pay goes there', a.href === 'https://inspyx.com/pay/Tok_ddddddddddddddddd1' && a.next[1].endsWith('Pay $275.50'), JSON.stringify(a));
+    await t.ctx.close();
     for (const [label, pay] of [['nothing owed (no pay link)', null], ['paid in full', { dueCents: 0, link: 'https://inspyx.com/pay#Tok_ddddddddddddddddd1' }],
-      ['a link that isn\'t this site\'s pay page', { dueCents: 500, link: 'https://evil.example/pay#Tok_ddddddddddddddddd1' }]]) {
+      ['a link that isn\'t this site\'s pay page', { dueCents: 500, link: 'https://evil.example/pay#Tok_ddddddddddddddddd1' }],
+      ['this site, but not its pay link', { dueCents: 500, link: 'https://inspyx.com/payx/Tok_ddddddddddddddddd1' }],
+      ['a pay link with more after the token', { dueCents: 500, link: 'https://inspyx.com/pay/Tok_ddddddddddddddddd1/x' }],
+      ['the supabase.co address', { dueCents: 500, link: 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/pay/Tok_ddddddddddddddddd1' }]]) {
       t = await open(browser, { view: VIEW(TEXT, Object.assign({}, signed, { pay })) });
       await t.page.locator('[data-state="signed"]').waitFor({ state: 'visible' });
       a = await step(t.page);
@@ -270,6 +281,16 @@ const pngInfo = (b64) => {
     const csp = res.headers.get('content-security-policy') || '';
     ok('script and connect only to this site and the sign function', csp.includes("script-src 'self'") && csp.includes('connect-src https://btxlrfvqifnrnxffohsz.supabase.co') && csp.includes("default-src 'none'"));
     ok('no Referer, never stored, never indexed, never framed', res.headers.get('referrer-policy') === 'no-referrer' && res.headers.get('cache-control') === 'no-store' && /noindex/.test(res.headers.get('x-robots-tag') || '') && res.headers.get('x-frame-options') === 'DENY');
+  });
+
+  await group('pay links: inspyx.com/pay/<token> goes to the pay function, never stored, indexed or framed (rehearsal 3, finding 13)', async () => {
+    const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'coming-soon', 'vercel.json'), 'utf8'));
+    const r = (cfg.rewrites || []).filter((x) => x.source === '/pay/:token');
+    ok('one rewrite, to the pay function, token and all', r.length === 1 && r[0].destination === 'https://btxlrfvqifnrnxffohsz.supabase.co/functions/v1/pay/:token', JSON.stringify(r));
+    const h = (cfg.headers || []).find((x) => x.source === '/pay/(.*)');
+    const of = (k) => h && (h.headers.find((x) => x.key === k) || {}).value;
+    ok('no Referer, never stored, never indexed, never framed', !!h && of('Referrer-Policy') === 'no-referrer' && of('Cache-Control') === 'no-store' &&
+      /noindex/.test(of('X-Robots-Tag') || '') && of('X-Frame-Options') === 'DENY' && /default-src 'none'/.test(of('Content-Security-Policy') || ''), JSON.stringify(h));
   });
 
   await browser.close();
