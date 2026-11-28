@@ -25,6 +25,9 @@ const kept = () => JSON.stringify({ access: 'test-access-1', renew: 'test-renew-
 let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
 const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
+// Waits for [locator] to be shown (a large file read on a busy machine can take far longer than the default 8 s), then
+// clicks it: the click waits on the element's ready state, never on a fixed clock that a slow read outruns.
+const tap = async (locator, ms) => { await locator.waitFor({ state: 'visible', timeout: ms || 30000 }); await locator.click({ timeout: ms || 30000 }); };
 const until = async (fn, ms) => { const end = Date.now() + (ms || 8000); for (;;) { try { if (await fn()) return true; } catch (e) { /* not yet */ } if (Date.now() > end) return false; await new Promise((r) => setTimeout(r, 60)); } };
 /* Spectora's services (made up): two kept, one hidden in Spectora (left off, as the app does), one with no price. */
 const svc = (id, a) => ({ id, type: 'service', attributes: a });
@@ -290,9 +293,8 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     const want = J(READER.inspections('history.csv', new TextEncoder().encode(big), { existing: [], existing_past: [] }));
     let sync = syncServer(seed()), spx = spxServer(), o = await open(browser, { sync, spx });
     await o.page.setInputFiles('[data-pick]', { name: 'history.csv', mimeType: 'text/csv', buffer: Buffer.from(big, 'utf8') });
-    await until(async () => await o.page.locator('[data-file-kind]').isVisible());
-    await o.page.locator('[data-fk="past"]').click();
-    await until(async () => await o.page.locator('[data-preview]').isVisible(), 30000);
+    await tap(o.page.locator('[data-fk="past"]'), 60000);
+    await until(async () => await o.page.locator('[data-preview]').isVisible(), 60000);
     ok('a file past the reader\'s limit: its own words say it was cut, in plain view', want.cut === true && !!want.cut_message &&
       await o.page.locator('[data-cut]').isVisible() && (await o.page.locator('[data-cut]').textContent()) === want.cut_message, want.cut_message);
     await o.ctx.close();
@@ -300,10 +302,9 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     // A person the server turns down while the import is saved (the phone's change was newer): said on the done screen.
     sync = syncServer(seed()); spx = spxServer(); o = await open(browser, { sync, spx });
     sync.refuse = (r) => r.kind === 'inspector_contacts' && r.data && r.data.name === 'Bob Diaz';
-    await paste(o.page, KEY); await o.page.locator('[data-check]').click();
-    await until(async () => await o.page.locator('[data-preview]').isVisible());
-    await o.page.locator('[data-go]').click();
-    await until(async () => await o.page.locator('[data-done]').isVisible(), 10000);
+    await paste(o.page, KEY); await tap(o.page.locator('[data-check]'));
+    await tap(o.page.locator('[data-go]'));
+    await until(async () => await o.page.locator('[data-done]').isVisible(), 30000);
     const lines = await o.page.locator('[data-done-list] li').allTextContents();
     ok('a row the server turned down: "1 more didn\'t go through", never passed off as all done', lines.some((t) => t.indexOf('1 more didn’t go through') === 0) &&
       !names(sync.people()).includes('bob diaz'), JSON.stringify(lines));

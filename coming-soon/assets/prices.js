@@ -110,7 +110,13 @@
 
   /* A new change time: now, or just past the row's last one (the store's _after). */
   var nextAt = function (data) { var t = Date.now(); return data && data.updatedAt >= t ? data.updatedAt + 1 : t; };
-  var wire = function (kind, data) { return { kind: kind, id: data.id, updated_at: data.updatedAt, deleted_at: data.deletedAt, data: data }; };
+  // [base]: the copy the dialog opened with, sent with a change so the server merges field by field (the app's
+  // sync/merge.ts): a field left as it was keeps what the server holds now, so another device's change to it stands.
+  var wire = function (kind, data, base) {
+    var row = { kind: kind, id: data.id, updated_at: data.updatedAt, deleted_at: data.deletedAt, data: data };
+    if (base && !data.deletedAt && base.id === data.id) row.base = base;
+    return row;
+  };
   var newId = function () { return window.crypto.randomUUID(); };
   var tidy = function (text) { var t = (text || '').trim(); return t === '' ? null : t; };
 
@@ -398,7 +404,7 @@
       updatedAt: at,
       deletedAt: null,
     };
-    finish(svcDialog, [wire('price_services', data)], 'saved');
+    finish(svcDialog, [wire('price_services', data, was)], 'saved');
   });
 
   $('[data-reinsp-on]', main).addEventListener('click', function () { if (REINSPECTION_ID) openService(null, null, REINSPECTION_ID); });
@@ -519,7 +525,7 @@
       updatedAt: at,
       deletedAt: null,
     };
-    finish(discDialog, [wire('price_discounts', data)], 'saved');
+    finish(discDialog, [wire('price_discounts', data, was)], 'saved');
   });
 
   $('[data-delete]', discForm).addEventListener('click', function () {

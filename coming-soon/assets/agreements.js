@@ -124,7 +124,13 @@
 
   /* A new change time: now, or just past the row's last one. */
   var nextAt = function (data) { var t = Date.now(); return data && data.updatedAt >= t ? data.updatedAt + 1 : t; };
-  var wire = function (kind, data) { return { kind: kind, id: data.id, updated_at: data.updatedAt, deleted_at: data.deletedAt, data: data }; };
+  // [base]: the copy the dialog opened with, sent with a change so the server merges field by field (the app's
+  // sync/merge.ts): a field left as it was keeps what the server holds now, so another device's change to it stands.
+  var wire = function (kind, data, base) {
+    var row = { kind: kind, id: data.id, updated_at: data.updatedAt, deleted_at: data.deletedAt, data: data };
+    if (base && !data.deletedAt && base.id === data.id) row.base = base;
+    return row;
+  };
   var newId = function () { return window.crypto.randomUUID(); };
   function signsWire(agreementId) {
     var at = nextAt(signsRow());
@@ -238,7 +244,7 @@
       updatedAt: at,
       deletedAt: null,
     };
-    var push = [wire('legal_documents', data)];
+    var push = [wire('legal_documents', data, was)];
     // The first agreement becomes the one clients sign (the phone's add); one ticked here becomes it too.
     // Never a reinspection agreement: a reinspection's has no default, and an inspection never signs one.
     if (kind === 'agreement' && ((!was && standing('agreement').length === 0) || (was && form.elements.signs.checked))) push.push(signsWire(data.id));
