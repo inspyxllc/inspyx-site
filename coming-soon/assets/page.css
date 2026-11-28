@@ -10,6 +10,9 @@
   --gl:max(32px, env(safe-area-inset-left, 0px)); --gr:max(32px, env(safe-area-inset-right, 0px));
 }
 *{margin:0; padding:0; box-sizing:border-box}
+/* Hidden is hidden: a rule that lays an element out (display:flex, block…) would otherwise draw it anyway, as
+   app.css says for the signed-in pages. tools/check_hidden.js looks at every page. */
+[hidden]{display:none !important}
 html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
 body{font-family:var(--font); color:var(--ink); background:var(--ground); line-height:1.55; -webkit-font-smoothing:antialiased}
 a{color:var(--navy); text-underline-offset:2px}

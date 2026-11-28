@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pay for your home inspection</title>
+<!-- A client's pay page with the inspector's card fee. The pay link (functions/v1/pay/<link> in the app's repo) sends a client here only while the
+     inspector's card fee applies: inspyx.com/pay#<link>, the link after the "#", which never reaches a server, a log
+     or a Referer. Stripe's card form tells credit from debit; only a credit card pays the fee, and the fee and the
+     new total show before "Pay". With the card fee off, links go to Stripe's Checkout. -->
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#F5F5F7">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/page.css">
+<link rel="stylesheet" href="/assets/pay.css">
+<script src="https://js.stripe.com/v3/"></script>
+<script src="/assets/pay.js" defer></script>
+</head>
+<body>
+<header class="bar">
+<a class="logo" href="/" aria-label="Inspyx, home">
+<svg viewBox="16 8 208 236" aria-hidden="true"><path d="M129.92,23.41 L201.03,83.71 Q214,94.7 214,111.7 L214,222 Q214,236 200,236 L40,236 Q26,236 26,222 L26,111.7 Q26,94.7 38.97,83.71 L110.08,23.41 Q120,15 129.92,23.41 Z"></path><path d="M150,114 C142,102 130,98 118,98 C100,98 88,108 88,122 C88,138 102,144 120,149 C138,154 152,160 152,176 C152,192 138,202 120,202 C106,202 94,196 88,186" stroke="#0284C7" stroke-width="19"></path></svg>
+<span>INSPYX</span>
+</a>
+</header>
+
+<main class="pay" data-pay>
+<section class="card pay-card" aria-labelledby="pay-title">
+  <h1 id="pay-title">Pay for your home inspection</h1>
+  <p class="pay-what" data-what hidden><span data-v="title"></span><span class="pay-detail" data-v="detail"></span></p>
+
+  <div class="pay-state" data-states>
+    <p data-state="loading" role="status">Opening your payment…</p>
+    <p data-state="gone" hidden>This pay link doesn’t work. Ask your inspector for a new one.</p>
+    <p data-state="failed" hidden>The payment couldn’t be opened. Check your connection and try again.</p>
+    <p data-state="nothing" hidden>Nothing is due on this link.</p>
+    <p data-state="paidfull" hidden>This inspection is paid in full. Thank you!</p>
+    <p data-state="paid" hidden>Paid. Thank you!</p>
+    <p data-state="confirming" hidden>Your payment is going through. Stripe’s receipt shows here once it’s confirmed.</p>
+    <p data-state="checkout" hidden>Opening the payment page…</p>
+    <p><a class="pay-receipt" data-receipt href="/" rel="noreferrer" hidden>See your receipt</a></p>
+    <p><button class="btn" type="button" data-again hidden>Try again</button></p>
+  </div>
+
+  <div class="pay-due" data-due hidden>
+    <p class="pay-amount">Due: <strong data-v="due"></strong></p>
+    <p class="pay-note"><span data-named><span data-v="business"></span> adds a <span data-v="rate"></span> fee when you pay by credit card.</span><span data-unnamed hidden>Your inspector adds a <span data-v="rate"></span> fee when you pay by credit card.</span> There’s no fee on a debit card.</p>
+
+    <div class="pay-entry" data-entry>
+      <label class="pay-label" for="pay-card-field" data-cardlabel>Card</label>
+      <div class="pay-field" id="pay-card-field" data-card></div>
+      <button class="btn pay-go" type="button" data-continue>Continue</button>
+    </div>
+
+    <div class="pay-quote" data-quote hidden>
+      <p data-credit>Credit card fee (<span data-v="rate"></span>): <strong data-v="fee"></strong></p>
+      <p data-debit hidden>No card fee on a debit card.</p>
+      <p class="pay-total">Total: <strong data-v="total"></strong></p>
+      <button class="btn pay-go" type="button" data-paynow>Pay <span data-v="total"></span></button>
+      <button class="pay-other" type="button" data-other>Use a different card</button>
+    </div>
+
+    <!-- Under both steps: a declined card is said while the total shows, too. -->
+    <div class="say" aria-live="polite">
+      <p data-error="card" hidden>The card couldn’t be read. Check the number and try again.</p>
+      <p data-error="declined" hidden>The card wasn’t accepted. Try another card.</p>
+      <p data-error="failed" hidden>That didn’t go through. Check your connection and try again.</p>
+      <p class="pay-why" data-why hidden></p>
+    </div>
+  </div>
+</section>
+<p class="pay-by">Payments are handled by Stripe. Inspyx never sees your card number.</p>
+</main>
+<noscript>
+  <p class="pay-noscript">This page needs JavaScript to take a card payment.</p>
+</noscript>
+</body>
+</html>
