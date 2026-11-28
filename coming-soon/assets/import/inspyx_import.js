@@ -67,7 +67,7 @@ if(o==null)o=$.jE=A.kI(n)
 p=q[o]}if(p!=null)return p
 p=A.u1(a)
 if(p!=null)return p
-if(typeof a=="function")return B.cr
+if(typeof a=="function")return B.ct
 s=Object.getPrototypeOf(a)
 if(s==null)return B.bM
 if(s===Object.prototype)return B.bM
@@ -308,7 +308,7 @@ return null}return s},
 fu(a){var s,r,q,p
 if(a instanceof A.m)return A.aP(A.aR(a),null)
 s=J.bP(a)
-if(s===B.cq||s===B.cs||t.cx.b(a)){r=B.bw(a)
+if(s===B.cs||s===B.cu||t.cx.b(a)){r=B.bw(a)
 if(r!=="Object"&&r!=="")return r
 q=a.constructor
 if(typeof q=="function"){p=q.name
@@ -372,7 +372,7 @@ q.a=b.length
 B.a.K(s,b)
 q.b=""
 if(c!=null&&c.a!==0)c.N(0,new A.iy(q,r,s))
-return J.pF(a,new A.f2(B.e8,0,s,r,0))},
+return J.pF(a,new A.f2(B.ea,0,s,r,0))},
 qi(a,b,c){var s,r=c==null||c.a===0
 if(r){if(!!a.$0)return a.$0()
 s=a[""+"$0"]
@@ -663,8 +663,8 @@ s["~"+o]=l
 s["-"+o]=l
 s["+"+o]=l
 s["*"+o]=l}}},
-tN(){var s,r,q,p,o,n,m=B.cc()
-m=A.dc(B.cd,A.dc(B.ce,A.dc(B.bv,A.dc(B.bv,A.dc(B.cf,A.dc(B.cg,A.dc(B.ch(B.bw),m)))))))
+tN(){var s,r,q,p,o,n,m=B.ce()
+m=A.dc(B.cf,A.dc(B.cg,A.dc(B.bv,A.dc(B.bv,A.dc(B.ch,A.dc(B.ci,A.dc(B.cj(B.bw),m)))))))
 if(typeof dartNativeDispatchHooksTransformer!="undefined"){s=dartNativeDispatchHooksTransformer
 if(typeof s=="function")s=[s]
 if(Array.isArray(s))for(r=0;r<s.length;++r){q=s[r]
@@ -723,7 +723,7 @@ mU(a,b,c,d){var s=a.indexOf(b,d)
 if(s<0)return a
 return A.ut(a,s,s+b.length,c)},
 ut(a,b,c,d){return a.substring(0,b)+d+a.substring(c)},
-I:function I(a,b){this.a=a
+J:function J(a,b){this.a=a
 this.b=b},
 el:function el(a,b){this.a=a
 this.b=b},
@@ -2316,11 +2316,12 @@ if(p.d!=null)continue
 o=p.c
 n="{{"+B.b.t(B.b.H(o,2,o.length-2))+"}}"
 if(!B.a.B(m,n))B.a.l(m,n)}return m},
-J:function J(a,b,c,d){var _=this
+I:function I(a,b,c,d,e){var _=this
 _.c=a
 _.d=b
-_.a=c
-_.b=d},
+_.e=c
+_.a=d
+_.b=e},
 dh:function dh(a,b,c,d){var _=this
 _.a=a
 _.b=b
@@ -2375,10 +2376,10 @@ q=e==null
 d=q?a8.i(0,p):a4
 c=q?d:e
 n=A.F(a5,a5)
-for(s=0;s<4;++s){b=B.dg[s]
+for(s=0;s<4;++s){b=B.di[s]
 if(A.od(f,b)!=null&&A.rQ(c,b)==null){h=A.od(f,b)
 h.toString
-n.j(0,b,h)}}if(!q)a=n.a===0?B.co:B.cn
+n.j(0,b,h)}}if(!q)a=n.a===0?B.cq:B.cp
 else a=d!=null?B.bB:B.bA
 q=c==null?a4:c.a[3]
 A:{if(B.bA===a){a6=f
@@ -2408,9 +2409,9 @@ tz(a){return A.cG(a,$.pp(),t.A.a(t.H.a(new A.kC())),null)},
 kC:function kC(){},
 nB(a){return new A.bp(a)},
 rV(b2,b3,b4){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,b0=null,b1={}
-if(b2.length>26214400)throw A.b(B.eA)
+if(b2.length>26214400)throw A.b(B.eC)
 s=new A.kj(b2)
-if(s.$1(B.bC))throw A.b(B.ey)
+if(s.$1(B.bC))throw A.b(B.eA)
 if(!s.$1(B.bD))throw A.b(B.bf)
 b1.a=null
 try{b1.a=A.nH(b2)}catch(r){throw A.b(B.bf)}q=new A.ki(b1)
@@ -2470,7 +2471,7 @@ if(a2==null)return B.bc
 try{s=A.fT(a2)
 r=new A.ko(s)
 f=t.S
-q=A.il(B.e0,f)
+q=A.il(B.e2,f)
 p=q
 for(q=r.$1("numFmt"),e=J.O(q.a),q=new A.ah(e,q.b,q.$ti.h("ah<1>"));q.m();){o=e.gp()
 d=o.aa(a1,a0)
@@ -2564,7 +2565,7 @@ l=m!=null
 if((!l||m==="n")&&s!=null&&c.B(0,s)){r=A.mi(k)
 if(r!=null&&r>=0&&r<1e4){q=B.i.b0(r*24*60)
 return""+B.d.aA(q,60)+":"+B.b.V(B.d.k(B.d.aN(q,60)),2,"0")}}switch(m){case"s":p=A.by(k,null)
-if(p==null||p<0||p>=b.length)throw A.b(B.ez)
+if(p==null||p<0||p>=b.length)throw A.b(B.eB)
 if(p>>>0!==p||p>=b.length)return A.e(b,p)
 return b[p]
 case"inlineStr":o=a.bG("is")
@@ -2607,17 +2608,17 @@ _.b=b
 _.c=c
 _.r=_.f=_.e=_.d=0},
 an(a){return new A.a3(a)},
-nH(a){var s,r,q=B.ck
+nH(a){var s,r,q=B.cm
 try{s=A.rl(a,q)
 return new A.jk(a,s)}catch(r){if(A.ao(r) instanceof A.a3)throw r
-else throw A.b(B.eF)}},
+else throw A.b(B.eH)}},
 rp(a){var s,r,q,p,o=a.a.length,n=o-22
-if(n<0)throw A.b(B.eI)
+if(n<0)throw A.b(B.eK)
 s=n-65535
 if(s<0)s=0
 for(r=a.b,q=n;q>=s;--q){p=q+4>o
 if(p)A.x(B.h)
-if(r.getUint32(q,!0)===101010256)return q}throw A.b(B.eM)},
+if(r.getUint32(q,!0)===101010256)return q}throw A.b(B.eO)},
 rl(c1,c2){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,b0,b1,b2,b3,b4,b5,b6=" disagrees with its local header",b7=c1.BYTES_PER_ELEMENT,b8=A.dP(0,null,B.d.bJ(c1.byteLength,b7)),b9=J.pB(B.z.gar(c1),c1.byteOffset+0*b7,b8*b7),c0=new A.jp(c1,b9)
 b8=A.rp(c0)
 if(b8>=20&&c0.bv(b8-20)===117853008)throw A.b(B.bm)
@@ -2631,7 +2632,7 @@ if(p===65535||o===4294967295||n===4294967295)throw A.b(B.bm)
 if(s!==0||r!==0||q!==p)throw A.b(B.c7)
 if(p>5000)throw A.b(A.an("more than 5000 entries"))
 m=n+o
-if(m>b8)throw A.b(B.eD)
+if(m>b8)throw A.b(B.eF)
 l=A.d([],t.nm)
 k=A.bw(t.N)
 j=A.d([],t.hD)
@@ -2707,7 +2708,7 @@ if(!k.l(0,a8))throw A.b(A.an("two entries are named "+a8))
 if(e&&a0!==a1)throw A.b(A.an(a8+" is stored but its sizes differ"))
 if(a1>134217728)throw A.b(A.an(a8+" is too large"))
 g+=a1
-if(g>268435456)throw A.b(B.eN)
+if(g>268435456)throw A.b(B.eP)
 if(a1>=1048576)e=a1>200*(a0===0?1:a0)
 else e=!1
 if(e)throw A.b(A.an(a8+" grows too much when inflated"))
@@ -2739,18 +2740,18 @@ if(!A.t0(A.fF(c1,e,d),a7))throw A.b(A.an(a8+b6))
 b3=d+b2
 b4=b3+a0
 if(b4>n)throw A.b(A.an(a8+" runs into the ZIP directory"))
-B.a.l(j,new A.I(a6,b4))
+B.a.l(j,new A.J(a6,b4))
 B.a.l(l,new A.h4(a8,b,a,a0,a1,b3))}if(h!==m)throw A.b(B.bl)
 B.a.aQ(j,new A.k4())
-for(b9=j.length,b5=1;b5<b9;++b5)if(j[b5].a<j[b5-1].b)throw A.b(B.eK)
+for(b9=j.length,b5=1;b5<b9;++b5)if(j[b5].a<j[b5-1].b)throw A.b(B.eM)
 return l},
 rT(a,b){var s,r
 if((b&2048)!==0)try{s=B.al.a3(a)
-return s}catch(r){if(t.lW.b(A.ao(r)))throw A.b(B.eG)
-else throw r}return B.ci.a3(a)},
+return s}catch(r){if(t.lW.b(A.ao(r)))throw A.b(B.eI)
+else throw r}return B.ck.a3(a)},
 rd(a){var s,r,q
-if(a.length===0)throw A.b(B.eH)
-if(B.b.B(a,"\x00"))throw A.b(B.eJ)
+if(a.length===0)throw A.b(B.eJ)
+if(B.b.B(a,"\x00"))throw A.b(B.eL)
 if(B.b.B(a,"\\"))throw A.b(A.an(a+" uses backslashes"))
 if(B.b.af(a,"/"))throw A.b(A.an(a+" is an absolute path"))
 s=A.j("^[A-Za-z]:",!0,!1,!1)
@@ -2776,7 +2777,7 @@ jp:function jp(a,b){this.a=a
 this.b=b},
 k4:function k4(){},
 tM(a,b){var s,r,q,p,o
-if(A.tV(b))return B.ca
+if(A.tV(b))return B.cc
 A:{s=A.l7(a)
 r=s==null?null:s.a
 if(B.b8===r)return B.aj
@@ -2803,7 +2804,7 @@ s=r.a
 if(s!==B.aq&&s!==B.ar)return null
 return new A.i6(a,B.aj,A.tE(r),r.b)},
 tZ(a,b,c){var s,r,q,p,o,n,m,l,k,j,i=b.c,h=i.gR(i)?B.ba:A.oP(a,b.b,i.gav())
-if(h.length===0)return new A.I(c,B.I)
+if(h.length===0)return new A.J(c,B.I)
 i=b.b
 if(!(i<a.length))return A.e(a,i)
 s=a[i]
@@ -2820,9 +2821,9 @@ if(j!=null)k.push(j)
 k.push(l)
 m=new A.b5(n.a,n.b,n.c,n.d,n.e,B.a.F(k,"\n"),m)}i.push(m)}r=A.d([],p)
 for(q=h.length,p=J.T(s),o=0;o<h.length;h.length===q||(0,A.u)(h),++o)r.push(B.b.t(p.i(s,h[o])))
-return new A.I(new A.cN(i,c.b),r)},
+return new A.J(new A.cN(i,c.b),r)},
 tY(a,b,c){var s,r,q,p,o,n,m,l,k,j,i=b.c,h=i.gR(i)?B.ba:A.oP(a,b.b,i.gav())
-if(h.length===0)return new A.I(c,B.I)
+if(h.length===0)return new A.J(c,B.I)
 i=b.b
 if(!(i<a.length))return A.e(a,i)
 s=a[i]
@@ -2839,7 +2840,7 @@ if(j.length!==0)k.push(j)
 k.push(l)
 m=new A.bU(m,n.b,n.c,n.d,n.e,n.f,n.r,n.w,n.x,n.y,n.z,n.Q,B.a.F(k,"\n"),n.at)}i.push(m)}r=A.d([],p)
 for(q=h.length,p=J.T(s),o=0;o<h.length;h.length===q||(0,A.u)(h),++o)r.push(B.b.t(p.i(s,h[o])))
-return new A.I(new A.cP(i,c.b,c.c,c.d),r)},
+return new A.J(new A.cP(i,c.b,c.c,c.d),r)},
 cJ:function cJ(a,b){this.a=a
 this.b=b},
 i6:function i6(a,b,c,d){var _=this
@@ -2894,7 +2895,7 @@ g.l(0,m)}if(h<=r)n=h===r&&o.a>b.a
 else n=!0
 if(n){b=o
 r=h
-s=q}}f=b.a<2?B.cl:new A.c7(!1,s,b)
+s=q}}f=b.a<2?B.cn:new A.c7(!1,s,b)
 if(f.gcm())return f
 e=A.r7(a0,b.a===0?f:new A.c7(!1,s,b))
 return e.a?e:f},
@@ -3115,7 +3116,7 @@ g.l(0,m)}if(h<=r)n=h===r&&o.a>b.a
 else n=!0
 if(n){b=o
 r=h
-s=q}}f=b.a<2?B.cp:new A.cd(!1,s,b)
+s=q}}f=b.a<2?B.cr:new A.cd(!1,s,b)
 d=f.c
 if(d.D(B.l)||d.D(B.m)||d.D(B.o)||d.D(B.p))return f
 e=A.r8(a0,b.a===0?f:new A.cd(!1,s,b))
@@ -3404,7 +3405,7 @@ lw:function lw(a,b){this.a=a
 this.b=b},
 lv:function lv(){},
 ud(a){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c=null,b=B.b.t(a)
-if(b.length===0)return B.et
+if(b.length===0)return B.ev
 s=$.p6().ai(0,b)
 s=A.cg(s,A.t(s).h("f.E"))
 r=s.length
@@ -3446,23 +3447,23 @@ if(m)r.push(j)
 b=B.a.F(r," ")
 s=A.d([],s)
 for(r=B.b.cS(b,A.j("[\\s,;:\"'`|<>()\\[\\]{}]+",!0,!1,!1)),g=r.length,o=0;o<r.length;r.length===g||(0,A.u)(r),++o){f=r[o]
-if(!B.e2.B(0,f.toLowerCase()))if(f.length<12){e=A.j("[0-9]",!0,!1,!1)
+if(!B.e4.B(0,f.toLowerCase()))if(f.length<12){e=A.j("[0-9]",!0,!1,!1)
 e=e.b.test(f)}else e=!0
 else e=!1
 if(e)s.push(f)}d=p!=null&&q!=null
 switch(s.length){case 0:return new A.bF(d?"That is your ISN address. Paste the access key and the secret key with it.":"That doesn't look like a key. Paste your Spectora API key, or your ISN access key and secret key with the address of the ISN page they are on.")
-case 1:if(d)return B.er
+case 1:if(d)return B.et
 if(B.a.gab(s).length<12)return B.c0
 return new A.fz(B.a.gab(s))
 case 2:if(B.a.J(s,new A.lO()))return B.c0
-if(!d)return B.es
+if(!d)return B.eu
 r=s.length
 if(0>=r)return A.e(s,0)
 g=s[0]
 if(1>=r)return A.e(s,1)
 s=s[1]
 return new A.f_(g,s,p,q,n&&m)
-default:return B.eq}},
+default:return B.es}},
 iu:function iu(){},
 fz:function fz(a){this.a=a},
 f_:function f_(a,b,c,d,e){var _=this
@@ -3474,7 +3475,7 @@ _.e=e},
 bF:function bF(a){this.a=a},
 lO:function lO(){},
 tm(a){var s,r,q,p,o,n,m,l,k,j,i,h="[^A-Z0-9]+"
-for(s=[B.dX,B.dW],r=0;r<2;++r){q=s[r]
+for(s=[B.dZ,B.dY],r=0;r<2;++r){q=s[r]
 p=q.a
 o=null
 n=null
@@ -3508,7 +3509,7 @@ q=A.cG(a,$.pl(),t.A.a(t.H.a(new A.m3(p,b,r,s))),null)
 o=o?A.tm(q):q
 return new A.iv(o,s,r,p.b,p.a)},
 o7(a,b){var s,r,q,p,o
-switch(b.a){case 1:s=B.a.B(B.de,a)
+switch(b.a){case 1:s=B.a.B(B.dg,a)
 break
 case 0:r=A.mO("{{"+a+"}}")
 A:{s=r.length
@@ -3523,13 +3524,13 @@ default:s=null}return s},
 rY(a,b){var s,r,q,p=null
 switch(b.a){case 0:A:{if(B.N===a){p="[Initials]"
 break A}if(B.bp===a){p=""
-break A}s=B.dt.i(0,a)
+break A}s=B.dv.i(0,a)
 B:{if(s==null)break B
 p=s.d
 r=s.c
 p=p?"["+r+"]":"{{"+A.tf(r)+"}}"
 break B}break A}break
-case 1:q=B.dn.i(0,a)
+case 1:q=B.dq.i(0,a)
 C:{if(q==null)break C
 r="{{"+q+"}}"
 p=r
@@ -3586,7 +3587,7 @@ _.f=d
 _.r=e},
 ix:function ix(a,b){this.a=a
 this.b=b},
-mN(a){var s,r,q,p,o,n,m,l,k,j,i,h,g,f=new A.kB(),e=new A.kA(),d=[new A.I(A.j("\\b(\\d{4})-(\\d{1,2})-(\\d{1,2})\\b",!0,!1,!1),new A.kw(f)),new A.I(A.j("\\b(\\d{1,2})[/\\-.](\\d{1,2})[/\\-.](\\d{2,4})\\b",!0,!1,!1),new A.kx(f)),new A.I(A.j("\\b([A-Za-z]{3,9})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(\\d{4})\\b",!0,!1,!1),new A.ky(e,f)),new A.I(A.j("\\b(\\d{1,2})\\s+([A-Za-z]{3,9})\\.?,?\\s+(\\d{4})\\b",!0,!1,!1),new A.kz(e,f))]
+mN(a){var s,r,q,p,o,n,m,l,k,j,i,h,g,f=new A.kB(),e=new A.kA(),d=[new A.J(A.j("\\b(\\d{4})-(\\d{1,2})-(\\d{1,2})\\b",!0,!1,!1),new A.kw(f)),new A.J(A.j("\\b(\\d{1,2})[/\\-.](\\d{1,2})[/\\-.](\\d{2,4})\\b",!0,!1,!1),new A.kx(f)),new A.J(A.j("\\b([A-Za-z]{3,9})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(\\d{4})\\b",!0,!1,!1),new A.ky(e,f)),new A.J(A.j("\\b(\\d{1,2})\\s+([A-Za-z]{3,9})\\.?,?\\s+(\\d{4})\\b",!0,!1,!1),new A.kz(e,f))]
 for(s=t.k,r=t.H,q=-1,p="",o=0;o<4;++o){n=d[o]
 m=n.a
 l=null
@@ -3691,10 +3692,10 @@ return!0},
 oL(a,b){var s,r,q,p
 if(A.hY(b,B.bD))return B.bd
 s=B.b.co(a,".")
-if(!(s<0||B.e_.B(0,B.b.M(a,s+1).toLowerCase())))return null
+if(!(s<0||B.e1.B(0,B.b.M(a,s+1).toLowerCase())))return null
 if(A.hY(b,B.bC))return B.bW
 r=b.length>8192?A.fF(b,0,8192):b
-if(!(A.hY(r,B.cM)||A.hY(r,B.cL)))q=B.z.B(r,0)||A.hY(r,B.cN)
+if(!(A.hY(r,B.cO)||A.hY(r,B.cN)))q=B.z.B(r,0)||A.hY(r,B.cP)
 else q=!1
 if(q)return null
 p=B.b.eU(A.kD(r)).toLowerCase()
@@ -3702,10 +3703,10 @@ if(B.b.af(p,"<")){if(B.b.B(p,"urn:schemas-microsoft-com:office:spreadsheet")||B.
 if(B.b.af(p,"<?xml")&&!B.b.B(p,"<html")&&!B.b.B(p,"<table"))return B.bX
 return B.bU}return B.bT},
 ue(a,b){var s,r,q,p
-if(b.length>26214400)throw A.b(B.eb)
+if(b.length>26214400)throw A.b(B.ed)
 s=null
 switch(A.oL(a,b)){case B.bW:throw A.b(B.c_)
-case B.bX:throw A.b(B.ed)
+case B.bX:throw A.b(B.ef)
 case B.bU:s=A.u7(A.kD(b))
 break
 case B.bV:s=B.a.ga_(A.ta(A.kD(b),!1)).c
@@ -3715,10 +3716,10 @@ if(p instanceof A.bp){r=p
 throw A.b(A.te(r))}else throw q}break
 case B.bT:s=A.u6(A.kD(b))
 break
-case null:case void 0:throw A.b(B.ea)}return A.rf(s)},
+case null:case void 0:throw A.b(B.ec)}return A.rf(s)},
 te(a){var s=a.a
 if(B.b.B(s,"older Excel format"))return B.c_
-if(B.b.B(s,"not an Excel workbook"))return B.ec
+if(B.b.B(s,"not an Excel workbook"))return B.ee
 return new A.aB(s)},
 rf(a){var s,r,q,p
 for(s=a.length,r=0;q=a.length,r<q;a.length===s||(0,A.u)(a),++r)for(p=B.a.gu(a[r]);p.m();)if(p.gp().length>32767)throw A.b(B.L)
@@ -3773,7 +3774,7 @@ c=A.A([",",0,";",0,"\t",0],e,d)}else if(r&&c.D(s)){r=c.i(0,s)
 r.toString
 c.j(0,s,r+1)}}++a0}if(f.length<20)B.a.l(f,c)
 for(p=",",o=0,n=0,m=0;m<3;++m){l={}
-k=B.d8[m]
+k=B.da[m]
 j=A.F(d,d)
 for(e=f.length,i=0;i<f.length;f.length===e||(0,A.u)(f),++i){b=f[i].i(0,k)
 b.toString
@@ -3971,7 +3972,7 @@ a2=b0.b
 a2.toString
 a8=A.o(c)
 a2.a+=a8
-if(b0.b.a.length>32767)throw A.b(B.L)}}}}catch(a9){if(A.ao(a9) instanceof A.ct)throw A.b(B.e9)
+if(b0.b.a.length>32767)throw A.b(B.L)}}}}catch(a9){if(A.ao(a9) instanceof A.ct)throw A.b(B.eb)
 else throw a9}if(!o)throw A.b(B.bZ)
 j.$0()
 b0.a.ac()
@@ -4017,7 +4018,7 @@ return!B.a.J(A.d(r.split(" "),t.s),B.bO.gT(B.bO))},
 u0(a){var s,r=B.b.t(a),q=A.j("\\s+",!0,!1,!1),p=A.w(r,q," ")
 if(p.length===0)return null
 r=$.pb()
-if(r.b.test(p))return B.ew
+if(r.b.test(p))return B.ey
 r=$.p9()
 if(r.b.test(p))return B.c1
 s=A.j("\\d",!0,!1,!1).ai(0,p).gn(0)
@@ -4026,7 +4027,7 @@ if(r.b.test(p)&&s>=7&&s<=15)return B.c2
 r=$.pv()
 if(r.b.test(p))return B.c3
 r=$.pk()
-if(r.b.test(p))return B.ex
+if(r.b.test(p))return B.ez
 return null},
 u_(a,b,c){var s,r,q,p,o,n,m,l=A.d([],t.s)
 for(s=b+1;s<a.length;++s){if(c<J.af(a[s])){if(!(s<a.length))return A.e(a,s)
@@ -4104,7 +4105,7 @@ break A}if("agents"===b2){q=B.ao
 break A}q=A.oq(b0)
 break A}j=A.ub(a9,s,q)
 a7.a=null
-i=b5?A.tZ(a9,s,j):new A.I(j,B.I)
+i=b5?A.tZ(a9,s,j):new A.J(j,B.I)
 h=null
 a7.a=i.a
 g=i.b
@@ -4126,7 +4127,7 @@ a4=n.i(0,e)
 a4=a4==null?null:a4.b
 m.push(A.A(["index",e,"header",a3,"field",a4,"sample",e<a1?b[e]:""],a,a0))}n=A.d([],o)
 for(f=0;f<13;++f){a5=B.bI[f]
-n.push(A.A(["field",a5.b,"label",B.dA.i(0,a5)],a,a0))}a1=A.d([],o)
+n.push(A.A(["field",a5.b,"label",B.dC.i(0,a5)],a,a0))}a1=A.d([],o)
 for(a2=a7.a.a,a3=a2.length,f=0;f<a2.length;a2.length===a3||(0,A.u)(a2),++f){e=a2[f]
 a1.push(A.A(["line",e.r,"role",e.a,"name",e.b,"phone",e.c,"email",e.d,"company",e.e,"note",e.f],a,a0))}o=A.d([],o)
 for(a2=a7.a.b,a3=a2.length,f=0;f<a2.length;a2.length===a3||(0,A.u)(a2),++f){a6=a2[f]
@@ -4151,7 +4152,7 @@ if(j!=null)l=j<0||j>=q
 else l=!1
 if(l)continue
 r=r.bE(k,j)}i=A.uc(a9,r,s)
-h=b5?A.tY(a9,r,i):new A.I(i,B.I)
+h=b5?A.tY(a9,r,i):new A.J(i,B.I)
 g=h.a
 f=a7
 e=h.b
@@ -4184,7 +4185,7 @@ a3=a3==null?a7:a3.b
 a.push(A.A(["index",a1,"header",a2,"field",a3,"sample",a1<o?b[a1]:""],a9,n))}l.j(0,"columns",a)
 o=A.d([],p)
 for(a4=0;a4<17;++a4){a5=B.bE[a4]
-o.push(A.A(["field",a5.b,"label",B.dr.i(0,a5)],a9,n))}l.j(0,"fields",o)
+o.push(A.A(["field",a5.b,"label",B.dt.i(0,a5)],a9,n))}l.j(0,"fields",o)
 l.K(0,A.mE(d,b3,b4,b0))
 p=A.d([],p)
 for(o=d.b,m=o.length,a4=0;a4<o.length;o.length===m||(0,A.u)(o),++a4){a6=o[a4]
@@ -4201,7 +4202,7 @@ n=new A.v(a2,s.a(new A.k8()),a3).gn(0)
 a3=new A.v(a2,s.a(new A.k9()),a3).gn(0)
 s=A.d([],t.d)
 for(a1=A.ma(a1,0,t.dp),m=J.O(a1.a),l=a1.b,a1=new A.b6(m,l,A.t(a1).h("b6<1>")),k=t.N,j=t.X;a1.m();){i=a1.c
-i=i>=0?new A.I(l+i,m.gp()):A.x(A.ax())
+i=i>=0?new A.J(l+i,m.gp()):A.x(A.ax())
 h=i.a
 q=null
 g=i.b
@@ -4253,7 +4254,7 @@ a=d.length
 r=c.length
 n=A.d([],t.d)
 for(s=A.ma(s,0,t.aV),m=J.O(s.a),l=s.b,s=new A.b6(m,l,A.t(s).h("b6<1>")),k=t.N,j=t.X;s.m();){i=s.c
-i=i>=0?new A.I(l+i,m.gp()):A.x(A.ax())
+i=i>=0?new A.J(l+i,m.gp()):A.x(A.ax())
 h=i.a
 p=null
 g=i.b
@@ -4270,17 +4271,17 @@ try{s=A.t9(a,b<0?0:b)
 return s}catch(r){s=B.f.L(A.A(["message",u.a],t.N,t.X),null)
 return s}},
 t9(a,b){var s,r,q,p=null,o=t.f.b(a)?a:B.as,n=o.i(0,"retry_after"),m=typeof n=="number"&&isFinite(n)&&n>=0?B.i.aM(n):p,l=p,k=p
-switch(o.i(0,"refused")){case"bad_key":k=B.e3
+switch(o.i(0,"refused")){case"bad_key":k=B.e5
 break
-case"quota":k=B.e4
+case"quota":k=B.e6
 break
-case"rate":k=B.e5
+case"rate":k=B.e7
 break
-case"server":k=B.e6
+case"server":k=B.e8
 break
 case"no_signal":l="Spectora couldn't be reached. Check your signal and try again."
 break
-case"unreadable":k=B.e7
+case"unreadable":k=B.e9
 break
 default:s=o.i(0,"error")
 A:{if("key"===s){r=u.r
@@ -4359,7 +4360,7 @@ m=m==null?null:m.b
 l.push(A.A(["start",n.a,"end",n.b,"blank",m],q,p))}return B.f.L(l,null)},
 uG(a,b){var s,r
 A:{if("agreement"===b){s=B.bL
-break A}if("email"===b){s=B.dU
+break A}if("email"===b){s=B.dW
 break A}s=null
 break A}if(s==null)return B.f.L(A.A(["status","unreadable"],t.N,t.X),null)
 r=A.F(t.N,t.X)
@@ -4393,7 +4394,7 @@ d=f[2].length
 f=f[1].length
 r=A.d([],t.d)
 for(s=A.ma(s,0,t.aV),n=J.O(s.a),m=s.b,s=new A.b6(n,m,A.t(s).h("b6<1>")),l=t.N,k=t.X;s.m();){j=s.c
-j=j>=0?new A.I(m+j,n.gp()):A.x(A.ax())
+j=j>=0?new A.J(m+j,n.gp()):A.x(A.ax())
 i=j.a
 p=null
 h=j.b
@@ -4537,7 +4538,7 @@ else{o=B.a.gX(r)
 n=o.b
 if(n+1>=p.a){n=Math.max(n,p.b)
 B.a.j(r,r.length-1,new A.a4(o.a,n))}else B.a.l(r,p)}}j=r.length
-if(j===0)return B.cm
+if(j===0)return B.co
 else if(j===1){if(0>=j)return A.e(r,0)
 m=r[0]
 j=m.a
@@ -5424,7 +5425,7 @@ return s.substring(J.ng(s,1))},
 aO(a,b){var s,r
 if(0>=b)return""
 if(b===1||a.length===0)return a
-if(b!==b>>>0)throw A.b(B.cj)
+if(b!==b>>>0)throw A.b(B.cl)
 for(s=a,r="";;){if((b&1)===1)r=s+r
 b=b>>>1
 if(b===0)break
@@ -5558,7 +5559,7 @@ return!1},
 gp(){return this.a.gp()},
 $iH:1}
 A.dn.prototype={
-gu(a){return B.cb},
+gu(a){return B.cd},
 gn(a){return 0}}
 A.dp.prototype={
 m(){return!1},
@@ -5581,7 +5582,7 @@ m(){if(++this.c>=0&&this.a.m())return!0
 this.c=-2
 return!1},
 gp(){var s=this.c
-return s>=0?new A.I(this.b+s,this.a.gp()):A.x(A.ax())},
+return s>=0?new A.J(this.b+s,this.a.gp()):A.x(A.ax())},
 $iH:1}
 A.a1.prototype={
 sn(a,b){throw A.b(A.aq("Cannot change the length of a fixed-length list"))},
@@ -5610,7 +5611,7 @@ k(a){return'Symbol("'+this.a+'")'},
 C(a,b){if(b==null)return!1
 return b instanceof A.bA&&this.a===b.a},
 $id0:1}
-A.I.prototype={$r:"+(1,2)",$s:1}
+A.J.prototype={$r:"+(1,2)",$s:1}
 A.el.prototype={$r:"+key,reference(1,2)",$s:2}
 A.bN.prototype={$r:"+refused,table(1,2)",$s:3}
 A.cz.prototype={$r:"+stop,waitSeconds(1,2)",$s:4}
@@ -6118,7 +6119,7 @@ s.toString
 return s},
 $iH:1}
 A.ci.prototype={
-gO(a){return B.ee},
+gO(a){return B.eg},
 ca(a,b,c){var s
 A.jZ(a,b,c)
 s=new Uint8Array(a,b,c)
@@ -6143,7 +6144,7 @@ c9(a,b,c){var s=A.qd(this.a,b,c)
 s.$flags=3
 return s}}
 A.fc.prototype={
-gO(a){return B.ef},
+gO(a){return B.eh},
 $iK:1,
 $in9:1}
 A.am.prototype={
@@ -6181,45 +6182,45 @@ $iq:1,
 $if:1,
 $ik:1}
 A.fd.prototype={
-gO(a){return B.eg},
+gO(a){return B.ei},
 $iK:1}
 A.fe.prototype={
-gO(a){return B.eh},
+gO(a){return B.ej},
 $iK:1}
 A.ff.prototype={
-gO(a){return B.ei},
-i(a,b){A.bO(b,a,a.length)
-return a[b]},
-$iK:1}
-A.fg.prototype={
-gO(a){return B.ej},
-i(a,b){A.bO(b,a,a.length)
-return a[b]},
-$iK:1}
-A.fh.prototype={
 gO(a){return B.ek},
 i(a,b){A.bO(b,a,a.length)
 return a[b]},
 $iK:1}
-A.fi.prototype={
+A.fg.prototype={
+gO(a){return B.el},
+i(a,b){A.bO(b,a,a.length)
+return a[b]},
+$iK:1}
+A.fh.prototype={
 gO(a){return B.em},
 i(a,b){A.bO(b,a,a.length)
 return a[b]},
 $iK:1}
+A.fi.prototype={
+gO(a){return B.eo},
+i(a,b){A.bO(b,a,a.length)
+return a[b]},
+$iK:1}
 A.fj.prototype={
-gO(a){return B.en},
+gO(a){return B.ep},
 i(a,b){A.bO(b,a,a.length)
 return a[b]},
 $iK:1,
 $imm:1}
 A.dI.prototype={
-gO(a){return B.eo},
+gO(a){return B.eq},
 gn(a){return a.length},
 i(a,b){A.bO(b,a,a.length)
 return a[b]},
 $iK:1}
 A.ba.prototype={
-gO(a){return B.ep},
+gO(a){return B.er},
 gn(a){return a.length},
 i(a,b){A.bO(b,a,a.length)
 return a[b]},
@@ -6796,7 +6797,7 @@ k(a){return"Cyclic error in JSON stringify"}}
 A.f5.prototype={
 L(a,b){var s=A.qG(a,this.gem().b,null)
 return s},
-gem(){return B.ct}}
+gem(){return B.cv}}
 A.f7.prototype={}
 A.jG.prototype={
 cM(a){var s,r,q,p,o,n,m=a.length
@@ -6930,12 +6931,12 @@ return s.charCodeAt(0)==0?s:s}}
 A.f8.prototype={
 a3(a){var s
 t.L.a(a)
-s=B.cF.bk(a)
+s=B.cH.bk(a)
 return s}}
 A.f9.prototype={}
 A.fI.prototype={
 bl(a,b){t.L.a(a)
-return(b===!0?B.ev:B.eu).bk(a)},
+return(b===!0?B.ex:B.ew).bk(a)},
 a3(a){return this.bl(a,null)}}
 A.e5.prototype={
 bk(a){return new A.jP(this.a).dg(t.L.a(a),0,null,!0)}}
@@ -7304,7 +7305,7 @@ gcA(a){var s=this.a
 return new A.cm(s,A.S(s).h("cm<1>"))},
 $iq:1,
 $ik:1}
-A.J.prototype={
+A.I.prototype={
 S(){return"AgreementBlank."+this.b}}
 A.dh.prototype={}
 A.cM.prototype={
@@ -7321,7 +7322,7 @@ p=!0
 if(q!=null)if(q!==0)if(!(q>1114111))p=q>=55296&&q<=57343
 if(p){p=a.i(0,0)
 p.toString
-return p}return A.R(q)}q=B.dp.i(0,p)
+return p}return A.R(q)}q=B.dr.i(0,p)
 if(q==null){p=a.i(0,0)
 p.toString}else p=A.R(q)
 return p},
@@ -7464,11 +7465,11 @@ else if(q===256)return
 else{p=q-257
 if(p>=29)throw A.b(B.aB)
 if(!(p>=0))return A.e(B.bJ,p)
-o=B.bJ[p]+j.Z(B.cI[p])
+o=B.bJ[p]+j.Z(B.cK[p])
 n=j.a3(b)
 if(n>=30)throw A.b(B.aB)
-m=B.df[n]+j.Z(B.cT[n])
-if(m>j.r)throw A.b(B.eL)
+m=B.dh[n]+j.Z(B.cV[n])
+if(m>j.r)throw A.b(B.eN)
 for(l=0;l<o;++l){k=j.r-m
 if(!(k>=0&&k<r))return A.e(s,k)
 j.cv(s[k])}}}},
@@ -7491,7 +7492,7 @@ k=n[s]
 j=3+h.Z(2)}else{j=m===17?3+h.Z(3):11+h.Z(7)
 k=0}if(q+j>o)throw A.b(B.a4)
 for(i=0;i<j;++i,q=l){l=q+1
-B.a.j(n,q,k)}}if(n[256]===0)throw A.b(B.eE)
+B.a.j(n,q,k)}}if(n[256]===0)throw A.b(B.eG)
 h.cd(A.ha(B.a.aH(n,0,g)),A.ha(B.a.aG(n,g)))}}
 A.a3.prototype={
 k(a){return"ZipRefused: "+this.a}}
@@ -7603,7 +7604,7 @@ A.lx.prototype={
 $1(a){var s
 A.h(a)
 s=A.j("[^a-z0-9]+",!0,!1,!1)
-return B.e1.B(0,B.b.t(A.w(a.toLowerCase(),s," ")))},
+return B.e3.B(0,B.b.t(A.w(a.toLowerCase(),s," ")))},
 $S:0}
 A.m4.prototype={
 $1(a){var s,r
@@ -7718,7 +7719,7 @@ o=B.a.bo(A.d([A.y(a4,"mobilephone"),A.y(a4,"workphone"),A.y(a4,"homephone")],s),
 n=A.y(a4,"email")
 if(a5==="client")m=A.y(a4,"companyname")
 else{l=a1.b.i(0,A.y(a4,"agency"))
-m=A.y(l==null?B.dw:l,"name")}l=A.y(a4,"city")
+m=A.y(l==null?B.dy:l,"name")}l=A.y(a4,"city")
 k=A.y(a4,a3).length!==0?A.y(a4,a3):A.y(a4,"state")
 j=t.g
 i=t.U
@@ -7809,7 +7810,7 @@ A.it.prototype={}
 A.lw.prototype={
 $4$email$phone(a,b,c,d){var s,r,q,p,o,n,m,l,k,j=A.j("\\s+",!0,!1,!1),i=B.b.t(A.w(b,j," ")),h=A.bq(i)
 j=!0
-if(h.length!==0)if(!B.dY.B(0,h)){j=A.j("\\p{L}",!0,!1,!0)
+if(h.length!==0)if(!B.e_.B(0,h)){j=A.j("\\p{L}",!0,!1,!0)
 j=!j.b.test(i)}if(j)return
 s=B.b.B(c,"@")?B.b.t(c):null
 r=B.b.t(d)
@@ -7866,15 +7867,15 @@ q=a.a2(3)
 p=a.a2(4)
 if(s!=null){o=B.b.t(s)
 n=A.j("\\s+",!0,!1,!1)
-m=B.du.i(0,A.w(o.toLowerCase(),n," "))
+m=B.dw.i(0,A.w(o.toLowerCase(),n," "))
 l="Palmtech"}else if(r!=null){o=B.b.t(r)
 if(A.o7(o,f.b))return e
-m=B.dv.i(0,o.toUpperCase())
+m=B.dx.i(0,o.toUpperCase())
 l="Spectora"}else if(q!=null){m=$.pg().i(0,q)
 o=q
 l="ISN"}else{p.toString
-if(!B.dZ.B(0,p))return e
-m=B.dB.i(0,p)
+if(!B.e0.B(0,p))return e
+m=B.dD.i(0,p)
 o=p
 l="Horizon"}k=m==null?null:A.rY(m,f.b)
 if(k==null){n=A.j("[^A-Za-z0-9 _\\-]",!0,!1,!1)
@@ -7901,7 +7902,7 @@ return B.b.V(B.d.k(a),4,"0")+"-"+B.b.V(B.d.k(b),2,"0")+"-"+B.b.V(B.d.k(c),2,"0")
 $S:42}
 A.kA.prototype={
 $1(a){var s,r=a.toLowerCase()
-for(s=0;s<12;++s)if(B.b.af(r,B.cX[s]))return s+1
+for(s=0;s<12;++s)if(B.b.af(r,B.cZ[s]))return s+1
 return null},
 $S:43}
 A.kw.prototype={
@@ -8105,7 +8106,7 @@ if(s==null){this.b.ao("")
 return}r=s.a
 this.b.ao(r)
 q=s.b
-B.a.j(p,a,q<=1?null:new A.I(r,q-1))},
+B.a.j(p,a,q<=1?null:new A.J(r,q-1))},
 $S:35}
 A.ls.prototype={
 $0(){var s,r,q,p,o=this.c,n=this.a,m=this.b
@@ -8147,7 +8148,7 @@ s.ao(o)
 for(n=1;n<m.c;++n)s.ao("")
 if(m.b>1)for(s=this.c,n=0;n<m.c;++n){for(q=r+n;s.length<=q;)B.a.l(s,null)
 p=n===0?o:""
-B.a.j(s,q,new A.I(p,m.b-1))}m.a=null
+B.a.j(s,q,new A.J(p,m.b-1))}m.a=null
 m.b=m.c=1},
 $S:1}
 A.lr.prototype={
@@ -8208,7 +8209,7 @@ $ibk:1}
 A.i.prototype={
 A(a,b){var s=this.v(new A.bj(a,b))
 return s instanceof A.r?-1:s.b},
-gP(){return B.d6},
+gP(){return B.d8},
 a1(a,b){},
 k(a){return A.eH(this).k(0)}}
 A.cX.prototype={}
@@ -8353,7 +8354,7 @@ default:return!1}}}
 A.m1.prototype={
 $1(a){var s
 A.ak(a)
-s=B.dq.i(0,a)
+s=B.ds.i(0,a)
 if(s!=null)return s
 if(a<32)return"\\x"+B.b.V(B.d.cF(a,16),2,"0")
 return A.R(a)},
@@ -8390,7 +8391,7 @@ if(q instanceof A.r)return q
 s=this.b.v(q)
 if(s instanceof A.r)return s
 r=this.$ti
-q=r.h("+(1,2)").a(new A.I(q.gE(),s.gE()))
+q=r.h("+(1,2)").a(new A.J(q.gE(),s.gE()))
 return new A.B(q,s.a,s.b,r.h("B<+(1,2)>"))},
 A(a,b){b=this.a.A(a,b)
 if(b<0)return-1
@@ -8721,7 +8722,7 @@ e_(a){var s=a.length
 if(s>1&&a[0]==="#"){if(s>2){s=a[1]
 s=s==="x"||s==="X"}else s=!1
 if(s)return this.bU(B.b.M(a,2),16)
-else return this.bU(B.b.M(a,1),10)}else return B.dm.i(0,a)},
+else return this.bU(B.b.M(a,1),10)}else return B.dp.i(0,a)},
 bU(a,b){var s=A.by(a,b)
 if(s==null||s<0||1114111<s)return null
 return A.R(s)},
@@ -8753,7 +8754,7 @@ if(o===$){if(p.gar(p)!=null&&p.gaZ()!=null){s=p.gar(p)
 s.toString
 r=p.gaZ()
 r.toString
-q=A.ny(s,r)}else q=B.cG
+q=A.ny(s,r)}else q=B.cI
 p.z$!==$&&A.i2()
 o=p.z$=q}return o},
 gcq(){var s,r,q,p,o=this
@@ -8810,7 +8811,7 @@ A.jh.prototype={
 $1(a){return t.I.a(a).gE()},
 $S:57}
 A.iQ.prototype={
-gaq(){return B.d5},
+gaq(){return B.d7},
 aa(a,b){return null}}
 A.d3.prototype={
 bF(a){var s=this.aa(a,null)
@@ -8917,7 +8918,7 @@ q=s}r.a=q+">"
 return null}}
 A.hp.prototype={}
 A.fS.prototype={
-ga9(){return B.eC},
+ga9(){return B.eE},
 I(a){return a.eX(this)}}
 A.hq.prototype={}
 A.aN.prototype={
@@ -9397,7 +9398,7 @@ dQ(){return A.iw(new A.l(this.gdF(),B.c,t.jk),0,9007199254740991,t.fw)},
 dG(){var s=this,r=t.h,q=t.N,p=t.R
 return A.ck(A.b_(new A.l(s.gaD(),B.c,r),new A.l(s.ga5(),B.c,r),new A.l(s.gdH(),B.c,t.P),q,q,p),new A.iW(s),q,q,p,t.fw)},
 dI(){var s=this.gaE(),r=t.h,q=t.N,p=t.R
-return new A.bb(B.dV,A.iD(A.lQ(new A.l(s,B.c,r),A.D("="),new A.l(s,B.c,r),new A.l(this.gap(),B.c,t.P),q,q,q,p),new A.iS(),q,q,q,p,p),t.bQ)},
+return new A.bb(B.dX,A.iD(A.lQ(new A.l(s,B.c,r),A.D("="),new A.l(s,B.c,r),new A.l(this.gap(),B.c,t.P),q,q,q,p),new A.iS(),q,q,q,p,p),t.bQ)},
 dJ(){var s=t.P
 return A.bs(A.d([new A.l(this.gdK(),B.c,s),new A.l(this.gdO(),B.c,s),new A.l(this.gdM(),B.c,s)],t.ge),null,t.R)},
 dL(){var s=t.N
@@ -9473,16 +9474,16 @@ A.iT.prototype={
 $3(a,b,c){A.h(a)
 A.h(b)
 A.h(c)
-return new A.I(b,B.bh)},
+return new A.J(b,B.bh)},
 $S:32}
 A.iV.prototype={
 $3(a,b,c){A.h(a)
 A.h(b)
 A.h(c)
-return new A.I(b,B.eB)},
+return new A.J(b,B.eD)},
 $S:32}
 A.iU.prototype={
-$1(a){return new A.I(A.h(a),B.bh)},
+$1(a){return new A.J(A.h(a),B.bh)},
 $S:82}
 A.j4.prototype={
 $4(a,b,c,d){var s=null
@@ -9727,7 +9728,7 @@ q(A.ac,[A.cp,A.b8,A.cm])
 r(A.dm,A.bx)
 r(A.dl,A.ds)
 q(A.a8,[A.bM,A.cy,A.aY])
-q(A.bM,[A.I,A.el,A.bN,A.cz])
+q(A.bM,[A.J,A.el,A.bN,A.cz])
 q(A.cy,[A.cA,A.em])
 q(A.aY,[A.en,A.eo,A.ep,A.eq,A.bg,A.er,A.es])
 r(A.d9,A.cW)
@@ -9764,7 +9765,7 @@ q(A.eX,[A.f8,A.fI])
 r(A.f9,A.hj)
 q(A.b1,[A.dO,A.dr])
 r(A.dk,A.d6)
-q(A.jq,[A.J,A.cM,A.cJ,A.V,A.eT,A.cb,A.P,A.fq,A.E,A.cn,A.bZ,A.bn,A.Y,A.aO])
+q(A.jq,[A.I,A.cM,A.cJ,A.V,A.eT,A.cb,A.P,A.fq,A.E,A.cn,A.bZ,A.bn,A.Y,A.aO])
 q(A.iu,[A.fz,A.f_,A.bF])
 r(A.cX,A.bj)
 q(A.cX,[A.B,A.r])
@@ -9855,56 +9856,56 @@ s(A.hw,A.bI)
 s(A.hP,A.bI)
 s(A.hx,A.bI)
 s(A.hy,A.fY)})()
-var v={G:typeof self!="undefined"?self:globalThis,typeUniverse:{eC:new Map(),tR:{},eT:{},tPV:{},sEA:[]},mangledGlobalNames:{c:"int",G:"double",aF:"num",a:"String",n:"bool",au:"Null",k:"List",m:"Object",U:"Map",a2:"JSObject"},mangledNames:{},types:["n(a)","~()","a(b9)","i<a>()","i<@>()","a(a)","i<+(a,Y)>()","c(c)","r(r,r)","c()","a()","~(~())","i<ag>()","n(aN)","n(bd)","~(@)","c(a?)","@()","au()","~(c,bn)","n(k<a>)","~(m?)","~(U<a,m?>,a,a)","a(a,m?[a2?])","n(n)","a(c)","n(bH)","k<a?>()","au(@)","~(m?,m?)","@(@)","n(m?)","+(a,Y)(a,a,a)","a(a,a)","a(a,ba[a2?])","~(c)","d8()","~(d0,@)","a(m?)","a(U<a,U<a,m?>>,a)","~(a,a{email:a,phone:a})","n(+company,email,name,note,phone,role(a?,a?,a,a?,a?,a))","a(c,c,c)","c?(a)","+stop,waitSeconds(a?,c?)(a)","~(c,c)","n(V)","n(P)","0&()","au(c)","U<a,m?>()","a4(a)","a4(a,a,a)","@(@,a)","a4(c)","c(a4,a4)","n(z)","a?(z)","c(+(c,c),+(c,c))","c(c,c)","@(a)","bd(a6)","i<L>()","i<e9>()","i<ar>()","i<k<a6>>()","i<a6>()","au(m,d_)","i<aC>()","i<be>()","i<aV>()","i<aW>()","i<bf>()","i<aM>()","~(a,@)","n(k<c>)","a(k<a>,V)","bJ(a)","ar(a,a,k<a6>,a,a)","a6(a,a,+(a,Y))","+(a,Y)(a,a,a,+(a,Y))","a?(a)","+(a,Y)(a)","aC(a,a,a,a)","be(a,a,a)","aV(a,a,a)","aW(a,k<a6>,a,a)","au(~())","bf(a,a,a,a)","aM(a,a,a,ag?,a,a?,a,a)","ag(a,a,+(a,Y))","ag(a,a,+(a,Y),a,+(a,Y))","a(a,a,a)","i<L>(c0)","~(L)","n()","a(k<a>,P)","a(m?,G)","a(a,ba)","c(@,@)","f<aN>(a)","m?(m?)"],interceptorsByTag:null,leafTags:null,arrayRti:Symbol("$ti"),rttc:{"2;":(a,b)=>c=>c instanceof A.I&&a.b(c.a)&&b.b(c.b),"2;key,reference":(a,b)=>c=>c instanceof A.el&&a.b(c.a)&&b.b(c.b),"2;refused,table":(a,b)=>c=>c instanceof A.bN&&a.b(c.a)&&b.b(c.b),"2;stop,waitSeconds":(a,b)=>c=>c instanceof A.cz&&a.b(c.a)&&b.b(c.b),"3;":(a,b,c)=>d=>d instanceof A.cA&&a.b(d.a)&&b.b(d.b)&&c.b(d.c),"3;existing,match,opts":(a,b,c)=>d=>d instanceof A.em&&a.b(d.a)&&b.b(d.b)&&c.b(d.c),"4;":a=>b=>b instanceof A.en&&A.df(a,b.a),"5;":a=>b=>b instanceof A.eo&&A.df(a,b.a),"5;agencies,agents,clients,orders,users":a=>b=>b instanceof A.ep&&A.df(a,b.a),"6;buyerAgent,client,clientEmail,clientPhone,listingAgent,removed":a=>b=>b instanceof A.eq&&A.df(a,b.a),"6;company,email,name,note,phone,role":a=>b=>b instanceof A.bg&&A.df(a,b.a),"8;":a=>b=>b instanceof A.er&&A.df(a,b.a),"8;company,deletedAt,email,id,name,note,phone,role":a=>b=>b instanceof A.es&&A.df(a,b.a)}}
-A.qX(v.typeUniverse,JSON.parse('{"fr":"bW","cq":"bW","bv":"bW","uN":"ci","f1":{"n":[],"K":[]},"dv":{"K":[]},"dw":{"a2":[]},"bW":{"a2":[]},"p":{"k":["1"],"q":["1"],"a2":[],"f":["1"]},"f0":{"dR":[]},"ih":{"p":["1"],"k":["1"],"q":["1"],"a2":[],"f":["1"]},"b2":{"H":["1"]},"cR":{"G":[],"aF":[],"b4":["aF"]},"du":{"G":[],"c":[],"aF":[],"b4":["aF"],"K":[]},"f3":{"G":[],"aF":[],"b4":["aF"],"K":[]},"bV":{"a":[],"b4":["a"],"fp":[],"K":[]},"cV":{"Q":[]},"aw":{"C":["c"],"c_":["c"],"k":["c"],"q":["c"],"f":["c"],"C.E":"c","c_.E":"c"},"q":{"f":["1"]},"ac":{"q":["1"],"f":["1"]},"cp":{"ac":["1"],"q":["1"],"f":["1"],"f.E":"1","ac.E":"1"},"as":{"H":["1"]},"bx":{"f":["2"],"f.E":"2"},"dm":{"bx":["1","2"],"q":["2"],"f":["2"],"f.E":"2"},"dD":{"H":["2"]},"b8":{"ac":["2"],"q":["2"],"f":["2"],"f.E":"2","ac.E":"2"},"v":{"f":["1"],"f.E":"1"},"ah":{"H":["1"]},"dn":{"q":["1"],"f":["1"],"f.E":"1"},"dp":{"H":["1"]},"bo":{"f":["1"],"f.E":"1"},"cr":{"H":["1"]},"ds":{"f":["+(c,1)"],"f.E":"+(c,1)"},"dl":{"ds":["1"],"q":["+(c,1)"],"f":["+(c,1)"],"f.E":"+(c,1)"},"b6":{"H":["+(c,1)"]},"d1":{"C":["1"],"c_":["1"],"k":["1"],"q":["1"],"f":["1"]},"cm":{"ac":["1"],"q":["1"],"f":["1"],"f.E":"1","ac.E":"1"},"bA":{"d0":[]},"I":{"bM":[],"a8":[]},"el":{"bM":[],"a8":[]},"bN":{"bM":[],"a8":[]},"cz":{"bM":[],"a8":[]},"cA":{"cy":[],"a8":[]},"em":{"cy":[],"a8":[]},"en":{"aY":[],"a8":[]},"eo":{"aY":[],"a8":[]},"ep":{"aY":[],"a8":[]},"eq":{"aY":[],"a8":[]},"bg":{"aY":[],"a8":[]},"er":{"aY":[],"a8":[]},"es":{"aY":[],"a8":[]},"dj":{"e3":["1","2"],"d9":["1","2"],"cW":["1","2"],"eB":["1","2"],"U":["1","2"]},"cK":{"U":["1","2"]},"a5":{"cK":["1","2"],"U":["1","2"]},"cv":{"f":["1"],"f.E":"1"},"bK":{"H":["1"]},"al":{"cK":["1","2"],"U":["1","2"]},"cL":{"bz":["1"],"cY":["1"],"q":["1"],"f":["1"]},"ab":{"cL":["1"],"bz":["1"],"cY":["1"],"q":["1"],"f":["1"]},"bl":{"cL":["1"],"bz":["1"],"cY":["1"],"q":["1"],"f":["1"]},"f2":{"nd":[]},"dJ":{"bD":[],"Q":[]},"f4":{"Q":[]},"fH":{"Q":[]},"eu":{"d_":[]},"bS":{"cc":[]},"eQ":{"cc":[]},"eR":{"cc":[]},"fE":{"cc":[]},"fA":{"cc":[]},"cI":{"cc":[]},"fy":{"Q":[]},"aH":{"W":["1","2"],"mf":["1","2"],"U":["1","2"],"W.K":"1","W.V":"2"},"b7":{"q":["1"],"f":["1"],"f.E":"1"},"dA":{"H":["1"]},"aJ":{"q":["1"],"f":["1"],"f.E":"1"},"dB":{"H":["1"]},"aI":{"q":["at<1,2>"],"f":["at<1,2>"],"f.E":"at<1,2>"},"dz":{"H":["at<1,2>"]},"ce":{"aH":["1","2"],"W":["1","2"],"mf":["1","2"],"U":["1","2"],"W.K":"1","W.V":"2"},"bM":{"a8":[]},"cy":{"a8":[]},"aY":{"a8":[]},"cS":{"mj":[],"fp":[]},"eg":{"dQ":[],"b9":[]},"h5":{"f":["dQ"],"f.E":"dQ"},"cu":{"H":["dQ"]},"fB":{"b9":[]},"hf":{"f":["b9"],"f.E":"b9"},"hg":{"H":["b9"]},"ba":{"aK":[],"mn":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"ci":{"a2":[],"K":[]},"dH":{"a2":[]},"fc":{"n9":[],"a2":[],"K":[]},"am":{"aG":["1"],"a2":[]},"dG":{"C":["G"],"am":["G"],"k":["G"],"aG":["G"],"q":["G"],"a2":[],"f":["G"],"a1":["G"]},"aK":{"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"]},"fd":{"C":["G"],"am":["G"],"k":["G"],"aG":["G"],"q":["G"],"a2":[],"f":["G"],"a1":["G"],"K":[],"C.E":"G","a1.E":"G"},"fe":{"C":["G"],"am":["G"],"k":["G"],"aG":["G"],"q":["G"],"a2":[],"f":["G"],"a1":["G"],"K":[],"C.E":"G","a1.E":"G"},"ff":{"aK":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"fg":{"aK":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"fh":{"aK":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"fi":{"aK":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"fj":{"aK":[],"mm":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"dI":{"aK":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"h8":{"Q":[]},"ew":{"bD":[],"Q":[]},"ev":{"H":["1"]},"c2":{"f":["1"],"f.E":"1"},"bi":{"Q":[]},"ea":{"h7":["1"]},"aX":{"cO":["1"]},"eC":{"nI":[]},"hc":{"eC":[],"nI":[]},"ec":{"W":["1","2"],"U":["1","2"]},"ef":{"ec":["1","2"],"W":["1","2"],"U":["1","2"],"W.K":"1","W.V":"2"},"ed":{"q":["1"],"f":["1"],"f.E":"1"},"ee":{"H":["1"]},"bL":{"bz":["1"],"nk":["1"],"cY":["1"],"q":["1"],"f":["1"]},"cw":{"H":["1"]},"C":{"k":["1"],"q":["1"],"f":["1"]},"W":{"U":["1","2"]},"cW":{"U":["1","2"]},"e3":{"d9":["1","2"],"cW":["1","2"],"eB":["1","2"],"U":["1","2"]},"bz":{"cY":["1"],"q":["1"],"f":["1"]},"et":{"bz":["1"],"cY":["1"],"q":["1"],"f":["1"]},"hj":{"c9":["k<c>","a"]},"eX":{"c6":["a","k<c>"]},"dx":{"Q":[]},"f6":{"Q":[]},"f5":{"c6":["m?","a"]},"f7":{"c9":["m?","a"]},"f8":{"c6":["a","k<c>"]},"f9":{"c9":["k<c>","a"]},"fI":{"c6":["a","k<c>"]},"e5":{"c9":["k<c>","a"]},"aT":{"b4":["aT"]},"G":{"aF":[],"b4":["aF"]},"c":{"aF":[],"b4":["aF"]},"k":{"q":["1"],"f":["1"]},"aF":{"b4":["aF"]},"mj":{"fp":[]},"dQ":{"b9":[]},"a":{"b4":["a"],"fp":[]},"eN":{"Q":[]},"bD":{"Q":[]},"b1":{"Q":[]},"dO":{"Q":[]},"dr":{"Q":[]},"fl":{"Q":[]},"e4":{"Q":[]},"fG":{"Q":[]},"co":{"Q":[]},"eS":{"Q":[]},"fn":{"Q":[]},"e_":{"Q":[]},"hh":{"d_":[]},"aU":{"f":["c"],"f.E":"c"},"fx":{"H":["c"]},"av":{"qw":[]},"d6":{"f":["1"]},"dk":{"k":["1"],"d6":["1"],"q":["1"],"f":["1"]},"fo":{"bk":[]},"r":{"cX":["0&"],"bj":[]},"cX":{"bj":[]},"B":{"cX":["1"],"bj":[]},"l":{"iH":["1"],"i":["1"]},"dE":{"f":["1"],"f.E":"1"},"dF":{"H":["1"]},"bu":{"a7":["~","a"],"i":["a"],"a7.T":"~"},"dC":{"a7":["1","2"],"i":["2"],"a7.T":"1"},"e1":{"a7":["1","bC<1>"],"i":["bC<1>"],"a7.T":"1"},"dX":{"b3":[]},"bt":{"b3":[]},"fb":{"b3":[]},"fm":{"b3":[]},"a4":{"b3":[]},"fv":{"b3":[]},"fJ":{"b3":[]},"di":{"cf":["1","1"],"i":["1"],"cf.R":"1"},"a7":{"i":["2"]},"dS":{"i":["+(1,2)"]},"dT":{"i":["+(1,2,3)"]},"dU":{"i":["+(1,2,3,4)"]},"dV":{"i":["+(1,2,3,4,5)"]},"dW":{"i":["+(1,2,3,4,5,6,7,8)"]},"cf":{"i":["2"]},"bb":{"a7":["1","1"],"i":["1"],"a7.T":"1"},"dZ":{"a7":["1","1"],"i":["1"],"a7.T":"1"},"eY":{"i":["~"]},"bT":{"i":["1"]},"fk":{"i":["a"]},"eP":{"i":["a"]},"cZ":{"i":["a"]},"eK":{"i":["a"]},"fC":{"i":["a"]},"e2":{"i":["a"]},"eL":{"i":["a"]},"fw":{"i":["a"]},"az":{"dy":["1"],"cl":["1","k<1>"],"a7":["1","k<1>"],"i":["k<1>"],"a7.T":"1"},"dy":{"cl":["1","k<1>"],"a7":["1","k<1>"],"i":["k<1>"]},"dL":{"cl":["1","k<1>"],"a7":["1","k<1>"],"i":["k<1>"],"a7.T":"1"},"cl":{"a7":["1","2"],"i":["2"]},"fP":{"c0":[]},"h_":{"bk":[]},"h1":{"bk":[]},"bG":{"f":["z"],"f.E":"z"},"fQ":{"H":["z"]},"bd":{"z":[],"Z":["z"],"aj":[],"aD":[],"bH":[],"Z.T":"z"},"e6":{"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"fM":{"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"fN":{"z":[],"Z":["z"],"aj":[],"aD":[]},"fO":{"d3":[],"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"fR":{"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"fS":{"z":[],"c1":["z"],"aj":[],"aD":[],"c1.T":"z"},"aN":{"d3":[],"z":[],"Z":["z"],"c1":["z"],"aj":[],"aD":[],"bH":[],"c1.T":"z","Z.T":"z"},"z":{"aj":[],"aD":[]},"h0":{"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"e8":{"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"d2":{"i":["a"]},"d4":{"aj":[]},"e7":{"dk":["1"],"k":["1"],"d6":["1"],"q":["1"],"f":["1"]},"h3":{"h2":[]},"hz":{"cs":[],"dY":["k<L>"]},"hF":{"cs":[],"dY":["k<L>"]},"aV":{"L":[]},"be":{"L":[]},"aW":{"L":[]},"aM":{"L":[]},"aC":{"L":[],"bI":[]},"bf":{"L":[]},"ar":{"L":[],"bI":[]},"e9":{"L":[]},"bJ":{"e9":[],"L":[]},"fU":{"f":["L"],"f.E":"L"},"fV":{"H":["L"]},"c8":{"dY":["1"]},"a6":{"bI":[]},"q1":{"k":["c"],"q":["c"],"f":["c"]},"mn":{"k":["c"],"q":["c"],"f":["c"]},"qz":{"k":["c"],"q":["c"],"f":["c"]},"q_":{"k":["c"],"q":["c"],"f":["c"]},"qy":{"k":["c"],"q":["c"],"f":["c"]},"q0":{"k":["c"],"q":["c"],"f":["c"]},"mm":{"k":["c"],"q":["c"],"f":["c"]},"pX":{"k":["G"],"q":["G"],"f":["G"]},"pY":{"k":["G"],"q":["G"],"f":["G"]},"iH":{"i":["1"]}}'))
+var v={G:typeof self!="undefined"?self:globalThis,typeUniverse:{eC:new Map(),tR:{},eT:{},tPV:{},sEA:[]},mangledGlobalNames:{c:"int",G:"double",aF:"num",a:"String",n:"bool",au:"Null",k:"List",m:"Object",U:"Map",a2:"JSObject"},mangledNames:{},types:["n(a)","~()","a(b9)","i<a>()","i<@>()","a(a)","i<+(a,Y)>()","c(c)","r(r,r)","c()","a()","~(~())","i<ag>()","n(aN)","n(bd)","~(@)","c(a?)","@()","au()","~(c,bn)","n(k<a>)","~(m?)","~(U<a,m?>,a,a)","a(a,m?[a2?])","n(n)","a(c)","n(bH)","k<a?>()","au(@)","~(m?,m?)","@(@)","n(m?)","+(a,Y)(a,a,a)","a(a,a)","a(a,ba[a2?])","~(c)","d8()","~(d0,@)","a(m?)","a(U<a,U<a,m?>>,a)","~(a,a{email:a,phone:a})","n(+company,email,name,note,phone,role(a?,a?,a,a?,a?,a))","a(c,c,c)","c?(a)","+stop,waitSeconds(a?,c?)(a)","~(c,c)","n(V)","n(P)","0&()","au(c)","U<a,m?>()","a4(a)","a4(a,a,a)","@(@,a)","a4(c)","c(a4,a4)","n(z)","a?(z)","c(+(c,c),+(c,c))","c(c,c)","@(a)","bd(a6)","i<L>()","i<e9>()","i<ar>()","i<k<a6>>()","i<a6>()","au(m,d_)","i<aC>()","i<be>()","i<aV>()","i<aW>()","i<bf>()","i<aM>()","~(a,@)","n(k<c>)","a(k<a>,V)","bJ(a)","ar(a,a,k<a6>,a,a)","a6(a,a,+(a,Y))","+(a,Y)(a,a,a,+(a,Y))","a?(a)","+(a,Y)(a)","aC(a,a,a,a)","be(a,a,a)","aV(a,a,a)","aW(a,k<a6>,a,a)","au(~())","bf(a,a,a,a)","aM(a,a,a,ag?,a,a?,a,a)","ag(a,a,+(a,Y))","ag(a,a,+(a,Y),a,+(a,Y))","a(a,a,a)","i<L>(c0)","~(L)","n()","a(k<a>,P)","a(m?,G)","a(a,ba)","c(@,@)","f<aN>(a)","m?(m?)"],interceptorsByTag:null,leafTags:null,arrayRti:Symbol("$ti"),rttc:{"2;":(a,b)=>c=>c instanceof A.J&&a.b(c.a)&&b.b(c.b),"2;key,reference":(a,b)=>c=>c instanceof A.el&&a.b(c.a)&&b.b(c.b),"2;refused,table":(a,b)=>c=>c instanceof A.bN&&a.b(c.a)&&b.b(c.b),"2;stop,waitSeconds":(a,b)=>c=>c instanceof A.cz&&a.b(c.a)&&b.b(c.b),"3;":(a,b,c)=>d=>d instanceof A.cA&&a.b(d.a)&&b.b(d.b)&&c.b(d.c),"3;existing,match,opts":(a,b,c)=>d=>d instanceof A.em&&a.b(d.a)&&b.b(d.b)&&c.b(d.c),"4;":a=>b=>b instanceof A.en&&A.df(a,b.a),"5;":a=>b=>b instanceof A.eo&&A.df(a,b.a),"5;agencies,agents,clients,orders,users":a=>b=>b instanceof A.ep&&A.df(a,b.a),"6;buyerAgent,client,clientEmail,clientPhone,listingAgent,removed":a=>b=>b instanceof A.eq&&A.df(a,b.a),"6;company,email,name,note,phone,role":a=>b=>b instanceof A.bg&&A.df(a,b.a),"8;":a=>b=>b instanceof A.er&&A.df(a,b.a),"8;company,deletedAt,email,id,name,note,phone,role":a=>b=>b instanceof A.es&&A.df(a,b.a)}}
+A.qX(v.typeUniverse,JSON.parse('{"fr":"bW","cq":"bW","bv":"bW","uN":"ci","f1":{"n":[],"K":[]},"dv":{"K":[]},"dw":{"a2":[]},"bW":{"a2":[]},"p":{"k":["1"],"q":["1"],"a2":[],"f":["1"]},"f0":{"dR":[]},"ih":{"p":["1"],"k":["1"],"q":["1"],"a2":[],"f":["1"]},"b2":{"H":["1"]},"cR":{"G":[],"aF":[],"b4":["aF"]},"du":{"G":[],"c":[],"aF":[],"b4":["aF"],"K":[]},"f3":{"G":[],"aF":[],"b4":["aF"],"K":[]},"bV":{"a":[],"b4":["a"],"fp":[],"K":[]},"cV":{"Q":[]},"aw":{"C":["c"],"c_":["c"],"k":["c"],"q":["c"],"f":["c"],"C.E":"c","c_.E":"c"},"q":{"f":["1"]},"ac":{"q":["1"],"f":["1"]},"cp":{"ac":["1"],"q":["1"],"f":["1"],"f.E":"1","ac.E":"1"},"as":{"H":["1"]},"bx":{"f":["2"],"f.E":"2"},"dm":{"bx":["1","2"],"q":["2"],"f":["2"],"f.E":"2"},"dD":{"H":["2"]},"b8":{"ac":["2"],"q":["2"],"f":["2"],"f.E":"2","ac.E":"2"},"v":{"f":["1"],"f.E":"1"},"ah":{"H":["1"]},"dn":{"q":["1"],"f":["1"],"f.E":"1"},"dp":{"H":["1"]},"bo":{"f":["1"],"f.E":"1"},"cr":{"H":["1"]},"ds":{"f":["+(c,1)"],"f.E":"+(c,1)"},"dl":{"ds":["1"],"q":["+(c,1)"],"f":["+(c,1)"],"f.E":"+(c,1)"},"b6":{"H":["+(c,1)"]},"d1":{"C":["1"],"c_":["1"],"k":["1"],"q":["1"],"f":["1"]},"cm":{"ac":["1"],"q":["1"],"f":["1"],"f.E":"1","ac.E":"1"},"bA":{"d0":[]},"J":{"bM":[],"a8":[]},"el":{"bM":[],"a8":[]},"bN":{"bM":[],"a8":[]},"cz":{"bM":[],"a8":[]},"cA":{"cy":[],"a8":[]},"em":{"cy":[],"a8":[]},"en":{"aY":[],"a8":[]},"eo":{"aY":[],"a8":[]},"ep":{"aY":[],"a8":[]},"eq":{"aY":[],"a8":[]},"bg":{"aY":[],"a8":[]},"er":{"aY":[],"a8":[]},"es":{"aY":[],"a8":[]},"dj":{"e3":["1","2"],"d9":["1","2"],"cW":["1","2"],"eB":["1","2"],"U":["1","2"]},"cK":{"U":["1","2"]},"a5":{"cK":["1","2"],"U":["1","2"]},"cv":{"f":["1"],"f.E":"1"},"bK":{"H":["1"]},"al":{"cK":["1","2"],"U":["1","2"]},"cL":{"bz":["1"],"cY":["1"],"q":["1"],"f":["1"]},"ab":{"cL":["1"],"bz":["1"],"cY":["1"],"q":["1"],"f":["1"]},"bl":{"cL":["1"],"bz":["1"],"cY":["1"],"q":["1"],"f":["1"]},"f2":{"nd":[]},"dJ":{"bD":[],"Q":[]},"f4":{"Q":[]},"fH":{"Q":[]},"eu":{"d_":[]},"bS":{"cc":[]},"eQ":{"cc":[]},"eR":{"cc":[]},"fE":{"cc":[]},"fA":{"cc":[]},"cI":{"cc":[]},"fy":{"Q":[]},"aH":{"W":["1","2"],"mf":["1","2"],"U":["1","2"],"W.K":"1","W.V":"2"},"b7":{"q":["1"],"f":["1"],"f.E":"1"},"dA":{"H":["1"]},"aJ":{"q":["1"],"f":["1"],"f.E":"1"},"dB":{"H":["1"]},"aI":{"q":["at<1,2>"],"f":["at<1,2>"],"f.E":"at<1,2>"},"dz":{"H":["at<1,2>"]},"ce":{"aH":["1","2"],"W":["1","2"],"mf":["1","2"],"U":["1","2"],"W.K":"1","W.V":"2"},"bM":{"a8":[]},"cy":{"a8":[]},"aY":{"a8":[]},"cS":{"mj":[],"fp":[]},"eg":{"dQ":[],"b9":[]},"h5":{"f":["dQ"],"f.E":"dQ"},"cu":{"H":["dQ"]},"fB":{"b9":[]},"hf":{"f":["b9"],"f.E":"b9"},"hg":{"H":["b9"]},"ba":{"aK":[],"mn":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"ci":{"a2":[],"K":[]},"dH":{"a2":[]},"fc":{"n9":[],"a2":[],"K":[]},"am":{"aG":["1"],"a2":[]},"dG":{"C":["G"],"am":["G"],"k":["G"],"aG":["G"],"q":["G"],"a2":[],"f":["G"],"a1":["G"]},"aK":{"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"]},"fd":{"C":["G"],"am":["G"],"k":["G"],"aG":["G"],"q":["G"],"a2":[],"f":["G"],"a1":["G"],"K":[],"C.E":"G","a1.E":"G"},"fe":{"C":["G"],"am":["G"],"k":["G"],"aG":["G"],"q":["G"],"a2":[],"f":["G"],"a1":["G"],"K":[],"C.E":"G","a1.E":"G"},"ff":{"aK":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"fg":{"aK":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"fh":{"aK":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"fi":{"aK":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"fj":{"aK":[],"mm":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"dI":{"aK":[],"C":["c"],"am":["c"],"k":["c"],"aG":["c"],"q":["c"],"a2":[],"f":["c"],"a1":["c"],"K":[],"C.E":"c","a1.E":"c"},"h8":{"Q":[]},"ew":{"bD":[],"Q":[]},"ev":{"H":["1"]},"c2":{"f":["1"],"f.E":"1"},"bi":{"Q":[]},"ea":{"h7":["1"]},"aX":{"cO":["1"]},"eC":{"nI":[]},"hc":{"eC":[],"nI":[]},"ec":{"W":["1","2"],"U":["1","2"]},"ef":{"ec":["1","2"],"W":["1","2"],"U":["1","2"],"W.K":"1","W.V":"2"},"ed":{"q":["1"],"f":["1"],"f.E":"1"},"ee":{"H":["1"]},"bL":{"bz":["1"],"nk":["1"],"cY":["1"],"q":["1"],"f":["1"]},"cw":{"H":["1"]},"C":{"k":["1"],"q":["1"],"f":["1"]},"W":{"U":["1","2"]},"cW":{"U":["1","2"]},"e3":{"d9":["1","2"],"cW":["1","2"],"eB":["1","2"],"U":["1","2"]},"bz":{"cY":["1"],"q":["1"],"f":["1"]},"et":{"bz":["1"],"cY":["1"],"q":["1"],"f":["1"]},"hj":{"c9":["k<c>","a"]},"eX":{"c6":["a","k<c>"]},"dx":{"Q":[]},"f6":{"Q":[]},"f5":{"c6":["m?","a"]},"f7":{"c9":["m?","a"]},"f8":{"c6":["a","k<c>"]},"f9":{"c9":["k<c>","a"]},"fI":{"c6":["a","k<c>"]},"e5":{"c9":["k<c>","a"]},"aT":{"b4":["aT"]},"G":{"aF":[],"b4":["aF"]},"c":{"aF":[],"b4":["aF"]},"k":{"q":["1"],"f":["1"]},"aF":{"b4":["aF"]},"mj":{"fp":[]},"dQ":{"b9":[]},"a":{"b4":["a"],"fp":[]},"eN":{"Q":[]},"bD":{"Q":[]},"b1":{"Q":[]},"dO":{"Q":[]},"dr":{"Q":[]},"fl":{"Q":[]},"e4":{"Q":[]},"fG":{"Q":[]},"co":{"Q":[]},"eS":{"Q":[]},"fn":{"Q":[]},"e_":{"Q":[]},"hh":{"d_":[]},"aU":{"f":["c"],"f.E":"c"},"fx":{"H":["c"]},"av":{"qw":[]},"d6":{"f":["1"]},"dk":{"k":["1"],"d6":["1"],"q":["1"],"f":["1"]},"fo":{"bk":[]},"r":{"cX":["0&"],"bj":[]},"cX":{"bj":[]},"B":{"cX":["1"],"bj":[]},"l":{"iH":["1"],"i":["1"]},"dE":{"f":["1"],"f.E":"1"},"dF":{"H":["1"]},"bu":{"a7":["~","a"],"i":["a"],"a7.T":"~"},"dC":{"a7":["1","2"],"i":["2"],"a7.T":"1"},"e1":{"a7":["1","bC<1>"],"i":["bC<1>"],"a7.T":"1"},"dX":{"b3":[]},"bt":{"b3":[]},"fb":{"b3":[]},"fm":{"b3":[]},"a4":{"b3":[]},"fv":{"b3":[]},"fJ":{"b3":[]},"di":{"cf":["1","1"],"i":["1"],"cf.R":"1"},"a7":{"i":["2"]},"dS":{"i":["+(1,2)"]},"dT":{"i":["+(1,2,3)"]},"dU":{"i":["+(1,2,3,4)"]},"dV":{"i":["+(1,2,3,4,5)"]},"dW":{"i":["+(1,2,3,4,5,6,7,8)"]},"cf":{"i":["2"]},"bb":{"a7":["1","1"],"i":["1"],"a7.T":"1"},"dZ":{"a7":["1","1"],"i":["1"],"a7.T":"1"},"eY":{"i":["~"]},"bT":{"i":["1"]},"fk":{"i":["a"]},"eP":{"i":["a"]},"cZ":{"i":["a"]},"eK":{"i":["a"]},"fC":{"i":["a"]},"e2":{"i":["a"]},"eL":{"i":["a"]},"fw":{"i":["a"]},"az":{"dy":["1"],"cl":["1","k<1>"],"a7":["1","k<1>"],"i":["k<1>"],"a7.T":"1"},"dy":{"cl":["1","k<1>"],"a7":["1","k<1>"],"i":["k<1>"]},"dL":{"cl":["1","k<1>"],"a7":["1","k<1>"],"i":["k<1>"],"a7.T":"1"},"cl":{"a7":["1","2"],"i":["2"]},"fP":{"c0":[]},"h_":{"bk":[]},"h1":{"bk":[]},"bG":{"f":["z"],"f.E":"z"},"fQ":{"H":["z"]},"bd":{"z":[],"Z":["z"],"aj":[],"aD":[],"bH":[],"Z.T":"z"},"e6":{"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"fM":{"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"fN":{"z":[],"Z":["z"],"aj":[],"aD":[]},"fO":{"d3":[],"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"fR":{"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"fS":{"z":[],"c1":["z"],"aj":[],"aD":[],"c1.T":"z"},"aN":{"d3":[],"z":[],"Z":["z"],"c1":["z"],"aj":[],"aD":[],"bH":[],"c1.T":"z","Z.T":"z"},"z":{"aj":[],"aD":[]},"h0":{"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"e8":{"z":[],"Z":["z"],"aj":[],"aD":[],"Z.T":"z"},"d2":{"i":["a"]},"d4":{"aj":[]},"e7":{"dk":["1"],"k":["1"],"d6":["1"],"q":["1"],"f":["1"]},"h3":{"h2":[]},"hz":{"cs":[],"dY":["k<L>"]},"hF":{"cs":[],"dY":["k<L>"]},"aV":{"L":[]},"be":{"L":[]},"aW":{"L":[]},"aM":{"L":[]},"aC":{"L":[],"bI":[]},"bf":{"L":[]},"ar":{"L":[],"bI":[]},"e9":{"L":[]},"bJ":{"e9":[],"L":[]},"fU":{"f":["L"],"f.E":"L"},"fV":{"H":["L"]},"c8":{"dY":["1"]},"a6":{"bI":[]},"q1":{"k":["c"],"q":["c"],"f":["c"]},"mn":{"k":["c"],"q":["c"],"f":["c"]},"qz":{"k":["c"],"q":["c"],"f":["c"]},"q_":{"k":["c"],"q":["c"],"f":["c"]},"qy":{"k":["c"],"q":["c"],"f":["c"]},"q0":{"k":["c"],"q":["c"],"f":["c"]},"mm":{"k":["c"],"q":["c"],"f":["c"]},"pX":{"k":["G"],"q":["G"],"f":["G"]},"pY":{"k":["G"],"q":["G"],"f":["G"]},"iH":{"i":["1"]}}'))
 A.qW(v.typeUniverse,JSON.parse('{"q":1,"d1":1,"am":1,"et":1}'))
 var u={b:" is also listed earlier; the two were joined.",f:" were read (the most Inspyx reads at once). Bring the rest in from a spreadsheet.",c:"Error handler must accept one Object or one Object and a StackTrace as arguments, and return a value of the returned future's type",a:"Inspyx couldn't ask Spectora just now. Try again in a minute.",k:"Inspyx couldn't read this file: it is damaged, or not a spreadsheet Inspyx can read.",r:"Spectora didn't accept this key. Check you copied all of it, and that it is still active in Spectora.",s:"Spectora's answer couldn't be read. Nothing was brought in.",t:"the spreadsheet is too large to import (more than 100,000 rows, 1,000 columns or 2,000,000 cells)"}
 var t=(function rtii(){var s=A.N
 return{n:s("bi"),gS:s("aw"),bP:s("b4<@>"),i9:s("dj<d0,@>"),nS:s("a5<a,E>"),M:s("ab<a>"),_:s("V"),k0:s("c8<k<z>>"),nP:s("c8<a>"),cs:s("aT"),V:s("ag"),gt:s("q<@>"),pf:s("bT<a>"),cC:s("bT<~>"),fz:s("Q"),nq:s("r"),lW:s("bk"),Z:s("cc"),fr:s("bl<aO>"),aV:s("b5"),p:s("P"),dp:s("bU"),bg:s("nd"),bO:s("f<L>"),eh:s("f<a6>"),b7:s("f<aj>"),e7:s("f<@>"),fm:s("f<c>"),kl:s("p<dh>"),h0:s("p<eU>"),o:s("p<b5>"),W:s("p<bU>"),c:s("p<k<a>>"),li:s("p<U<a,c>>"),d:s("p<U<a,m?>>"),hf:s("p<m>"),jj:s("p<i<ag>>"),Y:s("p<i<m>>"),fa:s("p<i<a4>>"),ge:s("p<i<+(a,Y)>>"),ig:s("p<i<a>>"),dy:s("p<i<L>>"),C:s("p<i<@>>"),bz:s("p<dK>"),fo:s("p<fs>"),lU:s("p<a4>"),hw:s("p<+key,reference(a,a)>"),hD:s("p<+(c,c)>"),kt:s("p<+buyerAgent,client,clientEmail,clientPhone,listingAgent,removed(a,a,a,a,a,n)>"),w:s("p<+company,email,name,note,phone,role(a?,a?,a,a?,a?,a)>"),oE:s("p<+company,deletedAt,email,id,name,note,phone,role(a?,c?,a?,a,a,a?,a?,a)>"),Q:s("p<X>"),s:s("p<a>"),di:s("p<fD>"),hR:s("p<fK>"),oF:s("p<bd>"),pp:s("p<L>"),m:s("p<z>"),oi:s("p<ar>"),nm:s("p<h4>"),bA:s("p<he>"),df:s("p<n>"),dG:s("p<@>"),t:s("p<c>"),nl:s("p<+(a,c)?>"),mf:s("p<a?>"),u:s("dv"),bp:s("a2"),dY:s("bv"),dX:s("aG<@>"),bX:s("aH<d0,@>"),J:s("az<m>"),ln:s("az<a>"),mP:s("az<@>"),i:s("k<m>"),aI:s("k<a4>"),a:s("k<a>"),iF:s("k<L>"),E:s("k<a6>"),j:s("k<@>"),L:s("k<c>"),fi:s("k<a?>"),f:s("U<@,@>"),i3:s("U<a,U<a,m?>>"),lb:s("U<a,m?>"),x:s("b9"),f1:s("dE<bC<a>>"),aj:s("aK"),e:s("ba"),b:s("au"),K:s("m"),bQ:s("bb<+(a,Y)>"),nw:s("bb<a>"),eK:s("bb<ag?>"),ik:s("bb<a?>"),n4:s("i<@>"),B:s("a4"),lZ:s("uO"),aK:s("+()"),R:s("+(a,Y)"),gn:s("+(c,c)"),oJ:s("+company,email,name,note,phone,role(a?,a?,a,a?,a?,a)"),mr:s("+company,deletedAt,email,id,name,note,phone,role(a?,c?,a?,a,a,a?,a?,a)"),by:s("l<ag>"),mD:s("l<k<a6>>"),P:s("l<+(a,Y)>"),h:s("l<a>"),eM:s("l<aV>"),dE:s("l<be>"),cB:s("l<aW>"),i8:s("l<aM>"),gV:s("l<aC>"),bj:s("l<L>"),jk:s("l<a6>"),hN:s("l<bf>"),d8:s("l<ar>"),br:s("l<e9>"),gy:s("l<@>"),mi:s("l<~>"),k:s("dQ"),ob:s("iH<@>"),mO:s("aU"),i6:s("dW<a,a,a,ag?,a,a?,a,a>"),i2:s("cY<aO>"),jx:s("dY<a>"),n0:s("X"),l:s("d_"),N:s("a"),H:s("a(b9)"),y:s("B<a>"),k2:s("B<~>"),bR:s("d0"),n9:s("e1<a>"),aJ:s("K"),do:s("bD"),cx:s("cq"),q:s("bn"),iX:s("v<V>"),pd:s("v<P>"),gc:s("v<+company,email,name,note,phone,role(a?,a?,a,a?,a?,a)>"),U:s("v<a>"),ks:s("bo<aN>"),k7:s("cr<aN>"),D:s("bd"),mz:s("aV"),oI:s("be"),ee:s("aW"),n8:s("bG"),dH:s("aM"),T:s("aN"),cW:s("aC"),j7:s("c0"),mX:s("L"),fw:s("a6"),jN:s("bH"),d0:s("bI"),ax:s("aj"),I:s("z"),co:s("bf"),fh:s("ar"),hO:s("e9"),j_:s("aX<@>"),mp:s("ef<m?,m?>"),r:s("d8"),d9:s("c2<a4>"),v:s("n"),bD:s("n(V)"),bb:s("n(P)"),iW:s("n(m)"),dh:s("n(+company,email,name,note,phone,role(a?,a?,a,a?,a?,a))"),g:s("n(a)"),dx:s("G"),z:s("@"),mY:s("@()"),mq:s("@(m)"),ng:s("@(m,d_)"),S:s("c"),g0:s("ag?"),gK:s("cO<au>?"),mU:s("a2?"),X:s("m?"),G:s("a?"),A:s("a(b9)?"),F:s("eb<@,@>?"),nF:s("hb?"),fU:s("n?"),jX:s("G?"),eE:s("c?"),jh:s("aF?"),cZ:s("aF"),ef:s("~"),O:s("~()"),f0:s("~(f<z>)")}})();(function constants(){var s=hunkHelpers.makeConstList
-B.cq=J.eZ.prototype
+B.cs=J.eZ.prototype
 B.a=J.p.prototype
 B.d=J.du.prototype
 B.i=J.cR.prototype
 B.b=J.bV.prototype
-B.cr=J.bv.prototype
-B.cs=J.dw.prototype
+B.ct=J.bv.prototype
+B.cu=J.dw.prototype
 B.z=A.ba.prototype
 B.bM=J.fr.prototype
 B.be=J.cq.prototype
-B.aJ=new A.J("Property address",!0,1,"propertyAddress")
-B.aK=new A.J("This year",!1,18,"year")
-B.aL=new A.J("Services and fees",!1,9,"feeLines")
-B.ah=new A.J("Buyer's agent first name",!1,21,"buyerAgentFirstName")
-B.aM=new A.J("City",!1,14,"city")
-B.aN=new A.J("Fee",!0,3,"fee")
-B.aO=new A.J("ZIP code",!1,16,"zip")
-B.aP=new A.J("Your company",!0,5,"company")
-B.aQ=new A.J("License number",!0,6,"licenseNumber")
-B.aR=new A.J("Buyer's agent phone",!1,23,"buyerAgentPhone")
-B.aS=new A.J("Services",!1,8,"services")
-B.aT=new A.J("State",!1,15,"state")
-B.aU=new A.J("Street",!1,13,"street")
-B.aV=new A.J("Client name",!0,0,"clientName")
-B.aW=new A.J("Today's date",!0,7,"today")
-B.aY=new A.J("Buyer's agent email",!1,24,"buyerAgentEmail")
-B.b_=new A.J("Inspection date",!0,2,"inspectionDate")
-B.b0=new A.J("Client's email",!1,12,"clientEmail")
-B.ai=new A.J("Buyer's agent",!0,19,"buyerAgent")
-B.b3=new A.J("Client's phone",!1,11,"clientPhone")
-B.b4=new A.J("Client's first name",!1,10,"clientFirstName")
-B.b5=new A.J("Company phone",!1,17,"companyPhone")
-B.b6=new A.J("Your name",!0,4,"inspectorName")
+B.aJ=new A.I("Client name",!0,!1,0,"clientName")
+B.aK=new A.I("This year",!1,!1,18,"year")
+B.ah=new A.I("Buyer's agent",!0,!1,19,"buyerAgent")
+B.aM=new A.I("City",!1,!1,14,"city")
+B.aN=new A.I("Client's phone",!1,!1,11,"clientPhone")
+B.aO=new A.I("Inspection date",!0,!1,2,"inspectionDate")
+B.aQ=new A.I("Client's first name",!1,!1,10,"clientFirstName")
+B.aR=new A.I("State",!1,!1,15,"state")
+B.aS=new A.I("Property address",!0,!1,1,"propertyAddress")
+B.aT=new A.I("Buyer's agent email",!1,!1,24,"buyerAgentEmail")
+B.aU=new A.I("Company phone",!1,!1,17,"companyPhone")
+B.ai=new A.I("Buyer's agent first name",!1,!1,21,"buyerAgentFirstName")
+B.aV=new A.I("Today's date",!0,!1,7,"today")
+B.aW=new A.I("Your name",!0,!1,4,"inspectorName")
+B.aX=new A.I("Your company",!0,!1,5,"company")
+B.aY=new A.I("Fee",!0,!1,3,"fee")
+B.b_=new A.I("Services",!1,!1,8,"services")
+B.b1=new A.I("Client's email",!1,!1,12,"clientEmail")
+B.b2=new A.I("License number",!0,!1,6,"licenseNumber")
+B.b3=new A.I("ZIP code",!1,!1,16,"zip")
+B.b4=new A.I("Buyer's agent phone",!1,!1,23,"buyerAgentPhone")
+B.b5=new A.I("Street",!1,!1,13,"street")
+B.b6=new A.I("Services and fees",!1,!1,9,"feeLines")
 B.aj=new A.cJ(0,"clients")
 B.b7=new A.cJ(1,"agents")
 B.bu=new A.cJ(2,"past")
-B.ca=new A.cJ(3,"template")
-B.eP=new A.eW(A.N("eW<0&>"))
-B.cb=new A.dp(A.N("dp<0&>"))
+B.cc=new A.cJ(3,"template")
+B.eR=new A.eW(A.N("eW<0&>"))
+B.cd=new A.dp(A.N("dp<0&>"))
 B.bw=function getTagFallback(o) {
   var s = Object.prototype.toString.call(o);
   return s.substring(8, s.length - 1);
 }
-B.cc=function() {
+B.ce=function() {
   var toStringFunction = Object.prototype.toString;
   function getTag(o) {
     var s = toStringFunction.call(o);
@@ -9936,7 +9937,7 @@ B.cc=function() {
     prototypeForTag: prototypeForTag,
     discriminator: discriminator };
 }
-B.ch=function(getTagFallback) {
+B.cj=function(getTagFallback) {
   return function(hooks) {
     if (typeof navigator != "object") return hooks;
     var userAgent = navigator.userAgent;
@@ -9951,11 +9952,11 @@ B.ch=function(getTagFallback) {
     hooks.getTag = getTagFallback;
   };
 }
-B.cd=function(hooks) {
+B.cf=function(hooks) {
   if (typeof dartExperimentalFixupGetTag != "function") return hooks;
   hooks.getTag = dartExperimentalFixupGetTag(hooks.getTag);
 }
-B.cg=function(hooks) {
+B.ci=function(hooks) {
   if (typeof navigator != "object") return hooks;
   var userAgent = navigator.userAgent;
   if (typeof userAgent != "string") return hooks;
@@ -9974,7 +9975,7 @@ B.cg=function(hooks) {
   }
   hooks.getTag = getTagFirefox;
 }
-B.cf=function(hooks) {
+B.ch=function(hooks) {
   if (typeof navigator != "object") return hooks;
   var userAgent = navigator.userAgent;
   if (typeof userAgent != "string") return hooks;
@@ -10005,7 +10006,7 @@ B.cf=function(hooks) {
   hooks.getTag = getTagIE;
   hooks.prototypeForTag = prototypeForTagIE;
 }
-B.ce=function(hooks) {
+B.cg=function(hooks) {
   var getTag = hooks.getTag;
   var prototypeForTag = hooks.prototypeForTag;
   function getTagFixed(o) {
@@ -10026,23 +10027,23 @@ B.ce=function(hooks) {
 B.bv=function(hooks) { return hooks; }
 
 B.f=new A.f5()
-B.ci=new A.f8()
+B.ck=new A.f8()
 B.ak=new A.fa(A.N("fa<a6>"))
-B.cj=new A.fn()
+B.cl=new A.fn()
 B.e=new A.iI()
 B.al=new A.fI()
 B.bx=new A.fJ()
-B.dM={amp:0,apos:1,gt:2,lt:3,quot:4}
-B.dm=new A.a5(B.dM,["&","'",">","<",'"'],A.N("a5<a,a>"))
+B.dO={amp:0,apos:1,gt:2,lt:3,quot:4}
+B.dp=new A.a5(B.dO,["&","'",">","<",'"'],A.N("a5<a,a>"))
 B.am=new A.fP()
-B.ck=new A.jj()
+B.cm=new A.jj()
 B.by=new A.jJ()
 B.n=new A.hc()
 B.an=new A.hh()
 B.u={}
-B.dx=new A.a5(B.u,[],A.N("a5<V,c>"))
-B.cl=new A.c7(!1,0,B.dx)
-B.cm=new A.bt(!1)
+B.dz=new A.a5(B.u,[],A.N("a5<V,c>"))
+B.cn=new A.c7(!1,0,B.dz)
+B.co=new A.bt(!1)
 B.j=new A.bt(!0)
 B.q=new A.V(0,"fullName")
 B.r=new A.V(1,"firstName")
@@ -10061,15 +10062,15 @@ B.bz=new A.eT(0,"clients")
 B.ao=new A.eT(1,"agents")
 B.bA=new A.cM(0,"add")
 B.bB=new A.cM(1,"bringBack")
-B.cn=new A.cM(2,"fill")
-B.co=new A.cM(3,"unchanged")
+B.cp=new A.cM(2,"fill")
+B.cq=new A.cM(3,"unchanged")
 B.b8=new A.cb(0,"clients")
 B.b9=new A.cb(1,"agents")
 B.ap=new A.cb(2,"past")
 B.aq=new A.cb(3,"templates")
 B.ar=new A.cb(4,"nothingToBring")
-B.dy=new A.a5(B.u,[],A.N("a5<P,c>"))
-B.cp=new A.cd(!1,0,B.dy)
+B.dA=new A.a5(B.u,[],A.N("a5<P,c>"))
+B.cr=new A.cd(!1,0,B.dA)
 B.k=new A.P(0,"date")
 B.l=new A.P(1,"address")
 B.V=new A.P(10,"buyerAgent")
@@ -10087,52 +10088,54 @@ B.o=new A.P(6,"clientFirstName")
 B.p=new A.P(7,"clientLastName")
 B.G=new A.P(8,"clientEmail")
 B.H=new A.P(9,"clientPhone")
-B.ct=new A.f7(null)
-B.cu=new A.ay(B.b9,"HomeGauge's Real Estate Pros")
-B.cv=new A.ay(B.b8,"Horizon's CRM Clients")
-B.cw=new A.ay(B.ap,"Horizon's Inspection Bookings")
-B.cx=new A.ay(B.ap,"ISN's Download Inspections")
-B.cy=new A.ay(B.b8,"HomeGauge's Buyers/Sellers")
-B.cz=new A.ay(B.aq,"Horizon's Company Templates")
-B.cA=new A.ay(B.ar,"Horizon's Tax Reporting Data")
-B.cB=new A.ay(B.ar,"Horizon's Dashboard Data")
-B.cC=new A.ay(B.ar,"a HomeGauge business report")
-B.cD=new A.ay(B.ap,"HomeGauge's Inspections by Date Range")
-B.cE=new A.ay(B.b9,"Horizon's CRM Agents")
-B.cF=new A.f9(!1)
-B.cG=s([0,0],t.t)
-B.cI=s([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0],t.t)
+B.cv=new A.f7(null)
+B.cw=new A.ay(B.b9,"HomeGauge's Real Estate Pros")
+B.cx=new A.ay(B.b8,"Horizon's CRM Clients")
+B.cy=new A.ay(B.ap,"Horizon's Inspection Bookings")
+B.cz=new A.ay(B.ap,"ISN's Download Inspections")
+B.cA=new A.ay(B.b8,"HomeGauge's Buyers/Sellers")
+B.cB=new A.ay(B.aq,"Horizon's Company Templates")
+B.cC=new A.ay(B.ar,"Horizon's Tax Reporting Data")
+B.cD=new A.ay(B.ar,"Horizon's Dashboard Data")
+B.cE=new A.ay(B.ar,"a HomeGauge business report")
+B.cF=new A.ay(B.ap,"HomeGauge's Inspections by Date Range")
+B.cG=new A.ay(B.b9,"Horizon's CRM Agents")
+B.cH=new A.f9(!1)
+B.cI=s([0,0],t.t)
+B.cK=s([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0],t.t)
 B.bC=s([208,207,17,224],t.t)
-B.cL=s([254,255],t.t)
-B.cM=s([255,254],t.t)
-B.cN=s([37,80,68,70],t.t)
+B.cN=s([254,255],t.t)
+B.cO=s([255,254],t.t)
+B.cP=s([37,80,68,70],t.t)
 B.bD=s([80,75,3,4],t.t)
-B.cT=s([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13],t.t)
-B.cX=s(["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"],t.s)
+B.cV=s([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13],t.t)
+B.cZ=s(["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"],t.s)
 B.bE=s([B.k,B.l,B.a0,B.a1,B.a2,B.m,B.o,B.p,B.G,B.H,B.V,B.F,B.W,B.X,B.Y,B.Z,B.a_],A.N("p<P>"))
-B.b2=new A.J("Listing agent",!0,20,"listingAgent")
-B.aX=new A.J("Buyer's agent last name",!1,22,"buyerAgentLastName")
-B.b1=new A.J("Listing agent first name",!1,25,"listingAgentFirstName")
-B.aZ=new A.J("Listing agent last name",!1,26,"listingAgentLastName")
-B.bs=new A.J("Listing agent phone",!1,27,"listingAgentPhone")
-B.bt=new A.J("Listing agent email",!1,28,"listingAgentEmail")
-B.bF=s([B.aV,B.aJ,B.b_,B.aN,B.b6,B.aP,B.aQ,B.aW,B.aS,B.aL,B.b4,B.b3,B.b0,B.aU,B.aM,B.aT,B.aO,B.b5,B.aK,B.ai,B.b2,B.ah,B.aX,B.aR,B.aY,B.b1,B.aZ,B.bs,B.bt],A.N("p<J>"))
-B.eQ=s([],t.d)
-B.d6=s([],t.C)
+B.aZ=new A.I("Listing agent",!0,!1,20,"listingAgent")
+B.aL=new A.I("Buyer's agent last name",!1,!1,22,"buyerAgentLastName")
+B.b0=new A.I("Listing agent first name",!1,!1,25,"listingAgentFirstName")
+B.aP=new A.I("Listing agent last name",!1,!1,26,"listingAgentLastName")
+B.bs=new A.I("Listing agent phone",!1,!1,27,"listingAgentPhone")
+B.bt=new A.I("Listing agent email",!1,!1,28,"listingAgentEmail")
+B.ca=new A.I("Original inspection date",!1,!0,29,"originalInspectionDate")
+B.cb=new A.I("Items to recheck",!1,!0,30,"itemsToRecheck")
+B.bF=s([B.aJ,B.aS,B.aO,B.aY,B.aW,B.aX,B.b2,B.aV,B.b_,B.b6,B.aQ,B.aN,B.b1,B.b5,B.aM,B.aR,B.b3,B.aU,B.aK,B.ah,B.aZ,B.ai,B.aL,B.b4,B.aT,B.b0,B.aP,B.bs,B.bt,B.ca,B.cb],A.N("p<I>"))
+B.eS=s([],t.d)
+B.d8=s([],t.C)
 B.I=s([],t.s)
-B.d5=s([],t.oF)
+B.d7=s([],t.oF)
 B.bG=s([],t.m)
 B.ba=s([],t.t)
 B.c=s([],t.dG)
-B.eR=s([],t.hw)
-B.eS=s([],t.oE)
-B.d8=s([",",";","\t"],t.s)
+B.eT=s([],t.hw)
+B.eU=s([],t.oE)
+B.da=s([",",";","\t"],t.s)
 B.bH=s([16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15],t.t)
 B.bI=s([B.q,B.r,B.t,B.C,B.y,B.D,B.S,B.T,B.E,B.U,B.P,B.Q,B.R],A.N("p<V>"))
-B.de=s(["client_first_name","client_name","address","city","date","time","date_time","hours","services","total","inspector_name","company","company_phone","link","pay_link"],t.s)
+B.dg=s(["client_first_name","client_name","address","city","date","time","date_time","hours","services","total","inspector_name","company","company_phone","link","pay_link"],t.s)
 B.bJ=s([3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258],t.t)
-B.df=s([1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],t.t)
-B.dg=s(["phone","email","company","note"],t.s)
+B.dh=s([1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],t.t)
+B.di=s(["phone","email","company","note"],t.s)
 B.bb=s([8364,0,8218,402,8222,8230,8224,8225,710,8240,352,8249,338,0,381,0,0,8216,8217,8220,8221,8226,8211,8212,732,8482,353,8250,339,0,382,376],t.t)
 B.a5=new A.E(0,"clientName")
 B.aC=new A.E(1,"clientFirstName")
@@ -10140,7 +10143,7 @@ B.B=new A.E(4,"address")
 B.O=new A.E(6,"city")
 B.x=new A.E(9,"inspectionDate")
 B.a6=new A.E(10,"inspectionTime")
-B.eO=new A.E(11,"hours")
+B.eQ=new A.E(11,"hours")
 B.a8=new A.E(16,"services")
 B.w=new A.E(14,"fee")
 B.aD=new A.E(17,"inspectorName")
@@ -10148,29 +10151,29 @@ B.M=new A.E(18,"company")
 B.a9=new A.E(19,"companyPhone")
 B.A=new A.E(21,"signLink")
 B.ab=new A.E(22,"payLink")
-B.dn=new A.al([B.a5,"client_name",B.aC,"client_first_name",B.B,"address",B.O,"city",B.x,"date",B.a6,"time",B.eO,"hours",B.a8,"services",B.w,"total",B.aD,"inspector_name",B.M,"company",B.a9,"company_phone",B.A,"link",B.ab,"pay_link"],A.N("al<E,a>"))
-B.dE={Aacute:0,aacute:1,Acirc:2,acirc:3,acute:4,AElig:5,aelig:6,Agrave:7,agrave:8,alefsym:9,Alpha:10,alpha:11,amp:12,and:13,ang:14,apos:15,Aring:16,aring:17,asymp:18,Atilde:19,atilde:20,Auml:21,auml:22,bdquo:23,Beta:24,beta:25,brvbar:26,bull:27,cap:28,Ccedil:29,ccedil:30,cedil:31,cent:32,Chi:33,chi:34,circ:35,clubs:36,cong:37,copy:38,crarr:39,cup:40,curren:41,Dagger:42,dagger:43,dArr:44,darr:45,deg:46,Delta:47,delta:48,diams:49,divide:50,Eacute:51,eacute:52,Ecirc:53,ecirc:54,Egrave:55,egrave:56,empty:57,emsp:58,ensp:59,Epsilon:60,epsilon:61,equiv:62,Eta:63,eta:64,ETH:65,eth:66,Euml:67,euml:68,euro:69,exist:70,fnof:71,forall:72,frac12:73,frac14:74,frac34:75,frasl:76,Gamma:77,gamma:78,ge:79,gt:80,hArr:81,harr:82,hearts:83,hellip:84,Iacute:85,iacute:86,Icirc:87,icirc:88,iexcl:89,Igrave:90,igrave:91,image:92,infin:93,int:94,Iota:95,iota:96,iquest:97,isin:98,Iuml:99,iuml:100,Kappa:101,kappa:102,Lambda:103,lambda:104,lang:105,laquo:106,lArr:107,larr:108,lceil:109,ldquo:110,le:111,lfloor:112,lowast:113,loz:114,lrm:115,lsaquo:116,lsquo:117,lt:118,macr:119,mdash:120,micro:121,middot:122,minus:123,Mu:124,mu:125,nabla:126,nbsp:127,ndash:128,ne:129,ni:130,not:131,notin:132,nsub:133,Ntilde:134,ntilde:135,Nu:136,nu:137,Oacute:138,oacute:139,Ocirc:140,ocirc:141,OElig:142,oelig:143,Ograve:144,ograve:145,oline:146,Omega:147,omega:148,Omicron:149,omicron:150,oplus:151,or:152,ordf:153,ordm:154,Oslash:155,oslash:156,Otilde:157,otilde:158,otimes:159,Ouml:160,ouml:161,para:162,part:163,permil:164,perp:165,Phi:166,phi:167,Pi:168,pi:169,piv:170,plusmn:171,pound:172,Prime:173,prime:174,prod:175,prop:176,Psi:177,psi:178,quot:179,radic:180,rang:181,raquo:182,rArr:183,rarr:184,rceil:185,rdquo:186,real:187,reg:188,rfloor:189,Rho:190,rho:191,rlm:192,rsaquo:193,rsquo:194,sbquo:195,Scaron:196,scaron:197,sdot:198,sect:199,shy:200,Sigma:201,sigma:202,sigmaf:203,sim:204,spades:205,sub:206,sube:207,sum:208,sup:209,sup1:210,sup2:211,sup3:212,supe:213,szlig:214,Tau:215,tau:216,there4:217,Theta:218,theta:219,thetasym:220,thinsp:221,THORN:222,thorn:223,tilde:224,times:225,trade:226,Uacute:227,uacute:228,uArr:229,uarr:230,Ucirc:231,ucirc:232,Ugrave:233,ugrave:234,uml:235,upsih:236,Upsilon:237,upsilon:238,Uuml:239,uuml:240,weierp:241,Xi:242,xi:243,Yacute:244,yacute:245,yen:246,Yuml:247,yuml:248,Zeta:249,zeta:250,zwj:251,zwnj:252}
-B.dp=new A.a5(B.dE,[193,225,194,226,180,198,230,192,224,8501,913,945,38,8743,8736,39,197,229,8776,195,227,196,228,8222,914,946,166,8226,8745,199,231,184,162,935,967,710,9827,8773,169,8629,8746,164,8225,8224,8659,8595,176,916,948,9830,247,201,233,202,234,200,232,8709,8195,8194,917,949,8801,919,951,208,240,203,235,8364,8707,402,8704,189,188,190,8260,915,947,8805,62,8660,8596,9829,8230,205,237,206,238,161,204,236,8465,8734,8747,921,953,191,8712,207,239,922,954,923,955,9001,171,8656,8592,8968,8220,8804,8970,8727,9674,8206,8249,8216,60,175,8212,181,183,8722,924,956,8711,160,8211,8800,8715,172,8713,8836,209,241,925,957,211,243,212,244,338,339,210,242,8254,937,969,927,959,8853,8744,170,186,216,248,213,245,8855,214,246,182,8706,8240,8869,934,966,928,960,982,177,163,8243,8242,8719,8733,936,968,34,8730,9002,187,8658,8594,8969,8221,8476,174,8971,929,961,8207,8250,8217,8218,352,353,8901,167,173,931,963,962,8764,9824,8834,8838,8721,8835,185,178,179,8839,223,932,964,8756,920,952,977,8201,222,254,732,215,8482,218,250,8657,8593,219,251,217,249,168,978,933,965,220,252,8472,926,958,221,253,165,376,255,918,950,8205,8204],A.N("a5<a,c>"))
-B.dq=new A.al([8,"\\b",9,"\\t",10,"\\n",11,"\\v",12,"\\f",13,"\\r",34,'\\"',39,"\\'",92,"\\\\"],A.N("al<c,a>"))
-B.dr=new A.al([B.k,"Date",B.l,"Street address",B.a0,"City",B.a1,"State",B.a2,"ZIP",B.m,"Client",B.o,"Client's first name",B.p,"Client's last name",B.G,"Client's email",B.H,"Client's phone",B.V,"Buyer's agent",B.F,"Listing agent",B.W,"Fee",B.X,"Services",B.Y,"Inspector",B.Z,"Order number",B.a_,"Notes"],A.N("al<P,a>"))
-B.d_=s(["date","inspection date","date of inspection","inspected on","inspection date time","inspection datetime","date time","datetime","appointment","appointment date","scheduled","scheduled date","scheduled for","event date","start","start date","service date"],t.s)
-B.db=s(["address","property","property address","inspection address","site address","subject property","subject address","street","street address","property street","address 1","address line 1","location"],t.s)
-B.cQ=s(["city","property city","town"],t.s)
-B.cK=s(["state","property state","st","province"],t.s)
-B.d3=s(["zip","zip code","zipcode","postal code","postcode","property zip","property zip code","property postal code"],t.s)
-B.dl=s(["client","clients","client name","client full name","customer","customer name","buyer","buyer name","home buyer","homebuyer","name"],t.s)
-B.dh=s(["client first name","buyer first name","customer first name","first name","first","firstname"],t.s)
-B.da=s(["client last name","buyer last name","customer last name","last name","last","lastname","surname"],t.s)
-B.cU=s(["email","e mail","email address","client email","client email address","customer email","buyer email"],t.s)
-B.dk=s(["phone","phone number","client phone","client mobile","client cell","customer phone","buyer phone","mobile","cell"],t.s)
-B.cS=s(["agent","agent name","buyer agent","buyers agent","buyer s agent","buying agent","selling agent","client agent","client s agent","referring agent","realtor","buyer agent name"],t.s)
-B.d0=s(["listing agent","listing agent name","list agent","seller agent","sellers agent","seller s agent"],t.s)
-B.cH=s(["fee","fees","price","total","total fee","total price","inspection fee","cost","amount","invoice total","invoice amount","order total","grand total"],t.s)
-B.cZ=s(["services","service","services ordered","inspection type","inspection types","type","order type","package","products"],t.s)
-B.cR=s(["inspector","inspectors","inspector name","assigned inspector","lead inspector"],t.s)
-B.cO=s(["order","order number","order no","order id","report","report number","report no","report id","inspection number","inspection no","inspection id","job","job number","invoice","invoice number","reference","ref","id","confirmation number"],t.s)
-B.cY=s(["notes","note","comments","comment","remarks","special instructions","instructions"],t.s)
-B.ds=new A.al([B.k,B.d_,B.l,B.db,B.a0,B.cQ,B.a1,B.cK,B.a2,B.d3,B.m,B.dl,B.o,B.dh,B.p,B.da,B.G,B.cU,B.H,B.dk,B.V,B.cS,B.F,B.d0,B.W,B.cH,B.X,B.cZ,B.Y,B.cR,B.Z,B.cO,B.a_,B.cY],A.N("al<P,k<a>>"))
+B.dq=new A.al([B.a5,"client_name",B.aC,"client_first_name",B.B,"address",B.O,"city",B.x,"date",B.a6,"time",B.eQ,"hours",B.a8,"services",B.w,"total",B.aD,"inspector_name",B.M,"company",B.a9,"company_phone",B.A,"link",B.ab,"pay_link"],A.N("al<E,a>"))
+B.dG={Aacute:0,aacute:1,Acirc:2,acirc:3,acute:4,AElig:5,aelig:6,Agrave:7,agrave:8,alefsym:9,Alpha:10,alpha:11,amp:12,and:13,ang:14,apos:15,Aring:16,aring:17,asymp:18,Atilde:19,atilde:20,Auml:21,auml:22,bdquo:23,Beta:24,beta:25,brvbar:26,bull:27,cap:28,Ccedil:29,ccedil:30,cedil:31,cent:32,Chi:33,chi:34,circ:35,clubs:36,cong:37,copy:38,crarr:39,cup:40,curren:41,Dagger:42,dagger:43,dArr:44,darr:45,deg:46,Delta:47,delta:48,diams:49,divide:50,Eacute:51,eacute:52,Ecirc:53,ecirc:54,Egrave:55,egrave:56,empty:57,emsp:58,ensp:59,Epsilon:60,epsilon:61,equiv:62,Eta:63,eta:64,ETH:65,eth:66,Euml:67,euml:68,euro:69,exist:70,fnof:71,forall:72,frac12:73,frac14:74,frac34:75,frasl:76,Gamma:77,gamma:78,ge:79,gt:80,hArr:81,harr:82,hearts:83,hellip:84,Iacute:85,iacute:86,Icirc:87,icirc:88,iexcl:89,Igrave:90,igrave:91,image:92,infin:93,int:94,Iota:95,iota:96,iquest:97,isin:98,Iuml:99,iuml:100,Kappa:101,kappa:102,Lambda:103,lambda:104,lang:105,laquo:106,lArr:107,larr:108,lceil:109,ldquo:110,le:111,lfloor:112,lowast:113,loz:114,lrm:115,lsaquo:116,lsquo:117,lt:118,macr:119,mdash:120,micro:121,middot:122,minus:123,Mu:124,mu:125,nabla:126,nbsp:127,ndash:128,ne:129,ni:130,not:131,notin:132,nsub:133,Ntilde:134,ntilde:135,Nu:136,nu:137,Oacute:138,oacute:139,Ocirc:140,ocirc:141,OElig:142,oelig:143,Ograve:144,ograve:145,oline:146,Omega:147,omega:148,Omicron:149,omicron:150,oplus:151,or:152,ordf:153,ordm:154,Oslash:155,oslash:156,Otilde:157,otilde:158,otimes:159,Ouml:160,ouml:161,para:162,part:163,permil:164,perp:165,Phi:166,phi:167,Pi:168,pi:169,piv:170,plusmn:171,pound:172,Prime:173,prime:174,prod:175,prop:176,Psi:177,psi:178,quot:179,radic:180,rang:181,raquo:182,rArr:183,rarr:184,rceil:185,rdquo:186,real:187,reg:188,rfloor:189,Rho:190,rho:191,rlm:192,rsaquo:193,rsquo:194,sbquo:195,Scaron:196,scaron:197,sdot:198,sect:199,shy:200,Sigma:201,sigma:202,sigmaf:203,sim:204,spades:205,sub:206,sube:207,sum:208,sup:209,sup1:210,sup2:211,sup3:212,supe:213,szlig:214,Tau:215,tau:216,there4:217,Theta:218,theta:219,thetasym:220,thinsp:221,THORN:222,thorn:223,tilde:224,times:225,trade:226,Uacute:227,uacute:228,uArr:229,uarr:230,Ucirc:231,ucirc:232,Ugrave:233,ugrave:234,uml:235,upsih:236,Upsilon:237,upsilon:238,Uuml:239,uuml:240,weierp:241,Xi:242,xi:243,Yacute:244,yacute:245,yen:246,Yuml:247,yuml:248,Zeta:249,zeta:250,zwj:251,zwnj:252}
+B.dr=new A.a5(B.dG,[193,225,194,226,180,198,230,192,224,8501,913,945,38,8743,8736,39,197,229,8776,195,227,196,228,8222,914,946,166,8226,8745,199,231,184,162,935,967,710,9827,8773,169,8629,8746,164,8225,8224,8659,8595,176,916,948,9830,247,201,233,202,234,200,232,8709,8195,8194,917,949,8801,919,951,208,240,203,235,8364,8707,402,8704,189,188,190,8260,915,947,8805,62,8660,8596,9829,8230,205,237,206,238,161,204,236,8465,8734,8747,921,953,191,8712,207,239,922,954,923,955,9001,171,8656,8592,8968,8220,8804,8970,8727,9674,8206,8249,8216,60,175,8212,181,183,8722,924,956,8711,160,8211,8800,8715,172,8713,8836,209,241,925,957,211,243,212,244,338,339,210,242,8254,937,969,927,959,8853,8744,170,186,216,248,213,245,8855,214,246,182,8706,8240,8869,934,966,928,960,982,177,163,8243,8242,8719,8733,936,968,34,8730,9002,187,8658,8594,8969,8221,8476,174,8971,929,961,8207,8250,8217,8218,352,353,8901,167,173,931,963,962,8764,9824,8834,8838,8721,8835,185,178,179,8839,223,932,964,8756,920,952,977,8201,222,254,732,215,8482,218,250,8657,8593,219,251,217,249,168,978,933,965,220,252,8472,926,958,221,253,165,376,255,918,950,8205,8204],A.N("a5<a,c>"))
+B.ds=new A.al([8,"\\b",9,"\\t",10,"\\n",11,"\\v",12,"\\f",13,"\\r",34,'\\"',39,"\\'",92,"\\\\"],A.N("al<c,a>"))
+B.dt=new A.al([B.k,"Date",B.l,"Street address",B.a0,"City",B.a1,"State",B.a2,"ZIP",B.m,"Client",B.o,"Client's first name",B.p,"Client's last name",B.G,"Client's email",B.H,"Client's phone",B.V,"Buyer's agent",B.F,"Listing agent",B.W,"Fee",B.X,"Services",B.Y,"Inspector",B.Z,"Order number",B.a_,"Notes"],A.N("al<P,a>"))
+B.d1=s(["date","inspection date","date of inspection","inspected on","inspection date time","inspection datetime","date time","datetime","appointment","appointment date","scheduled","scheduled date","scheduled for","event date","start","start date","service date"],t.s)
+B.dd=s(["address","property","property address","inspection address","site address","subject property","subject address","street","street address","property street","address 1","address line 1","location"],t.s)
+B.cS=s(["city","property city","town"],t.s)
+B.cM=s(["state","property state","st","province"],t.s)
+B.d5=s(["zip","zip code","zipcode","postal code","postcode","property zip","property zip code","property postal code"],t.s)
+B.dn=s(["client","clients","client name","client full name","customer","customer name","buyer","buyer name","home buyer","homebuyer","name"],t.s)
+B.dj=s(["client first name","buyer first name","customer first name","first name","first","firstname"],t.s)
+B.dc=s(["client last name","buyer last name","customer last name","last name","last","lastname","surname"],t.s)
+B.cW=s(["email","e mail","email address","client email","client email address","customer email","buyer email"],t.s)
+B.dm=s(["phone","phone number","client phone","client mobile","client cell","customer phone","buyer phone","mobile","cell"],t.s)
+B.cU=s(["agent","agent name","buyer agent","buyers agent","buyer s agent","buying agent","selling agent","client agent","client s agent","referring agent","realtor","buyer agent name"],t.s)
+B.d2=s(["listing agent","listing agent name","list agent","seller agent","sellers agent","seller s agent"],t.s)
+B.cJ=s(["fee","fees","price","total","total fee","total price","inspection fee","cost","amount","invoice total","invoice amount","order total","grand total"],t.s)
+B.d0=s(["services","service","services ordered","inspection type","inspection types","type","order type","package","products"],t.s)
+B.cT=s(["inspector","inspectors","inspector name","assigned inspector","lead inspector"],t.s)
+B.cQ=s(["order","order number","order no","order id","report","report number","report no","report id","inspection number","inspection no","inspection id","job","job number","invoice","invoice number","reference","ref","id","confirmation number"],t.s)
+B.d_=s(["notes","note","comments","comment","remarks","special instructions","instructions"],t.s)
+B.du=new A.al([B.k,B.d1,B.l,B.dd,B.a0,B.cS,B.a1,B.cM,B.a2,B.d5,B.m,B.dn,B.o,B.dj,B.p,B.dc,B.G,B.cW,B.H,B.dm,B.V,B.cU,B.F,B.d2,B.W,B.cJ,B.X,B.d0,B.Y,B.cT,B.Z,B.cQ,B.a_,B.d_],A.N("al<P,k<a>>"))
 B.aa=new A.E(2,"clientPhone")
 B.ad=new A.E(3,"clientEmail")
 B.aI=new A.E(5,"street")
@@ -10190,56 +10193,56 @@ B.br=new A.E(31,"listingAgentFirstName")
 B.c9=new A.E(32,"listingAgentLastName")
 B.ae=new A.E(33,"listingAgentPhone")
 B.aH=new A.E(34,"listingAgentEmail")
-B.dt=new A.al([B.a5,B.aV,B.aC,B.b4,B.aa,B.b3,B.ad,B.b0,B.B,B.aJ,B.aI,B.aU,B.O,B.aM,B.af,B.aT,B.ag,B.aO,B.x,B.b_,B.v,B.aW,B.bn,B.aK,B.w,B.aN,B.a7,B.aL,B.a8,B.aS,B.aD,B.b6,B.M,B.aP,B.a9,B.b5,B.bo,B.aQ,B.aE,B.ai,B.bq,B.ah,B.c8,B.aX,B.ac,B.aR,B.aF,B.aY,B.aG,B.b2,B.br,B.b1,B.c9,B.aZ,B.ae,B.bs,B.aH,B.bt],A.N("al<E,J>"))
-B.dC={"client name":0,"client phone":1,"client email":2,"property address":3,"property city":4,"property state":5,"property zip":6,"inspection date":7,"inspection long date":8,"inspection time":9,"current date and time":10,"total cost":11,"inspection amount due":12,"inspection services":13,"inspector name":14,"company name":15,"company phone":16,"agreement url":17,"payment url":18,"buyer agent name":19,"buyer agent phone":20,"buyer agent email":21,"seller agent name":22,"seller agent phone":23,"seller agent email":24}
-B.du=new A.a5(B.dC,[B.a5,B.aa,B.ad,B.B,B.O,B.af,B.ag,B.x,B.x,B.a6,B.v,B.w,B.w,B.a8,B.aD,B.M,B.a9,B.A,B.ab,B.aE,B.ac,B.aF,B.aG,B.ae,B.aH],t.nS)
-B.dK={CLIENT_NAME:0,CLIENT_FIRST_NAME:1,CLIENT_PHONE:2,CLIENT_EMAIL:3,CUSTOMER_INITIALS:4,ADDRESS:5,STREET:6,CITY:7,STATE:8,ZIP:9,INSPECTION_DATE:10,INSPECTION_TIME:11,CURRENT_DATE:12,CURRENT_YEAR:13,PRICE:14,FEES:15,SERVICES:16,INSPECTOR_NAME:17,INSPECTOR_CREDENTIALS:18,INSPECTION_COMPANY:19,COMPANY_PHONE:20,SIGN_LINK:21,SIGN_AND_PAY_LINK:22,PAY_LINK:23,AGENT_NAME:24,CLIENT_AGENT_FIRST_NAME:25,CLIENT_AGENT_PHONE:26,CLIENT_AGENT_EMAIL:27,LISTING_AGENT:28,LISTING_AGENT_FIRST_NAME:29,LISTING_AGENT_PHONE:30,LISTING_AGENT_EMAIL:31}
+B.dv=new A.al([B.a5,B.aJ,B.aC,B.aQ,B.aa,B.aN,B.ad,B.b1,B.B,B.aS,B.aI,B.b5,B.O,B.aM,B.af,B.aR,B.ag,B.b3,B.x,B.aO,B.v,B.aV,B.bn,B.aK,B.w,B.aY,B.a7,B.b6,B.a8,B.b_,B.aD,B.aW,B.M,B.aX,B.a9,B.aU,B.bo,B.b2,B.aE,B.ah,B.bq,B.ai,B.c8,B.aL,B.ac,B.b4,B.aF,B.aT,B.aG,B.aZ,B.br,B.b0,B.c9,B.aP,B.ae,B.bs,B.aH,B.bt],A.N("al<E,I>"))
+B.dE={"client name":0,"client phone":1,"client email":2,"property address":3,"property city":4,"property state":5,"property zip":6,"inspection date":7,"inspection long date":8,"inspection time":9,"current date and time":10,"total cost":11,"inspection amount due":12,"inspection services":13,"inspector name":14,"company name":15,"company phone":16,"agreement url":17,"payment url":18,"buyer agent name":19,"buyer agent phone":20,"buyer agent email":21,"seller agent name":22,"seller agent phone":23,"seller agent email":24}
+B.dw=new A.a5(B.dE,[B.a5,B.aa,B.ad,B.B,B.O,B.af,B.ag,B.x,B.x,B.a6,B.v,B.w,B.w,B.a8,B.aD,B.M,B.a9,B.A,B.ab,B.aE,B.ac,B.aF,B.aG,B.ae,B.aH],t.nS)
+B.dM={CLIENT_NAME:0,CLIENT_FIRST_NAME:1,CLIENT_PHONE:2,CLIENT_EMAIL:3,CUSTOMER_INITIALS:4,ADDRESS:5,STREET:6,CITY:7,STATE:8,ZIP:9,INSPECTION_DATE:10,INSPECTION_TIME:11,CURRENT_DATE:12,CURRENT_YEAR:13,PRICE:14,FEES:15,SERVICES:16,INSPECTOR_NAME:17,INSPECTOR_CREDENTIALS:18,INSPECTION_COMPANY:19,COMPANY_PHONE:20,SIGN_LINK:21,SIGN_AND_PAY_LINK:22,PAY_LINK:23,AGENT_NAME:24,CLIENT_AGENT_FIRST_NAME:25,CLIENT_AGENT_PHONE:26,CLIENT_AGENT_EMAIL:27,LISTING_AGENT:28,LISTING_AGENT_FIRST_NAME:29,LISTING_AGENT_PHONE:30,LISTING_AGENT_EMAIL:31}
 B.N=new A.E(23,"initials")
-B.dv=new A.a5(B.dK,[B.a5,B.aC,B.aa,B.ad,B.N,B.B,B.aI,B.O,B.af,B.ag,B.x,B.a6,B.v,B.bn,B.w,B.a7,B.a8,B.aD,B.bo,B.M,B.a9,B.A,B.A,B.ab,B.aE,B.bq,B.ac,B.aF,B.aG,B.br,B.ae,B.aH],t.nS)
-B.dw=new A.a5(B.u,[],A.N("a5<a,m?>"))
-B.eT=new A.a5(B.u,[],A.N("a5<a,c?>"))
+B.dx=new A.a5(B.dM,[B.a5,B.aC,B.aa,B.ad,B.N,B.B,B.aI,B.O,B.af,B.ag,B.x,B.a6,B.v,B.bn,B.w,B.a7,B.a8,B.aD,B.bo,B.M,B.a9,B.A,B.A,B.ab,B.aE,B.bq,B.ac,B.aF,B.aG,B.br,B.ae,B.aH],t.nS)
+B.dy=new A.a5(B.u,[],A.N("a5<a,m?>"))
+B.eV=new A.a5(B.u,[],A.N("a5<a,c?>"))
 B.bK=new A.a5(B.u,[],A.N("a5<d0,@>"))
 B.as=new A.a5(B.u,[],A.N("a5<m?,m?>"))
-B.cV=s(["name","full name","fullname","client","client name","agent","agent name","contact","contact name","display name","customer","customer name","person"],t.s)
-B.d4=s(["first","first name","firstname","fname","given name","given","client first name","agent first name"],t.s)
-B.d9=s(["last","last name","lastname","lname","surname","family name","client last name","agent last name"],t.s)
-B.cP=s(["email","e mail","email address","e mail address","email 1","primary email","client email","agent email","e mail 1 value","email 1 value"],t.s)
-B.dd=s(["phone","phone number","telephone","tel","work phone","office phone","business phone","home phone","primary phone","phone 1","phone 1 value","client phone","agent phone"],t.s)
-B.d7=s(["mobile","mobile phone","cell","cell phone","cellphone","mobile number","cell number"],t.s)
-B.di=s(["company","company name","agency","brokerage","broker","office name","organization","organisation","organization name","firm","business","agency name"],t.s)
-B.cW=s(["type","role","contact type","category","client type","agent type","kind"],t.s)
-B.cJ=s(["address","street","street address","address 1","address line 1","mailing address","property address","home address","business street","home street"],t.s)
-B.dj=s(["city","town","business city","home city"],t.s)
-B.d2=s(["state","province","region","st","business state","home state"],t.s)
-B.d1=s(["zip","zip code","zipcode","postal code","postcode","postal","zip postal code","business postal code","home postal code"],t.s)
-B.dc=s(["notes","note","comments","comment"],t.s)
-B.dz=new A.al([B.q,B.cV,B.r,B.d4,B.t,B.d9,B.C,B.cP,B.y,B.dd,B.D,B.d7,B.S,B.di,B.T,B.cW,B.E,B.cJ,B.U,B.dj,B.P,B.d2,B.Q,B.d1,B.R,B.dc],A.N("al<V,k<a>>"))
-B.dA=new A.al([B.q,"Name",B.r,"First name",B.t,"Last name",B.C,"Email",B.y,"Phone",B.D,"Mobile",B.S,"Company",B.T,"Client or agent",B.E,"Street address",B.U,"City",B.P,"State",B.Q,"ZIP",B.R,"Notes"],A.N("al<V,a>"))
-B.dQ={COMPANYNAME:0,ONLINECONTRACTURL:1,CLIENT1EMAIL:2}
-B.dB=new A.a5(B.dQ,[B.M,B.A,B.ad],t.nS)
+B.cX=s(["name","full name","fullname","client","client name","agent","agent name","contact","contact name","display name","customer","customer name","person"],t.s)
+B.d6=s(["first","first name","firstname","fname","given name","given","client first name","agent first name"],t.s)
+B.db=s(["last","last name","lastname","lname","surname","family name","client last name","agent last name"],t.s)
+B.cR=s(["email","e mail","email address","e mail address","email 1","primary email","client email","agent email","e mail 1 value","email 1 value"],t.s)
+B.df=s(["phone","phone number","telephone","tel","work phone","office phone","business phone","home phone","primary phone","phone 1","phone 1 value","client phone","agent phone"],t.s)
+B.d9=s(["mobile","mobile phone","cell","cell phone","cellphone","mobile number","cell number"],t.s)
+B.dk=s(["company","company name","agency","brokerage","broker","office name","organization","organisation","organization name","firm","business","agency name"],t.s)
+B.cY=s(["type","role","contact type","category","client type","agent type","kind"],t.s)
+B.cL=s(["address","street","street address","address 1","address line 1","mailing address","property address","home address","business street","home street"],t.s)
+B.dl=s(["city","town","business city","home city"],t.s)
+B.d4=s(["state","province","region","st","business state","home state"],t.s)
+B.d3=s(["zip","zip code","zipcode","postal code","postcode","postal","zip postal code","business postal code","home postal code"],t.s)
+B.de=s(["notes","note","comments","comment"],t.s)
+B.dB=new A.al([B.q,B.cX,B.r,B.d6,B.t,B.db,B.C,B.cR,B.y,B.df,B.D,B.d9,B.S,B.dk,B.T,B.cY,B.E,B.cL,B.U,B.dl,B.P,B.d4,B.Q,B.d3,B.R,B.de],A.N("al<V,k<a>>"))
+B.dC=new A.al([B.q,"Name",B.r,"First name",B.t,"Last name",B.C,"Email",B.y,"Phone",B.D,"Mobile",B.S,"Company",B.T,"Client or agent",B.E,"Street address",B.U,"City",B.P,"State",B.Q,"ZIP",B.R,"Notes"],A.N("al<V,a>"))
+B.dS={COMPANYNAME:0,ONLINECONTRACTURL:1,CLIENT1EMAIL:2}
+B.dD=new A.a5(B.dS,[B.M,B.A,B.ad],t.nS)
 B.bL=new A.fq(0,"agreement")
-B.dU=new A.fq(1,"email")
+B.dW=new A.fq(1,"email")
 B.bh=new A.Y('"',1,"DOUBLE_QUOTE")
-B.dV=new A.I("",B.bh)
-B.dW=new A.cA(B.b1,B.aZ,B.b2)
-B.dX=new A.cA(B.ah,B.aX,B.ai)
-B.dO={"n a":0,na:1,none:2,no:3,"no agent":4,"no agents":5,"no client":6,unknown:7,tbd:8,tba:9,self:10,"not applicable":11,null:12,nil:13,x:14,pending:15,other:16}
-B.dY=new A.ab(B.dO,17,t.M)
-B.dI={spouse:0,partner:1,co:2,second:3,secondary:4,alternate:5,alt:6,other:7,emergency:8,assistant:9,referral:10,referring:11,lender:12,attorney:13,escrow:14,title:15,tenant:16,occupant:17,contractor:18}
-B.at=new A.ab(B.dI,19,t.M)
-B.dN={paid:0,due:1,balance:2,discount:3,tax:4,tip:5,deposit:6,refund:7,refunded:8,owed:9,payment:10,payments:11,outstanding:12,commission:13,created:14,updated:15,modified:16,ordered:17,booked:18,sent:19,signed:20,delivered:21,published:22,cancelled:23,canceled:24,closing:25,close:26,opt:27,optin:28,optout:29,verified:30,status:31,count:32,url:33,link:34,ext:35,extension:36,country:37,area:38,prefix:39,format:40,id:41}
-B.au=new A.ab(B.dN,42,t.M)
-B.dD={"last inspection date":0,"last inspection":1,"property address":2,"inspection address":3,property:4}
-B.bN=new A.ab(B.dD,5,t.M)
+B.dX=new A.J("",B.bh)
+B.dY=new A.cA(B.b0,B.aP,B.aZ)
+B.dZ=new A.cA(B.ai,B.aL,B.ah)
+B.dQ={"n a":0,na:1,none:2,no:3,"no agent":4,"no agents":5,"no client":6,unknown:7,tbd:8,tba:9,self:10,"not applicable":11,null:12,nil:13,x:14,pending:15,other:16}
+B.e_=new A.ab(B.dQ,17,t.M)
+B.dK={spouse:0,partner:1,co:2,second:3,secondary:4,alternate:5,alt:6,other:7,emergency:8,assistant:9,referral:10,referring:11,lender:12,attorney:13,escrow:14,title:15,tenant:16,occupant:17,contractor:18}
+B.at=new A.ab(B.dK,19,t.M)
+B.dP={paid:0,due:1,balance:2,discount:3,tax:4,tip:5,deposit:6,refund:7,refunded:8,owed:9,payment:10,payments:11,outstanding:12,commission:13,created:14,updated:15,modified:16,ordered:17,booked:18,sent:19,signed:20,delivered:21,published:22,cancelled:23,canceled:24,closing:25,close:26,opt:27,optin:28,optout:29,verified:30,status:31,count:32,url:33,link:34,ext:35,extension:36,country:37,area:38,prefix:39,format:40,id:41}
+B.au=new A.ab(B.dP,42,t.M)
+B.dF={"last inspection date":0,"last inspection":1,"property address":2,"inspection address":3,property:4}
+B.bN=new A.ab(B.dF,5,t.M)
 B.c5=new A.aO(0,"ATTRIBUTE")
 B.av=new A.bl([B.c5],t.fr)
-B.dJ={opt:0,optin:1,optout:2,verified:3,unverified:4,valid:5,invalid:6,date:7,time:8,count:9,status:10,id:11,bounce:12,bounced:13,consent:14,subscribed:15,unsubscribed:16,type:17,ext:18,extension:19,format:20,url:21,link:22,links:23,website:24,social:25,country:26,dialing:27,dial:28,prefix:29,area:30}
-B.aw=new A.ab(B.dJ,31,t.M)
-B.dR={COMPANYNAME:0,COMPANYEMAIL:1,CLIENT1EMAIL:2,CLIENT2EMAIL:3,ONLINECONTRACTURL:4}
-B.dZ=new A.ab(B.dR,5,t.M)
-B.dL={client:0,clients:1,buyer:2,buyers:3,customer:4,customers:5,agent:6,agents:7,realtor:8,broker:9,inspector:10,inspectors:11,spouse:12,partner:13,co:14,second:15,secondary:16,alternate:17,alt:18,other:19,emergency:20,assistant:21,lender:22,attorney:23,escrow:24,title:25,tenant:26,occupant:27,contractor:28,seller:29,sellers:30,listing:31,referral:32,referring:33,owner:34,contact:35,person:36,user:37,name:38,first:39,last:40,middle:41,nick:42,surname:43,address:44,street:45,city:46,town:47,state:48,zip:49,postal:50,postcode:51,property:52,county:53,phone:54,telephone:55,tel:56,cell:57,mobile:58,fax:59,email:60,e:61,company:62,office:63,agency:64,brokerage:65,firm:66,team:67,business:68,date:69,time:70,day:71,created:72,updated:73,modified:74,ordered:75,order:76,booking:77,booked:78,report:79,invoice:80,sent:81,signed:82,closing:83,close:84,scheduled:85,appointment:86,fee:87,fees:88,price:89,total:90,cost:91,paid:92,due:93,balance:94,payment:95,tax:96,discount:97,id:98,number:99,no:100,num:101,ref:102,code:103,status:104,count:105,type:106,opt:107,verified:108,url:109,link:110,note:111,notes:112,comment:113,comments:114,service:115,services:116,tag:117,tags:118}
-B.bO=new A.ab(B.dL,119,t.M)
-B.eU=new A.ab(B.u,0,t.M)
+B.dL={opt:0,optin:1,optout:2,verified:3,unverified:4,valid:5,invalid:6,date:7,time:8,count:9,status:10,id:11,bounce:12,bounced:13,consent:14,subscribed:15,unsubscribed:16,type:17,ext:18,extension:19,format:20,url:21,link:22,links:23,website:24,social:25,country:26,dialing:27,dial:28,prefix:29,area:30}
+B.aw=new A.ab(B.dL,31,t.M)
+B.dT={COMPANYNAME:0,COMPANYEMAIL:1,CLIENT1EMAIL:2,CLIENT2EMAIL:3,ONLINECONTRACTURL:4}
+B.e0=new A.ab(B.dT,5,t.M)
+B.dN={client:0,clients:1,buyer:2,buyers:3,customer:4,customers:5,agent:6,agents:7,realtor:8,broker:9,inspector:10,inspectors:11,spouse:12,partner:13,co:14,second:15,secondary:16,alternate:17,alt:18,other:19,emergency:20,assistant:21,lender:22,attorney:23,escrow:24,title:25,tenant:26,occupant:27,contractor:28,seller:29,sellers:30,listing:31,referral:32,referring:33,owner:34,contact:35,person:36,user:37,name:38,first:39,last:40,middle:41,nick:42,surname:43,address:44,street:45,city:46,town:47,state:48,zip:49,postal:50,postcode:51,property:52,county:53,phone:54,telephone:55,tel:56,cell:57,mobile:58,fax:59,email:60,e:61,company:62,office:63,agency:64,brokerage:65,firm:66,team:67,business:68,date:69,time:70,day:71,created:72,updated:73,modified:74,ordered:75,order:76,booking:77,booked:78,report:79,invoice:80,sent:81,signed:82,closing:83,close:84,scheduled:85,appointment:86,fee:87,fees:88,price:89,total:90,cost:91,paid:92,due:93,balance:94,payment:95,tax:96,discount:97,id:98,number:99,no:100,num:101,ref:102,code:103,status:104,count:105,type:106,opt:107,verified:108,url:109,link:110,note:111,notes:112,comment:113,comments:114,service:115,services:116,tag:117,tags:118}
+B.bO=new A.ab(B.dN,119,t.M)
+B.eW=new A.ab(B.u,0,t.M)
 B.bc=new A.ab(B.u,0,A.N("ab<c>"))
 B.ax=new A.aO(1,"CDATA")
 B.aA=new A.aO(2,"COMMENT")
@@ -10247,94 +10250,94 @@ B.a3=new A.aO(7,"ELEMENT")
 B.ay=new A.aO(11,"PROCESSING")
 B.az=new A.aO(12,"TEXT")
 B.bP=new A.bl([B.ax,B.aA,B.a3,B.ay,B.az],t.fr)
-B.dP={first:0,last:1,middle:2,nick:3,nickname:4,company:5,agency:6,office:7,team:8,user:9,file:10,street:11,brokerage:12,firm:13,property:14,business:15,organization:16,organisation:17}
-B.bQ=new A.ab(B.dP,18,t.M)
-B.dS={agency:0,"agency name":1,brokerage:2,"brokerage name":3,broker:4,"agent team":5,team:6,"real estate office":7,office:8,"mls id":9,"mls number":10,license:11,"license number":12,"agent id":13}
-B.bR=new A.ab(B.dS,14,t.M)
-B.dT={csv:0,tsv:1,txt:2,xls:3,xlsx:4,xml:5,htm:6,html:7}
-B.e_=new A.ab(B.dT,8,t.M)
-B.e0=new A.bl([18,19,20,21,45,46,47],A.N("bl<c>"))
+B.dR={first:0,last:1,middle:2,nick:3,nickname:4,company:5,agency:6,office:7,team:8,user:9,file:10,street:11,brokerage:12,firm:13,property:14,business:15,organization:16,organisation:17}
+B.bQ=new A.ab(B.dR,18,t.M)
+B.dU={agency:0,"agency name":1,brokerage:2,"brokerage name":3,broker:4,"agent team":5,team:6,"real estate office":7,office:8,"mls id":9,"mls number":10,license:11,"license number":12,"agent id":13}
+B.bR=new A.ab(B.dU,14,t.M)
+B.dV={csv:0,tsv:1,txt:2,xls:3,xlsx:4,xml:5,htm:6,html:7}
+B.e1=new A.ab(B.dV,8,t.M)
+B.e2=new A.bl([18,19,20,21,45,46,47],A.N("bl<c>"))
 B.bi=new A.aO(3,"DECLARATION")
 B.bj=new A.aO(4,"DOCUMENT_TYPE")
 B.bS=new A.bl([B.ax,B.aA,B.bi,B.bj,B.a3,B.ay,B.az],t.fr)
-B.dH={"number of inspections":0,"last inspection date":1,"total inspections":2,"inspections count":3,"inspection count":4}
-B.e1=new A.ab(B.dH,5,t.M)
-B.dG={bearer:0,authorization:1,basic:2,access:3,secret:4,key:5,keys:6,api:7,token:8,isn:9,spectora:10,username:11,password:12,my:13,and:14}
-B.e2=new A.ab(B.dG,15,t.M)
-B.dF={spouse:0,partner:1,co:2,second:3,secondary:4,alternate:5,alt:6,other:7,emergency:8,assistant:9,lender:10,attorney:11,escrow:12,title:13,tenant:14,occupant:15,contractor:16,seller:17,sellers:18,owner:19,landlord:20,coordinator:21,tc:22}
-B.J=new A.ab(B.dF,23,t.M)
-B.e3=new A.cn(1,"badKey")
-B.e4=new A.cn(2,"quota")
-B.e5=new A.cn(3,"rate")
-B.e6=new A.cn(4,"server")
-B.e7=new A.cn(5,"unreadable")
-B.e8=new A.bA("call")
+B.dJ={"number of inspections":0,"last inspection date":1,"total inspections":2,"inspections count":3,"inspection count":4}
+B.e3=new A.ab(B.dJ,5,t.M)
+B.dI={bearer:0,authorization:1,basic:2,access:3,secret:4,key:5,keys:6,api:7,token:8,isn:9,spectora:10,username:11,password:12,my:13,and:14}
+B.e4=new A.ab(B.dI,15,t.M)
+B.dH={spouse:0,partner:1,co:2,second:3,secondary:4,alternate:5,alt:6,other:7,emergency:8,assistant:9,lender:10,attorney:11,escrow:12,title:13,tenant:14,occupant:15,contractor:16,seller:17,sellers:18,owner:19,landlord:20,coordinator:21,tc:22}
+B.J=new A.ab(B.dH,23,t.M)
+B.e5=new A.cn(1,"badKey")
+B.e6=new A.cn(2,"quota")
+B.e7=new A.cn(3,"rate")
+B.e8=new A.cn(4,"server")
+B.e9=new A.cn(5,"unreadable")
+B.ea=new A.bA("call")
 B.bT=new A.bZ(0,"csv")
 B.bd=new A.bZ(1,"xlsx")
 B.bU=new A.bZ(2,"html")
 B.bV=new A.bZ(3,"spreadsheetXml")
 B.bW=new A.bZ(4,"oldExcel")
 B.bX=new A.bZ(5,"otherXml")
-B.e9=new A.aB("it is damaged, or not a spreadsheet Inspyx can read")
-B.ea=new A.aB("it is not a spreadsheet. Pick a .csv or .xlsx file")
-B.eb=new A.aB("the file is larger than 25 MB")
+B.eb=new A.aB("it is damaged, or not a spreadsheet Inspyx can read")
+B.ec=new A.aB("it is not a spreadsheet. Pick a .csv or .xlsx file")
+B.ed=new A.aB("the file is larger than 25 MB")
 B.K=new A.aB(u.t)
 B.L=new A.aB("a cell in it holds more than 32,767 characters, more than any spreadsheet allows")
 B.bY=new A.aB("it carries its own definitions (a DOCTYPE), which Inspyx never reads. Open it in Excel and save it as .xlsx or .csv")
-B.ec=new A.aB("it is not an Excel workbook, or it is damaged")
+B.ee=new A.aB("it is not an Excel workbook, or it is damaged")
 B.bZ=new A.aB("there's no table in it. It may be a web page saved under a spreadsheet's name")
 B.c_=new A.aB("this is the older Excel format (97\u20132003). Open it in Excel, Numbers or Google Sheets and save it as .xlsx or .csv")
-B.ed=new A.aB("it is an XML file, not a spreadsheet. Open it in Excel and save it as .xlsx or .csv")
-B.ee=A.bh("uJ")
-B.ef=A.bh("n9")
-B.eg=A.bh("pX")
-B.eh=A.bh("pY")
-B.ei=A.bh("q_")
-B.ej=A.bh("q0")
-B.ek=A.bh("q1")
-B.el=A.bh("m")
-B.em=A.bh("qy")
-B.en=A.bh("mm")
-B.eo=A.bh("qz")
-B.ep=A.bh("mn")
-B.eq=new A.bF("That is more than one key. Paste only the key, or for ISN the access key and the secret key.")
-B.er=new A.bF("That looks like one ISN key. Paste the access key and the secret key together.")
+B.ef=new A.aB("it is an XML file, not a spreadsheet. Open it in Excel and save it as .xlsx or .csv")
+B.eg=A.bh("uJ")
+B.eh=A.bh("n9")
+B.ei=A.bh("pX")
+B.ej=A.bh("pY")
+B.ek=A.bh("q_")
+B.el=A.bh("q0")
+B.em=A.bh("q1")
+B.en=A.bh("m")
+B.eo=A.bh("qy")
+B.ep=A.bh("mm")
+B.eq=A.bh("qz")
+B.er=A.bh("mn")
+B.es=new A.bF("That is more than one key. Paste only the key, or for ISN the access key and the secret key.")
+B.et=new A.bF("That looks like one ISN key. Paste the access key and the secret key together.")
 B.c0=new A.bF("That key looks cut off. Copy all of it and paste it again.")
-B.es=new A.bF("Those look like ISN keys. Paste the address of the ISN page where you made them with them (it ends in /access-keys).")
-B.et=new A.bF("Paste the key your old platform gave you.")
-B.eu=new A.e5(!1)
-B.ev=new A.e5(!0)
-B.ew=new A.bn(0,"email")
+B.eu=new A.bF("Those look like ISN keys. Paste the address of the ISN page where you made them with them (it ends in /access-keys).")
+B.ev=new A.bF("Paste the key your old platform gave you.")
+B.ew=new A.e5(!1)
+B.ex=new A.e5(!0)
+B.ey=new A.bn(0,"email")
 B.c1=new A.bn(1,"date")
 B.c2=new A.bn(2,"phone")
 B.c3=new A.bn(3,"address")
-B.ex=new A.bn(4,"name")
+B.ez=new A.bn(4,"name")
 B.bf=new A.bp("this is not an Excel workbook (a Spectora export is one)")
-B.ey=new A.bp("this is the older Excel format (97\u20132003). Export the template from Spectora again, or save the file as .xlsx")
-B.ez=new A.bp("the workbook is damaged (a cell names text it does not hold)")
+B.eA=new A.bp("this is the older Excel format (97\u20132003). Export the template from Spectora again, or save the file as .xlsx")
+B.eB=new A.bp("the workbook is damaged (a cell names text it does not hold)")
 B.c4=new A.bp("the workbook has no worksheet")
 B.bg=new A.bp(u.t)
-B.eA=new A.bp("the file is larger than 25 MB")
-B.eB=new A.Y("'",0,"SINGLE_QUOTE")
-B.eC=new A.aO(5,"DOCUMENT")
+B.eC=new A.bp("the file is larger than 25 MB")
+B.eD=new A.Y("'",0,"SINGLE_QUOTE")
+B.eE=new A.aO(5,"DOCUMENT")
 B.h=new A.a3("the file is cut short")
-B.eD=new A.a3("the ZIP directory is out of place")
+B.eF=new A.a3("the ZIP directory is out of place")
 B.c6=new A.a3("an entry inflates past the size it says")
-B.eE=new A.a3("a deflate block has no end code")
-B.eF=new A.a3("the file is not a readable ZIP")
-B.eG=new A.a3("an entry name is not valid text")
-B.eH=new A.a3("an entry has no name")
+B.eG=new A.a3("a deflate block has no end code")
+B.eH=new A.a3("the file is not a readable ZIP")
+B.eI=new A.a3("an entry name is not valid text")
+B.eJ=new A.a3("an entry has no name")
 B.aB=new A.a3("a deflate code is malformed")
-B.eI=new A.a3("the file is too short to be a ZIP")
-B.eJ=new A.a3("an entry name holds a NUL")
+B.eK=new A.a3("the file is too short to be a ZIP")
+B.eL=new A.a3("an entry name holds a NUL")
 B.c7=new A.a3("split (multi-part) ZIPs are not read")
-B.eK=new A.a3("two entries overlap")
+B.eM=new A.a3("two entries overlap")
 B.a4=new A.a3("a deflate block is malformed")
 B.bk=new A.a3("a deflate stream is cut short")
-B.eL=new A.a3("a deflate distance is too far back")
+B.eN=new A.a3("a deflate distance is too far back")
 B.bl=new A.a3("the ZIP directory is corrupt")
-B.eM=new A.a3("the file has no ZIP directory")
-B.eN=new A.a3("the ZIP holds too much")
+B.eO=new A.a3("the file has no ZIP directory")
+B.eP=new A.a3("the ZIP holds too much")
 B.bm=new A.a3("ZIP64 archives are not read")
 B.bp=new A.E(24,"signature")})();(function staticFields(){$.jE=null
 $.aQ=A.d([],t.hf)
@@ -10375,37 +10378,37 @@ s($,"v2","p5",()=>A.qe(4096))
 s($,"v0","p3",()=>new A.jR().$0())
 s($,"v1","p4",()=>new A.jQ().$0())
 s($,"uM","oS",()=>A.j("^([+-]?\\d{4,6})-?(\\d\\d)-?(\\d\\d)(?:[ T](\\d\\d)(?::?(\\d\\d)(?::?(\\d\\d)(?:[.,](\\d+))?)?)?( ?[zZ]| ?([-+])(\\d\\d)(?::?(\\d\\d))?)?)?$",!0,!1,!1))
-s($,"vd","i4",()=>A.i1(B.el))
+s($,"vd","i4",()=>A.i1(B.en))
 s($,"v4","p7",()=>A.j("\\{\\{\\s*([A-Za-z][A-Za-z0-9_ \\-\\u2019']{0,48}?)\\s*\\}\\}|\\[\\s*([^\\[\\]\\r\\n]{1,40}?)\\s*\\]",!0,!1,!1))
-s($,"vw","px",()=>{var r,q,p=A.F(t.N,A.N("J"))
-for(r=0;r<29;++r){q=B.bF[r]
-p.j(0,A.tg(q.c),q)}p.j(0,"ADDRESS",B.aJ)
-p.j(0,"STREET",B.aU)
+s($,"vw","px",()=>{var r,q,p=A.F(t.N,A.N("I"))
+for(r=0;r<31;++r){q=B.bF[r]
+p.j(0,A.tg(q.c),q)}p.j(0,"ADDRESS",B.aS)
+p.j(0,"STREET",B.b5)
 p.j(0,"CITY",B.aM)
-p.j(0,"STATE",B.aT)
-p.j(0,"ZIP",B.aO)
-p.j(0,"CURRENT_DATE",B.aW)
+p.j(0,"STATE",B.aR)
+p.j(0,"ZIP",B.b3)
+p.j(0,"CURRENT_DATE",B.aV)
 p.j(0,"CURRENT_YEAR",B.aK)
-p.j(0,"PRICE",B.aN)
-p.j(0,"FEES",B.aL)
-p.j(0,"SERVICES",B.aS)
-p.j(0,"CLIENT_NAME",B.aV)
-p.j(0,"CLIENT_FIRST_NAME",B.b4)
-p.j(0,"CLIENT_PHONE",B.b3)
-p.j(0,"CLIENT_EMAIL",B.b0)
-p.j(0,"INSPECTION_DATE",B.b_)
-p.j(0,"INSPECTOR_NAME",B.b6)
-p.j(0,"INSPECTOR_CREDENTIALS",B.aQ)
-p.j(0,"INSPECTION_COMPANY",B.aP)
-p.j(0,"COMPANY_PHONE",B.b5)
-p.j(0,"AGENT_NAME",B.ai)
-p.j(0,"CLIENT_AGENT_FIRST_NAME",B.ah)
-p.j(0,"CLIENT_AGENT_PHONE",B.aR)
-p.j(0,"CLIENT_AGENT_EMAIL",B.aY)
+p.j(0,"PRICE",B.aY)
+p.j(0,"FEES",B.b6)
+p.j(0,"SERVICES",B.b_)
+p.j(0,"CLIENT_NAME",B.aJ)
+p.j(0,"CLIENT_FIRST_NAME",B.aQ)
+p.j(0,"CLIENT_PHONE",B.aN)
+p.j(0,"CLIENT_EMAIL",B.b1)
+p.j(0,"INSPECTION_DATE",B.aO)
+p.j(0,"INSPECTOR_NAME",B.aW)
+p.j(0,"INSPECTOR_CREDENTIALS",B.b2)
+p.j(0,"INSPECTION_COMPANY",B.aX)
+p.j(0,"COMPANY_PHONE",B.aU)
+p.j(0,"AGENT_NAME",B.ah)
+p.j(0,"CLIENT_AGENT_FIRST_NAME",B.ai)
+p.j(0,"CLIENT_AGENT_PHONE",B.b4)
+p.j(0,"CLIENT_AGENT_EMAIL",B.aT)
 return p})
-s($,"vh","pj",()=>{var r,q,p=A.F(t.N,A.N("J"))
-for(r=0;r<29;++r){q=B.bF[r]
-if(q.d)p.j(0,A.rU(q.c),q)}return p})
+s($,"vh","pj",()=>{var r,q,p=A.F(t.N,A.N("I"))
+for(r=0;r<31;++r){q=B.bF[r]
+if(q.d||q.e)p.j(0,A.rU(q.c),q)}return p})
 s($,"vo","pp",()=>A.j("&(#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[A-Za-z][A-Za-z0-9]{1,31});",!0,!1,!1))
 s($,"vv","pw",()=>A.qc(256,new A.kn(),!1,t.S))
 s($,"vc","pf",()=>{var r,q=A.d([],t.t)
@@ -10416,11 +10419,11 @@ for(r=280;r<288;++r)q.push(8)
 return A.ha(q)})
 s($,"vb","pe",()=>A.ha(A.bm(30,5,!1,t.S)))
 s($,"v9","pc",()=>{var r,q,p,o=A.F(t.N,t._)
-for(r=B.dz.gW(),r=r.gu(r);r.m();){q=r.gp()
+for(r=B.dB.gW(),r=r.gu(r);r.m();){q=r.gp()
 for(p=J.O(q.b),q=q.a;p.m();)o.j(0,p.gp(),q)}return o})
-s($,"vg","pi",()=>A.d([new A.I(A.j("\\bcrm clients?\\b",!0,!1,!1),B.cv),new A.I(A.j("\\bcrm agents?\\b",!0,!1,!1),B.cE),new A.I(A.j("\\binspection bookings?\\b",!0,!1,!1),B.cw),new A.I(A.j("\\bcompany templates?\\b",!0,!1,!1),B.cz),new A.I(A.j("\\bdashboard data\\b",!0,!1,!1),B.cB),new A.I(A.j("\\btax reporting\\b",!0,!1,!1),B.cA),new A.I(A.j("\\breal estate pros?\\b",!0,!1,!1),B.cu),new A.I(A.j("\\bbuyers? sellers?\\b",!0,!1,!1),B.cy),new A.I(A.j("^hg inspections by date range\\b",!0,!1,!1),B.cD),new A.I(A.j("^hg (revenue|distance traveled|appointments per lead source)\\b",!0,!1,!1),B.cC),new A.I(A.j("\\bdownload inspections\\b",!0,!1,!1),B.cx)],A.N("p<+(mj,ay)>")))
+s($,"vg","pi",()=>A.d([new A.J(A.j("\\bcrm clients?\\b",!0,!1,!1),B.cx),new A.J(A.j("\\bcrm agents?\\b",!0,!1,!1),B.cG),new A.J(A.j("\\binspection bookings?\\b",!0,!1,!1),B.cy),new A.J(A.j("\\bcompany templates?\\b",!0,!1,!1),B.cB),new A.J(A.j("\\bdashboard data\\b",!0,!1,!1),B.cD),new A.J(A.j("\\btax reporting\\b",!0,!1,!1),B.cC),new A.J(A.j("\\breal estate pros?\\b",!0,!1,!1),B.cw),new A.J(A.j("\\bbuyers? sellers?\\b",!0,!1,!1),B.cA),new A.J(A.j("^hg inspections by date range\\b",!0,!1,!1),B.cF),new A.J(A.j("^hg (revenue|distance traveled|appointments per lead source)\\b",!0,!1,!1),B.cE),new A.J(A.j("\\bdownload inspections\\b",!0,!1,!1),B.cz)],A.N("p<+(mj,ay)>")))
 s($,"va","pd",()=>{var r,q,p,o=A.F(t.N,t.p)
-for(r=B.ds.gW(),r=r.gu(r);r.m();){q=r.gp()
+for(r=B.du.gW(),r=r.gu(r);r.m();){q=r.gp()
 for(p=J.O(q.b),q=q.a;p.m();)o.j(0,p.gp(),q)}return o})
 s($,"vj","mW",()=>A.j("^\\s*(?:[A-Za-z]{3,9}\\.?,?\\s+)?(\\d{1,2})[/\\-.](\\d{1,2})[/\\-.](\\d{2,4})\\b",!0,!1,!1))
 s($,"vf","ph",()=>A.j("^\\s*(\\d{4})[\\-/](\\d{1,2})[\\-/](\\d{1,2})(?![0-9])",!0,!1,!1))

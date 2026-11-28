@@ -46,6 +46,9 @@
 /* Job 7 (W14): the starter, the blanks to tap in, and the agreement as the client reads it. */
 .agr-empty{display:grid; gap:12px; justify-items:start; padding:20px; border-radius:18px; background:linear-gradient(135deg, #EEF4FF, #F7F2FF)}
 .agr-empty p{margin:0; font-size:16px; color:var(--ink-soft)}
+/* Within the page on a phone: the column never grows past it, and a long button wraps rather than pushing it wider. */
+.agr-empty{grid-template-columns:minmax(0, 1fr)}
+.agr-empty .btn{max-width:100%; white-space:normal; text-align:center; padding:12px 24px}
 .agr-starter{justify-self:start}
 .agr-tabs{display:flex; gap:4px; padding:4px; border-radius:12px; background:#EEF1F5; width:max-content; max-width:100%}
 .agr-tabs [role="tab"]{min-height:36px; padding:0 14px; border:0; border-radius:9px; background:transparent; color:var(--ink-soft); font:600 14px var(--font); cursor:pointer}
