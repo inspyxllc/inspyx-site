@@ -1,19 +1,20 @@
-/* Your inspections, live (2026-11-14, Inspyx 4): the inspector's inspections as their phone has them, kept in step both
-   ways. Moises's dashboard interview, answer 6: "Both stay in sync"; a change shows on the other within seconds, and the
-   newest change wins when both touch the same thing.
+/* Your inspections, live: the inspector's inspections as their phone has them, kept in step both ways, so a change
+   made on either shows on the other within seconds, and the newest change wins when both touch the same thing.
    How: the server keeps one register per field of every inspection (the inspection-sync function, in the app's repo at
-   backend/supabase/functions/inspection-sync). This page pulls every field once, then only what changed after its point;
-   it sends each edit as one field with the time it was made; and it pulls again whenever the server pings "something
-   changed" (InspyxAuth.listen), when the tab comes back into view, and once a minute as a fallback.
+   backend/supabase/functions/inspection-sync). The list needs only each inspection's own row and its people, so the
+   page pulls those kinds for the whole account (about 1.5% of a large account's fields); an inspection's every field is
+   pulled when it is opened. Each part has its own point, and after the first pull only what changed after it comes.
+   Both are kept in this browser between visits (insp-cache.js), so the list draws at once and a reload asks only for
+   what changed. The page sends each edit as one field with the time it was made, and pulls again whenever the server
+   pings "something changed" (InspyxAuth.listen), when the tab comes back into view, and once a minute as a fallback.
    An edit typed here is never overwritten while its box is being typed in: the newest value lands when the box is left.
-   Desk finishing (2026-11-16): the cover's city, state, ZIP and booked time (a reschedule), each finding's location and
-   who should fix it, and why an item wasn't inspected: every field the phone applies from elsewhere
-   (inspection_sync_apply.dart). A booked time travels as the phone keeps it, UTC milliseconds; the box shows it in this
-   browser's time zone, to the minute. The start is the phone's alone (write-once there): shown, never sent.
-   Renames and Find (2026-11-16): a stop's and an item's names are boxes (the phone applies both from elsewhere); a
-   box marked data-required (title, address, a name) is never sent empty. The list is in the phone's day order (its
-   start, else its booked time, else when it was made; newest first), each with its day, and Find keeps the ones whose
-   title, address or city has what is typed.
+   Every field the phone applies from elsewhere (inspection_sync_apply.dart) can be edited here: the cover's city,
+   state, ZIP and booked time (a reschedule), each finding's location and who should fix it, why an item wasn't
+   inspected, and the names of stops and items. A booked time travels as the phone keeps it, UTC milliseconds; the box
+   shows it in this browser's time zone, to the minute. The start is the phone's alone (write-once there): shown,
+   never sent. A box marked data-required (title, address, a name) is never sent empty. The list is in the phone's day
+   order (its start, else its booked time, else when it was made; newest first), each with its day, and Find keeps the
+   ones whose title, address or city has what is typed.
    This file says no words. The page holds every sentence. */
 (function () {
   'use strict';
@@ -43,10 +44,16 @@
 
   // Every field the server holds for this inspector: "entity/id.field" -> { inspection, entity, id, field, value, at, device }
   var fields = Object.create(null);
-  var point = null, offset = 0, pulling = null, again = false;
-  // The first pull brings every field the inspector has (rehearsal 3, findings 28–29: 51,542 of them, 53 pages, ~23 s):
-  // until it ends the page shows "Loading", never a part of the list or "Live" (the list showed one of 27).
+  var offset = 0, pulling = null, again = false;
+  // The list's kinds of field: what the list, the calendar and the people page read (insp-read.js pulls the same).
+  var LIST_KINDS = ['inspection', 'person'];
+  // How far the list has been pulled, and each opened inspection (id -> its point).
+  var listPoint = null, points = Object.create(null);
+  // Until the list's first pull ends (or the kept list is read) the page shows "Loading", never part of the list.
   var loaded = false;
+  // The inspections whose every field is here: opened and pulled, or kept from an earlier visit.
+  var whole = Object.create(null);
+  var cache = window.InspyxInspCache, account = auth.who() ? auth.who().id : null;
   var outbox = [];          // this page's edits not yet answered: { inspection, entity, id, field, value, at }
   var dirty = Object.create(null);   // keys being typed in right now
   var timers = Object.create(null);
@@ -63,28 +70,38 @@
     if (!held || later(f, held)) fields[k] = f;
   }
 
-  /* One exchange with the function: sends what waits, brings what changed. */
-  function exchange() {
-    var push = outbox.slice(0, 500);
-    return auth.ask('inspection-sync', { device: me, push: push, after: point, limit: 5000 }, DEADLINE).then(function (r) {
+  /* One exchange with the function: sends what waits, brings what changed of one part: the list's kinds (inspection
+     null), or every field of one inspection. */
+  function exchange(inspection) {
+    // Edits go with the list's exchange only: the inspection's runs beside it, and an edit is sent once.
+    var push = inspection === null ? outbox.slice(0, 500) : [];
+    var ask = inspection === null
+      ? { device: me, push: push, after: listPoint, entities: LIST_KINDS, limit: 5000 }
+      : { device: me, push: push, after: points[inspection] || null, inspection: inspection, limit: 5000 };
+    return auth.ask('inspection-sync', ask, DEADLINE).then(function (r) {
       if (r === null) { window.location.replace('/signin'); return false; }
       if (r.status !== 200 || !r.json || !Array.isArray(r.json.fields)) throw new Error('sync');
       if (typeof r.json.now === 'number') offset = r.json.now - Date.now();
       var answered = Object.create(null);
       (r.json.results || []).forEach(function (x) { answered[x.i] = true; });
       (r.json.skipped || []).forEach(function (x) { answered[x.i] = true; });
-      outbox = outbox.filter(function (w, i) { return i >= push.length || !answered[i]; });
+      if (push.length) outbox = outbox.filter(function (w, i) { return i >= push.length || !answered[i]; });
       r.json.fields.forEach(take);
-      if (typeof r.json.next === 'number') point = r.json.next;
-      return r.json.more === true || outbox.length > 0;
+      if (typeof r.json.next === 'number') { if (inspection === null) listPoint = r.json.next; else points[inspection] = r.json.next; }
+      return r.json.more === true || (inspection === null && outbox.length > 0);
     });
   }
 
   function sync() {
     if (pulling) { again = true; return pulling; }
-    var loop = function () { return exchange().then(function (more) { return more ? loop() : null; }); };
-    pulling = loop().then(function () {
-      loaded = true;
+    var loop = function (part) { return exchange(part).then(function (more) { return more ? loop(part) : null; }); };
+    // The list and the inspection open now, side by side: what the page shows, and nothing else.
+    var open = chosen();
+    pulling = Promise.all([
+      loop(null).then(function () { loaded = true; render(); }),
+      open ? loop(open).then(function () { whole[open] = true; }) : null,
+    ]).then(function () {
+      keep(open);
       show('data-save', outbox.length ? 'saving' : (anyEdits ? 'saved' : ''));
       showLive(listening ? 'live' : 'connecting');
       render();
@@ -125,6 +142,33 @@
     });
     show('data-save', 'saving');
     sync();
+  }
+
+  /* Keeps the list and the inspection just pulled in this browser, unless an edit is still on its way: what is kept
+     is what the server holds up to its point, never an edit it may still refuse (a later visit pulls only after the
+     point, so it would never be put right). */
+  function keep(open) {
+    if (!cache || !account || outbox.length) return;
+    var list = [], one = [];
+    Object.keys(fields).forEach(function (k) {
+      var f = fields[k];
+      if (LIST_KINDS.indexOf(f.entity) >= 0) list.push(f);
+      if (open && f.inspection === open) one.push(f);
+    });
+    if (listPoint !== null) cache.write(account, 'list', listPoint, list);
+    if (open && whole[open] && typeof points[open] === 'number') cache.write(account, open, points[open], one);
+  }
+
+  /* What this browser kept of the list, and of inspection [open] when it is given: drawn at once, then the pull asks
+     only for what changed after each point. A point already pulled past here is never moved back. */
+  function fromKept(open) {
+    if (!cache || !account) return Promise.resolve();
+    return Promise.all([loaded ? null : cache.read(account, 'list'), open && !whole[open] ? cache.read(account, open) : null])
+      .then(function (got) {
+        if (got[0] && listPoint === null) { got[0].fields.forEach(take); listPoint = got[0].point; loaded = true; }
+        if (got[1] && open && points[open] === undefined) { got[1].fields.forEach(take); points[open] = got[1].point; whole[open] = true; }
+        if (got[0] || got[1]) render();
+      }, function () { /* nothing kept: the pull brings it */ });
   }
 
   // ---- what shows ----------------------------------------------------------------------------------------------
@@ -200,12 +244,15 @@
   var shape = null;
   function renderOne() {
     var id = chosen();
-    var detail = $('[data-detail]'), pick = $('[data-pick]');
-    // Never half an inspection: one opened by its address waits for the first pull with the list.
+    var detail = $('[data-detail]'), pick = $('[data-pick]'), waiting = $('[data-one-loading]');
+    waiting.hidden = true;
+    // Never half an inspection: one opened by its address waits for the list's first pull.
     if (!loaded) { detail.hidden = true; pick.hidden = true; shape = null; return; }
     if (!id || deleted('inspection', id) || val('inspection', id, 'title') === undefined) {
       detail.hidden = true; pick.hidden = false; shape = null; return;
     }
+    // Nor before its own fields are here: the list holds only its row and its people.
+    if (!whole[id]) { detail.hidden = true; pick.hidden = true; waiting.hidden = false; shape = null; return; }
     pick.hidden = true; detail.hidden = false;
     var stops = parts('section', function (s) { return owner['section/' + s] === id; }).sort(byPosition('section'));
     var itemsOf = function (s) { return parts('item', function (i) { return val('item', i, 'section_id') === s && !val('item', i, 'parent_item_id'); }).sort(byPosition('item')); };
@@ -1626,7 +1673,11 @@
   var listening = false;
   function showLive(which) { show('data-live', which); }
 
-  window.addEventListener('hashchange', function () { shape = null; flagOnly = false; flagTrouble = false; render(); });
+  // Another inspection opened: drawn from what is kept when it is, and pulled.
+  window.addEventListener('hashchange', function () {
+    shape = null; flagOnly = false; flagTrouble = false; render();
+    fromKept(chosen()).then(sync);
+  });
   var searching = null;
   $('[data-search]').addEventListener('input', function () { clearTimeout(searching); searching = setTimeout(function () { var id = chosen(); if (id) renderSearch(id); }, 120); });
   addForm($('[data-addstop]'), function (name) { var id = chosen(); if (id) addStop(id, name, $('[data-addstop-chapter]').value || null); });
@@ -1646,7 +1697,7 @@
     else { pullBusiness(); pullPublished(); }
     sync();
   });
-  sync();
+  fromKept(chosen()).then(sync);
   pullBusiness();
   checkAI();
   pullPublished();

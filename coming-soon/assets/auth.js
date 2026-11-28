@@ -14,6 +14,8 @@
   // by itself: every table sits behind row-level security, and new accounts are made by invitation only.
   var KEY = 'sb_publishable_iFfCyDj7e5cnTsWC7aDO8Q_BD5bG_io';
   var STORE = 'inspyx.signin';
+  // The inspections this browser keeps between visits (assets/insp-cache.js): deleted whenever no one is signed in.
+  var KEPT = 'inspyx-inspections';
   var GOING = 'inspyx.signin.google';   // kept for this tab only, while the browser is away at Google
   var DEADLINE = 30000;   // the longest one call may take, as in the app
   var EARLY = 60000;      // a sign-in with less than a minute left is renewed before it is used
@@ -66,7 +68,11 @@
     } catch (e) { return null; }
   }
   function keep(s) { try { root.localStorage.setItem(STORE, JSON.stringify(s)); return stored() !== null; } catch (e) { return false; } }
-  function forget() { try { root.localStorage.removeItem(STORE); } catch (e) { /* nothing was kept */ } }
+  function forgetKept() { try { if (root.indexedDB) root.indexedDB.deleteDatabase(KEPT); } catch (e) { /* nothing was kept */ } }
+  function forget() {
+    try { root.localStorage.removeItem(STORE); } catch (e) { /* nothing was kept */ }
+    forgetKept();
+  }
 
   function signIn(email, password) {
     return send('POST', BASE + '/token?grant_type=password', null, { email: email, password: password }).then(function (r) {
@@ -389,7 +395,8 @@
       if (stopped) return;
       current().then(function (s) {
         if (stopped) return;
-        if (!s || s.id !== me.id) { stopped = true; tell({ signedOut: true }); return; }   // signed out, or someone else signed in
+        // Signed out, or someone else signed in: nothing of the inspections kept here stays.
+        if (!s || s.id !== me.id) { stopped = true; forgetKept(); tell({ signedOut: true }); return; }
         var ws;
         try { ws = new root.WebSocket(REALTIME); } catch (e) { dropped(); return; }
         socket = ws;
@@ -614,7 +621,10 @@
     });
   }
 
-  root.InspyxAuth = { signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, templateFile: templateFile, templateRead: templateRead, convertTemplate: convertTemplate, editFinding: editFinding, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, linkRequest: linkRequest, linkKey: linkKey, linkTake: linkTake, linkVerify: linkVerify, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword, choices: choices, choose: choose };
+  // A page opened with no one signed in keeps nothing of anyone's inspections.
+  if (!stored()) forgetKept();
+
+  root.InspyxAuth = { kept: KEPT, signIn: signIn, signOut: signOut, current: current, stored: stored, ask: ask, picture: picture, templateFile: templateFile, templateRead: templateRead, convertTemplate: convertTemplate, editFinding: editFinding, listen: listen, who: who, googleStart: googleStart, googleBack: googleBack, requestReset: requestReset, resetBack: resetBack, linkRequest: linkRequest, linkKey: linkKey, linkTake: linkTake, linkVerify: linkVerify, setNewPassword: setNewPassword, signUp: signUp, signupBack: signupBack, setPassword: setPassword, choices: choices, choose: choose };
 
   /* The gate. A page for the signed-in (data-gate="in") sends a browser with no sign-in to the sign-in page; the
      sign-in page (data-gate="out") sends a browser that has one to the dashboard (/today, since 2026-11-15). It asks three times:
