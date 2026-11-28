@@ -1,19 +1,20 @@
-/* Your inspections, live (2026-11-14, Inspyx 4): the inspector's inspections as their phone has them, kept in step both
-   ways. Moises's dashboard interview, answer 6: "Both stay in sync"; a change shows on the other within seconds, and the
-   newest change wins when both touch the same thing.
+/* Your inspections, live: the inspector's inspections as their phone has them, kept in step both ways, so a change
+   made on either shows on the other within seconds, and the newest change wins when both touch the same thing.
    How: the server keeps one register per field of every inspection (the inspection-sync function, in the app's repo at
-   backend/supabase/functions/inspection-sync). This page pulls every field once, then only what changed after its point;
-   it sends each edit as one field with the time it was made; and it pulls again whenever the server pings "something
-   changed" (InspyxAuth.listen), when the tab comes back into view, and once a minute as a fallback.
+   backend/supabase/functions/inspection-sync). The list needs only each inspection's own row and its people, so the
+   page pulls those kinds for the whole account (about 1.5% of a large account's fields); an inspection's every field is
+   pulled when it is opened. Each part has its own point, and after the first pull only what changed after it comes.
+   Both are kept in this browser between visits (insp-cache.js), so the list draws at once and a reload asks only for
+   what changed. The page sends each edit as one field with the time it was made, and pulls again whenever the server
+   pings "something changed" (InspyxAuth.listen), when the tab comes back into view, and once a minute as a fallback.
    An edit typed here is never overwritten while its box is being typed in: the newest value lands when the box is left.
-   Desk finishing (2026-11-16): the cover's city, state, ZIP and booked time (a reschedule), each finding's location and
-   who should fix it, and why an item wasn't inspected: every field the phone applies from elsewhere
-   (inspection_sync_apply.dart). A booked time travels as the phone keeps it, UTC milliseconds; the box shows it in this
-   browser's time zone, to the minute. The start is the phone's alone (write-once there): shown, never sent.
-   Renames and Find (2026-11-16): a stop's and an item's names are boxes (the phone applies both from elsewhere); a
-   box marked data-required (title, address, a name) is never sent empty. The list is in the phone's day order (its
-   start, else its booked time, else when it was made; newest first), each with its day, and Find keeps the ones whose
-   title, address or city has what is typed.
+   Every field the phone applies from elsewhere (inspection_sync_apply.dart) can be edited here: the cover's city,
+   state, ZIP and booked time (a reschedule), each finding's location and who should fix it, why an item wasn't
+   inspected, and the names of stops and items. A booked time travels as the phone keeps it, UTC milliseconds; the box
+   shows it in this browser's time zone, to the minute. The start is the phone's alone (write-once there): shown,
+   never sent. A box marked data-required (title, address, a name) is never sent empty. The list is in the phone's day
+   order (its start, else its booked time, else when it was made; newest first), each with its day, and Find keeps the
+   ones whose title, address or city has what is typed.
    This file says no words. The page holds every sentence. */
 (function () {
   'use strict';
@@ -43,10 +44,16 @@
 
   // Every field the server holds for this inspector: "entity/id.field" -> { inspection, entity, id, field, value, at, device }
   var fields = Object.create(null);
-  var point = null, offset = 0, pulling = null, again = false;
-  // The first pull brings every field the inspector has (rehearsal 3, findings 28–29: 51,542 of them, 53 pages, ~23 s):
-  // until it ends the page shows "Loading", never a part of the list or "Live" (the list showed one of 27).
+  var offset = 0, pulling = null, again = false;
+  // The list's kinds of field: what the list, the calendar and the people page read (insp-read.js pulls the same).
+  var LIST_KINDS = ['inspection', 'person'];
+  // How far the list has been pulled, and each opened inspection (id -> its point).
+  var listPoint = null, points = Object.create(null);
+  // Until the list's first pull ends (or the kept list is read) the page shows "Loading", never part of the list.
   var loaded = false;
+  // The inspections whose every field is here: opened and pulled, or kept from an earlier visit.
+  var whole = Object.create(null);
+  var cache = window.InspyxInspCache, account = auth.who() ? auth.who().id : null;
   var outbox = [];          // this page's edits not yet answered: { inspection, entity, id, field, value, at }
   var dirty = Object.create(null);   // keys being typed in right now
   var timers = Object.create(null);
@@ -57,34 +64,58 @@
   var later = function (a, b) { return a.at > b.at || (a.at === b.at && a.device > b.device); };
 
   var owner = Object.create(null);   // "entity/id" -> the inspection it belongs to
+  // What the server has said it holds, field by field: only this is kept between visits. An edit made here shows in
+  // fields at once, but reaches confirmed only when a pull brings it back from the server, so nothing the server may
+  // still refuse (or never got) is kept as if it were there.
+  var confirmed = Object.create(null);
   function take(f) {
     var k = key(f.entity, f.id, f.field), held = fields[k];
     owner[f.entity + '/' + f.id] = f.inspection;
     if (!held || later(f, held)) fields[k] = f;
   }
+  function fromServer(f) {
+    take(f);
+    var k = key(f.entity, f.id, f.field), held = confirmed[k];
+    if (!held || later(f, held)) confirmed[k] = f;
+  }
 
-  /* One exchange with the function: sends what waits, brings what changed. */
-  function exchange() {
-    var push = outbox.slice(0, 500);
-    return auth.ask('inspection-sync', { device: me, push: push, after: point, limit: 5000 }, DEADLINE).then(function (r) {
+  /* One exchange with the function: sends what waits, brings what changed of one part: the list's kinds (inspection
+     null), or every field of one inspection. */
+  function exchange(inspection) {
+    // Edits go with the list's exchange only: the inspection's runs beside it, and an edit is sent once.
+    var push = inspection === null ? outbox.slice(0, 500) : [];
+    var ask = inspection === null
+      ? { device: me, push: push, after: listPoint, entities: LIST_KINDS, limit: 5000 }
+      : { device: me, push: push, after: points[inspection] || null, inspection: inspection, limit: 5000 };
+    return auth.ask('inspection-sync', ask, DEADLINE).then(function (r) {
       if (r === null) { window.location.replace('/signin'); return false; }
       if (r.status !== 200 || !r.json || !Array.isArray(r.json.fields)) throw new Error('sync');
       if (typeof r.json.now === 'number') offset = r.json.now - Date.now();
       var answered = Object.create(null);
       (r.json.results || []).forEach(function (x) { answered[x.i] = true; });
       (r.json.skipped || []).forEach(function (x) { answered[x.i] = true; });
-      outbox = outbox.filter(function (w, i) { return i >= push.length || !answered[i]; });
-      r.json.fields.forEach(take);
-      if (typeof r.json.next === 'number') point = r.json.next;
-      return r.json.more === true || outbox.length > 0;
+      // Answered: exactly the writes that were sent. One edited again while it was on its way is a new write, still
+      // waiting, whatever its place in the outbox now.
+      if (push.length) {
+        var done = push.filter(function (w, i) { return answered[i]; });
+        outbox = outbox.filter(function (w) { return done.indexOf(w) < 0; });
+      }
+      r.json.fields.forEach(fromServer);
+      if (typeof r.json.next === 'number') { if (inspection === null) listPoint = r.json.next; else points[inspection] = r.json.next; }
+      return r.json.more === true || (inspection === null && outbox.length > 0);
     });
   }
 
   function sync() {
     if (pulling) { again = true; return pulling; }
-    var loop = function () { return exchange().then(function (more) { return more ? loop() : null; }); };
-    pulling = loop().then(function () {
-      loaded = true;
+    var loop = function (part) { return exchange(part).then(function (more) { return more ? loop(part) : null; }); };
+    // The list and the inspection open now, side by side: what the page shows, and nothing else.
+    var open = chosen();
+    pulling = Promise.all([
+      loop(null).then(function () { loaded = true; render(); }),
+      open ? loop(open).then(function () { whole[open] = true; }) : null,
+    ]).then(function () {
+      keep(open);
       show('data-save', outbox.length ? 'saving' : (anyEdits ? 'saved' : ''));
       showLive(listening ? 'live' : 'connecting');
       render();
@@ -111,7 +142,7 @@
     sync();
   }
 
-  /* Several fields at once, as one change (2026-11-24, his list item 12): a new part's fields travel together, so the
+  /* Several fields at once, as one change: a new part's fields travel together, so the
      phone makes it whole (inspection_sync_apply.dart makes a stop or an item only when its required fields have all
      come), and a move's two positions or a delete's parts land together. */
   function editAll(inspection, writes) {
@@ -125,6 +156,33 @@
     });
     show('data-save', 'saving');
     sync();
+  }
+
+  /* Keeps the list and the inspection just pulled in this browser, unless an edit is still on its way: what is kept
+     is what the server holds up to its point, never an edit it may still refuse (a later visit pulls only after the
+     point, so it would never be put right). */
+  function keep(open) {
+    if (!cache || !account || outbox.length) return;
+    var list = [], one = [];
+    Object.keys(confirmed).forEach(function (k) {
+      var f = confirmed[k];
+      if (LIST_KINDS.indexOf(f.entity) >= 0) list.push(f);
+      if (open && f.inspection === open) one.push(f);
+    });
+    if (listPoint !== null) cache.write(account, 'list', listPoint, list);
+    if (open && whole[open] && typeof points[open] === 'number') cache.write(account, open, points[open], one);
+  }
+
+  /* What this browser kept of the list, and of inspection [open] when it is given: drawn at once, then the pull asks
+     only for what changed after each point. A point already pulled past here is never moved back. */
+  function fromKept(open) {
+    if (!cache || !account) return Promise.resolve();
+    return Promise.all([loaded ? null : cache.read(account, 'list'), open && !whole[open] ? cache.read(account, open) : null])
+      .then(function (got) {
+        if (got[0] && listPoint === null) { got[0].fields.forEach(fromServer); listPoint = got[0].point; loaded = true; }
+        if (got[1] && open && points[open] === undefined) { got[1].fields.forEach(fromServer); points[open] = got[1].point; whole[open] = true; }
+        if (got[0] || got[1]) render();
+      }, function () { /* nothing kept: the pull brings it */ });
   }
 
   // ---- what shows ----------------------------------------------------------------------------------------------
@@ -200,12 +258,15 @@
   var shape = null;
   function renderOne() {
     var id = chosen();
-    var detail = $('[data-detail]'), pick = $('[data-pick]');
-    // Never half an inspection: one opened by its address waits for the first pull with the list.
+    var detail = $('[data-detail]'), pick = $('[data-pick]'), waiting = $('[data-one-loading]');
+    waiting.hidden = true;
+    // Never half an inspection: one opened by its address waits for the list's first pull.
     if (!loaded) { detail.hidden = true; pick.hidden = true; shape = null; return; }
     if (!id || deleted('inspection', id) || val('inspection', id, 'title') === undefined) {
       detail.hidden = true; pick.hidden = false; shape = null; return;
     }
+    // Nor before its own fields are here: the list holds only its row and its people.
+    if (!whole[id]) { detail.hidden = true; pick.hidden = true; waiting.hidden = false; shape = null; return; }
     pick.hidden = true; detail.hidden = false;
     var stops = parts('section', function (s) { return owner['section/' + s] === id; }).sort(byPosition('section'));
     var itemsOf = function (s) { return parts('item', function (i) { return val('item', i, 'section_id') === s && !val('item', i, 'parent_item_id'); }).sort(byPosition('item')); };
@@ -264,7 +325,7 @@
       if (dirty[k]) return;
       var f = fields[k], v = f ? f.value : null;
       var want = el.getAttribute('data-kind') === 'time' ? (typeof v === 'number' && isFinite(v) ? toBox(v) : '') : v === null || v === undefined ? '' : String(v);
-      // An item made here has no status until it is set: the phone's own start, "Not started" (2026-11-24, item 12).
+      // An item made here has no status until it is set: the phone's own start, "Not started".
       if (want === '' && el.getAttribute('data-field') === 'status') want = 'untouched';
       if (el.value !== want) el.value = want;
     });
@@ -341,7 +402,7 @@
       var row = tpl('person');
       row.querySelector('[data-v="name"]').textContent = text(val('person', p, 'name')).trim() || word('noname');
       row.querySelector('[data-v="role"]').textContent = word(role);
-      // How to reach them, as the phone keeps it (the rehearsal, A05: names only).
+      // How to reach them, as the phone keeps it.
       row.querySelector('[data-v="reach"]').textContent = [text(val('person', p, 'phone')).trim(), text(val('person', p, 'email')).trim()]
         .filter(Boolean).join(' · ');
       row.querySelector('[data-v="look"]').textContent = word('look-' + as);
@@ -352,7 +413,7 @@
     });
   }
 
-  /* ---- Agreements outdated (2026-11-24, his Spectora list item 10): whether the agreement the client signed still
+  /* ---- Agreements outdated: whether the agreement the client signed still
      says what is true today, and "Send the updated agreement". The signings, what their blanks were filled with
      (signing_details), the fee and the bookings come from the business sync, read only (as calendar.js); the
      inspection's own fields come from this page's inspection sync. The rulebook is agreement-fill.js, the phone's
@@ -373,24 +434,24 @@
       });
     };
     // Answers whether the whole feed came in: a save to a template must not take a library it couldn't read for an
-    // empty one (Codex on inspyx-site #98).
+    // empty one.
     bizPulling = loop().then(function (ok) { bizPulling = null; if (ok === true) bizLoaded = true; renderList(); renderOne(); return ok === true; },
       function () { bizPulling = null; return false; });
     return bizPulling;
   }
-  // The archive (2026-11-25, archive_rules.ts) and the bookings' write-back: read and written here too (the
-  // rehearsal, round 2: the web couldn't cancel or put away a job).
+  // The archive (archive_rules.ts) and the bookings' write-back: read and written here too (the web has to be
+  // able to cancel or put away a job).
   BIZ.archived_inspections = true;
   function takeBiz(row) {
     if (!row || !BIZ[row.kind] || typeof row.id !== 'string') return;
     var k = row.kind + '/' + row.id, held = biz[k], wire = flagWire[k];
     // What the server has, even when a tap still on its way is newer and shown: what that tap goes back to if it isn't
-    // kept (Codex on inspyx-site #95). The feed sends a row once.
+    // kept. The feed sends a row once.
     if (wire && (!wire.sure || row.updated_at >= wire.sure.updated_at)) wire.sure = row;
     if (!held || row.updated_at >= held.updated_at) biz[k] = row;
   }
 
-  /* ---- Flag for later (2026-11-24, his list item 12, piece C): the inspector's own mark on an item or a finding,
+  /* ---- Flag for later: the inspector's own mark on an item or a finding,
      "come back to this". Its own business-sync kind (item_flags; the server's flag_rules.ts, the phone's
      item_flag_rules.dart, one rulebook), never a field of the inspection: a flag never reaches the report, its
      fingerprint or "updated since sent". The server deletes a flag with its item or inspection. ---- */
@@ -480,9 +541,9 @@
     el.addEventListener('click', function () { setFlag(inspection, id, !flagged(id)); });
   }
 
-  /* ---- Save to template (2026-11-26, his list item 12, piece D): a finding written here goes into the inspector's
+  /* ---- Save to template: a finding written here goes into the inspector's
      template as a pre-written comment, so the next inspection offers it under the same item. From Inspyx's own
-     template, it goes into the inspector's OWN COPY of it (his decision, 2026-11-26), made here when there is none,
+     template, it goes into the inspector's OWN COPY of it, made here when there is none,
      which then becomes the template new inspections start from. The template's file and its row travel as the
      phone's do (the private store, then the business sync); every rule of their shape is template-save.js, the
      phone's own rules, proven against the phone in the app repo (test/src/data/web_template_save_test.dart). ---- */
@@ -557,7 +618,7 @@
       // Every id he has had, removed ones too: a new one is never an old one (the phone's newTemplateIdFor).
       var id = TS.newTemplateId(copy.copyName, rows.map(function (r) { return r.id; }));
       // New inspections start from the copy only when they start from ours now (or from nothing he chose): never over a
-      // default he picked himself (the lead's condition on his yes, 2026-11-26).
+      // default he picked himself.
       var dflt = biz[TPL_DEFAULT + '/default'], now = standingRow(dflt) ? dflt.data.templateId : null;
       return { id: id, name: copy.copyName, text: TS.makeCopy(copy, id, copy.copyName), row: null, source: copy.sourceName,
         makeDefault: now === null || now === undefined || now === spot.from };
@@ -586,7 +647,7 @@
           createdAt: at, updatedAt: at, deletedAt: null };
         if (base) data.base = base;
         var push = [{ kind: TPL, id: target.id, updated_at: at, deleted_at: null, data: data }];
-        // A copy made here: new inspections start from it, or the comment would never show (his yes, 2026-11-26).
+        // A copy made here: new inspections start from it, or the comment would never show.
         if (!target.row && target.makeDefault) push.push({ kind: TPL_DEFAULT, id: 'default', updated_at: at, deleted_at: null,
           data: { id: 'default', ownerAccountId: me, templateId: target.id, updatedAt: at, deletedAt: null } });
         return auth.ask('sync', { push: push, after: bizPoint, limit: 500 }, DEADLINE).then(function (r) {
@@ -641,8 +702,7 @@
         if (t.problem) { where.textContent = tplWords('tpl-' + t.problem, { item: itemName() }); return; }
         target = t;
         if (t.source) copySource = t.source;
-        // A new copy that would become the default: asked, with a box ticked for yes (rehearsal round 2, 2026-11-26:
-        // it switched new inspections with a sentence easy to miss).
+        // A new copy that would become the default: asked, with a box ticked for yes (a sentence is easy to miss).
         var asks = !t.row && t.makeDefault;
         where.textContent = tplWords(t.row ? 'tpl-into' : 'tpl-into-new-keep', { name: t.name, item: itemName(), source: t.source || '' });
         q('[data-tpl-use]').hidden = !asks;
@@ -715,9 +775,8 @@
       totalCents: f.totalCents, byHand: Object.keys(json(f.selectionJson, {})).length === 0 };
   }
 
-  /* ---- The job (the rehearsal, round 2, A05, 2026-11-26: the job page showed the people's names and nothing of the
-     fee, the payments, the agreement or the house). Read only: the fee and the payments are set on the phone and
-     travel through the business sync (PR 3, Moises's "Yes, store them"); the facts are the inspection's own. ---- */
+  /* ---- The job: the people's names, the fee, the payments, the agreement and the house. Read only: the fee and the
+     payments are set on the phone and travel through the business sync; the facts are the inspection's own. ---- */
   var say = function (w, vals) { return word(w).replace(/\{(\w+)\}/g, function (m, k) { return vals && k in vals ? vals[k] : m; }); };
   function renderJob(id) {
     if (!Fill) return;
@@ -790,10 +849,10 @@
   }
 
   /* The inspection's signings: by the id the server copied onto them, or through its booking. */
-  /* ---- Cancel this booking and Archive (the rehearsal, round 2: a booked job couldn't be cancelled or put away on
-     the web). The phone has no deleting a whole inspection: it archives, and the archive can bring it back. Cancel is
-     the phone's cancelBookingOf: the booking goes back as cancelled (the server emails the client and frees the time),
-     then the inspection goes to the archive. ---- */
+  /* ---- Cancel this booking and Archive: a booked job can be cancelled or put away on the web. The phone has no
+     deleting a whole inspection: it archives, and the archive can bring it back. Cancel is the phone's
+     cancelBookingOf: the booking goes back as cancelled (the server emails the client and frees the time), then the
+     inspection goes to the archive. ---- */
   function archived(id) {
     var r = biz['archived_inspections/' + id];
     return !!(r && r.deleted_at == null && r.data && r.data.archivedAt != null);
@@ -824,7 +883,7 @@
       return kept ? 'saved' : 'refused';
     }, function () { return 'failed'; });
   }
-  /* ---- Set the fee and record a payment on the web (the lead, 2026-11-27: his rule, the web does what the app does).
+  /* ---- Set the fee and record a payment on the web (the web does what the app does).
      The same rows the phone writes (InspectionFeeStore.setFee with InspectionFeeEntry.byHand; recordPayment and its
      undo, voidedAt), through the business sync; then the client's pay link is brought up to date with the request
      the phone sends (refreshPayLink: payments, action link, never made here). ---- */
@@ -867,7 +926,7 @@
   }
   function handPayments(id) {
     return Object.keys(biz).filter(function (k) { return k.indexOf('inspection_payments/') === 0; }).map(function (k) { return biz[k]; })
-      // A deleted row is never counted (as bizData leaves it out of the Paid line: Codex on #131).
+      // A deleted row is never counted (as bizData leaves it out of the Paid line).
       .filter(function (r) { var d = r.data; return r.deleted_at == null && d && d.deletedAt == null && d.inspectionId === id && d.voidedAt == null && d.method !== 'pay_link' && typeof d.amountCents === 'number'; })
       .sort(function (a, b) { return a.data.recordedAt - b.data.recordedAt; });
   }
@@ -903,7 +962,7 @@
       if (o !== 'saved') { jobBusy = false; jobSay(o === 'refused' ? 'job-refused' : 'job-failed'); renderOne(); return; }
       if (done) done();
       renderOne();
-      // Every page of the feed in before the pay link's totals are worked out (Codex on #131): a fee or a payment on a
+      // Every page of the feed in before the pay link's totals are worked out: a fee or a payment on a
       // later page is never left out of them.
       return pullBusiness().then(function (whole) {
         if (!whole) { jobBusy = false; jobSay('job-saved-later'); return; }
@@ -917,7 +976,7 @@
     if (cents > FEE_MAX) return 'amount-big';
     return null;
   }
-  // A form is its inspection's: opened for it, closed when another is opened, never submitted for another (Codex on #131).
+  // A form is its inspection's: opened for it, closed when another is opened, never submitted for another.
   function formFor(f) { return f.getAttribute('data-for'); }
   $('[data-fee-edit]').addEventListener('click', function () {
     var id = chosen(), fee = id && feeOf(id), f = $('[data-fee-form]');
@@ -952,7 +1011,7 @@
     var list = $('[data-pays]'), rows = handPayments(id), usd = Fill ? Fill.agreementUsd : function (c) { return '$' + (c / 100).toFixed(2); };
     var shape = JSON.stringify(rows.map(function (r) { return [r.id, r.data.amountCents, r.data.method, r.data.recordedAt]; }));
     $('[data-fee-edit]').textContent = word(feeOf(id) ? 'fee-change' : 'fee-set');
-    // Nothing set until the whole business feed is in (a fee or payment not yet read would be left out: Codex on #131).
+    // Nothing set until the whole business feed is in (a fee or payment not yet read would be left out).
     $('[data-fee-edit]').hidden = !bizLoaded; $('[data-pay-add]').hidden = !bizLoaded;
     ['[data-fee-form]', '[data-pay-form]'].forEach(function (q) { var f = $(q); if (!f.hidden && (formFor(f) !== id || !bizLoaded)) f.hidden = true; });
     if (list.getAttribute('data-shape') === shape) return;
@@ -990,7 +1049,7 @@
   }
   function renderActs(id) {
     var box = $('[data-acts]'), gone = archived(id), booking = gone ? null : standingBooking(id), client = clientOf(id);
-    // Until the bookings are in, a booked job can't be told from one with none (Codex on #125): nothing is offered.
+    // Until the bookings are in, a booked job can't be told from one with none: nothing is offered.
     box.hidden = !bizLoaded;
     if (!bizLoaded) return;
     $('[data-acts-archived]').hidden = !gone;
@@ -1028,7 +1087,7 @@
     busy(true); problem('');
     var done = function (which) { busy(false); actDialog.close(); actSaid = { id: a.id, which: which, name: a.client }; renderList(); renderOne(); };
     if (a.which === 'archive') {
-      // A booking that came in since the dialog opened: archiving alone would leave the client booked (Codex on #125).
+      // A booking that came in since the dialog opened: archiving alone would leave the client booked.
       if (standingBooking(a.id)) { busy(false); problem('archive-booked'); renderOne(); return; }
       sendBiz([archiveRow(a.id)]).then(function (o) { if (o === 'saved') done('archived'); else { busy(false); problem('archive-' + o); } });
       return;
@@ -1084,8 +1143,8 @@
         list.appendChild(li);
       });
     }
-    // No price on record, or one taken off: an updated agreement carries the price, and none would send it as zero
-    // (Codex on #89), whatever else changed.
+    // No price on record, or one taken off: an updated agreement carries the price, and none would send it as zero,
+    // whatever else changed.
     var needsFee = !facts.fee || st.changes.some(function (c) { return (c.blank === 'fee' || c.blank === 'feeLines') && Fill.dartTrim(c.now) === ''; });
     $('[data-agr-needsfee]').hidden = !needsFee;
     var send = $('[data-agr-send]');
@@ -1137,7 +1196,7 @@
     });
   });
 
-  /* ---- Edit with AI (2026-11-24, his decision after the Spectora walk; the relay's contract EDIT_WITH_AI.md v1):
+  /* ---- Edit with AI (the relay's contract is EDIT_WITH_AI.md v1):
      Spex's version of one finding's details, shown beside the inspector's with Keep or Discard. Nothing changes
      without Keep, and Keep only fills the Details box, which then saves as typing does. The button shows only when the
      relay says this inspector may use it ("edit": true); asking is a hello alone, never billed. The sign-in stays in
@@ -1154,9 +1213,9 @@
     }, function () { aiOpen = null; });   // unreachable: asked again on the next visit
   }
   var cut = function (v, n) { v = Fill ? Fill.dartTrim(text(v)) : text(v).trim(); return v.length > n ? v.slice(0, n) : v; };
-  /* Which actions each field offers, and when (the contract v1.1, EDIT_WITH_AI.md "Which fields, which actions"; his yes
-     to Add a recommendation on "What to do", 2026-11-26): the Details all four, also when empty; "What it means" shorter
-     and grammar, only with words; "What to do" Add a recommendation always, shorter and grammar only with words. */
+  /* Which actions each field offers, and when (the contract v1.1, EDIT_WITH_AI.md "Which fields, which actions"):
+     the Details all four, also when empty; "What it means" shorter and grammar, only with words; "What to do" Add a
+     recommendation always, shorter and grammar only with words. */
   var AI_FIELDS = {
     details: { always: ['clearer', 'shorter', 'recommend', 'grammar'], withWords: [] },
     implication: { always: [], withWords: ['shorter', 'grammar'] },
@@ -1200,8 +1259,8 @@
     all('[data-ai-action]', box).forEach(function (b) {
       b.addEventListener('click', function () {
         var title = el.querySelector('[data-field="finding_title"]');
-        // The field's words are never cut: Keep replaces them whole, so a cut would delete what was past the limit
-        // (Codex on #90). Over the relay's limit, Spex isn't asked. The title, item and stop are only context.
+        // The field's words are never cut: Keep replaces them whole, so a cut would delete what was past the limit.
+        // Over the relay's limit, Spex isn't asked. The title, item and stop are only context.
         var words = Fill ? Fill.dartTrim(details.value) : details.value.trim();
         if (words.length > AI_MAX_TEXT) {
           q('[data-ai-error]').textContent = word('ai-too-long');
@@ -1241,7 +1300,7 @@
     });
     q('[data-ai-discard]').addEventListener('click', function () { shown('none'); });
   }
-  /* ---- the report's structure (2026-11-24, his list item 12): add, move and delete stops, items and findings, as
+  /* ---- the report's structure: add, move and delete stops, items and findings, as
      the phone does. Each new part is named as the phone names one (a version-4 id) and made with the fields the phone
      makes it with; a delete is final, here and on the phone, so it asks first and says what goes. ---- */
   var newId = function () { return crypto.randomUUID(); };
@@ -1295,7 +1354,7 @@
     var tied = positions.some(function (p, i) { return typeof p !== 'number' || positions.indexOf(p) !== i; });
     if (tied) {
       // Two sharing a place (made at once on two devices), or one with none: every one is numbered again in the
-      // order shown, the two swapped, so nothing else moves (Codex on inspyx-site #92).
+      // order shown, the two swapped, so nothing else moves.
       var order = siblings.slice(); order[at] = other; order[to] = id;
       editAll(inspection, order.map(function (x, i) { return { entity: entity, id: x, field: 'position', value: i }; }));
       return;
@@ -1347,8 +1406,8 @@
       renderOne();
     }, function () { /* unknown: the line stays out */ });
   }
-  /* ---- Send the report (the rehearsal, round 2; the lead, 2026-11-27). The web can't make a report, so it sends the
-     one published only while it is current: no change to the inspection after it was published (the phone's #783 remakes
+  /* ---- Send the report. The web can't make a report, so it sends the
+     one published only while it is current: no change to the inspection after it was published (the phone remakes
      an outdated one first; the web can't read its revision, so it compares the inspection's newest change with the
      publish time). Bookkeeping a phone writes when it applies sync isn't a change. Each person gets their own link, as
      the app sends (web_report.dart: link, then send). ---- */
@@ -1396,7 +1455,7 @@
       $('[data-send-message]').value = word('send-message').replace('{place}', place || word('send-the-property'));
     }
     // Each person as they first appear, by their role: the client ticked, an agent not, whether there from the start or
-    // added on the phone while this is open (Codex on #130); his own ticks are kept.
+    // added on the phone while this is open; his own ticks are kept.
     sendPeople(id).forEach(function (x) { if (!sendSeen[x.id]) { sendSeen[x.id] = true; if (x.role !== 'client') sendOff[x.id] = true; } });
     var outdated = lastChange(id) > rep.at;
     show('data-send-state', outdated ? 'outdated' : 'ready');
@@ -1439,7 +1498,7 @@
     // The function refuses a send with no subject: said here, never "didn't go through".
     if (!subject) { sendSay('no-subject'); return; }
     sendBusy = true; renderSend(id); sendSay(null);
-    // Its answer belongs to this inspection: shown only while it is still the one open (Codex on #130).
+    // Its answer belongs to this inspection: shown only while it is still the one open.
     var here = function () { return chosen() === id; };
     var stop = function (which, vals) { sendBusy = false; if (here()) sendSay(which, vals); renderOne(); };
     var keys = [];
@@ -1461,7 +1520,7 @@
     });
     chain.then(function (ok) {
       if (!ok) { stop('failed'); return; }
-      // Checked again just before it goes: a change that came in while the links were being made (Codex on #130).
+      // Checked again just before it goes: a change that came in while the links were being made.
       if (lastChange(id) > reports[id].at) { stop('outdated'); return; }
       return auth.ask('report', { action: 'send', inspection_id: id, recipients: keys, subject: subject, message: message }, DEADLINE).then(function (r) {
         if (r === null) { window.location.replace('/signin'); return; }
@@ -1533,7 +1592,7 @@
     sel.value = keep;
   }
 
-  /* ---- whole-report search (2026-11-24, his list item 12, piece B): every stop, item, finding and note of the
+  /* ---- whole-report search: every stop, item, finding and note of the
      inspection on show, searched here in the browser (nothing is sent); case and accents set aside. A match names
      where it is and goes straight to its box. ---- */
   var SEARCH_SHOWN = 50;
@@ -1626,7 +1685,11 @@
   var listening = false;
   function showLive(which) { show('data-live', which); }
 
-  window.addEventListener('hashchange', function () { shape = null; flagOnly = false; flagTrouble = false; render(); });
+  // Another inspection opened: drawn from what is kept when it is, and pulled.
+  window.addEventListener('hashchange', function () {
+    shape = null; flagOnly = false; flagTrouble = false; render();
+    fromKept(chosen()).then(sync);
+  });
   var searching = null;
   $('[data-search]').addEventListener('input', function () { clearTimeout(searching); searching = setTimeout(function () { var id = chosen(); if (id) renderSearch(id); }, 120); });
   addForm($('[data-addstop]'), function (name) { var id = chosen(); if (id) addStop(id, name, $('[data-addstop-chapter]').value || null); });
@@ -1634,7 +1697,7 @@
   var finding = null;
   $('[data-find]').addEventListener('input', function () { clearTimeout(finding); finding = setTimeout(renderList, 120); });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); pullPublished(); } });
-  // The business pull rides the same clock (Codex on inspyx-site #89): a fee changed on the phone or an updated
+  // The business pull rides the same clock: a fee changed on the phone or an updated
   // agreement signed reaches an open tab within a minute, never only on a tab switch. It asks from where it left off.
   setInterval(function () { if (document.visibilityState === 'visible') { sync(); pullBusiness(); pullPublished(); } }, FALLBACK);
 
@@ -1646,7 +1709,7 @@
     else { pullBusiness(); pullPublished(); }
     sync();
   });
-  sync();
+  fromKept(chosen()).then(sync);
   pullBusiness();
   checkAI();
   pullPublished();

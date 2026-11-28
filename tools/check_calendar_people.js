@@ -1,4 +1,4 @@
-// Self-checks for the calendar (/calendar) and People (/people) pages (2026-11-16, Inspyx 4).
+// Self-checks for the calendar (/calendar) and People (/people) pages.
 // NOTHING REAL IS ASKED OR CHANGED HERE. The inspection-sync function is a stand-in this test runs itself, with the
 // live server's rules (one register per field; the newest change wins; deletion is final; pull by seq), as in
 // check_inspections.js. The Realtime socket is a stand-in too. The sign-in in the browser is a made-up one that exists
@@ -110,10 +110,10 @@ async function open(browser, o) {
     if (u === SERVER + '/functions/v1/sync') {
       const b = JSON.parse(req.postData() || '{}');
       bookingCalls.push(b);
-      // The People book (job 7): a pushed person is kept newest-wins; o.lose() drops the answer of one that landed.
+      // The People book: a pushed person is kept newest-wins; o.lose() drops the answer of one that landed.
       const book = o.book || (o.book = new Map());
       // o.bookDown(): the sync function fails; o.notApplied(): a pushed person is answered "not applied" (the server
-      // holds a newer copy) and not kept; o.slowPush: ms before a push is answered (Codex on #87).
+      // holds a newer copy) and not kept; o.slowPush: ms before a push is answered.
       if (o.bookDown && o.bookDown()) return route.fulfill({ status: 503, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"error":"database"}' });
       if ((b.push || []).length && o.slowPush) await new Promise((r) => setTimeout(r, o.slowPush));
       const refused = (b.push || []).length && o.notApplied && o.notApplied();
@@ -136,7 +136,10 @@ async function open(browser, o) {
     if (o.down && o.down()) return route.abort('failed');
     const results = (body.push || []).map((w, i) => ({ i, outcome: s.push(body.device, w) }));
     const limit = body.limit || 500;
-    const rows = [...s.held.values()].filter((h) => h.seq > (body.after || 0)).sort((a, b) => a.seq - b.seq).slice(0, limit);
+    // As the live function: after a point, one inspection only (inspection), some kinds only (entities).
+    const rows = [...s.held.values()].filter((h) => h.seq > (body.after || 0) &&
+      (!body.inspection || h.inspection === body.inspection) &&
+      (!body.entities || body.entities.indexOf(h.entity) >= 0)).sort((a, b) => a.seq - b.seq).slice(0, limit);
     return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({
       results, skipped: [], fields: rows.map((h) => ({ inspection: h.inspection, entity: h.entity, id: h.id, field: h.field, value: h.value, at: h.at, device: h.device, seq: h.seq })),
       next: rows.length ? rows[rows.length - 1].seq : body.after, more: rows.length >= limit, now: NOW.getTime() }) });
@@ -167,7 +170,7 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     });
   }
 
-  // ---- a week and a day (2026-11-23, job 4) --------------------------------------------------------------------
+  // ---- a week and a day --------------------------------------------------------------------
   const SHOTS = process.env.SHOTS || '';
   const blocks = (page, d) => page.evaluate((x) => [...document.querySelectorAll('.cal-gcol[data-date="' + x + '"] .cal-block')].map((b) => ({
     t: b.querySelector('time').textContent.replace(/\s+/g, ' '), title: b.querySelector('strong').textContent, top: Math.round(b.getBoundingClientRect().top - b.parentElement.getBoundingClientRect().top),
@@ -239,6 +242,8 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     const s = server(); seed(s);
     const { page, ctx, errs, away, calls, sockets, res, ping } = await open(browser, { server: s, path: 'calendar' });
     ok('calendar: opens with no errors, asks only the sync function, as the signed-in inspector, and sends nothing', errs.length === 0 && away.length === 0 && sendsNothing(calls) && calls[0].body.after === null, errs.concat(away).join(' | '));
+    ok('calendar: it pulls only what it reads, each inspection\'s own row and its people', calls.length > 0 &&
+      calls.every((c) => JSON.stringify(c.body.entities) === '["inspection","person"]'));
     ok('calendar: asks for pages of 5000 (the server\'s most since 2026-11-27: 11 pages for 51,542 fields, not 53)', calls.every((c) => c.body.limit === 5000), JSON.stringify(calls.map((c) => c.body.limit)));
     ok('calendar: served with the live pages\' rule (the signed-in rule plus the live socket)', liveRule(res));
     ok('calendar: opens on this month, November 2026', (await vis(page, '[data-month]')).join() === 'November 2026' && new URL(page.url()).hash === '');
@@ -322,7 +327,7 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     let r = await open(browser, { server: empty, path: 'calendar' });
     ok('calendar: with no inspections synced yet, it says so and shows no grid', (await vis(r.page, '[data-state]')).join() === 'No inspections here yet. They show up here once your phone has synced.' && (await vis(r.page, '[data-days]')).length === 0);
     await r.ctx.close();
-    // A first booking made on /new, before the phone has synced anything: it shows at once (Codex on #86).
+    // A first booking made on /new, before the phone has synced anything: it shows at once.
     const only = [{ kind: 'bookings', id: 'bk-9', updated_at: 1, deleted_at: null, data: { id: 'bk-9', status: 'booked', inspectionId: null,
       startsAt: ny('2026-11-19T13:00:00'), endsAt: ny('2026-11-19T15:30:00'), property: { street: '88 New Booking Blvd', city: 'Miami', state: 'FL' } } }];
     r = await open(browser, { server: server(), path: 'calendar', hash: '#week-2026-11-18', bookings: only });
@@ -451,7 +456,7 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     ok('while an Add waits: Escape and Cancel don\'t close it', await page.isVisible('[data-dialog]') && await page.isDisabled('[data-form] [data-close]'));
     ok('and it lands on its own draft: saved, closed, shown', await until(async () => !(await page.isVisible('[data-dialog]')) && (await vis(page, '.ppl-one h3')).includes('Kai Lane'), 4000));
     // An Add that landed with its answer lost, then the phone (its clock a day ahead) changed that person: the retry
-    // is refused and brings the newer copy; the next try is newer still and saves (Codex on #87, r2).
+    // is refused and brings the newer copy; the next try is newer still and saves.
     let lost = true;
     o.slowPush = 0; o.lose = () => { const was = lost; lost = false; return was; };
     await page.click('[data-add-person]');
@@ -473,7 +478,7 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     await r.ctx.close();
   });
 
-  // Delete (the rehearsal, round 2): a person kept in People can go, as on the phone (deleteContact: the row marked,
+  // Delete: a person kept in People can go, as on the phone (deleteContact: the row marked,
   // never removed), and Undo brings them back (restoreContact) unless someone is kept under that name by then.
   for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
     await group('people: Delete and Undo, ' + label, async () => {
@@ -585,7 +590,7 @@ const sendsNothing = (calls) => calls.length > 0 && calls.every((c) => Array.isA
     ok('Undo then: the row still standing holds the name, so this one stays deleted, as on the phone', await until(async () => same(await vis(page, '[data-say]'), ['Someone else is kept as Jo Banks now, so this one stays deleted.'])) &&
       book.get('k4').data.deletedAt !== null);
     // 1b. Two names on one card (the same email), one refused: Undo brings back the deleted one; the refused one's name
-    //     (still kept) never blocks it (Codex on #123, r2).
+    //     (still kept) never blocks it.
     book.set('k8', Object.assign(row('k8', 'listing_agent', 'Lee Parks', { email: 'lee@example.com' }), { changed_at: 'zz', updated_at: T + 7 }));
     book.set('k9', Object.assign(row('k9', 'listing_agent', 'Leon Parks', { email: 'LEE@example.com' }), { changed_at: 'zz', updated_at: T + 7 }));
     await page.evaluate(() => window.InspyxPeopleBook.pull());

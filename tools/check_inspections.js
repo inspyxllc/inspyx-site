@@ -1,4 +1,4 @@
-// Self-checks for "Your inspections", live: /inspections (2026-11-14, Inspyx 4).
+// Self-checks for "Your inspections", live: /inspections.
 // NOTHING REAL IS ASKED OR CHANGED HERE. The inspection-sync function is a stand-in this test runs itself, with the
 // live server's rules (one register per field; the newest change wins; deletion is final; pull by seq): the same as
 // backend/supabase/functions/inspection-sync/schema.sql in the app's repo. The Realtime socket is a stand-in too.
@@ -18,7 +18,8 @@ const HOUR = 3600000, PHONE = 390, WIDE = 1280;
 const kept = (endsInMs) => JSON.stringify({ access: 'test-access-1', renew: 'test-renew-1', ends: Date.now() + endsInMs, id: ME, email: 'pat@example.com' });
 let failed = 0;
 const ok = (name, cond, extra) => { if (!cond) failed++; console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '  [' + extra + ']' : '')); };
-const group = async (label, fn) => { try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
+// ONLY=<words>: run only the groups whose name has them (a quick look while working; the gate runs them all).
+const group = async (label, fn) => { if (process.env.ONLY && label.indexOf(process.env.ONLY) < 0) return; try { await fn(); } catch (e) { ok(label + ': these checks could not run', false, String((e && e.message) || e).split('\n')[0]); } };
 
 const INSP = '6f1c2a3b-0000-4000-8000-000000000001', SEC = '6f1c2a3b-0000-4000-8000-0000000000b1';
 const ITEM = '6f1c2a3b-0000-4000-8000-0000000000a1', FIND = '6f1c2a3b-0000-4000-8000-0000000000a2';
@@ -153,8 +154,14 @@ async function open(browser, o) {
     const results = (body.push || []).map((w, i) => ({ i, outcome: s.push(body.device, w) }));
     // o.page: the server's own cap on a page (a pull in several pages); o.pageDelay: each page's wait.
     const cap = Math.min(body.limit || 500, o.page || Infinity);
-    const rows = [...s.held.values()].filter((h) => h.seq > (body.after || 0)).sort((a, b) => a.seq - b.seq).slice(0, cap);
+    // As the live function: after a point, one inspection only (inspection), some kinds only (entities).
+    const rows = [...s.held.values()].filter((h) => h.seq > (body.after || 0) &&
+      (!body.inspection || h.inspection === body.inspection) &&
+      (!body.entities || body.entities.indexOf(h.entity) >= 0)).sort((a, b) => a.seq - b.seq).slice(0, cap);
     if (o.pageDelay) await new Promise((r) => setTimeout(r, o.pageDelay));
+    // o.oneDelay: each pull of one inspection waits; o.pushDelay: each request carrying an edit waits.
+    if (o.oneDelay && body.inspection) await new Promise((r) => setTimeout(r, o.oneDelay));
+    if (o.pushDelay && (body.push || []).length) await new Promise((r) => setTimeout(r, o.pushDelay));
     return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({
       results, skipped: [], fields: rows.map((h) => ({ inspection: h.inspection, entity: h.entity, id: h.id, field: h.field, value: h.value, at: h.at, device: h.device, seq: h.seq })),
       next: rows.length ? rows[rows.length - 1].seq : body.after, more: rows.length >= cap, now: Date.now() }) });
@@ -174,6 +181,74 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
   const browser = await engine.launch();
   console.log('browser: ' + engine.name() + ' ' + browser.version());
 
+  await group('the list pulls only its kinds; an inspection is pulled when it is opened; kept between visits', async () => {
+    const s = server(); seed(s);
+    const o = { server: s, pageDelay: 200 };
+    const { page, ctx, errs, calls, ping } = await open(browser, o);
+    ok('a fresh list: only the list\'s kinds, for the whole account, nothing of any inspection', await until(async () => (await vis(page, '[data-list="items"] li')).length === 2) &&
+      calls.length > 0 && calls.every((c) => same(c.body.entities, ['inspection', 'person']) && !c.body.inspection));
+    const before = calls.length;
+    await page.evaluate((id) => { window.location.hash = id; }, INSP);
+    ok('opened: "Loading this inspection…" until its own fields are here', same(await vis(page, '[data-one-loading]'), ['Loading this inspection…']) && (await vis(page, '[data-detail]')).length === 0);
+    ok('then the inspection, from a pull of that inspection alone', await until(async () => await boxValue(page, 'inspection', INSP, 'title') === '12 Oak St') &&
+      calls.slice(before).some((c) => c.body.inspection === INSP && c.body.after === null) && (await vis(page, '[data-one-loading]')).length === 0);
+    // What was kept: the list, and the inspection opened.
+    const kept = async (part) => page.evaluate(([a, p]) => window.InspyxInspCache.read(a, p), [ME, part]);
+    ok('kept: the list (its kinds only) and the inspection, each with its point', await until(async () => { const l = await kept('list'), one = await kept(INSP); return l && one; }) &&
+      (await kept('list')).fields.every((f) => f.entity === 'inspection' || f.entity === 'person') &&
+      (await kept(INSP)).fields.some((f) => f.entity === 'item') && typeof (await kept('list')).point === 'number');
+    // A reload draws what was kept before the server answers, then asks only after each point.
+    o.pageDelay = 3000;
+    const atReload = calls.length;
+    await page.reload({ waitUntil: 'load' });
+    ok('reloaded: the list and the inspection drawn from what was kept, before the server answers', await until(async () =>
+      (await vis(page, '[data-list="items"] li')).length === 2 && await boxValue(page, 'inspection', INSP, 'title') === '12 Oak St', 2500));
+    ok('then it asks only after each kept point', await until(async () => calls.length >= atReload + 2, 8000) &&
+      calls.slice(atReload).every((c) => typeof c.body.after === 'number'));
+    o.pageDelay = 0;
+    // An edit not yet answered is never kept. The one moment it could be: the list's pull has ended, and the
+    // inspection's is still on its way when the edit is typed (its own pull sends no edits).
+    o.oneDelay = 3000; o.pushDelay = 3000;
+    const atEdit = calls.length;
+    await page.reload({ waitUntil: 'load' });
+    await until(async () => await boxValue(page, 'inspection', INSP, 'title') === '12 Oak St' &&
+      calls.slice(atEdit).some((c) => !c.body.inspection), 2500);
+    await page.locator('[data-key="inspection/' + INSP + '.title"]').fill('12 Oak Street, rear');
+    await page.locator('[data-key="inspection/' + INSP + '.title"]').blur();
+    // The inspection's pull ends (and the page keeps what it has) while the edit is still on its way.
+    await page.waitForTimeout(3500);
+    ok('an edit still on its way is never kept', (await kept('list')).fields.every((f) => f.value !== '12 Oak Street, rear') &&
+      (await kept(INSP)).fields.every((f) => f.value !== '12 Oak Street, rear'));
+    o.oneDelay = 0; o.pushDelay = 0;
+    ok('once the server has it, it is kept', await until(async () => (await kept('list')).fields.some((f) => f.value === '12 Oak Street, rear'), 8000));
+    // Edited again while the first value is on its way: the second is sent too, and only what the server holds is kept.
+    const title = '[data-key="inspection/' + INSP + '.title"]';
+    o.pushDelay = 1500;
+    await page.locator(title).fill('first'); await page.locator(title).blur();
+    await page.waitForTimeout(300);
+    await page.locator(title).fill('second'); await page.locator(title).blur();
+    await page.waitForTimeout(600);
+    // Behind the server is fine (the next pull catches up); ahead of it never is.
+    ok('edited again while on its way: what is kept never runs ahead of the server', s.value('inspection', INSP, 'title') !== 'second' &&
+      (await kept('list')).fields.every((f) => f.value !== 'second'), s.value('inspection', INSP, 'title'));
+    o.pushDelay = 0;
+    ok('then the second value reaches the server, and is kept', await until(async () => s.value('inspection', INSP, 'title') === 'second' &&
+      (await kept('list')).fields.some((f) => f.field === 'title' && f.id === INSP && f.value === 'second'), 8000), s.value('inspection', INSP, 'title'));
+    // Another account on this browser never reads what was kept for this one: each part is kept under its account.
+    ok('another account reads nothing kept for this one', (await kept('list')) !== null &&
+      (await page.evaluate(() => window.InspyxInspCache.read('22222222-2222-4222-8222-222222222222', 'list'))) === null);
+    // Signing out deletes everything kept, even with a pull on its way that ends after it.
+    o.pageDelay = 1500;
+    ping();
+    await page.waitForTimeout(200);
+    await page.evaluate(() => window.InspyxAuth.signOut());
+    await page.waitForTimeout(2500);
+    ok('signed out: nothing of anyone\'s inspections is kept', await until(async () =>
+      !(await page.evaluate(async () => (await indexedDB.databases()).some((d) => d.name === 'inspyx-inspections')))));
+    ok('no errors on the way', errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  });
+
   await group('signed out', async () => {
     const s = server(); seed(s);
     const { page, ctx, calls } = await open(browser, { server: s, store: null });
@@ -192,7 +267,12 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     ok('mid-pull: not "Live" yet, and no half-drawn inspection', !(await vis(page, '[data-live]')).join().startsWith('Live') && (await vis(page, '[data-detail]')).length === 0);
     ok('then: both inspections, the one asked for open, and "Live"', await until(async () => (await vis(page, '[data-list="items"] li')).length === 2 &&
       await boxValue(page, 'inspection', INSP, 'title') === '12 Oak St' && (await vis(page, '[data-live]')).join().startsWith('Live'), 15000));
-    ok('every page asked once, each from where the last ended', calls.every((c, i) => i === 0 ? c.body.after === null : typeof c.body.after === 'number') && errs.length === 0, errs.join(' | '));
+    // Two parts, side by side: the list's kinds for the whole account, and every field of the inspection open.
+    const listCalls = calls.filter((c) => !c.body.inspection), oneCalls = calls.filter((c) => c.body.inspection === INSP);
+    const inTurn = (cs) => cs.length > 0 && cs.every((c, i) => i === 0 ? c.body.after === null : typeof c.body.after === 'number' && c.body.after >= (cs[i - 1].body.after || 0));
+    ok('every page asked once, each from where the last ended: the list\'s kinds, and the inspection open', inTurn(listCalls) && inTurn(oneCalls) &&
+      listCalls.every((c) => JSON.stringify(c.body.entities) === '["inspection","person"]') && oneCalls.every((c) => c.body.entities === undefined) &&
+      listCalls.length + oneCalls.length === calls.length && errs.length === 0, errs.join(' | ') + ' list ' + listCalls.length + ' one ' + oneCalls.length);
     await ctx.close();
   });
 
@@ -312,7 +392,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  // The job card (the rehearsal, round 2, A05): the fee, what's paid, the agreement and the house's facts, read from the
+  // The job card: the fee, what's paid, the agreement and the house's facts, read from the
   // business sync and the inspection; plus how to reach each person.
   const JOB = (page, k) => page.evaluate((q) => { const e = document.querySelector('[data-job] [data-v="' + q + '"]'); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; }, k);
   const NOON = (d) => Date.UTC(2026, 10, d, 17, 0, 0);
@@ -393,7 +473,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  // Cancel this booking and Archive (the rehearsal, round 2): the phone's cancelBookingOf and archive, on the web.
+  // Cancel this booking and Archive: the phone's cancelBookingOf and archive, on the web.
   function actServer(rows) {
     const held = new Map(rows.map((r) => [r.kind + '/' + r.id, r]));
     const t = { held, pushed: [], down: false, refuse: [] };
@@ -516,7 +596,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await r3.ctx.close();
   });
 
-  // Set the fee and record a payment on the web (the lead, 2026-11-27): the phone's rows, then the pay link.
+  // Set the fee and record a payment on the web: the phone's rows, then the pay link.
   for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
     await group('fee and payments on the web, ' + label, async () => {
       const s = server(); seed(s);
@@ -635,7 +715,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  // Send the report (the rehearsal, round 2; the lead, 2026-11-27): one link a person, only while the report is current.
+  // Send the report: one link a person, only while the report is current.
   for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
     await group('send the report, ' + label, async () => {
       const s = server(); seed(s);
@@ -871,7 +951,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await page.evaluate((sel) => { const t = document.querySelector(sel); t.disabled = false; t.value = 'typed meanwhile'; }, k);
       await page.waitForTimeout(600);
       ok(label + ': details changed while Spex worked: its version isn\'t offered', !(await dbox.locator('[data-ai-version]').isVisible()) && await page.locator(k).inputValue() === 'typed meanwhile');
-      // Over the relay's limit: never cut and sent (Keep would delete the rest; Codex on #90): Spex isn't asked.
+      // Over the relay's limit: never cut and sent (Keep would delete the rest): Spex isn't asked.
       const long = 'x'.repeat(PROTO.edit.max_text_chars) + ' the last observation';
       await page.evaluate(([sel, v]) => { const t = document.querySelector(sel); t.disabled = false; t.value = v; }, [k, long]);
       const before = asked.length;
@@ -1186,7 +1266,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       ok(label + ': a match goes straight to its box', await until(async () => await page.evaluate((sel) => document.activeElement === document.querySelector(sel), k)) &&
         await page.locator(k).evaluate((e) => e.classList.contains('is-found')));
       // A phone can keep an accent as a letter of its own (fac + cedilla + ade): the mark is still the word itself.
-      s.phone('item', ITEM, 'note', 'Cafe\u0301 side: re\u0301sume\u0301 boards \u0130n place, soffit loose', 99);
+      s.phone('item', ITEM, 'note', 'Cafe\u0301 side: re\u0301sume\u0301 boards \u0130n place, soffit loose');
       await page.reload(); await page.waitForSelector('[data-search]');
       await page.locator('[data-search]').fill('soffit');
       ok(label + ': letters kept as two never shift the mark', await until(async () => (await page.locator('[data-search-results] mark').count()) > 0 &&
@@ -1307,7 +1387,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  /* ---- Save to template (his list item 12, piece D) ---- */
+  /* ---- Save to template ---- */
   const TS = require('../coming-soon/assets/template-save.js');
   const COPY = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '../coming-soon/assets/template-copies/inspyx.walkthrough.json'), 'utf8'));
   const nodeSha = (t) => require('crypto').createHash('sha256').update(Buffer.from(t, 'utf8')).digest('hex');
@@ -1371,7 +1451,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const said = (await where.textContent()).trim();
       ok(label + ': it says where it goes first: a new copy of Inspyx’s walkthrough, made now, under the item',
         said === 'Into “My Walkthrough”, your own copy of Inspyx’s Walkthrough, made now, under Gutters.', said);
-      // Rehearsal round 2 (2026-11-26): switching new inspections to it is asked, ticked for yes, never in passing.
+      // Switching new inspections to it is asked, ticked for yes, never in passing.
       const use = box(FIND).locator('[data-tpl-use]');
       ok(label + ': it asks whether new inspections start from the copy, ticked for yes', await use.isVisible() &&
         (await use.textContent()).trim() === 'Use “My Walkthrough” for my new inspections' && await box(FIND).locator('[data-tpl-use-box]').isChecked(),
@@ -1483,7 +1563,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await o.ctx.close();
 
     // The business feed unreachable: the page can't see his copy or his default. Opening says so and offers no Save
-    // (never "a new copy, made now" over his); down only at Save, it writes nothing (Codex on #98). Back again: into
+    // (never "a new copy, made now" over his); down only at Save, it writes nothing. Back again: into
     // his copy, his default kept.
     s = server(); seed(s); seedFromOurs(s);
     const picked = { kind: 'template_default', id: 'default', updated_at: 6, deleted_at: null, data: { id: 'default', ownerAccountId: ME, templateId: 'inspector.converted-one', updatedAt: 6, deletedAt: null } };
@@ -1620,7 +1700,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  // Desk finishing (2026-11-16): the cover's city, state, ZIP and booked time; a finding's location and who should
+  // Desk finishing: the cover's city, state, ZIP and booked time; a finding's location and who should
   // fix it; why an item wasn't inspected. The browser is in New York; times travel as UTC milliseconds.
   await group('desk finishing', async () => {
     const ny = (x) => new Date(x + '-05:00').getTime();
@@ -1663,7 +1743,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  // Renames and Find (2026-11-16): a stop's and an item's names are boxes; a name is never sent empty; the list is in
+  // Renames and Find: a stop's and an item's names are boxes; a name is never sent empty; the list is in
   // the phone's day order with each inspection's day, and Find keeps the matching ones.
   await group('renames and find', async () => {
     const s = server(); seed(s);
