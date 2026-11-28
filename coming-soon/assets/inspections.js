@@ -64,10 +64,19 @@
   var later = function (a, b) { return a.at > b.at || (a.at === b.at && a.device > b.device); };
 
   var owner = Object.create(null);   // "entity/id" -> the inspection it belongs to
+  // What the server has said it holds, field by field: only this is kept between visits. An edit made here shows in
+  // fields at once, but reaches confirmed only when a pull brings it back from the server, so nothing the server may
+  // still refuse (or never got) is kept as if it were there.
+  var confirmed = Object.create(null);
   function take(f) {
     var k = key(f.entity, f.id, f.field), held = fields[k];
     owner[f.entity + '/' + f.id] = f.inspection;
     if (!held || later(f, held)) fields[k] = f;
+  }
+  function fromServer(f) {
+    take(f);
+    var k = key(f.entity, f.id, f.field), held = confirmed[k];
+    if (!held || later(f, held)) confirmed[k] = f;
   }
 
   /* One exchange with the function: sends what waits, brings what changed of one part: the list's kinds (inspection
@@ -85,8 +94,13 @@
       var answered = Object.create(null);
       (r.json.results || []).forEach(function (x) { answered[x.i] = true; });
       (r.json.skipped || []).forEach(function (x) { answered[x.i] = true; });
-      if (push.length) outbox = outbox.filter(function (w, i) { return i >= push.length || !answered[i]; });
-      r.json.fields.forEach(take);
+      // Answered: exactly the writes that were sent. One edited again while it was on its way is a new write, still
+      // waiting, whatever its place in the outbox now.
+      if (push.length) {
+        var done = push.filter(function (w, i) { return answered[i]; });
+        outbox = outbox.filter(function (w) { return done.indexOf(w) < 0; });
+      }
+      r.json.fields.forEach(fromServer);
       if (typeof r.json.next === 'number') { if (inspection === null) listPoint = r.json.next; else points[inspection] = r.json.next; }
       return r.json.more === true || (inspection === null && outbox.length > 0);
     });
@@ -150,8 +164,8 @@
   function keep(open) {
     if (!cache || !account || outbox.length) return;
     var list = [], one = [];
-    Object.keys(fields).forEach(function (k) {
-      var f = fields[k];
+    Object.keys(confirmed).forEach(function (k) {
+      var f = confirmed[k];
       if (LIST_KINDS.indexOf(f.entity) >= 0) list.push(f);
       if (open && f.inspection === open) one.push(f);
     });
@@ -165,8 +179,8 @@
     if (!cache || !account) return Promise.resolve();
     return Promise.all([loaded ? null : cache.read(account, 'list'), open && !whole[open] ? cache.read(account, open) : null])
       .then(function (got) {
-        if (got[0] && listPoint === null) { got[0].fields.forEach(take); listPoint = got[0].point; loaded = true; }
-        if (got[1] && open && points[open] === undefined) { got[1].fields.forEach(take); points[open] = got[1].point; whole[open] = true; }
+        if (got[0] && listPoint === null) { got[0].fields.forEach(fromServer); listPoint = got[0].point; loaded = true; }
+        if (got[1] && open && points[open] === undefined) { got[1].fields.forEach(fromServer); points[open] = got[1].point; whole[open] = true; }
         if (got[0] || got[1]) render();
       }, function () { /* nothing kept: the pull brings it */ });
   }

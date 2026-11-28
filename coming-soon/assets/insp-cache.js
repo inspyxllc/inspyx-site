@@ -32,6 +32,8 @@
   }
 
   var keyOf = function (account, part) { return account + '|' + part; };
+  // Whether [account] is still the one signed in on this browser: a pull that ends after a sign-out keeps nothing.
+  var signedIn = function (account) { var me = root.InspyxAuth && root.InspyxAuth.who(); return !!me && me.id === account; };
 
   /* The part's { point, fields }, or null: none kept, another shape, or no store. part is 'list' or an inspection's id. */
   function read(account, part) {
@@ -52,13 +54,18 @@
 
   /* Keeps the part's fields as pulled to point. Answers whether it was kept; a refusal (a full disk) keeps nothing. */
   function write(account, part, point, fields) {
+    if (!signedIn(account)) return Promise.resolve(false);
     return db().then(function (d) {
-      if (!d) return false;
+      if (!d || !signedIn(account)) return false;
       return new Promise(function (resolve) {
         try {
           var t = d.transaction(STORE, 'readwrite');
           t.objectStore(STORE).put({ key: keyOf(account, part), shape: SHAPE, account: account, point: point, fields: fields });
-          t.oncomplete = function () { resolve(true); };
+          t.oncomplete = function () {
+            // Signed out while it was being written (the delete may have run first): it goes again, with all of it.
+            if (!signedIn(account)) { forget(); resolve(false); return; }
+            resolve(true);
+          };
           t.onerror = function () { resolve(false); };
           t.onabort = function () { resolve(false); };
         } catch (e) { resolve(false); }

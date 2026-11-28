@@ -184,7 +184,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
   await group('the list pulls only its kinds; an inspection is pulled when it is opened; kept between visits', async () => {
     const s = server(); seed(s);
     const o = { server: s, pageDelay: 200 };
-    const { page, ctx, errs, calls } = await open(browser, o);
+    const { page, ctx, errs, calls, ping } = await open(browser, o);
     ok('a fresh list: only the list\'s kinds, for the whole account, nothing of any inspection', await until(async () => (await vis(page, '[data-list="items"] li')).length === 2) &&
       calls.length > 0 && calls.every((c) => same(c.body.entities, ['inspection', 'person']) && !c.body.inspection));
     const before = calls.length;
@@ -221,11 +221,28 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       (await kept(INSP)).fields.every((f) => f.value !== '12 Oak Street, rear'));
     o.oneDelay = 0; o.pushDelay = 0;
     ok('once the server has it, it is kept', await until(async () => (await kept('list')).fields.some((f) => f.value === '12 Oak Street, rear'), 8000));
+    // Edited again while the first value is on its way: the second is sent too, and only what the server holds is kept.
+    const title = '[data-key="inspection/' + INSP + '.title"]';
+    o.pushDelay = 1500;
+    await page.locator(title).fill('first'); await page.locator(title).blur();
+    await page.waitForTimeout(300);
+    await page.locator(title).fill('second'); await page.locator(title).blur();
+    await page.waitForTimeout(600);
+    // Behind the server is fine (the next pull catches up); ahead of it never is.
+    ok('edited again while on its way: what is kept never runs ahead of the server', s.value('inspection', INSP, 'title') !== 'second' &&
+      (await kept('list')).fields.every((f) => f.value !== 'second'), s.value('inspection', INSP, 'title'));
+    o.pushDelay = 0;
+    ok('then the second value reaches the server, and is kept', await until(async () => s.value('inspection', INSP, 'title') === 'second' &&
+      (await kept('list')).fields.some((f) => f.field === 'title' && f.id === INSP && f.value === 'second'), 8000), s.value('inspection', INSP, 'title'));
     // Another account on this browser never reads what was kept for this one: each part is kept under its account.
     ok('another account reads nothing kept for this one', (await kept('list')) !== null &&
       (await page.evaluate(() => window.InspyxInspCache.read('22222222-2222-4222-8222-222222222222', 'list'))) === null);
-    // Signing out deletes everything kept.
+    // Signing out deletes everything kept, even with a pull on its way that ends after it.
+    o.pageDelay = 1500;
+    ping();
+    await page.waitForTimeout(200);
     await page.evaluate(() => window.InspyxAuth.signOut());
+    await page.waitForTimeout(2500);
     ok('signed out: nothing of anyone\'s inspections is kept', await until(async () =>
       !(await page.evaluate(async () => (await indexedDB.databases()).some((d) => d.name === 'inspyx-inspections')))));
     ok('no errors on the way', errs.length === 0, errs.join(' | '));
