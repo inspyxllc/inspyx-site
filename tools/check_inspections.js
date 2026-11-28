@@ -1,4 +1,4 @@
-// Self-checks for "Your inspections", live: /inspections (2026-11-14, Inspyx 4).
+// Self-checks for "Your inspections", live: /inspections.
 // NOTHING REAL IS ASKED OR CHANGED HERE. The inspection-sync function is a stand-in this test runs itself, with the
 // live server's rules (one register per field; the newest change wins; deletion is final; pull by seq): the same as
 // backend/supabase/functions/inspection-sync/schema.sql in the app's repo. The Realtime socket is a stand-in too.
@@ -375,7 +375,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  // The job card (the rehearsal, round 2, A05): the fee, what's paid, the agreement and the house's facts, read from the
+  // The job card: the fee, what's paid, the agreement and the house's facts, read from the
   // business sync and the inspection; plus how to reach each person.
   const JOB = (page, k) => page.evaluate((q) => { const e = document.querySelector('[data-job] [data-v="' + q + '"]'); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; }, k);
   const NOON = (d) => Date.UTC(2026, 10, d, 17, 0, 0);
@@ -456,7 +456,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  // Cancel this booking and Archive (the rehearsal, round 2): the phone's cancelBookingOf and archive, on the web.
+  // Cancel this booking and Archive: the phone's cancelBookingOf and archive, on the web.
   function actServer(rows) {
     const held = new Map(rows.map((r) => [r.kind + '/' + r.id, r]));
     const t = { held, pushed: [], down: false, refuse: [] };
@@ -579,7 +579,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await r3.ctx.close();
   });
 
-  // Set the fee and record a payment on the web (the lead, 2026-11-27): the phone's rows, then the pay link.
+  // Set the fee and record a payment on the web: the phone's rows, then the pay link.
   for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
     await group('fee and payments on the web, ' + label, async () => {
       const s = server(); seed(s);
@@ -698,7 +698,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  // Send the report (the rehearsal, round 2; the lead, 2026-11-27): one link a person, only while the report is current.
+  // Send the report: one link a person, only while the report is current.
   for (const [label, w] of [['wide', WIDE], ['phone', PHONE]]) {
     await group('send the report, ' + label, async () => {
       const s = server(); seed(s);
@@ -934,7 +934,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       await page.evaluate((sel) => { const t = document.querySelector(sel); t.disabled = false; t.value = 'typed meanwhile'; }, k);
       await page.waitForTimeout(600);
       ok(label + ': details changed while Spex worked: its version isn\'t offered', !(await dbox.locator('[data-ai-version]').isVisible()) && await page.locator(k).inputValue() === 'typed meanwhile');
-      // Over the relay's limit: never cut and sent (Keep would delete the rest; Codex on #90): Spex isn't asked.
+      // Over the relay's limit: never cut and sent (Keep would delete the rest): Spex isn't asked.
       const long = 'x'.repeat(PROTO.edit.max_text_chars) + ' the last observation';
       await page.evaluate(([sel, v]) => { const t = document.querySelector(sel); t.disabled = false; t.value = v; }, [k, long]);
       const before = asked.length;
@@ -1370,7 +1370,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  /* ---- Save to template (his list item 12, piece D) ---- */
+  /* ---- Save to template ---- */
   const TS = require('../coming-soon/assets/template-save.js');
   const COPY = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '../coming-soon/assets/template-copies/inspyx.walkthrough.json'), 'utf8'));
   const nodeSha = (t) => require('crypto').createHash('sha256').update(Buffer.from(t, 'utf8')).digest('hex');
@@ -1434,7 +1434,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
       const said = (await where.textContent()).trim();
       ok(label + ': it says where it goes first: a new copy of Inspyx’s walkthrough, made now, under the item',
         said === 'Into “My Walkthrough”, your own copy of Inspyx’s Walkthrough, made now, under Gutters.', said);
-      // Rehearsal round 2 (2026-11-26): switching new inspections to it is asked, ticked for yes, never in passing.
+      // Switching new inspections to it is asked, ticked for yes, never in passing.
       const use = box(FIND).locator('[data-tpl-use]');
       ok(label + ': it asks whether new inspections start from the copy, ticked for yes', await use.isVisible() &&
         (await use.textContent()).trim() === 'Use “My Walkthrough” for my new inspections' && await box(FIND).locator('[data-tpl-use-box]').isChecked(),
@@ -1546,7 +1546,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await o.ctx.close();
 
     // The business feed unreachable: the page can't see his copy or his default. Opening says so and offers no Save
-    // (never "a new copy, made now" over his); down only at Save, it writes nothing (Codex on #98). Back again: into
+    // (never "a new copy, made now" over his); down only at Save, it writes nothing. Back again: into
     // his copy, his default kept.
     s = server(); seed(s); seedFromOurs(s);
     const picked = { kind: 'template_default', id: 'default', updated_at: 6, deleted_at: null, data: { id: 'default', ownerAccountId: ME, templateId: 'inspector.converted-one', updatedAt: 6, deletedAt: null } };
@@ -1683,7 +1683,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  // Desk finishing (2026-11-16): the cover's city, state, ZIP and booked time; a finding's location and who should
+  // Desk finishing: the cover's city, state, ZIP and booked time; a finding's location and who should
   // fix it; why an item wasn't inspected. The browser is in New York; times travel as UTC milliseconds.
   await group('desk finishing', async () => {
     const ny = (x) => new Date(x + '-05:00').getTime();
@@ -1726,7 +1726,7 @@ const until = async (fn, ms) => { const end = Date.now() + (ms || 4000); for (;;
     await ctx.close();
   });
 
-  // Renames and Find (2026-11-16): a stop's and an item's names are boxes; a name is never sent empty; the list is in
+  // Renames and Find: a stop's and an item's names are boxes; a name is never sent empty; the list is in
   // the phone's day order with each inspection's day, and Find keeps the matching ones.
   await group('renames and find', async () => {
     const s = server(); seed(s);

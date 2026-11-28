@@ -84,7 +84,7 @@
     });
   }
 
-  /* Signing in with Google (2026-11-13, his decision of 2026-11-12). The browser goes to the account server,
+  /* Signing in with Google. The browser goes to the account server,
      which sends it on to Google and takes it back, and returns it to /signin with a code good once. The code is
      worth nothing alone: it is exchanged together with a verifier this tab made before leaving and never sent
      anywhere until then (PKCE). So a code read off an address bar, a history or a log signs nobody in.
@@ -107,7 +107,7 @@
       // has: this tab's own storage, gone when the tab closes, read once on the way back and removed then. It is
       // not a password and not a token: without the code Google's return brings, it signs nobody in, and that code
       // is good once and for minutes. (GitHub's code scanning flags this line as "clear text storage of sensitive
-      // information"; it was looked at on 2026-11-13 and left as it is, for these reasons.)
+      // information"; it was reviewed and left as it is, for these reasons.)
       try { root.sessionStorage.setItem(GOING, verifier); } catch (e) { throw new Refusal('storage'); }
       if (root.sessionStorage.getItem(GOING) !== verifier) throw new Refusal('storage');
       root.location.assign(BASE + '/authorize?provider=google&redirect_to=' + encodeURIComponent(root.location.origin + page) +
@@ -207,7 +207,7 @@
     });
   }
 
-  /* A picture's file (business setup phase 2c, 2026-11-16): the inspector's photo, logo or signature in the
+  /* A picture's file: the inspector's photo, logo or signature in the
      private store business-media, added (never over another: a file is named by its content and never changes) or
      read, as the signed-in inspector. Only that store, and only a name of its own shape in the signed-in
      inspector's own folder: <their id>/<headshot|logo|signature>/<sha256>.<jpg|png> (the server's policies hold
@@ -263,7 +263,7 @@
     });
   }
 
-  /* A template's file (T4, the template upload page, 2026-11-23): one converted template's version file (its manifest
+  /* A template's file: one converted template's version file (its manifest
      JSON) in the private store business-templates, added (never over another: a file is named by its content), as the
      signed-in inspector: <their id>/<template id>/<sha256>.json (the app's templateFileName and the server's
      template_rules.ts hold the same name; the store's policies, the same folder). It answers { status, inner } as
@@ -285,7 +285,7 @@
     });
   }
 
-  /* Reading a template's file back (2026-11-26, Save to template, his list item 12, piece D): the same store and the
+  /* Reading a template's file back (for Save to template): the same store and the
      same name rule as templateFile, read as the signed-in inspector from their own folder only. It answers
      { status, inner, blob } as picture does (blob when found), or null when nobody is signed in. */
   function templateRead(name, deadline) {
@@ -317,7 +317,7 @@
     });
   }
 
-  /* Edit with AI (2026-11-24, his decision after the Spectora walk; the relay's contract EDIT_WITH_AI.md v1): one
+  /* Edit with AI (the relay's contract is EDIT_WITH_AI.md v1): one
      finding's details sent to Spex on the Spex Chat connection, signed in inside this file as ask is (the page never
      holds the token). [request]: { action, title, text, item?, stop? }; with no action, only asks whether Edit with
      AI is open to this inspector (a hello alone is never billed). Answers:
@@ -366,7 +366,7 @@
     });
   }
 
-  /* Hearing "something changed" (inspection sync, 2026-11-14): the server's pings for the signed-in inspector's
+  /* Hearing "something changed" (inspection sync): the server's pings for the signed-in inspector's
      own inspections, on their private Realtime topic insp:<their id>. The sign-in goes to the server inside this
      file, as in ask: the page gives a function to call on each ping, and gets back a way to stop. Only the
      signed-in inspector's own topic can be asked for (the server holds the same rule). It joins again after any
@@ -440,7 +440,7 @@
     return s ? { id: s.id, email: s.email } : null;
   }
 
-  /* A forgotten password (2026-11-13). Two halves, on two visits.
+  /* A forgotten password. Two halves, on two visits.
      requestReset asks the account server to email a reset link to an address. The answer never says whether an
      account uses that address: the server answers the same either way, and so does the page.
      The link comes back to /reset with a one-time sign-in in the address's fragment (the part after #, which no
@@ -484,7 +484,7 @@
     });
   }
 
-  /* A sign-in link by email (2026-11-23, his order: "make sure it's done right"). For an inspector who would rather
+  /* A sign-in link by email. For an inspector who would rather
      not type a password, and for signing in on another device: the link opens the app on a phone that has it, the
      website anywhere else.
      linkRequest asks the account server to email a link to an account that already exists (create_user: false:
@@ -532,7 +532,7 @@
     });
   }
 
-  /* Making an account (2026-11-13; his rules: anyone may sign up, with Google or an email and a password; every
+  /* Making an account (anyone may sign up, with Google or an email and a password; every
      account also has a password; the Terms tick is required). Nothing here opens sign-up: while the account server
      refuses new accounts, signUp answers 'closed'.
      signUp asks for an account with an email and a password. The server then emails a link that proves the address;
