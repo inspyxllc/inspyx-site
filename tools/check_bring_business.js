@@ -511,7 +511,7 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     await until(async () => await o.page.locator('[data-preview]').isVisible());
     // Another tab signs in as someone else: this page's books still hold the first account's rows.
     const reloaded = o.page.waitForEvent('framenavigated', { timeout: 5000 }).then(() => true, () => false);
-    await o.page.evaluate(() => { const real = window.InspyxAuth.who; window.InspyxAuth.who = function () { const w = real(); return w ? Object.assign({}, w, { id: '22222222-2222-4222-8222-222222222222' }) : w; }; });
+    await o.page.evaluate(() => { const real = window.InspyxAuth.who; window.InspyxAuth.who = function () { const w = real(); return w ? Object.assign({}, w, { id: '22222222-2222-4222-8222-222222222222', owner: '22222222-2222-4222-8222-222222222222' }) : w; }; });
     await o.page.locator('[data-go]').click();
     ok('Bring in under another account: nothing is kept, and the page starts again', await reloaded && sync.pushes.length === 0, JSON.stringify(sync.pushes));
     await o.ctx.close();
@@ -526,7 +526,7 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     await first;
     // While the first request is out (its answer held back), another tab signs in as someone else.
     const reloaded = o.page.waitForEvent('framenavigated', { timeout: 8000 }).then(() => true, () => false);
-    await o.page.evaluate(() => { const real = window.InspyxAuth.who; window.InspyxAuth.who = function () { const w = real(); return w ? Object.assign({}, w, { id: '22222222-2222-4222-8222-222222222222' }) : w; }; });
+    await o.page.evaluate(() => { const real = window.InspyxAuth.who; window.InspyxAuth.who = function () { const w = real(); return w ? Object.assign({}, w, { id: '22222222-2222-4222-8222-222222222222', owner: '22222222-2222-4222-8222-222222222222' }) : w; }; });
     ok('a sign-in switched mid-read: no further request carries the key, and the page starts again', await reloaded && spx.calls.length === 1, JSON.stringify(spx.calls.map((c) => c.what)));
     await o.ctx.close();
   });

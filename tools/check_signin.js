@@ -66,7 +66,7 @@ async function open(browser, where, opts) {
   if (o.clock) await page.clock.install();
   if (o.init) await page.addInitScript(o.init);
   if (o.without) await page.route('**/' + o.without, (route) => route.abort());
-  const errs = [], away = [], calls = [];
+  const errs = [], away = [], calls = [], orgAsks = [];
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|net::ERR_FAILED|net::ERR_ABORTED/.test(m.text())) errs.push(m.text()); });
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   await page.route((u) => !u.href.startsWith(HOME) && !u.href.startsWith('data:'), async (route) => {
@@ -79,6 +79,13 @@ async function open(browser, where, opts) {
     if (req.url() === SERVER + '/auth/v1/user' && req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ id: 'x', email: 'x@example.com', user_metadata: {} }) });
     // /today asks the payments function where card payments stand (job 2, #77): answered here, never counted as
     // another site. Every other request outside sign-in still is.
+    // A fresh sign-in asks which company the person belongs to (the app's org function), once, before it is kept:
+    // answered with o.org (an id), refused with o.org === 'down', else the person's own one-person company.
+    if (req.url() === SERVER + '/functions/v1/org') {
+      orgAsks.push({ method: req.method(), auth: req.headers().authorization || '' });
+      if (o.org === 'down') return route.fulfill({ status: 503, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"error":"database"}' });
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ org: o.org || '11111111-1111-4111-8111-111111111111', role: 'owner' }) });
+    }
     if (req.url() === SERVER + '/functions/v1/payments') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ state: 'none', payouts: false }) });
     if (!req.url().startsWith(SERVER + '/auth/v1/')) { away.push(req.url()); return route.abort(); }
     const call = { method: req.method(), path: req.url().slice(SERVER.length), headers: req.headers(), body: req.postData() };
@@ -96,7 +103,7 @@ async function open(browser, where, opts) {
   });
   const res = await page.goto(url + where, { waitUntil: 'load' });
   await page.waitForTimeout(350);
-  return { ctx, page, errs, away, calls, res };
+  return { ctx, page, errs, away, calls, res, orgAsks };
 }
 const at = (page) => page.evaluate(() => location.pathname);
 // Who the dashboard says is signed in.
@@ -294,6 +301,38 @@ async function fill(page, pass) { await page.fill('#signin-email', WHO); await p
     const a = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, robots: (document.querySelector('meta[name=robots]') || {}).content, btn: Math.round(document.querySelector('[data-signout]').getBoundingClientRect().height), inline: document.querySelectorAll('[style], style, script:not([src])').length, title: document.title }));
     ok('the account page: kept out of search results, nothing scrolls sideways, its button is big enough to tap', a.robots === 'noindex' && a.sw <= PHONE && a.btn >= 44 && a.inline === 0 && a.title === 'Inspyx — Account', JSON.stringify(a));
     await ctx.close();
+  });
+
+  // ---- the company (the app's docs/org-tenant.md, phase 3): asked once as a person signs in, kept with the sign-in
+  await group('the company', async () => {
+    const COMPANY = '0a0b0c0d-1111-4222-8333-444455556666';
+    for (const [label, org, want] of [['answered', COMPANY, COMPANY], ['not answered', 'down', undefined]]) {
+      const { ctx, page, errs, away, calls, orgAsks } = await open(browser, 'signin', { org, answers: () => ({ status: 200, json: granted(1) }) });
+      await fill(page);
+      await page.click('[data-signin] button');
+      await page.waitForURL('**/today');
+      await page.waitForTimeout(300);
+      const s = JSON.parse((await stored(page)) || '{}');
+      const owner = await page.evaluate(() => window.InspyxAuth.who().owner);
+      ok('the company, ' + label + ': asked once, with the new sign-in, after the account server and before anything is kept',
+        orgAsks.length === 1 && orgAsks[0].method === 'POST' && orgAsks[0].auth === 'Bearer test-access-1' && calls.filter((x) => x.path.startsWith('/auth/v1/token')).length === 1, JSON.stringify(orgAsks));
+      ok('the company, ' + label + ': the sign-in goes through and lands on the dashboard; the company kept is ' + (want ? 'it' : 'none, so the owner is the account'),
+        (await at(page)) === '/today' && s.org === want && owner === (want || s.id) && errs.length === 0 && away.length === 0, JSON.stringify({ org: s.org, owner }) + ' ' + errs.join(' | '));
+      await ctx.close();
+    }
+    // A renewal keeps the company it had and asks nothing; a sign-in kept from before companies has none and stays its own.
+    const withCompany = JSON.stringify(Object.assign(JSON.parse(kept(1, 30 * 1000)), { org: COMPANY }));
+    const r = await open(browser, 'today', { init: (v) => { localStorage.setItem('inspyx.signin', v); }, answers: () => ({ status: 200, json: granted(2) }) });
+    await r.page.evaluate((v) => localStorage.setItem('inspyx.signin', v), withCompany);
+    await r.page.evaluate(() => window.InspyxAuth.current(true));
+    const after = JSON.parse((await stored(r.page)) || '{}');
+    ok('the company: a renewal keeps the company and asks the org function nothing', after.access === 'test-access-2' && after.org === COMPANY && r.orgAsks.length === 0, JSON.stringify({ access: after.access, org: after.org, asks: r.orgAsks.length }));
+    await r.page.evaluate((v) => localStorage.setItem('inspyx.signin', v), kept(3, 3600 * 1000));
+    const old = await r.page.evaluate(() => window.InspyxAuth.who());
+    ok('the company: a sign-in kept before companies is still a sign-in, and its owner is its own account', !!old && old.owner === old.id, JSON.stringify(old));
+    await r.page.evaluate((v) => localStorage.setItem('inspyx.signin', v), JSON.stringify(Object.assign(JSON.parse(kept(4, 3600 * 1000)), { org: 'not-an-id' })));
+    ok('the company: a kept company that is not an id is damage, never a sign-in', (await r.page.evaluate(() => window.InspyxAuth.who())) === null);
+    await r.ctx.close();
   });
 
   // ---- sign-ins that do not go through: each says its own sentence, and only that one

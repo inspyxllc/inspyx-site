@@ -141,7 +141,7 @@
     start: function (onChange) {
       var who = auth.who();
       if (!who) return;
-      me = who.id;
+      me = who.owner;
       listeners.push(onChange);
       pull();
       setInterval(function () { if (document.visibilityState === 'visible') pull(); }, 30000);

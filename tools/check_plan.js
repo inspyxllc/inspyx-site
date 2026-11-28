@@ -703,7 +703,8 @@ const shows = (v, sentence, button) => same(v.stands, [sentence]) && same(v.butt
 
     const t = await open(browser, 'plan', { store: kept(18, HOUR), stripe: true, answers: (c) => (action(c) === 'status' ? bill(plan({})) : { status: 200, json: { url: CHECKOUT } }) });
     const handed = await t.page.evaluate(() => { const w = window.InspyxAuth.who(); return w ? Object.keys(w).sort().join(',') + ' ' + JSON.stringify(w) : 'nobody'; });
-    ok('what a page is told about who is signed in is their address and their id, and nothing that could sign anyone in', handed === 'email,id {"id":"11111111-1111-4111-8111-111111111111","email":"' + WHO + '"}' && !/test-access|test-renew/.test(handed), handed);
+    // owner: whose data the page works on, the person's company (here a sign-in kept before companies: their own).
+    ok('what a page is told about who is signed in is their address, their id and whose data it is, and nothing that could sign anyone in', handed === 'email,id,owner {"id":"11111111-1111-4111-8111-111111111111","email":"' + WHO + '","owner":"11111111-1111-4111-8111-111111111111"}' && !/test-access|test-renew/.test(handed), handed);
     const where = await t.page.evaluate(() => document.documentElement.outerHTML + ' ' + location.href + ' ' + document.cookie + ' ' + JSON.stringify(sessionStorage));
     await t.page.click('[data-do="start"]'); await t.page.waitForURL(CHECKOUT, { timeout: 5000 });
     ok('the sign-in is sent to Inspyx\'s server only, and in a header: it is never in the page, an address or a cookie, and never goes along to Stripe', !/test-access|test-renew/.test(where) && t.calls.every((c) => !/test-access|test-renew/.test(c.path) && !/test-access|test-renew/.test(c.body || '')) && !/test-access|test-renew/.test(t.arrived.join(' ')) && t.away.length === 0, t.arrived.join(' '));

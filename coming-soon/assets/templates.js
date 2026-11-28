@@ -35,7 +35,7 @@
   })();
 
   var drop = $('[data-drop]'), pick = $('[data-pick]'), results = $('[data-results]');
-  var me = (auth.stored() || {}).id || null;
+  var me = (auth.who() || {}).owner || null;
   var turn = 0;   // each file read is a turn; an answer from an older turn is dropped
 
   // ---- what shows -------------------------------------------------------------------------------------------------

@@ -60,7 +60,7 @@
   function usedId() { var d = biz[TPL_DEFAULT + '/default']; return standing(d) ? d.data.templateId : null; }
   /* A template's file, checked against its row; null when it can't be read now. */
   function readFile(row) {
-    var me = auth.who().id, d = row.data;
+    var me = auth.who().owner, d = row.data;
     return auth.templateRead(me + '/' + row.id + '/' + d.sha256 + '.json', DEADLINE).then(function (r) {
       if (r === null) { window.location.replace('/signin'); return null; }
       if (r.status !== 200 || !r.blob) return null;
@@ -93,7 +93,7 @@
   }
   /* The file [text] of template [id] into the store, then its row: { row } or { problem }. */
   function store(id, text, version, name, source, base, also) {
-    var me = auth.who().id, bytes = new TextEncoder().encode(text);
+    var me = auth.who().owner, bytes = new TextEncoder().encode(text);
     return digest(text).then(function (sha) {
       return auth.templateFile(me + '/' + id + '/' + sha + '.json', bytes, DEADLINE).then(function (f) {
         if (f === null) { window.location.replace('/signin'); return { problem: 'failed' }; }
@@ -762,7 +762,7 @@
   $('[data-use]').addEventListener('click', function () {
     if (busy || !open || open.readOnly) return;
     lock(true); say('using');
-    var id = open.id, me = auth.who().id, before = null;
+    var id = open.id, me = auth.who().owner, before = null;
     var run = queue.then(function () {
       return pull().then(function (ok) {
         if (!ok) return 'failed';
@@ -816,7 +816,7 @@
   $('[data-del-no]').addEventListener('click', function () { askDelete(false); $('[data-delete]').focus(); });
   $('[data-del-yes]').addEventListener('click', function () {
     if (busy || !open || open.readOnly) return;
-    var id = open.id, name = open.outline.name, me = auth.who().id;
+    var id = open.id, name = open.outline.name, me = auth.who().owner;
     askDelete(false); lock(true); say('deleting');
     var run = queue.then(function () {
       return pull().then(function (ok) {
@@ -854,7 +854,7 @@
   });
   $('[data-gone-undo]').addEventListener('click', function () {
     if (busy || !gone) return;
-    var g = gone, me = auth.who().id;
+    var g = gone, me = auth.who().owner;
     lock(true); showGone(words('undoing'), false);
     var run = queue.then(function () {
       return pull().then(function (ok) {

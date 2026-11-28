@@ -53,7 +53,7 @@
   var opened = null;
   function sameAccount() {
     var w = auth.who();
-    if (w && opened && w.id === opened) return true;
+    if (w && opened && w.owner === opened) return true;
     // The key goes before anything else: nothing of the first account's read is sent as the second (Codex on #133).
     picked++;
     if (keyBox) { keyBox.value = ''; }
@@ -656,7 +656,7 @@
 
   auth.current().then(function (s) {
     if (!s) return;
-    opened = (auth.who() || {}).id || null;
+    opened = (auth.who() || {}).owner || null;
     main.hidden = false;
     book.start(function () {});
     pastBook.start(function () {});

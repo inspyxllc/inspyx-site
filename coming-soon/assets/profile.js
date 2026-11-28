@@ -373,7 +373,7 @@
 
   var who = auth.who();
   if (!who) { window.location.replace('/signin'); return; }
-  me = who.id;
+  me = who.owner;
   main.hidden = false;
   render();
   pull();
