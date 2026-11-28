@@ -124,7 +124,7 @@
     var at = P.nextAt(was), kind = was ? was.kind : $('input[name="kind"]:checked', qForm).value;
     var position = was ? was.position : questions().reduce(function (m, q) { return q.position > m ? q.position : m; }, -1) + 1;
     P.finish(qDialog, [P.wire('price_questions', { id: was ? was.id : P.newId(), ownerAccountId: P.me(), name: name, kind: kind,
-      position: position, createdAt: was ? was.createdAt : at, updatedAt: at, deletedAt: null })], 'saved');
+      position: position, createdAt: was ? was.createdAt : at, updatedAt: at, deletedAt: null }, was)], 'saved');
   });
   $('[data-qdelete]', qForm).addEventListener('click', function () {
     var b = $('[data-qdelete]', qForm), was = editingQ;
@@ -358,7 +358,7 @@
       id: was ? was.id : P.newId(), ownerAccountId: P.me(), serviceId: editingC.serviceId, basis: c.basis, mode: c.mode,
       tiersJson: tiersJson(c), position: was ? was.position : siblings.reduce(function (m, x) { return x.position > m ? x.position : m; }, -1) + 1,
       createdAt: was ? was.createdAt : at, updatedAt: at, deletedAt: null, questionId: c.questionId,
-    })], 'saved');
+    }, was)], 'saved');
   });
   $('[data-cdelete]', cForm).addEventListener('click', function () {
     var b = $('[data-cdelete]', cForm), was = editingC.row;

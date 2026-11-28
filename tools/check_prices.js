@@ -276,6 +276,9 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     await until(async () => !(await page.locator('[data-dialog="service"]').isVisible()));
     const w = pushed(calls).find((r) => r.id === 'svc-home');
     ok('a change keeps its id, place and making time, with a later change time', !!w && w.data.feeCents === 42500 && w.data.position === 0 && w.data.createdAt === T && w.data.updatedAt > T && w.data.minimumFeeCents === 35000);
+    // The copy the dialog opened with goes as the change's base, so the server merges field by field (the app's
+    // sync/merge.ts): only the fee changed from it, so another device's change to any other field stands.
+    ok('a change carries the copy it was made from as its base', !!w && !!w.base && w.base.id === 'svc-home' && w.base.feeCents === 40000 && w.base.updatedAt === T && w.base.name === 'Home inspection', JSON.stringify(w && w.base));
     await card(page, 'Home inspection').locator('.prc-addon', { hasText: 'Radon test' }).locator('[data-edit]').click();
     ok('an add-on opens as Add-on, with extra time and no minimum', (await vis(page, f + ' h2')).join() === 'Add-on' && (await vis(page, f + ' [data-time]')).join() === 'Extra time' && !(await page.locator(f + ' input[name="minimum"]').isVisible()));
     await page.click(f + ' [data-close]');
@@ -286,6 +289,7 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     await until(async () => !(await page.locator('[data-dialog="service"]').isVisible()));
     const addOn = pushed(calls).find((r) => r.data && r.data.name === 'Pool');
     ok('a new add-on hangs from its service, first in its list, with no minimum', !!addOn && addOn.data.parentId === 'svc-condo' && addOn.data.position === 0 && addOn.data.minimumFeeCents === null);
+    ok('a new row carries no base: there is nothing to merge with', !!addOn && !('base' in addOn));
     await card(page, 'Home inspection').locator('.prc-row [data-edit]').click();
     ok('deleting a service says it takes its add-ons and price changes', await page.locator(f + ' [data-only="delete-service"]').isVisible());
     await page.click(f + ' [data-delete]');
@@ -295,6 +299,7 @@ const card = (page, name) => page.locator('.prc-card', { has: page.locator('[dat
     const gone = pushed(calls).filter((r) => r.deleted_at !== null);
     ok('the second deletes the service, its add-ons and its price change, all at one time', JSON.stringify(gone.map((r) => r.id).sort()) === JSON.stringify(['add-radon', 'add-wdo', 'mod-sqft', 'svc-home']) && new Set(gone.map((r) => r.data.deletedAt)).size === 1 && gone.every((r) => r.data.updatedAt >= r.data.deletedAt), JSON.stringify(gone.map((r) => r.id)));
     ok('and they leave the list', !(await vis(page, '[data-list="services"] [data-v="name"]')).some((n) => /Home inspection|Radon/.test(n)) && (await vis(page, '[data-say]')).join() === 'Deleted.');
+    ok('a deletion carries no base: it is judged whole', gone.every((r) => !('base' in r)));
     await ctx.close();
   });
 
