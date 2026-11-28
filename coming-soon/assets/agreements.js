@@ -110,12 +110,10 @@
     if (at > 0) list.unshift(list.splice(at, 1)[0]);
     return list;
   }
-  /* A reinspection's (legal_library.dart's _documentsNow): by name, the one used last first; never a default. */
+  /* A reinspection's: by name, then when made; never a default. The phone also puts the one it used last first, but
+   * when each was used stays on that phone (it is not in the synced row), so the web can only order by name. */
   function reinspections() {
-    var list = byName(standing('reinspection')), last = -1;
-    list.forEach(function (d, i) { if (typeof d.lastUsedAt === 'number' && (last < 0 || d.lastUsedAt > list[last].lastUsedAt)) last = i; });
-    if (last > 0) list.unshift(list.splice(last, 1)[0]);
-    return list;
+    return byName(standing('reinspection'));
   }
   function byName(docs) {
     return docs.sort(function (a, b) {

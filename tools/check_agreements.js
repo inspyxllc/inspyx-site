@@ -179,6 +179,27 @@ const card = (page, name) => page.locator('.agr-card', { has: page.locator('[dat
     await ctx.close();
   });
 
+  await group('reinspection agreements: their order, and the row an edit sends', async () => {
+    const s = server(); seed(s);
+    // A row from elsewhere with when it was used (the phone keeps that to itself; a row like this is only a test's).
+    s.agreement('re-z', 'Zeta recheck', 'Z.', T - 2000, { kind: 'reinspection', lastUsedAt: T });
+    s.agreement('re-a', 'Alpha recheck', 'A.', T - 1000, { kind: 'reinspection' });
+    const { page, ctx, calls } = await open(browser, { server: s });
+    await until(async () => (await vis(page, '[data-list-re] [data-v="name"]')).length === 2);
+    ok('listed by name: when each was used is not the web\'s to know',
+      (await vis(page, '[data-list-re] [data-v="name"]')).join() === 'Alpha recheck,Zeta recheck');
+    await page.click('[data-list-re] [data-edit] >> nth=1');
+    await page.fill(F + ' input[name="name"]', 'Zeta recheck, edited');
+    const before = calls.length;
+    await page.click(F + ' button[type="submit"]');
+    await until(async () => pushed(calls.slice(before)).length > 0);
+    const row = pushed(calls.slice(before)).find((r) => r.kind === 'legal_documents');
+    ok('an edit sends exactly the fields the server keeps for an agreement, still a reinspection one',
+      !!row && Object.keys(row.data).sort().join() === 'body,createdAt,deletedAt,id,kind,ownerAccountId,title,updatedAt' &&
+      row.data.kind === 'reinspection' && row.data.title === 'Zeta recheck, edited', row ? Object.keys(row.data).join() : 'none sent');
+    await ctx.close();
+  });
+
   await group('a new agreement', async () => {
     const s = server(); seed(s);
     const { page, ctx, calls } = await open(browser, { server: s });
