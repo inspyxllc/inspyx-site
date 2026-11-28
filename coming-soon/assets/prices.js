@@ -561,7 +561,7 @@
 
   var who = auth.who();
   if (!who) { window.location.replace('/signin'); return; }
-  me = who.id;
+  me = who.owner;
   main.hidden = false;
   render();
   reinspectionIdFor(me).then(function (id) { REINSPECTION_ID = id; render(); });

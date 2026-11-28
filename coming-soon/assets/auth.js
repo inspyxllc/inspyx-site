@@ -64,8 +64,20 @@
   function stored() {
     try {
       var s = JSON.parse(root.localStorage.getItem(STORE));
-      return s && typeof s.access === 'string' && typeof s.renew === 'string' && typeof s.ends === 'number' && typeof s.id === 'string' && typeof s.email === 'string' ? s : null;
+      return s && typeof s.access === 'string' && typeof s.renew === 'string' && typeof s.ends === 'number' && typeof s.id === 'string' && typeof s.email === 'string' &&
+        (s.org === undefined || ORG.test(String(s.org))) ? s : null;
     } catch (e) { return null; }
+  }
+  /* The company a fresh sign-in belongs to, asked once of the server's org function as the person signs in,
+     before anything is kept (docs/org-tenant.md in the app's repository, phase 3): everything a page writes is the
+     company's. No answer leaves none, and the company is then the account's own, whose id is the account's. A
+     sign-in never fails for it. A renewal keeps the company it had; a sign-in kept before companies has none. */
+  var ORG = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  function withCompany(s) {
+    return send('POST', FUNCTIONS + 'org', s.access, {}, 8000).then(function (r) {
+      if (r.status === 200 && r.json && ORG.test(String(r.json.org))) s.org = r.json.org;
+      return s;
+    }, function () { return s; });
   }
   function keep(s) { try { root.localStorage.setItem(STORE, JSON.stringify(s)); return stored() !== null; } catch (e) { return false; } }
   function forgetKept() { try { if (root.indexedDB) root.indexedDB.deleteDatabase(KEPT); } catch (e) { /* nothing was kept */ } }
@@ -78,9 +90,10 @@
     return send('POST', BASE + '/token?grant_type=password', null, { email: email, password: password }).then(function (r) {
       if (r.status === 400 || r.status === 401) throw new Refusal('rejected', r.status);
       if (r.status !== 200) throw new Refusal('server', r.status);
-      var s = whole(r.json);
-      if (!keep(s)) { send('POST', BASE + '/logout?scope=local', s.access).then(function () {}, function () {}); throw new Refusal('storage'); }
-      return s;
+      return withCompany(whole(r.json)).then(function (s) {
+        if (!keep(s)) { send('POST', BASE + '/logout?scope=local', s.access).then(function () {}, function () {}); throw new Refusal('storage'); }
+        return s;
+      });
     });
   }
 
@@ -132,9 +145,10 @@
     return send('POST', BASE + '/token?grant_type=pkce', null, { auth_code: code, code_verifier: verifier }).then(function (r) {
       if (r.status === 400 || r.status === 401 || r.status === 403 || r.status === 404) throw new Refusal('google', r.status);
       if (r.status !== 200) throw new Refusal('server', r.status);
-      var s = whole(r.json);
-      if (!keep(s)) { send('POST', BASE + '/logout?scope=local', s.access).then(function () {}, function () {}); throw new Refusal('storage'); }
-      return s;
+      return withCompany(whole(r.json)).then(function (s) {
+        if (!keep(s)) { send('POST', BASE + '/logout?scope=local', s.access).then(function () {}, function () {}); throw new Refusal('storage'); }
+        return s;
+      });
     });
   }
 
@@ -143,6 +157,7 @@
       if (r.status === 400 || r.status === 401) { forget(); throw new Refusal('rejected', r.status); }
       if (r.status !== 200) throw new Refusal('server', r.status);
       var next = whole(r.json);
+      if (s.org !== undefined) next.org = s.org;
       if (!keep(next)) throw new Refusal('storage');
       return next;
     });
@@ -210,7 +225,7 @@
   /* A picture's file: the inspector's photo, logo or signature in the
      private store business-media, added (never over another: a file is named by its content and never changes) or
      read, as the signed-in inspector. Only that store, and only a name of its own shape in the signed-in
-     inspector's own folder: <their id>/<headshot|logo|signature>/<sha256>.<jpg|png> (the server's policies hold
+     inspector's company's folder: <its id>/<headshot|logo|signature>/<sha256>.<jpg|png> (the server's policies hold
      the same). It answers { status, inner, blob } (blob when read and found; inner, the status Storage put inside its answer),
      or null when nobody is signed in. The token
      stays in this file, as in ask; a refused sign-in (401) is renewed once, as in ask. */
@@ -249,7 +264,7 @@
     if (!PICTURE.test(String(name)) || (action !== 'add' && action !== 'read')) return Promise.reject(new Refusal('malformed'));
     if (action === 'add' && (!blob || (blob.type !== 'image/jpeg' && blob.type !== 'image/png'))) return Promise.reject(new Refusal('malformed'));
     var once = function (s) {
-      if (name.split('/')[0] !== s.id) return Promise.reject(new Refusal('malformed'));
+      if (name.split('/')[0] !== (s.org || s.id)) return Promise.reject(new Refusal('malformed'));
       return action === 'add'
         ? sendPicture('POST', PICTURES + 'business-media/' + name, s.access, blob, deadline)
         : sendPicture('GET', PICTURES + 'authenticated/business-media/' + name, s.access, null, deadline);
@@ -265,7 +280,7 @@
 
   /* A template's file: one converted template's version file (its manifest
      JSON) in the private store business-templates, added (never over another: a file is named by its content), as the
-     signed-in inspector: <their id>/<template id>/<sha256>.json (the app's templateFileName and the server's
+     signed-in inspector's company: <its id>/<template id>/<sha256>.json (the app's templateFileName and the server's
      template_rules.ts hold the same name; the store's policies, the same folder). It answers { status, inner } as
      picture does, or null when nobody is signed in. The token stays in this file, as in ask; a refused sign-in (401)
      is renewed once. */
@@ -273,7 +288,7 @@
   function templateFile(name, bytes, deadline) {
     if (!TEMPLATE_FILE.test(String(name)) || !(bytes instanceof Uint8Array) || !bytes.length) return Promise.reject(new Refusal('malformed'));
     var once = function (s) {
-      if (name.split('/')[0] !== s.id) return Promise.reject(new Refusal('malformed'));
+      if (name.split('/')[0] !== (s.org || s.id)) return Promise.reject(new Refusal('malformed'));
       return sendPictureBytes('POST', PICTURES + 'business-templates/' + name, s.access, bytes, 'application/json', deadline);
     };
     return current().then(function (s) {
@@ -286,12 +301,12 @@
   }
 
   /* Reading a template's file back (for Save to template): the same store and the
-     same name rule as templateFile, read as the signed-in inspector from their own folder only. It answers
+     same name rule as templateFile, read as the signed-in inspector from their company's folder only. It answers
      { status, inner, blob } as picture does (blob when found), or null when nobody is signed in. */
   function templateRead(name, deadline) {
     if (!TEMPLATE_FILE.test(String(name))) return Promise.reject(new Refusal('malformed'));
     var once = function (s) {
-      if (name.split('/')[0] !== s.id) return Promise.reject(new Refusal('malformed'));
+      if (name.split('/')[0] !== (s.org || s.id)) return Promise.reject(new Refusal('malformed'));
       return sendPictureBytes('GET', PICTURES + 'authenticated/business-templates/' + name, s.access, null, null, deadline);
     };
     return current().then(function (s) {
@@ -367,16 +382,16 @@
   }
 
   /* Hearing "something changed" (inspection sync): the server's pings for the signed-in inspector's
-     own inspections, on their private Realtime topic insp:<their id>. The sign-in goes to the server inside this
+     company's inspections, on its private Realtime topic insp:<its id>. The sign-in goes to the server inside this
      file, as in ask: the page gives a function to call on each ping, and gets back a way to stop. Only the
-     signed-in inspector's own topic can be asked for (the server holds the same rule). It joins again after any
+     signed-in inspector's company's topic can be asked for (the server holds the same rule). It joins again after any
      drop, waiting a little longer each time, and with a renewed sign-in before the old one ends. A ping is only
      a nudge: the page then asks the inspection-sync function for what changed. */
   var REALTIME = SERVER.replace(/^https:/, 'wss:') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(KEY) + '&vsn=1.0.0';
   function listen(onPing) {
     var me = who();
     if (!me || typeof onPing !== 'function' || typeof root.WebSocket !== 'function') return null;
-    var topic = 'realtime:insp:' + me.id;
+    var topic = 'realtime:insp:' + me.owner;
     var socket = null, beat = null, renewal = null, retry = null, stopped = false, failures = 0, ref = 0;
     var tell = function (what) { try { onPing(what); } catch (e) { /* a page's mistake never stops the listening */ } };
     function close() {
@@ -433,11 +448,12 @@
     return { stop: function () { stopped = true; clearTimeout(retry); close(); } };
   }
 
-  /* Who is signed in: their address and their id, and nothing that could sign anyone in. What a page needs to
-     name its reader; a page that only shows things takes this, never the sign-in itself. */
+  /* Who is signed in: their address, their id, and whose data they work on (owner: their company, else their own
+     account), and nothing that could sign anyone in. What a page needs to name its reader and the owner of every
+     row and file it writes; a page that only shows things takes this, never the sign-in itself. */
   function who() {
     var s = stored();
-    return s ? { id: s.id, email: s.email } : null;
+    return s ? { id: s.id, email: s.email, owner: s.org || s.id } : null;
   }
 
   /* A forgotten password. Two halves, on two visits.
@@ -526,9 +542,10 @@
     return send('POST', BASE + '/verify', null, { type: 'magiclink', token_hash: key }).then(function (r) {
       if (r.status >= 400 && r.status < 500 && r.status !== 429) throw new Refusal('expired', r.status);
       if (r.status !== 200) throw new Refusal('server', r.status);
-      var s = whole(r.json);
-      if (!keep(s)) { send('POST', BASE + '/logout?scope=local', s.access).then(function () {}, function () {}); throw new Refusal('storage'); }
-      return s;
+      return withCompany(whole(r.json)).then(function (s) {
+        if (!keep(s)) { send('POST', BASE + '/logout?scope=local', s.access).then(function () {}, function () {}); throw new Refusal('storage'); }
+        return s;
+      });
     });
   }
 
@@ -551,9 +568,10 @@
       if (r.status === 422 || r.status === 400) throw new Refusal(/weak|password/i.test(String(code || '')) ? 'weak' : 'server', r.status);
       if (r.status !== 200) throw new Refusal('server', r.status);
       if (r.json && r.json.access_token) {
-        var s = whole(r.json);
-        if (!keep(s)) throw new Refusal('storage');
-        return 'in';
+        return withCompany(whole(r.json)).then(function (s) {
+          if (!keep(s)) throw new Refusal('storage');
+          return 'in';
+        });
       }
       return 'confirm';
     });
@@ -569,9 +587,10 @@
     return send('GET', BASE + '/user', token).then(function (r) {
       if (r.status === 401 || r.status === 403) throw new Refusal('expired', r.status);
       if (r.status !== 200) throw new Refusal('server', r.status);
-      var s = whole({ access_token: token, refresh_token: renewal, expires_in: isFinite(expires) && expires > 0 ? expires : 3600, user: r.json });
-      if (!keep(s)) throw new Refusal('storage');
-      return s;
+      return withCompany(whole({ access_token: token, refresh_token: renewal, expires_in: isFinite(expires) && expires > 0 ? expires : 3600, user: r.json })).then(function (s) {
+        if (!keep(s)) throw new Refusal('storage');
+        return s;
+      });
     });
   }
   function setPassword(password) {

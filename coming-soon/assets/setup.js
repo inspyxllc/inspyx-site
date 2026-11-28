@@ -34,7 +34,7 @@
 
   // ---- the rows ---------------------------------------------------------------------------------------------------
 
-  var me = (auth.stored() || {}).id || null;
+  var me = (auth.who() || {}).owner || null;
   var rows = Object.create(null);
 
   function take(into, r) {

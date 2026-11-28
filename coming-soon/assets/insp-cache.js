@@ -32,7 +32,8 @@
   }
 
   var keyOf = function (account, part) { return account + '|' + part; };
-  // Whether [account] is still the one signed in on this browser: a pull that ends after a sign-out keeps nothing.
+  // Whether [account] (the person it was kept for) is still the one signed in on this browser: a pull that ends after a
+  // sign-out, or another person's sign-in, keeps nothing.
   var signedIn = function (account) { var me = root.InspyxAuth && root.InspyxAuth.who(); return !!me && me.id === account; };
 
   /* The part's { point, fields }, or null: none kept, another shape, or no store. part is 'list' or an inspection's id. */

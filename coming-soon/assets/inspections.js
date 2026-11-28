@@ -53,6 +53,7 @@
   var loaded = false;
   // The inspections whose every field is here: opened and pulled, or kept from an earlier visit.
   var whole = Object.create(null);
+  // Kept per person, not per company: what one person's browser kept is never shown to another who signs in there.
   var cache = window.InspyxInspCache, account = auth.who() ? auth.who().id : null;
   var outbox = [];          // this page's edits not yet answered: { inspection, entity, id, field, value, at }
   var dirty = Object.create(null);   // keys being typed in right now
@@ -473,7 +474,7 @@
     if (!who || !ITEM_ID.test(id)) return;
     // Past the newest copy held, so a clear always wins over the set before it (the People book does the same).
     var at = Math.max(Date.now(), before ? before.updated_at + 1 : 0);
-    var data = { id: id, ownerAccountId: who.id, inspectionId: inspection,
+    var data = { id: id, ownerAccountId: who.owner, inspectionId: inspection,
       flaggedAt: on ? at : (before && before.data && before.data.flaggedAt) || at, updatedAt: at, deletedAt: on ? null : at };
     var row = { kind: FLAG, id: id, updated_at: at, deleted_at: data.deletedAt, data: data };
     var wire = flagWire[k] = flagWire[k] || { n: 0, sure: before };
@@ -577,7 +578,7 @@
   }
   /* A template's current file, as text, checked against its row (null: can't be read now). */
   function readTemplate(row) {
-    var me = auth.who().id, d = row.data;
+    var me = auth.who().owner, d = row.data;
     return auth.templateRead(me + '/' + row.id + '/' + d.sha256 + '.json', DEADLINE).then(function (r) {
       if (r === null) { window.location.replace('/signin'); return null; }
       if (r.status !== 200 || !r.blob) return null;
@@ -627,7 +628,7 @@
 
   /* Saves [line] into [target] (from templateFor). Answers 'saved', or a problem's word. */
   function saveInto(target, spot, line) {
-    var me = auth.who().id;
+    var me = auth.who().owner;
     var itemRef = TS.refIn(spot.ref, spot.from, target.id);
     if (!itemRef) return Promise.resolve('no_item');
     var made = TS.addLine(target.text, { itemRef: itemRef, title: line.title, details: line.details,
@@ -899,7 +900,7 @@
       .filter(function (r) { return r.data && r.data.inspectionId === id; });
   }
   function feeRow(id, cents) {
-    var rows = feeRows(id), now = Date.now() + offset, me = auth.who().id;
+    var rows = feeRows(id), now = Date.now() + offset, me = auth.who().owner;
     rows.sort(function (a, b) { return (b.data.updatedAt || 0) - (a.data.updatedAt || 0) || (a.id < b.id ? 1 : -1); });
     var standing = rows[0] && rows[0].deleted_at == null && rows[0].data.deletedAt == null ? rows[0] : null;
     // Above every fee of the inspection (the store's _onTop): the newest is the fee.
@@ -913,10 +914,10 @@
     return { kind: 'inspection_fees', id: data.id, updated_at: at, deleted_at: null, data: data };
   }
   function paymentRow(id, cents, method, note) {
-    var at = Date.now() + offset, me = auth.who().id, pid = window.crypto.randomUUID();
+    var at = Date.now() + offset, me = auth.who().owner, pid = window.crypto.randomUUID();
     return { kind: 'inspection_payments', id: pid, updated_at: at, deleted_at: null, data: {
       id: pid, ownerAccountId: me, inspectionId: id, amountCents: cents, method: method, note: note || null,
-      recordedAt: at, recordedByAccountId: me, voidedAt: null, updatedAt: at, deletedAt: null, cardLive: null } };
+      recordedAt: at, recordedByAccountId: auth.who().id, voidedAt: null, updatedAt: at, deletedAt: null, cardLive: null } };
   }
   function voidRow(held) {
     var at = Math.max(Date.now() + offset, held.updated_at + 1), data = {};
@@ -1029,7 +1030,7 @@
     var now = Date.now() + offset, held = biz['archived_inspections/' + id];
     var at = Math.max(now, held ? held.updated_at + 1 : 0);
     return { kind: 'archived_inspections', id: id, updated_at: at, deleted_at: null,
-      data: { id: id, ownerAccountId: auth.who().id, archivedAt: at, updatedAt: at, deletedAt: null } };
+      data: { id: id, ownerAccountId: auth.who().owner, archivedAt: at, updatedAt: at, deletedAt: null } };
   }
   function cancelRow(held) {
     var at = Math.max(Date.now() + offset, held.updated_at + 1), data = {};
