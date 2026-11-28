@@ -53,7 +53,8 @@
   var loaded = false;
   // The inspections whose every field is here: opened and pulled, or kept from an earlier visit.
   var whole = Object.create(null);
-  var cache = window.InspyxInspCache, account = auth.who() ? auth.who().owner : null;
+  // Kept per person, not per company: what one person's browser kept is never shown to another who signs in there.
+  var cache = window.InspyxInspCache, account = auth.who() ? auth.who().id : null;
   var outbox = [];          // this page's edits not yet answered: { inspection, entity, id, field, value, at }
   var dirty = Object.create(null);   // keys being typed in right now
   var timers = Object.create(null);
@@ -916,7 +917,7 @@
     var at = Date.now() + offset, me = auth.who().owner, pid = window.crypto.randomUUID();
     return { kind: 'inspection_payments', id: pid, updated_at: at, deleted_at: null, data: {
       id: pid, ownerAccountId: me, inspectionId: id, amountCents: cents, method: method, note: note || null,
-      recordedAt: at, recordedByAccountId: me, voidedAt: null, updatedAt: at, deletedAt: null, cardLive: null } };
+      recordedAt: at, recordedByAccountId: auth.who().id, voidedAt: null, updatedAt: at, deletedAt: null, cardLive: null } };
   }
   function voidRow(held) {
     var at = Math.max(Date.now() + offset, held.updated_at + 1), data = {};

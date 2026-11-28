@@ -517,6 +517,33 @@ const names = (rows) => rows.filter((r) => r.deleted_at == null && r.data.delete
     await o.ctx.close();
   });
 
+  // A teammate of the same company: the same owner, another person. The key typed here is the first person's, so
+  // nothing goes on as the second either, and the page starts again.
+  await group('own pass: a teammate of the same company signed in from another tab', async () => {
+    const sync = syncServer(seed()), spx = spxServer();
+    const o = await open(browser, { sync, spx });
+    await paste(o.page, KEY); await o.page.locator('[data-check]').click();
+    await until(async () => await o.page.locator('[data-preview]').isVisible());
+    const reloaded = o.page.waitForEvent('framenavigated', { timeout: 5000 }).then(() => true, () => false);
+    await o.page.evaluate(() => { const real = window.InspyxAuth.who; window.InspyxAuth.who = function () { const w = real(); return w ? Object.assign({}, w, { id: '33333333-3333-4333-8333-333333333333' }) : w; }; });
+    await o.page.locator('[data-go]').click();
+    ok('Bring in after a teammate signed in: nothing is kept, and the page starts again', await reloaded && sync.pushes.length === 0, JSON.stringify(sync.pushes));
+    await o.ctx.close();
+  });
+
+  await group('a teammate signed in while Spectora is being read', async () => {
+    const sync = syncServer(seed()), spx = spxServer(); spx.delay = 700;
+    const o = await open(browser, { sync, spx });
+    await paste(o.page, KEY);
+    const first = o.page.waitForRequest((r) => r.url().indexOf('/functions/v1/spectora-import') >= 0);
+    await o.page.locator('[data-check]').click();
+    await first;
+    const reloaded = o.page.waitForEvent('framenavigated', { timeout: 8000 }).then(() => true, () => false);
+    await o.page.evaluate(() => { const real = window.InspyxAuth.who; window.InspyxAuth.who = function () { const w = real(); return w ? Object.assign({}, w, { id: '33333333-3333-4333-8333-333333333333' }) : w; }; });
+    ok('a teammate signed in mid-read: no further request carries the first person\'s key, and the page starts again', await reloaded && spx.calls.length === 1, JSON.stringify(spx.calls.map((c) => c.what)));
+    await o.ctx.close();
+  });
+
   await group('Codex r5 on #133: another account signed in while Spectora is being read', async () => {
     const sync = syncServer(seed()), spx = spxServer(); spx.delay = 700;
     const o = await open(browser, { sync, spx });

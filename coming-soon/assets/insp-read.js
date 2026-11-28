@@ -34,7 +34,7 @@
   var point = null, pulling = null, again = false, loaded = false, listening = false, draw = null;
   // The kinds these pages read: the same as /inspections's list, so the two share what is kept.
   var LIST_KINDS = ['inspection', 'person'];
-  var cache = root.InspyxInspCache, account = auth.who() ? auth.who().owner : null;
+  var cache = root.InspyxInspCache, account = auth.who() ? auth.who().id : null;
 
   var key = function (entity, id, field) { return entity + '/' + id + '.' + field; };
   var later = function (a, b) { return a.at > b.at || (a.at === b.at && a.device > b.device); };

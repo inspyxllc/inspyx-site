@@ -48,12 +48,13 @@
   var plan = null;       // the last plan shown (counts), for Bring in to compare
   var done = null;       // { people: changes[], past: { importId, n } | null } for Undo
   var busy = false, picked = 0;
-  /* The account the page opened for: its books hold that account's rows. If another tab signs in as someone else,
-     nothing is planned or kept from these rows as the new account: the page starts again (its own adversarial pass). */
-  var opened = null;
+  /* The person the page opened for, and the company whose rows its books hold (opened, the owner of every row it
+     writes). If another tab signs in as someone else, even a teammate of the same company, nothing is planned, kept
+     or sent with the key typed here as the new sign-in: the page starts again (its own adversarial pass). */
+  var opened = null, openedBy = null;
   function sameAccount() {
     var w = auth.who();
-    if (w && opened && w.owner === opened) return true;
+    if (w && opened && openedBy && w.id === openedBy && w.owner === opened) return true;
     // The key goes before anything else: nothing of the first account's read is sent as the second (Codex on #133).
     picked++;
     if (keyBox) { keyBox.value = ''; }
@@ -657,6 +658,7 @@
   auth.current().then(function (s) {
     if (!s) return;
     opened = (auth.who() || {}).owner || null;
+    openedBy = (auth.who() || {}).id || null;
     main.hidden = false;
     book.start(function () {});
     pastBook.start(function () {});
